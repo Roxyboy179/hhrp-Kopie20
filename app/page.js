@@ -209,7 +209,13 @@ export default function LandingPage() {
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>
             <Link
-              href={user ? '/bewerbung' : '/api/auth/discord'}
+              href={user ? '/bewerbung' : '#'}
+              onClick={(e) => {
+                if (!user) {
+                  e.preventDefault();
+                  window.location.href = '/api/auth/discord';
+                }
+              }}
               className="group flex items-center justify-center gap-3 glass border border-white/10 text-white px-8 py-4 rounded-2xl text-base font-medium hover:bg-white/[0.06] hover:border-blue-500/20 transition-all hover:scale-[1.03] active:scale-[0.98]"
             >
               {user ? <Sparkles className="w-5 h-5 text-blue-400" /> : <LogIn className="w-5 h-5 text-blue-400" />}
@@ -322,7 +328,13 @@ export default function LandingPage() {
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </button>
                 <Link
-                  href={user ? '/bewerbung' : '/api/auth/discord'}
+                  href={user ? '/bewerbung' : '#'}
+                  onClick={(e) => {
+                    if (!user) {
+                      e.preventDefault();
+                      window.location.href = '/api/auth/discord';
+                    }
+                  }}
                   className="group flex items-center justify-center gap-3 glass border border-white/10 text-white px-8 py-4 rounded-2xl text-base font-medium hover:bg-white/[0.06] transition-all hover:scale-[1.03] active:scale-[0.98]"
                 >
                   <FileText className="w-5 h-5 text-blue-400" />

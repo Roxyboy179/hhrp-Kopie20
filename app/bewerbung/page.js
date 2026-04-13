@@ -68,9 +68,12 @@ export default function BewerbungPage() {
           <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
           <h2 className="text-xl font-bold mb-2">Anmeldung erforderlich</h2>
           <p className="text-white/40 mb-6">Du musst angemeldet sein, um eine Bewerbung einzureichen.</p>
-          <a href="/api/auth/discord" className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 px-4 py-2 bg-[#5865F2] hover:bg-[#4752C4] rounded-xl text-white">
+          <button 
+            onClick={() => window.location.href = '/api/auth/discord'} 
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 px-4 py-2 bg-[#5865F2] hover:bg-[#4752C4] rounded-xl text-white"
+          >
             Mit Discord anmelden
-          </a>
+          </button>
         </GlassCard>
       </div>
     );

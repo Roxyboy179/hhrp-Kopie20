@@ -52,13 +52,32 @@ export function Navbar({ user, loading }) {
 
         <div className="hidden md:flex items-center gap-1 bg-white/[0.03] backdrop-blur-xl rounded-2xl p-1 border border-white/[0.06]">
           {navItems.filter(n => n.show).map(n => {
-            const linkHref = (n.requireAuth && !user) ? '/api/auth/discord' : n.id;
+            const requiresDiscordAuth = n.requireAuth && !user;
             const isActive = pathname === n.id;
+            
+            if (requiresDiscordAuth) {
+              return (
+                <button
+                  key={n.id}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.location.href = '/api/auth/discord';
+                  }}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                    isActive
+                      ? 'bg-blue-500/20 text-blue-300 shadow-inner shadow-blue-500/10'
+                      : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04]'
+                  }`}
+                >
+                  {n.icon}<span className="hidden lg:inline">{n.label}</span>
+                </button>
+              );
+            }
             
             return (
               <a
                 key={n.id}
-                href={linkHref}
+                href={n.id}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
                   isActive
                     ? 'bg-blue-500/20 text-blue-300 shadow-inner shadow-blue-500/10'
@@ -91,13 +110,16 @@ export function Navbar({ user, loading }) {
               </Button>
             </div>
           ) : (
-            <a
-              href="/api/auth/discord"
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                window.location.href = '/api/auth/discord';
+              }}
               className="flex items-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-2 rounded-xl text-sm font-medium shadow-lg shadow-[#5865F2]/25 hover:shadow-[#5865F2]/40 transition-all hover:scale-105 active:scale-95"
             >
               <DiscordIcon size={14} />
               <span className="hidden sm:inline">Anmelden</span>
-            </a>
+            </button>
           )}
           <button className="md:hidden text-white/50 hover:text-white p-2 rounded-xl hover:bg-white/[0.04] transition-all" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -108,12 +130,27 @@ export function Navbar({ user, loading }) {
       {mobileOpen && (
         <div className="md:hidden glass-strong mx-4 mb-4 rounded-2xl p-2 animate-fade-in-down space-y-1">
           {navItems.filter(n => n.show).map(n => {
-            const linkHref = (n.requireAuth && !user) ? '/api/auth/discord' : n.id;
+            const requiresDiscordAuth = n.requireAuth && !user;
+            
+            if (requiresDiscordAuth) {
+              return (
+                <button
+                  key={n.id}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    window.location.href = '/api/auth/discord';
+                  }}
+                  className="w-full text-left px-4 py-3 rounded-xl text-sm text-white/70 hover:bg-white/[0.06] transition-all flex items-center gap-3"
+                >
+                  {n.icon}{n.label}
+                </button>
+              );
+            }
             
             return (
               <a
                 key={n.id}
-                href={linkHref}
+                href={n.id}
                 onClick={() => setMobileOpen(false)}
                 className="w-full text-left px-4 py-3 rounded-xl text-sm text-white/70 hover:bg-white/[0.06] transition-all flex items-center gap-3"
               >
