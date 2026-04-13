@@ -538,7 +538,7 @@ async function handleAdminGetAccounts(request) {
 
   try {
     const accounts = await getAllAdminAccounts();
-    return NextResponse.json({ accounts });
+    return NextResponse.json({ accounts: accounts.map(toCamelCase) });
   } catch (error) {
     console.error('Get accounts error:', error);
     return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
