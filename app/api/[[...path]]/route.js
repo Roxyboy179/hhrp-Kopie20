@@ -787,6 +787,12 @@ export async function PUT(request) {
   const url = new URL(request.url);
   const p = url.pathname.replace('/api/', '');
 
+  switch (p) {
+    case 'settings/username': return handleUpdateUsername(request);
+    case 'settings/password': return handleUpdatePassword(request);
+    default: break;
+  }
+
   if (p.startsWith('admin/bewerbungen/')) {
     return handleAdminUpdateBewerbung(request, p.substring('admin/bewerbungen/'.length));
   }
