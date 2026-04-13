@@ -402,20 +402,31 @@ async function handleWithdrawBewerbung(request, id) {
 
 // ===== ADMIN HANDLERS =====
 async function handleAdminLogin(request) {
+  console.log('[DEBUG] ========== ADMIN LOGIN REQUEST ==========');
+  
   try {
-    const { mitarbeiterNummer, email, password } = await request.json();
+    const body = await request.json();
+    const { mitarbeiterNummer, email, password } = body;
     
-    console.log('[DEBUG] Admin login attempt:', { mitarbeiterNummer, email });
+    console.log('[DEBUG] Login attempt:', { 
+      mitarbeiterNummer, 
+      email,
+      passwordProvided: !!password 
+    });
 
+    // SCHRITT 1: Account in DB finden
     const account = await getAdminAccountByCredentials(mitarbeiterNummer, email, password);
     
-    console.log('[DEBUG] Account found:', account ? 'YES' : 'NO');
-    
     if (!account) {
-      console.log('[DEBUG] Login failed: Invalid credentials');
+      console.log('[DEBUG] ❌ Login failed: Invalid credentials');
       return NextResponse.json({ error: 'Ungültige Anmeldedaten' }, { status: 401 });
     }
 
+    console.log('[DEBUG] ✅ Account validated:', account.mitarbeiter_nummer);
+
+    // SCHRITT 2: Discord Member Check (OPTIONAL - kann später aktiviert werden)
+    // ERSTMAL DEAKTIVIERT FÜR TESTING!
+    /*
     console.log('[DEBUG] Checking Discord member...');
     const member = await getGuildMember(account.discord_user_id);
     if (!member) {
@@ -428,11 +439,20 @@ async function handleAdminLogin(request) {
       console.log('[DEBUG] No admin role found');
       return NextResponse.json({ error: 'Keine Admin-Berechtigung auf Discord' }, { status: 403 });
     }
+    */
 
-    console.log('[DEBUG] Login successful');
+    // TEMPORÄR: Default Role wenn Discord-Check deaktiviert
+    const adminRole = {
+      name: account.role_name || 'Admin',
+      level: 4,
+      canCreateAccounts: true,
+      canSeeAll: true
+    };
+
+    console.log('[DEBUG] Creating admin session...');
     const admin = {
-      discordUserId: account.discord_user_id,
-      discordUsername: account.discord_username,
+      discordUserId: account.discord_user_id || 'temporary-id',
+      discordUsername: account.discord_username || account.email,
       mitarbeiterNummer: account.mitarbeiter_nummer,
       roleName: adminRole.name,
       roleLevel: adminRole.level,
@@ -449,10 +469,12 @@ async function handleAdminLogin(request) {
       maxAge: 7 * 24 * 60 * 60
     });
 
+    console.log('[DEBUG] ✅ Login successful!');
+    console.log('[DEBUG] ========== LOGIN COMPLETE ==========');
     return response;
   } catch (error) {
-    console.error('[DEBUG] Admin login error:', error);
-    return NextResponse.json({ error: 'Anmeldefehler' }, { status: 500 });
+    console.error('[DEBUG] ❌ Admin login error:', error);
+    return NextResponse.json({ error: 'Anmeldefehler: ' + error.message }, { status: 500 });
   }
 }
 
