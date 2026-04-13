@@ -13,7 +13,7 @@ import time
 import uuid
 
 # Configuration
-BASE_URL = "https://hamburg-rp-portal.preview.emergentagent.com"
+BASE_URL = "https://bewerbung-portal-2.preview.emergentagent.com"
 JWT_SECRET = "hhrp-jwt-secret-hamburg-horizon-2025"
 
 def create_jwt_token(payload):
