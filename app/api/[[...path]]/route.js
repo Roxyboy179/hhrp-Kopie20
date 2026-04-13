@@ -87,7 +87,18 @@ function toCamelCase(obj) {
   const result = {};
   for (const [key, value] of Object.entries(obj)) {
     const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
-    result[camelKey] = typeof value === 'object' && value !== null ? toCamelCase(value) : value;
+    
+    // Spezialfall: form_data ist ein JSON-String, muss geparst werden
+    if (key === 'form_data' && typeof value === 'string') {
+      try {
+        result[camelKey] = JSON.parse(value);
+      } catch (e) {
+        console.error('[toCamelCase] Fehler beim Parsen von form_data:', e);
+        result[camelKey] = value;
+      }
+    } else {
+      result[camelKey] = typeof value === 'object' && value !== null ? toCamelCase(value) : value;
+    }
   }
   return result;
 }
