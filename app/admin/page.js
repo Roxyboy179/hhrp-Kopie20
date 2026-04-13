@@ -7,9 +7,11 @@ import { GlassCard } from '@/components/shared/GlassCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
 import { 
-  Loader2, Lock, LogIn, LogOut, FileText, UserPlus, 
-  AlertTriangle, Settings, Shield
+  Loader2, Lock, LogIn, FileText, UserPlus, 
+  Clock, CheckCircle2, XCircle, AlertTriangle,
+  TrendingUp, Users, Activity
 } from 'lucide-react';
 
 const inputClass = "bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-blue-500/40 focus:ring-blue-500/20 rounded-xl";
@@ -19,6 +21,7 @@ export default function AdminPage() {
   const { user } = useAuth();
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState(null);
   const [loginForm, setLoginForm] = useState({ mitarbeiterNummer: '', email: '', password: '' });
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
@@ -28,7 +31,10 @@ export default function AdminPage() {
       try {
         const res = await fetch('/api/admin/me');
         const data = await res.json();
-        if (data.admin) setAdmin(data.admin);
+        if (data.admin) {
+          setAdmin(data.admin);
+          await fetchStats();
+        }
       } catch (e) {
         console.error(e);
       } finally {
@@ -36,6 +42,23 @@ export default function AdminPage() {
       }
     })();
   }, []);
+
+  const fetchStats = async () => {
+    try {
+      const res = await fetch('/api/admin/bewerbungen');
+      const data = await res.json();
+      const bewerbungen = data.bewerbungen || [];
+      setStats({
+        total: bewerbungen.length,
+        eingereicht: bewerbungen.filter(b => b.status === 'Eingereicht').length,
+        inBearbeitung: bewerbungen.filter(b => b.status === 'In Bearbeitung').length,
+        angenommen: bewerbungen.filter(b => b.status === 'Angenommen').length,
+        abgelehnt: bewerbungen.filter(b => b.status === 'Abgelehnt').length,
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -50,6 +73,7 @@ export default function AdminPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setAdmin(data.admin);
+      await fetchStats();
     } catch (e) {
       setLoginError(e.message);
     } finally {
@@ -57,14 +81,9 @@ export default function AdminPage() {
     }
   };
 
-  const handleLogout = async () => {
-    await fetch('/api/admin/logout', { method: 'POST' });
-    setAdmin(null);
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center h-full">
         <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
       </div>
     );
@@ -136,22 +155,26 @@ export default function AdminPage() {
 
             {user && user.adminLevel > 0 && (
               <div className="mt-6 text-center">
-                <div className="w-full h-px bg-white/[0.06] mb-6" />
+                <Separator className="bg-white/[0.06] mb-6" />
                 <p className="text-white/30 text-sm mb-3">
                   Angemeldet als <span className="text-blue-300 font-medium">{user.adminRole}</span>
                 </p>
                 <Button 
                   variant="outline" 
                   className="border-blue-500/20 text-blue-300 hover:bg-blue-500/10 rounded-xl"
-                  onClick={() => setAdmin({ 
-                    discordUserId: user.id, 
-                    discordUsername: user.globalName || user.username, 
-                    roleName: user.adminRole, 
-                    roleLevel: user.adminLevel, 
-                    canCreateAccounts: user.canCreateAccounts, 
-                    canSeeAll: user.canSeeAll, 
-                    viaDiscord: true 
-                  })}
+                  onClick={() => {
+                    const adminData = { 
+                      discordUserId: user.id, 
+                      discordUsername: user.globalName || user.username, 
+                      roleName: user.adminRole, 
+                      roleLevel: user.adminLevel, 
+                      canCreateAccounts: user.canCreateAccounts, 
+                      canSeeAll: user.canSeeAll, 
+                      viaDiscord: true 
+                    };
+                    setAdmin(adminData);
+                    fetchStats();
+                  }}
                 >
                   Mit Discord-Rolle fortfahren
                 </Button>
@@ -164,68 +187,111 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen py-12 px-4">
-      <div className="max-w-6xl mx-auto space-y-6 animate-fade-in-up">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h2 className="text-2xl font-bold">Admin Panel</h2>
-            <p className="text-white/40 text-sm mt-1">
-              Rolle: <span className="text-blue-300">{admin.roleName}</span>
-              {admin.discordUsername && ` | ${admin.discordUsername}`}
-            </p>
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold mb-1">Willkommen zurück!</h1>
+        <p className="text-white/40">
+          {admin.discordUsername} · {admin.roleName}
+        </p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <GlassCard className="p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-white/40 text-sm">Gesamt</span>
+            <Users className="w-4 h-4 text-blue-400" />
           </div>
-          <Button 
-            variant="ghost" 
-            onClick={handleLogout} 
-            className="text-white/40 hover:text-white gap-2 rounded-xl"
-          >
-            <LogOut className="w-4 h-4" /> Abmelden
-          </Button>
-        </div>
+          <p className="text-2xl font-bold">{stats?.total || 0}</p>
+          <p className="text-xs text-white/30 mt-1">Bewerbungen</p>
+        </GlassCard>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <GlassCard hover className="p-6" onClick={() => router.push('/admin/bewerbungen')}>
-            <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4">
-              <FileText className="w-6 h-6 text-blue-400" />
-            </div>
-            <h3 className="text-lg font-bold mb-2">Bewerbungen</h3>
-            <p className="text-white/40 text-sm">Verwalte alle eingereichten Bewerbungen</p>
-          </GlassCard>
-
-          {(admin.canCreateAccounts || admin.roleLevel >= 3) && (
-            <GlassCard hover className="p-6" onClick={() => router.push('/admin/accounts')}>
-              <div className="w-12 h-12 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-4">
-                <UserPlus className="w-6 h-6 text-green-400" />
-              </div>
-              <h3 className="text-lg font-bold mb-2">Accounts</h3>
-              <p className="text-white/40 text-sm">Verwalte Admin-Accounts</p>
-            </GlassCard>
-          )}
-
-          <GlassCard hover className="p-6">
-            <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-4">
-              <Settings className="w-6 h-6 text-purple-400" />
-            </div>
-            <h3 className="text-lg font-bold mb-2">Einstellungen</h3>
-            <p className="text-white/40 text-sm">Systemeinstellungen anpassen</p>
-          </GlassCard>
-        </div>
-
-        <GlassCard className="p-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center shrink-0">
-              <AlertTriangle className="w-6 h-6 text-yellow-400" />
-            </div>
-            <div>
-              <h3 className="font-bold mb-1">Admin-Dashboard in Entwicklung</h3>
-              <p className="text-white/40 text-sm">
-                Das vollständige Admin-Dashboard mit Statistiken, Bewerbungsverwaltung und mehr kommt bald.
-                Derzeit können Sie über die Navigation auf Bewerbungen und Accounts zugreifen.
-              </p>
-            </div>
+        <GlassCard className="p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-white/40 text-sm">Eingereicht</span>
+            <Clock className="w-4 h-4 text-yellow-400" />
           </div>
+          <p className="text-2xl font-bold">{stats?.eingereicht || 0}</p>
+          <p className="text-xs text-white/30 mt-1">Warten auf Bearbeitung</p>
+        </GlassCard>
+
+        <GlassCard className="p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-white/40 text-sm">In Bearbeitung</span>
+            <Activity className="w-4 h-4 text-blue-400" />
+          </div>
+          <p className="text-2xl font-bold">{stats?.inBearbeitung || 0}</p>
+          <p className="text-xs text-white/30 mt-1">Wird gerade bearbeitet</p>
+        </GlassCard>
+
+        <GlassCard className="p-5">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-white/40 text-sm">Angenommen</span>
+            <CheckCircle2 className="w-4 h-4 text-green-400" />
+          </div>
+          <p className="text-2xl font-bold">{stats?.angenommen || 0}</p>
+          <p className="text-xs text-white/30 mt-1">Erfolgreiche Bewerbungen</p>
         </GlassCard>
       </div>
+
+      {/* Quick Actions */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <GlassCard hover className="p-6" onClick={() => router.push('/admin/bewerbungen')}>
+          <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4">
+            <FileText className="w-6 h-6 text-blue-400" />
+          </div>
+          <h3 className="text-lg font-bold mb-2">Bewerbungen verwalten</h3>
+          <p className="text-white/40 text-sm mb-4">
+            Alle eingereichten Bewerbungen ansehen, bearbeiten und Status ändern
+          </p>
+          <div className="flex items-center gap-2 text-xs text-blue-400">
+            <span>Jetzt öffnen</span>
+            <TrendingUp className="w-3 h-3" />
+          </div>
+        </GlassCard>
+
+        {(admin.canCreateAccounts || admin.roleLevel >= 3) && (
+          <GlassCard hover className="p-6" onClick={() => router.push('/admin/accounts')}>
+            <div className="w-12 h-12 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-4">
+              <UserPlus className="w-6 h-6 text-green-400" />
+            </div>
+            <h3 className="text-lg font-bold mb-2">Admin Accounts</h3>
+            <p className="text-white/40 text-sm mb-4">
+              Admin-Accounts erstellen, verwalten und Berechtigungen anpassen
+            </p>
+            <div className="flex items-center gap-2 text-xs text-green-400">
+              <span>Jetzt öffnen</span>
+              <TrendingUp className="w-3 h-3" />
+            </div>
+          </GlassCard>
+        )}
+
+        <GlassCard className="p-6 opacity-50">
+          <div className="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center mb-4">
+            <Activity className="w-6 h-6 text-purple-400" />
+          </div>
+          <h3 className="text-lg font-bold mb-2">Statistiken</h3>
+          <p className="text-white/40 text-sm mb-4">
+            Detaillierte Analysen und Berichte (Bald verfügbar)
+          </p>
+        </GlassCard>
+      </div>
+
+      {/* Info Card */}
+      <GlassCard className="p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-5 h-5 text-blue-400" />
+          </div>
+          <div>
+            <h3 className="font-bold mb-1">Admin Panel - Hamburg Horizon RP</h3>
+            <p className="text-white/40 text-sm leading-relaxed">
+              Über das Admin Panel können Sie Bewerbungen verwalten, Admin-Accounts erstellen und das System überwachen. 
+              Nutzen Sie die Sidebar-Navigation, um zwischen den verschiedenen Bereichen zu wechseln.
+            </p>
+          </div>
+        </div>
+      </GlassCard>
     </div>
   );
 }
