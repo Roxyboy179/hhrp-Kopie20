@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 
-// Passwort: HHRP2025!Temp
-const password = 'HHRP2025!Temp';
+// Passwort: Joellading1202
+const password = 'Joellading1202';
 
 bcrypt.hash(password, 10).then(hash => {
   console.log('\n=================================');
