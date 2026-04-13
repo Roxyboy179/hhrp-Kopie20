@@ -10,16 +10,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { 
-  FileText, Send, Loader2, AlertTriangle, CheckCircle2, ArrowLeft 
+  FileText, Send, Loader2, AlertTriangle, CheckCircle2, ArrowLeft,
+  User, Calendar, Gamepad2, Shield, Target, MessageSquare, 
+  Clock, Mic, BookOpen, Heart
 } from 'lucide-react';
 
 const inputClass = "bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-blue-500/40 focus:ring-blue-500/20 rounded-xl";
 
-function FormSection({ number, title, emoji, children }) {
+function FormSection({ number, title, icon: Icon, children }) {
   return (
     <div className="space-y-4">
       <h3 className="text-base font-semibold flex items-center gap-2 text-white/90">
-        <span className="text-lg">{emoji}</span>
+        <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+          <Icon className="w-4 h-4 text-blue-400" />
+        </div>
         <span className="text-blue-400">{number}.</span> {title}
       </h3>
       <div className="space-y-4 pl-4 md:pl-7 border-l-2 border-blue-500/20">{children}</div>
@@ -152,7 +156,7 @@ export default function BewerbungPage() {
         <GlassCard className="p-6 md:p-8">
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Persönliche Informationen */}
-            <FormSection number={1} title="Persönliche Informationen" emoji="👤">
+            <FormSection number={1} title="Persönliche Informationen" icon={User}>
               <FormField label="Vorname" required>
                 <Input
                   value={formData.vorname}
@@ -187,7 +191,7 @@ export default function BewerbungPage() {
             </FormSection>
 
             {/* Roleplay Erfahrung */}
-            <FormSection number={2} title="Roleplay Erfahrung" emoji="🎮">
+            <FormSection number={2} title="Roleplay Erfahrung" icon={Gamepad2}>
               <FormField label="Wie lange spielst du schon Roleplay?" required>
                 <Input
                   value={formData.spielzeit}
@@ -229,7 +233,7 @@ export default function BewerbungPage() {
             </FormSection>
 
             {/* Motivation */}
-            <FormSection number={3} title="Motivation & Eigenschaften" emoji="💡">
+            <FormSection number={3} title="Motivation & Eigenschaften" icon={Target}>
               <FormField label="Warum möchtest du in unser Team?" required>
                 <Textarea
                   value={formData.warumTeam}
@@ -262,7 +266,7 @@ export default function BewerbungPage() {
             </FormSection>
 
             {/* Situationen */}
-            <FormSection number={4} title="Situationsfragen" emoji="⚖️">
+            <FormSection number={4} title="Situationsfragen" icon={MessageSquare}>
               <FormField label="Ein Spieler macht Fail-RP. Wie gehst du vor?" required>
                 <Textarea
                   value={formData.failRpLoesung}
@@ -285,7 +289,7 @@ export default function BewerbungPage() {
             </FormSection>
 
             {/* Voraussetzungen */}
-            <FormSection number={5} title="Voraussetzungen" emoji="✅">
+            <FormSection number={5} title="Voraussetzungen" icon={Shield}>
               <div className="space-y-3">
                 <div className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
                   <Checkbox
@@ -294,9 +298,14 @@ export default function BewerbungPage() {
                     className="mt-0.5"
                     required
                   />
-                  <label className="text-sm text-white/80 cursor-pointer">
-                    Ich habe ein funktionierendes Mikrofon
-                  </label>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Mic className="w-4 h-4 text-blue-400" />
+                      <label className="text-sm text-white/80 cursor-pointer font-medium">
+                        Ich habe ein funktionierendes Mikrofon
+                      </label>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
@@ -306,9 +315,14 @@ export default function BewerbungPage() {
                     className="mt-0.5"
                     required
                   />
-                  <label className="text-sm text-white/80 cursor-pointer">
-                    Ich habe die Serverregeln gelesen und verstanden
-                  </label>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-purple-400" />
+                      <label className="text-sm text-white/80 cursor-pointer font-medium">
+                        Ich habe die Serverregeln gelesen und verstanden
+                      </label>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
@@ -318,9 +332,14 @@ export default function BewerbungPage() {
                     className="mt-0.5"
                     required
                   />
-                  <label className="text-sm text-white/80 cursor-pointer">
-                    Ich verpflichte mich, respektvoll und fair zu bleiben
-                  </label>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Heart className="w-4 h-4 text-green-400" />
+                      <label className="text-sm text-white/80 cursor-pointer font-medium">
+                        Ich verpflichte mich, respektvoll und fair zu bleiben
+                      </label>
+                    </div>
+                  </div>
                 </div>
               </div>
             </FormSection>

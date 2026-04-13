@@ -63,6 +63,7 @@ export default function MeineBewerbungenPage() {
     try {
       const res = await fetch('/api/bewerbungen');
       const data = await res.json();
+      console.log('[DEBUG] Bewerbungen geladen:', data.bewerbungen);
       setBewerbungen(data.bewerbungen || []);
     } catch (e) {
       console.error(e);
