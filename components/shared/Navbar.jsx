@@ -25,10 +25,6 @@ export function Navbar({ user, loading }) {
     return () => window.removeEventListener('scroll', handler);
   }, []);
 
-  const handleLogin = () => { 
-    // Force a full page navigation to avoid Next.js RSC handling
-    window.location.replace('/api/auth/discord'); 
-  };
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/';
@@ -55,25 +51,24 @@ export function Navbar({ user, loading }) {
         </Link>
 
         <div className="hidden md:flex items-center gap-1 bg-white/[0.03] backdrop-blur-xl rounded-2xl p-1 border border-white/[0.06]">
-          {navItems.filter(n => n.show).map(n => (
-            <Link
-              key={n.id}
-              href={n.id}
-              onClick={(e) => {
-                if (n.requireAuth && !user) {
-                  e.preventDefault();
-                  handleLogin();
-                }
-              }}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
-                pathname === n.id
-                  ? 'bg-blue-500/20 text-blue-300 shadow-inner shadow-blue-500/10'
-                  : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04]'
-              }`}
-            >
-              {n.icon}<span className="hidden lg:inline">{n.label}</span>
-            </Link>
-          ))}
+          {navItems.filter(n => n.show).map(n => {
+            const linkHref = (n.requireAuth && !user) ? '/api/auth/discord' : n.id;
+            const isActive = pathname === n.id;
+            
+            return (
+              <a
+                key={n.id}
+                href={linkHref}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                  isActive
+                    ? 'bg-blue-500/20 text-blue-300 shadow-inner shadow-blue-500/10'
+                    : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04]'
+                }`}
+              >
+                {n.icon}<span className="hidden lg:inline">{n.label}</span>
+              </a>
+            );
+          })}
         </div>
 
         <div className="flex items-center gap-3">
@@ -112,23 +107,20 @@ export function Navbar({ user, loading }) {
 
       {mobileOpen && (
         <div className="md:hidden glass-strong mx-4 mb-4 rounded-2xl p-2 animate-fade-in-down space-y-1">
-          {navItems.filter(n => n.show).map(n => (
-            <Link
-              key={n.id}
-              href={n.id}
-              onClick={(e) => {
-                if (n.requireAuth && !user) {
-                  e.preventDefault();
-                  handleLogin();
-                  return;
-                }
-                setMobileOpen(false);
-              }}
-              className="w-full text-left px-4 py-3 rounded-xl text-sm text-white/70 hover:bg-white/[0.06] transition-all flex items-center gap-3"
-            >
-              {n.icon}{n.label}
-            </Link>
-          ))}
+          {navItems.filter(n => n.show).map(n => {
+            const linkHref = (n.requireAuth && !user) ? '/api/auth/discord' : n.id;
+            
+            return (
+              <a
+                key={n.id}
+                href={linkHref}
+                onClick={() => setMobileOpen(false)}
+                className="w-full text-left px-4 py-3 rounded-xl text-sm text-white/70 hover:bg-white/[0.06] transition-all flex items-center gap-3"
+              >
+                {n.icon}{n.label}
+              </a>
+            );
+          })}
         </div>
       )}
     </nav>
