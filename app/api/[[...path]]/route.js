@@ -78,12 +78,24 @@ function getAdminContext(request) {
 // ===== DISCORD HELPERS =====
 async function getGuildMember(userId) {
   try {
+    console.log(`[DEBUG] Checking member: User=${userId}, Guild=${DISCORD_GUILD_ID}`);
     const res = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD_ID}/members/${userId}`, {
       headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` }
     });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
+    
+    console.log(`[DEBUG] Discord API response status: ${res.status}`);
+    
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error(`[DEBUG] Discord API error:`, errorText);
+      return null;
+    }
+    
+    const member = await res.json();
+    console.log(`[DEBUG] Member found:`, member.user?.username, `Roles:`, member.roles?.length);
+    return member;
+  } catch (error) {
+    console.error('[DEBUG] Exception in getGuildMember:', error);
     return null;
   }
 }
