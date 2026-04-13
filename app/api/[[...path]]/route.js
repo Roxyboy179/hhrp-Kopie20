@@ -62,20 +62,10 @@ function getAdminFromRequest(request) {
 }
 
 function getAdminContext(request) {
+  // Only return admin context if logged in via admin credentials
+  // NOT via Discord roles
   const adminUser = getAdminFromRequest(request);
   if (adminUser) return adminUser;
-  const user = getUserFromRequest(request);
-  if (user && user.adminLevel > 0) {
-    return {
-      discordUserId: user.id,
-      discordUsername: user.globalName || user.username,
-      roleName: user.adminRole,
-      roleLevel: user.adminLevel,
-      canCreateAccounts: user.canCreateAccounts,
-      canSeeAll: user.canSeeAll,
-      viaDiscord: true,
-    };
-  }
   return null;
 }
 
