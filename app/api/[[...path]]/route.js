@@ -76,6 +76,21 @@ function getAdminContext(request) {
   return null;
 }
 
+// ===== HELPER FUNCTIONS =====
+
+// Convert snake_case to camelCase for frontend compatibility
+function toCamelCase(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(toCamelCase);
+  
+  const result = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    result[camelKey] = typeof value === 'object' && value !== null ? toCamelCase(value) : value;
+  }
+  return result;
+}
+
 // ===== DISCORD HELPERS =====
 async function getGuildMember(userId) {
   try {
@@ -352,7 +367,7 @@ async function handleGetBewerbungen(request) {
 
   try {
     const bewerbungen = await getUserBewerbungen(user.id);
-    return NextResponse.json({ bewerbungen });
+    return NextResponse.json({ bewerbungen: bewerbungen.map(toCamelCase) });
   } catch (error) {
     console.error('Get bewerbungen error:', error);
     return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
@@ -458,7 +473,7 @@ async function handleAdminGetBewerbungen(request) {
 
   try {
     const bewerbungen = await getAllBewerbungen();
-    return NextResponse.json({ bewerbungen });
+    return NextResponse.json({ bewerbungen: bewerbungen.map(toCamelCase) });
   } catch (error) {
     console.error('Admin get bewerbungen error:', error);
     return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
