@@ -1,0 +1,25 @@
+{
+  "id": "7f5f2bc0-5eac-481f-bfb0-f5d552719c27",
+  "userId": "test-user-123",
+  "username": "testuser",
+  "globalName": "Test User",
+  "email": "test@example.com",
+  "discordCreatedAt": "2024-01-01T00:00:00.000Z",
+  "avatar": "test_avatar",
+  "status": "In Bearbeitung",
+  "claimedBy": "1059408423726362695",
+  "claimedByName": "Roxyboy2474",
+  "formData": {
+    "vorname": "Max",
+    "nachname": "Mustermann",
+    "alter": "25",
+    "robloxName": "MaxMuster123",
+    "discordName": "MaxMuster#1234",
+    "erfahrung": "Ja, 2 Jahre Erfahrung",
+    "motivation": "Ich möchte Teil des Teams werden",
+    "verfuegbarkeit": "Täglich 3-4 Stunden",
+    "teambereich": "Polizei"
+  },
+  "createdAt": "2026-04-13T11:17:50.416Z",
+  "updatedAt": "2026-04-13T11:17:52.086Z"
+}
