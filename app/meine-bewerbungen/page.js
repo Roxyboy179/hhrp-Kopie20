@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { 
   Loader2, FileText, RefreshCw, ChevronRight, ArrowLeft, 
-  AlertTriangle, Clock, CheckCircle2, XCircle, Plus
+  AlertTriangle, Clock, CheckCircle2, XCircle, Plus,
+  User, Gamepad2, Users, Target, MessageSquare, Shield, Mic, BookOpen, Heart
 } from 'lucide-react';
 
 function formatDateTime(dateStr) {
@@ -173,39 +174,111 @@ export default function MeineBewerbungenPage() {
                       <div className="mt-6 pt-6 border-t border-white/5">
                         <div className="grid md:grid-cols-2 gap-6">
                           <div>
-                            <p className="text-white/40 text-xs mb-1">Vorname</p>
+                            <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5">
+                              <User className="w-3 h-3" /> Vorname
+                            </p>
                             <p className="text-white/90">{bewerbung.formData.vorname || '-'}</p>
                           </div>
                           <div>
-                            <p className="text-white/40 text-xs mb-1">Nachname</p>
-                            <p className="text-white/90">{bewerbung.formData.nachname || '-'}</p>
-                          </div>
-                          <div>
-                            <p className="text-white/40 text-xs mb-1">Alter</p>
+                            <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5">
+                              <User className="w-3 h-3" /> Alter
+                            </p>
                             <p className="text-white/90">{bewerbung.formData.alter || '-'}</p>
                           </div>
                           <div>
-                            <p className="text-white/40 text-xs mb-1">Discord</p>
-                            <p className="text-white/90">{bewerbung.formData.discord || '-'}</p>
+                            <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5">
+                              <Gamepad2 className="w-3 h-3" /> Roblox Name
+                            </p>
+                            <p className="text-white/90">{bewerbung.formData.robloxName || '-'}</p>
                           </div>
-                          <div className="md:col-span-2">
-                            <p className="text-white/40 text-xs mb-1">Erfahrung</p>
-                            <p className="text-white/90 whitespace-pre-wrap">{bewerbung.formData.erfahrung || '-'}</p>
+                          <div>
+                            <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5">
+                              <Clock className="w-3 h-3" /> Spielzeit
+                            </p>
+                            <p className="text-white/90">{bewerbung.formData.spielzeit || '-'}</p>
                           </div>
-                          <div className="md:col-span-2">
-                            <p className="text-white/40 text-xs mb-1">Motivation</p>
-                            <p className="text-white/90 whitespace-pre-wrap">{bewerbung.formData.motivation || '-'}</p>
+                          <div>
+                            <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5">
+                              <Users className="w-3 h-3" /> Fraktion
+                            </p>
+                            <p className="text-white/90">{bewerbung.formData.fraktion || '-'}</p>
                           </div>
-                          <div className="md:col-span-2">
-                            <p className="text-white/40 text-xs mb-1">Verfügbarkeit</p>
-                            <p className="text-white/90 whitespace-pre-wrap">{bewerbung.formData.verfuegbarkeit || '-'}</p>
+                          <div>
+                            <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5">
+                              <Clock className="w-3 h-3" /> Stunden/Woche
+                            </p>
+                            <p className="text-white/90">{bewerbung.formData.stundenProWoche || '-'}</p>
                           </div>
-                          {bewerbung.formData.zusatz && (
+                          {bewerbung.formData.andererServer && (
                             <div className="md:col-span-2">
-                              <p className="text-white/40 text-xs mb-1">Zusätzliche Informationen</p>
-                              <p className="text-white/90 whitespace-pre-wrap">{bewerbung.formData.zusatz}</p>
+                              <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5">
+                                <Gamepad2 className="w-3 h-3" /> Andere Server
+                              </p>
+                              <p className="text-white/90 whitespace-pre-wrap text-sm">{bewerbung.formData.andererServer}</p>
                             </div>
                           )}
+                          <div className="md:col-span-2">
+                            <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5">
+                              <Shield className="w-3 h-3" /> Bann/Warn History
+                            </p>
+                            <p className="text-white/90 whitespace-pre-wrap text-sm">{bewerbung.formData.bannWarn || '-'}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5">
+                              <Target className="w-3 h-3" /> Motivation
+                            </p>
+                            <p className="text-white/90 whitespace-pre-wrap text-sm">{bewerbung.formData.warumTeam || '-'}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5">
+                              <Heart className="w-3 h-3" /> Geduld & Stressresistenz
+                            </p>
+                            <p className="text-white/90 whitespace-pre-wrap text-sm">{bewerbung.formData.geduldig || '-'}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5">
+                              <MessageSquare className="w-3 h-3" /> Fail-RP Lösung
+                            </p>
+                            <p className="text-white/90 whitespace-pre-wrap text-sm">{bewerbung.formData.failRpLoesung || '-'}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <p className="text-white/40 text-xs mb-1 flex items-center gap-1.5">
+                              <MessageSquare className="w-3 h-3" /> Streit-Lösung
+                            </p>
+                            <p className="text-white/90 whitespace-pre-wrap text-sm">{bewerbung.formData.streitLoesung || '-'}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <p className="text-white/40 text-xs mb-2">Voraussetzungen</p>
+                            <div className="flex flex-wrap gap-3">
+                              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+                                {bewerbung.formData.hatMikro ? (
+                                  <CheckCircle2 className="w-4 h-4 text-green-400" />
+                                ) : (
+                                  <XCircle className="w-4 h-4 text-red-400" />
+                                )}
+                                <Mic className="w-3 h-3 text-white/40" />
+                                <span className="text-xs text-white/60">Mikrofon</span>
+                              </div>
+                              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+                                {bewerbung.formData.kenntRegeln ? (
+                                  <CheckCircle2 className="w-4 h-4 text-green-400" />
+                                ) : (
+                                  <XCircle className="w-4 h-4 text-red-400" />
+                                )}
+                                <BookOpen className="w-3 h-3 text-white/40" />
+                                <span className="text-xs text-white/60">Regeln gelesen</span>
+                              </div>
+                              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.05]">
+                                {bewerbung.formData.bleibtNett ? (
+                                  <CheckCircle2 className="w-4 h-4 text-green-400" />
+                                ) : (
+                                  <XCircle className="w-4 h-4 text-red-400" />
+                                )}
+                                <Heart className="w-3 h-3 text-white/40" />
+                                <span className="text-xs text-white/60">Respektvoll</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     )}
