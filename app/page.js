@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { GlassCard } from '@/components/shared/GlassCard';
 import {
@@ -10,7 +11,7 @@ import {
   Zap, Radio, Headphones, Crosshair, MessageSquare,
   ShieldCheck, Building2, Siren, Flame, Stethoscope,
   UserCheck, CircleDot, Map, FileText, Play,
-  BadgeCheck, ArrowRight, CheckCircle2
+  BadgeCheck, ArrowRight, CheckCircle2, AlertTriangle, X
 } from 'lucide-react';
 
 const DiscordIcon = ({ size = 16 }) => (
@@ -43,12 +44,122 @@ function AnimatedSection({ children, className = '', delay = 0 }) {
   );
 }
 
+function ErrorModal({ error, onClose }) {
+  const getErrorContent = () => {
+    switch (error) {
+      case 'not_member':
+        return {
+          icon: <AlertTriangle className="w-12 h-12 text-yellow-400" />,
+          title: 'Nicht auf dem Discord-Server',
+          message: 'Du musst Mitglied unseres Discord-Servers sein, um dich anzumelden und eine Bewerbung einzureichen.',
+          action: 'Discord beitreten',
+          actionUrl: 'https://discord.gg/cFQUWrzpC',
+          color: 'yellow'
+        };
+      case 'auth_failed':
+        return {
+          icon: <X className="w-12 h-12 text-red-400" />,
+          title: 'Anmeldung fehlgeschlagen',
+          message: 'Die Anmeldung mit Discord ist fehlgeschlagen. Bitte versuche es erneut.',
+          action: 'Erneut versuchen',
+          actionUrl: '/api/auth/discord',
+          color: 'red'
+        };
+      default:
+        return {
+          icon: <AlertTriangle className="w-12 h-12 text-orange-400" />,
+          title: 'Ein Fehler ist aufgetreten',
+          message: 'Es gab ein Problem bei der Anmeldung. Bitte versuche es später erneut.',
+          action: 'Schließen',
+          actionUrl: null,
+          color: 'orange'
+        };
+    }
+  };
+
+  const content = getErrorContent();
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+      <div className="relative max-w-md w-full animate-scale-in">
+        <GlassCard className="p-8 border border-white/10">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <div className="text-center space-y-6">
+            <div className={`w-20 h-20 rounded-3xl bg-${content.color}-500/10 border border-${content.color}-500/20 flex items-center justify-center mx-auto`}>
+              {content.icon}
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold mb-2">{content.title}</h2>
+              <p className="text-white/60 leading-relaxed">{content.message}</p>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {content.actionUrl ? (
+                <a
+                  href={content.actionUrl}
+                  target={content.actionUrl.startsWith('http') ? '_blank' : undefined}
+                  rel={content.actionUrl.startsWith('http') ? 'noopener noreferrer' : undefined}
+                  className={`flex items-center justify-center gap-2 ${
+                    content.color === 'yellow' 
+                      ? 'bg-[#5865F2] hover:bg-[#4752C4]' 
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  } text-white px-6 py-3 rounded-xl font-medium transition-all hover:scale-105 active:scale-95`}
+                >
+                  {content.color === 'yellow' && <DiscordIcon size={18} />}
+                  {content.action}
+                  <ArrowRight className="w-4 h-4" />
+                </a>
+              ) : (
+                <button
+                  onClick={onClose}
+                  className="bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-xl font-medium transition-all"
+                >
+                  {content.action}
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="text-white/40 hover:text-white text-sm transition-colors"
+              >
+                Schließen
+              </button>
+            </div>
+          </div>
+        </GlassCard>
+      </div>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const { user } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [showError, setShowError] = useState(null);
+
+  useEffect(() => {
+    const error = searchParams.get('error');
+    if (error) {
+      setShowError(error);
+      // Remove error from URL without page reload
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [searchParams]);
+
   const handleLogin = () => { window.location.replace('/api/auth/discord'); };
 
   return (
     <div className="space-y-0 pb-0 overflow-hidden">
+      {showError && <ErrorModal error={showError} onClose={() => setShowError(null)} />}
+      
       {/* ========== HERO SECTION ========== */}
       <section className="relative min-h-screen flex items-center justify-center text-center px-4 overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">
