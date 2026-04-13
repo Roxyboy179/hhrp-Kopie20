@@ -388,22 +388,32 @@ async function handleWithdrawBewerbung(request, id) {
 async function handleAdminLogin(request) {
   try {
     const { mitarbeiterNummer, email, password } = await request.json();
+    
+    console.log('[DEBUG] Admin login attempt:', { mitarbeiterNummer, email });
 
     const account = await getAdminAccountByCredentials(mitarbeiterNummer, email, password);
+    
+    console.log('[DEBUG] Account found:', account ? 'YES' : 'NO');
+    
     if (!account) {
+      console.log('[DEBUG] Login failed: Invalid credentials');
       return NextResponse.json({ error: 'Ungültige Anmeldedaten' }, { status: 401 });
     }
 
+    console.log('[DEBUG] Checking Discord member...');
     const member = await getGuildMember(account.discord_user_id);
     if (!member) {
+      console.log('[DEBUG] Discord member not found');
       return NextResponse.json({ error: 'Discord-Mitgliedschaft nicht gefunden' }, { status: 403 });
     }
 
     const adminRole = getAdminRole(member.roles || []);
     if (!adminRole) {
+      console.log('[DEBUG] No admin role found');
       return NextResponse.json({ error: 'Keine Admin-Berechtigung auf Discord' }, { status: 403 });
     }
 
+    console.log('[DEBUG] Login successful');
     const admin = {
       discordUserId: account.discord_user_id,
       discordUsername: account.discord_username,
@@ -425,7 +435,7 @@ async function handleAdminLogin(request) {
 
     return response;
   } catch (error) {
-    console.error('Admin login error:', error);
+    console.error('[DEBUG] Admin login error:', error);
     return NextResponse.json({ error: 'Anmeldefehler' }, { status: 500 });
   }
 }
