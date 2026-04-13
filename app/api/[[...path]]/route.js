@@ -586,21 +586,44 @@ export async function GET(request) {
   const url = new URL(request.url);
   const p = url.pathname.replace('/api/', '');
 
-  // DEBUG ENDPOINT
+  // DEBUG ENDPOINT - Supabase Test
   if (p === 'debug/test-supabase') {
     try {
-      const { data, error } = await supabaseAdmin.from('admin_accounts').select('*');
+      console.log('[DEBUG] Testing Supabase connection...');
+      console.log('[DEBUG] URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+      console.log('[DEBUG] Key exists:', !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+      
+      const { data, error, status, statusText } = await supabaseAdmin
+        .from('admin_accounts')
+        .select('*');
+      
+      console.log('[DEBUG] Response status:', status, statusText);
+      console.log('[DEBUG] Error:', error);
+      console.log('[DEBUG] Data:', data);
+      
       return NextResponse.json({ 
-        success: !error, 
+        success: !error,
+        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasServiceKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        status,
+        statusText,
         accounts: data?.map(a => ({ 
+          id: a.id,
           mitarbeiter_nummer: a.mitarbeiter_nummer, 
           email: a.email,
-          discord_username: a.discord_username 
+          discord_username: a.discord_username,
+          password_hash: a.password_hash // Zeigen für Debug
         })),
-        error: error?.message 
+        error: error?.message || error,
+        rawError: error
       });
     } catch (e) {
-      return NextResponse.json({ error: e.message }, { status: 500 });
+      console.error('[DEBUG] Exception:', e);
+      return NextResponse.json({ 
+        error: e.message, 
+        stack: e.stack,
+        type: e.constructor.name 
+      }, { status: 500 });
     }
   }
 
