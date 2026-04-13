@@ -113,7 +113,18 @@ export default function AdminBewerbungenPage() {
       const data = await res.json();
       if (res.ok) {
         await fetchBewerbungen();
-        if (selected?.id === id) setSelected(data.bewerbung);
+        if (selected?.id === id) {
+          // formData als String parsen falls nötig
+          const bewerbung = data.bewerbung;
+          if (bewerbung && typeof bewerbung.formData === 'string') {
+            try {
+              bewerbung.formData = JSON.parse(bewerbung.formData);
+            } catch (e) {
+              console.error('Fehler beim Parsen von formData:', e);
+            }
+          }
+          setSelected(bewerbung);
+        }
       } else {
         alert(data.error || 'Fehler');
       }
