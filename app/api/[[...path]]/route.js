@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { supabaseAdmin } from '@/lib/supabase';
 import { 
   createBewerbung, 
   getUserBewerbungen, 
@@ -584,6 +585,24 @@ async function handleAdminDeleteAccount(request, id) {
 export async function GET(request) {
   const url = new URL(request.url);
   const p = url.pathname.replace('/api/', '');
+
+  // DEBUG ENDPOINT
+  if (p === 'debug/test-supabase') {
+    try {
+      const { data, error } = await supabaseAdmin.from('admin_accounts').select('*');
+      return NextResponse.json({ 
+        success: !error, 
+        accounts: data?.map(a => ({ 
+          mitarbeiter_nummer: a.mitarbeiter_nummer, 
+          email: a.email,
+          discord_username: a.discord_username 
+        })),
+        error: error?.message 
+      });
+    } catch (e) {
+      return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+  }
 
   switch (p) {
     case 'auth/discord': return handleDiscordAuth();
