@@ -80,6 +80,13 @@ export default function AdminBewerbungenPage() {
         setLoading(false);
       }
     })();
+
+    // Auto-Refresh alle 10 Sekunden
+    const interval = setInterval(() => {
+      fetchBewerbungen();
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchBewerbungen = async () => {
