@@ -664,6 +664,24 @@ export async function GET(request) {
     }
   }
 
+  // DEBUG ENDPOINT - Test Login
+  if (p === 'debug/test-login') {
+    try {
+      const testResult = await getAdminAccountByCredentials('MA-001', 'roxyboy2474', 'Joellading1202');
+      return NextResponse.json({
+        success: !!testResult,
+        account: testResult,
+        message: testResult ? 'Login would succeed!' : 'Login would fail!'
+      });
+    } catch (e) {
+      return NextResponse.json({
+        success: false,
+        error: e.message,
+        stack: e.stack
+      });
+    }
+  }
+
   switch (p) {
     case 'auth/discord': return handleDiscordAuth();
     case 'auth/callback': return handleDiscordCallback(request);
