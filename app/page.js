@@ -45,7 +45,7 @@ function AnimatedSection({ children, className = '', delay = 0 }) {
 
 export default function LandingPage() {
   const { user } = useAuth();
-  const handleLogin = () => { window.location.href = '/api/auth/discord'; };
+  const handleLogin = () => { window.location.replace('/api/auth/discord'); };
 
   return (
     <div className="space-y-0 pb-0 overflow-hidden">

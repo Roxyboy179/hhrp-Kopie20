@@ -25,7 +25,10 @@ export function Navbar({ user, loading }) {
     return () => window.removeEventListener('scroll', handler);
   }, []);
 
-  const handleLogin = () => { window.location.href = '/api/auth/discord'; };
+  const handleLogin = () => { 
+    // Force a full page navigation to avoid Next.js RSC handling
+    window.location.replace('/api/auth/discord'); 
+  };
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     window.location.href = '/';
@@ -93,13 +96,13 @@ export function Navbar({ user, loading }) {
               </Button>
             </div>
           ) : (
-            <button
-              onClick={handleLogin}
+            <a
+              href="/api/auth/discord"
               className="flex items-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-2 rounded-xl text-sm font-medium shadow-lg shadow-[#5865F2]/25 hover:shadow-[#5865F2]/40 transition-all hover:scale-105 active:scale-95"
             >
               <DiscordIcon size={14} />
               <span className="hidden sm:inline">Anmelden</span>
-            </button>
+            </a>
           )}
           <button className="md:hidden text-white/50 hover:text-white p-2 rounded-xl hover:bg-white/[0.04] transition-all" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
