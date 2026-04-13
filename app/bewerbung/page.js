@@ -6,37 +6,63 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { GlassCard } from '@/components/shared/GlassCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { 
-  Loader2, Send, CheckCircle2, AlertTriangle, ArrowLeft, FileText 
+  FileText, Send, Loader2, AlertTriangle, CheckCircle2, ArrowLeft 
 } from 'lucide-react';
 
 const inputClass = "bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-blue-500/40 focus:ring-blue-500/20 rounded-xl";
+
+function FormSection({ number, title, emoji, children }) {
+  return (
+    <div className="space-y-4">
+      <h3 className="text-base font-semibold flex items-center gap-2 text-white/90">
+        <span className="text-lg">{emoji}</span>
+        <span className="text-blue-400">{number}.</span> {title}
+      </h3>
+      <div className="space-y-4 pl-4 md:pl-7 border-l-2 border-blue-500/20">{children}</div>
+    </div>
+  );
+}
+
+function FormField({ label, required, children }) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-white/60 text-sm">{label} {required && <span className="text-red-400">*</span>}</Label>
+      {children}
+    </div>
+  );
+}
 
 export default function BewerbungPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [formData, setFormData] = useState({
     vorname: '',
-    nachname: '',
     alter: '',
-    discord: '',
-    erfahrung: '',
-    motivation: '',
-    verfuegbarkeit: '',
-    zusatz: ''
+    robloxName: '',
+    spielzeit: '',
+    fraktion: '',
+    andererServer: '',
+    bannWarn: '',
+    warumTeam: '',
+    geduldig: '',
+    stundenProWoche: '',
+    failRpLoesung: '',
+    streitLoesung: '',
+    hatMikro: false,
+    kenntRegeln: false,
+    bleibtNett: false,
   });
   const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/?error=not_logged_in');
-    }
-    if (user) {
-      setFormData(prev => ({ ...prev, discord: user.username || user.globalName || '' }));
     }
   }, [user, authLoading, router]);
 
@@ -53,9 +79,9 @@ export default function BewerbungPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok) throw new Error(data.error || 'Fehler beim Einreichen');
 
-      setSuccess(true);
+      setSubmitted(true);
       setTimeout(() => router.push('/meine-bewerbungen'), 2000);
     } catch (e) {
       setError(e.message);
@@ -74,7 +100,7 @@ export default function BewerbungPage() {
 
   if (!user) return null;
 
-  if (success) {
+  if (submitted) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="max-w-md w-full animate-fade-in-up">
@@ -115,19 +141,19 @@ export default function BewerbungPage() {
             <FileText className="w-4 h-4 text-blue-400" />
             <span className="text-sm text-blue-300">Team-Bewerbung</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold mb-3">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3">
             Bewirb dich für unser Team
           </h1>
-          <p className="text-white/60 text-lg">
+          <p className="text-white/60 text-base md:text-lg">
             Fülle das Formular aus und werde Teil von Hamburg Horizon RP
           </p>
         </div>
 
-        <GlassCard className="p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label className="text-white/60 text-sm">Vorname *</Label>
+        <GlassCard className="p-6 md:p-8">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Persönliche Informationen */}
+            <FormSection number={1} title="Persönliche Informationen" emoji="👤">
+              <FormField label="Vorname" required>
                 <Input
                   value={formData.vorname}
                   onChange={e => setFormData({ ...formData, vorname: e.target.value })}
@@ -135,23 +161,9 @@ export default function BewerbungPage() {
                   className={inputClass}
                   required
                 />
-              </div>
+              </FormField>
 
-              <div className="space-y-2">
-                <Label className="text-white/60 text-sm">Nachname *</Label>
-                <Input
-                  value={formData.nachname}
-                  onChange={e => setFormData({ ...formData, nachname: e.target.value })}
-                  placeholder="Mustermann"
-                  className={inputClass}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label className="text-white/60 text-sm">Alter *</Label>
+              <FormField label="Alter" required>
                 <Input
                   type="number"
                   value={formData.alter}
@@ -159,93 +171,190 @@ export default function BewerbungPage() {
                   placeholder="18"
                   className={inputClass}
                   required
-                  min="16"
+                  min="13"
                 />
-              </div>
+              </FormField>
 
-              <div className="space-y-2">
-                <Label className="text-white/60 text-sm">Discord Username *</Label>
+              <FormField label="Roblox Name" required>
                 <Input
-                  value={formData.discord}
-                  onChange={e => setFormData({ ...formData, discord: e.target.value })}
-                  placeholder="username#0000"
+                  value={formData.robloxName}
+                  onChange={e => setFormData({ ...formData, robloxName: e.target.value })}
+                  placeholder="Dein Roblox Username"
                   className={inputClass}
                   required
                 />
+              </FormField>
+            </FormSection>
+
+            {/* Roleplay Erfahrung */}
+            <FormSection number={2} title="Roleplay Erfahrung" emoji="🎮">
+              <FormField label="Wie lange spielst du schon Roleplay?" required>
+                <Input
+                  value={formData.spielzeit}
+                  onChange={e => setFormData({ ...formData, spielzeit: e.target.value })}
+                  placeholder="z.B. 2 Jahre"
+                  className={inputClass}
+                  required
+                />
+              </FormField>
+
+              <FormField label="In welcher Fraktion möchtest du arbeiten?" required>
+                <Input
+                  value={formData.fraktion}
+                  onChange={e => setFormData({ ...formData, fraktion: e.target.value })}
+                  placeholder="z.B. Polizei, Feuerwehr, Rettungsdienst"
+                  className={inputClass}
+                  required
+                />
+              </FormField>
+
+              <FormField label="Warst du schon auf einem anderen RP-Server?">
+                <Textarea
+                  value={formData.andererServer}
+                  onChange={e => setFormData({ ...formData, andererServer: e.target.value })}
+                  placeholder="Wenn ja, welcher und wie war deine Erfahrung?"
+                  className={inputClass + " min-h-[80px] resize-none"}
+                />
+              </FormField>
+
+              <FormField label="Wurdest du schon mal gebannt oder verwarnt?" required>
+                <Textarea
+                  value={formData.bannWarn}
+                  onChange={e => setFormData({ ...formData, bannWarn: e.target.value })}
+                  placeholder="Wenn ja, warum? Bitte sei ehrlich."
+                  className={inputClass + " min-h-[80px] resize-none"}
+                  required
+                />
+              </FormField>
+            </FormSection>
+
+            {/* Motivation */}
+            <FormSection number={3} title="Motivation & Eigenschaften" emoji="💡">
+              <FormField label="Warum möchtest du in unser Team?" required>
+                <Textarea
+                  value={formData.warumTeam}
+                  onChange={e => setFormData({ ...formData, warumTeam: e.target.value })}
+                  placeholder="Was motiviert dich?"
+                  className={inputClass + " min-h-[120px] resize-none"}
+                  required
+                />
+              </FormField>
+
+              <FormField label="Bist du geduldig und kannst du mit Stress umgehen?" required>
+                <Textarea
+                  value={formData.geduldig}
+                  onChange={e => setFormData({ ...formData, geduldig: e.target.value })}
+                  placeholder="Beschreibe deine Stärken"
+                  className={inputClass + " min-h-[100px] resize-none"}
+                  required
+                />
+              </FormField>
+
+              <FormField label="Wie viele Stunden pro Woche kannst du aktiv sein?" required>
+                <Input
+                  value={formData.stundenProWoche}
+                  onChange={e => setFormData({ ...formData, stundenProWoche: e.target.value })}
+                  placeholder="z.B. 10-15 Stunden"
+                  className={inputClass}
+                  required
+                />
+              </FormField>
+            </FormSection>
+
+            {/* Situationen */}
+            <FormSection number={4} title="Situationsfragen" emoji="⚖️">
+              <FormField label="Ein Spieler macht Fail-RP. Wie gehst du vor?" required>
+                <Textarea
+                  value={formData.failRpLoesung}
+                  onChange={e => setFormData({ ...formData, failRpLoesung: e.target.value })}
+                  placeholder="Beschreibe deine Vorgehensweise"
+                  className={inputClass + " min-h-[120px] resize-none"}
+                  required
+                />
+              </FormField>
+
+              <FormField label="Zwei Spieler streiten sich. Wie löst du den Konflikt?" required>
+                <Textarea
+                  value={formData.streitLoesung}
+                  onChange={e => setFormData({ ...formData, streitLoesung: e.target.value })}
+                  placeholder="Beschreibe deine Lösung"
+                  className={inputClass + " min-h-[120px] resize-none"}
+                  required
+                />
+              </FormField>
+            </FormSection>
+
+            {/* Voraussetzungen */}
+            <FormSection number={5} title="Voraussetzungen" emoji="✅">
+              <div className="space-y-3">
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+                  <Checkbox
+                    checked={formData.hatMikro}
+                    onCheckedChange={v => setFormData({ ...formData, hatMikro: v })}
+                    className="mt-0.5"
+                    required
+                  />
+                  <label className="text-sm text-white/80 cursor-pointer">
+                    Ich habe ein funktionierendes Mikrofon
+                  </label>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+                  <Checkbox
+                    checked={formData.kenntRegeln}
+                    onCheckedChange={v => setFormData({ ...formData, kenntRegeln: v })}
+                    className="mt-0.5"
+                    required
+                  />
+                  <label className="text-sm text-white/80 cursor-pointer">
+                    Ich habe die Serverregeln gelesen und verstanden
+                  </label>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/[0.05]">
+                  <Checkbox
+                    checked={formData.bleibtNett}
+                    onCheckedChange={v => setFormData({ ...formData, bleibtNett: v })}
+                    className="mt-0.5"
+                    required
+                  />
+                  <label className="text-sm text-white/80 cursor-pointer">
+                    Ich verpflichte mich, respektvoll und fair zu bleiben
+                  </label>
+                </div>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-white/60 text-sm">Roleplay Erfahrung *</Label>
-              <Textarea
-                value={formData.erfahrung}
-                onChange={e => setFormData({ ...formData, erfahrung: e.target.value })}
-                placeholder="Beschreibe deine bisherige Erfahrung im Roleplay..."
-                className={inputClass + " min-h-[120px] resize-none"}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-white/60 text-sm">Warum möchtest du in unser Team? *</Label>
-              <Textarea
-                value={formData.motivation}
-                onChange={e => setFormData({ ...formData, motivation: e.target.value })}
-                placeholder="Was motiviert dich, Teil unseres Teams zu werden?"
-                className={inputClass + " min-h-[120px] resize-none"}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-white/60 text-sm">Verfügbarkeit *</Label>
-              <Textarea
-                value={formData.verfuegbarkeit}
-                onChange={e => setFormData({ ...formData, verfuegbarkeit: e.target.value })}
-                placeholder="Wann bist du in der Regel online und verfügbar?"
-                className={inputClass + " min-h-[80px] resize-none"}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-white/60 text-sm">Zusätzliche Informationen</Label>
-              <Textarea
-                value={formData.zusatz}
-                onChange={e => setFormData({ ...formData, zusatz: e.target.value })}
-                placeholder="Gibt es noch etwas, das wir wissen sollten?"
-                className={inputClass + " min-h-[80px] resize-none"}
-              />
-            </div>
+            </FormSection>
 
             {error && (
               <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex items-center gap-3">
-                <AlertTriangle className="w-5 h-5 text-red-400" />
+                <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0" />
                 <span className="text-red-300 text-sm">{error}</span>
               </div>
             )}
 
-            <Button
-              type="submit"
-              disabled={submitting}
-              className="w-full bg-blue-600 hover:bg-blue-700 rounded-xl h-12 text-lg"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  Wird eingereicht...
-                </>
-              ) : (
-                <>
-                  <Send className="w-5 h-5 mr-2" />
-                  Bewerbung einreichen
-                </>
-              )}
-            </Button>
+            <div className="pt-4 border-t border-white/5">
+              <Button
+                type="submit"
+                disabled={submitting}
+                className="w-full bg-blue-600 hover:bg-blue-700 rounded-xl h-12 text-lg"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    Wird eingereicht...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-5 h-5 mr-2" />
+                    Bewerbung einreichen
+                  </>
+                )}
+              </Button>
 
-            <p className="text-white/40 text-xs text-center">
-              Mit dem Absenden bestätigst du, dass alle Angaben wahrheitsgemäß sind.
-            </p>
+              <p className="text-white/40 text-xs text-center mt-4">
+                Mit dem Absenden bestätigst du, dass alle Angaben wahrheitsgemäß sind.
+              </p>
+            </div>
           </form>
         </GlassCard>
       </div>
