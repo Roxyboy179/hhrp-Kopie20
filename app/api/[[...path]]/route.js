@@ -374,6 +374,22 @@ async function handleGetBewerbungen(request) {
   }
 }
 
+async function handleGetBewerbungenStats(request) {
+  try {
+    const bewerbungen = await getAllBewerbungen();
+    const stats = {
+      total: bewerbungen.length,
+      angenommen: bewerbungen.filter(b => b.status === 'Angenommen').length,
+      inBearbeitung: bewerbungen.filter(b => b.status === 'In Bearbeitung').length,
+      eingereicht: bewerbungen.filter(b => b.status === 'Eingereicht').length,
+    };
+    return NextResponse.json(stats);
+  } catch (error) {
+    console.error('Get stats error:', error);
+    return NextResponse.json({ total: 0, angenommen: 0, inBearbeitung: 0 });
+  }
+}
+
 async function handleWithdrawBewerbung(request, id) {
   const user = getUserFromRequest(request);
   if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
@@ -687,6 +703,7 @@ export async function GET(request) {
     case 'auth/callback': return handleDiscordCallback(request);
     case 'auth/me': return handleAuthMe(request);
     case 'bewerbungen': return handleGetBewerbungen(request);
+    case 'bewerbungen/stats': return handleGetBewerbungenStats(request);
     case 'admin/me': return handleAdminMe(request);
     case 'admin/bewerbungen': return handleAdminGetBewerbungen(request);
     case 'admin/accounts': return handleAdminGetAccounts(request);

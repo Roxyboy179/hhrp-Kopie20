@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { 
   Loader2, FileText, RefreshCw, ChevronRight, ArrowLeft, 
-  AlertTriangle, User, Clock, CheckCircle2, XCircle 
+  AlertTriangle, Clock, CheckCircle2, XCircle, Plus
 } from 'lucide-react';
 
 function formatDateTime(dateStr) {
@@ -32,22 +32,13 @@ function getStatusColor(status) {
 
 function StatusIcon({ status }) {
   switch (status) {
-    case 'Eingereicht': return <Clock className="w-3.5 h-3.5" />;
-    case 'In Bearbeitung': return <Loader2 className="w-3.5 h-3.5 animate-spin" />;
-    case 'Angenommen': return <CheckCircle2 className="w-3.5 h-3.5" />;
-    case 'Abgelehnt': return <XCircle className="w-3.5 h-3.5" />;
-    case 'Zurückgezogen': return <AlertTriangle className="w-3.5 h-3.5" />;
-    default: return <Clock className="w-3.5 h-3.5" />;
+    case 'Eingereicht': return <Clock className="w-4 h-4" />;
+    case 'In Bearbeitung': return <Loader2 className="w-4 h-4 animate-spin" />;
+    case 'Angenommen': return <CheckCircle2 className="w-4 h-4" />;
+    case 'Abgelehnt': return <XCircle className="w-4 h-4" />;
+    case 'Zurückgezogen': return <AlertTriangle className="w-4 h-4" />;
+    default: return <Clock className="w-4 h-4" />;
   }
-}
-
-function DetailRow({ label, value }) {
-  return (
-    <div className="grid grid-cols-[140px_1fr] gap-4 py-1.5">
-      <span className="text-white/40 text-sm">{label}</span>
-      <span className="text-white/80 text-sm whitespace-pre-wrap">{value || '-'}</span>
-    </div>
-  );
 }
 
 export default function MeineBewerbungenPage() {
@@ -56,6 +47,16 @@ export default function MeineBewerbungenPage() {
   const [bewerbungen, setBewerbungen] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/?error=not_logged_in');
+      return;
+    }
+    if (user) {
+      fetchBewerbungen();
+    }
+  }, [user, authLoading, router]);
 
   const fetchBewerbungen = async () => {
     setLoading(true);
@@ -70,19 +71,13 @@ export default function MeineBewerbungenPage() {
     }
   };
 
-  useEffect(() => {
-    if (user) {
-      fetchBewerbungen();
-    }
-  }, [user]);
-
   const handleWithdraw = async (id) => {
     if (!confirm('Möchtest du diese Bewerbung wirklich zurückziehen?')) return;
     try {
       const res = await fetch(`/api/bewerbungen/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        fetchBewerbungen();
-        if (selected?.id === id) setSelected(null);
+        await fetchBewerbungen();
+        setSelected(null);
       }
     } catch (e) {
       console.error(e);
@@ -91,147 +86,145 @@ export default function MeineBewerbungenPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
       </div>
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <GlassCard className="p-8 max-w-md w-full text-center">
-          <AlertTriangle className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Anmeldung erforderlich</h2>
-          <p className="text-white/40 mb-6">Du musst angemeldet sein, um deine Bewerbungen zu sehen.</p>
-          <button 
-            onClick={() => window.location.href = '/api/auth/discord'} 
-            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 h-9 px-4 py-2 bg-[#5865F2] hover:bg-[#4752C4] rounded-xl text-white"
-          >
-            Mit Discord anmelden
-          </button>
-        </GlassCard>
-      </div>
-    );
-  }
-
-  if (selected) {
-    const fd = selected.formData || {};
-    return (
-      <div className="min-h-screen py-12 px-4">
-        <div className="max-w-3xl mx-auto animate-fade-in-up">
-          <Button variant="ghost" onClick={() => setSelected(null)} className="text-white/50 hover:text-white mb-4 gap-2 rounded-xl">
-            <ArrowLeft className="w-4 h-4" /> Zurück
-          </Button>
-          <GlassCard className="p-6 md:p-10 space-y-6">
-            <div className="flex items-start justify-between flex-wrap gap-4">
-              <div>
-                <h2 className="text-xl font-bold">Bewerbung #{selected.id.substring(0, 8)}</h2>
-                <p className="text-sm text-white/35 mt-1">Eingereicht am {formatDateTime(selected.createdAt)}</p>
-              </div>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${getStatusColor(selected.status)}`}>
-                <StatusIcon status={selected.status} />
-                {selected.status}
-              </span>
-            </div>
-
-            {selected.claimedByName && (
-              <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 text-sm flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Wird bearbeitet von: {selected.claimedByName}
-              </div>
-            )}
-
-            <Separator className="bg-white/[0.06]" />
-
-            <div className="space-y-1">
-              <DetailRow label="Vorname" value={fd.vorname} />
-              <DetailRow label="Alter" value={fd.alter} />
-              <DetailRow label="Roblox-Name" value={fd.robloxName} />
-              <DetailRow label="Spielzeit" value={fd.spielzeit} />
-              <DetailRow label="Fraktion" value={fd.fraktion} />
-              <DetailRow label="Anderer Server" value={fd.andererServer} />
-              <DetailRow label="Bann/Warn" value={fd.bannWarn} />
-              <DetailRow label="Warum Team?" value={fd.warumTeam} />
-              <DetailRow label="Geduldig?" value={fd.geduldig} />
-              <DetailRow label="Stunden/Woche" value={fd.stundenProWoche} />
-              <DetailRow label="Fail-RP Lösung" value={fd.failRpLoesung} />
-              <DetailRow label="Streit-Lösung" value={fd.streitLoesung} />
-              <DetailRow label="Mikro" value={fd.hatMikro ? 'Ja' : 'Nein'} />
-              <DetailRow label="Kennt Regeln" value={fd.kenntRegeln ? 'Ja' : 'Nein'} />
-              <DetailRow label="Bleibt nett" value={fd.bleibtNett ? 'Ja' : 'Nein'} />
-            </div>
-
-            {(selected.status === 'Eingereicht' || selected.status === 'In Bearbeitung') && (
-              <>
-                <Separator className="bg-white/[0.06]" />
-                <div className="flex justify-end">
-                  <Button 
-                    variant="destructive" 
-                    onClick={() => handleWithdraw(selected.id)} 
-                    className="gap-2 rounded-xl"
-                  >
-                    <AlertTriangle className="w-4 h-4" /> Zurückziehen
-                  </Button>
-                </div>
-              </>
-            )}
-          </GlassCard>
-        </div>
-      </div>
-    );
-  }
+  if (!user) return null;
 
   return (
-    <div className="min-h-screen py-12 px-4">
-      <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold">Meine Bewerbungen</h2>
-          <Button 
-            variant="ghost" 
-            onClick={fetchBewerbungen} 
-            className="text-white/40 hover:text-white gap-2 rounded-xl" 
-            size="sm"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </Button>
+    <div className="min-h-screen px-4 py-8">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <Button
+              variant="ghost"
+              onClick={() => router.push('/')}
+              className="mb-4 text-white/60 hover:text-white"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Zurück zur Startseite
+            </Button>
+            <h1 className="text-4xl font-bold">Meine Bewerbungen</h1>
+            <p className="text-white/60 mt-2">Übersicht deiner Team-Bewerbungen</p>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={fetchBewerbungen}
+              className="rounded-xl border-white/10"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Aktualisieren
+            </Button>
+            <Button
+              onClick={() => router.push('/bewerbung')}
+              className="bg-blue-600 hover:bg-blue-700 rounded-xl"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Neue Bewerbung
+            </Button>
+          </div>
         </div>
 
         {bewerbungen.length === 0 ? (
-          <GlassCard className="p-14 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-white/[0.03] flex items-center justify-center mx-auto mb-4">
-              <FileText className="w-8 h-8 text-white/15" />
-            </div>
-            <p className="text-white/40 mb-2">Keine Bewerbungen vorhanden</p>
-            <p className="text-white/20 text-sm">Schreibe deine erste Bewerbung, um Teil des Teams zu werden.</p>
+          <GlassCard className="p-16 text-center">
+            <FileText className="w-16 h-16 text-white/20 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Noch keine Bewerbungen</h3>
+            <p className="text-white/40 mb-6">Du hast noch keine Bewerbung eingereicht.</p>
+            <Button
+              onClick={() => router.push('/bewerbung')}
+              className="bg-blue-600 hover:bg-blue-700 rounded-xl"
+            >
+              Jetzt bewerben
+            </Button>
           </GlassCard>
         ) : (
-          <div className="space-y-3">
-            {bewerbungen.map(b => (
-              <GlassCard key={b.id} hover className="p-5" onClick={() => setSelected(b)}>
+          <div className="grid gap-4">
+            {bewerbungen.map(bewerbung => (
+              <GlassCard key={bewerbung.id} className="p-6">
                 <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                      <span className="font-semibold text-sm">#{b.id.substring(0, 8)}</span>
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(b.status)}`}>
-                        <StatusIcon status={b.status} />
-                        {b.status}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-lg font-semibold">
+                        Bewerbung vom {formatDateTime(bewerbung.createdAt)}
+                      </h3>
+                      <span className={`px-3 py-1 rounded-full text-xs border flex items-center gap-1.5 ${getStatusColor(bewerbung.status)}`}>
+                        <StatusIcon status={bewerbung.status} />
+                        {bewerbung.status}
                       </span>
                     </div>
-                    <p className="text-xs text-white/30">{formatDateTime(b.createdAt)}</p>
+                    
+                    {bewerbung.claimedByName && (
+                      <p className="text-white/40 text-sm">
+                        Bearbeitet von: {bewerbung.claimedByName}
+                      </p>
+                    )}
+
+                    {selected === bewerbung.id && bewerbung.formData && (
+                      <div className="mt-6 pt-6 border-t border-white/5">
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <div>
+                            <p className="text-white/40 text-xs mb-1">Vorname</p>
+                            <p className="text-white/90">{bewerbung.formData.vorname || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-white/40 text-xs mb-1">Nachname</p>
+                            <p className="text-white/90">{bewerbung.formData.nachname || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-white/40 text-xs mb-1">Alter</p>
+                            <p className="text-white/90">{bewerbung.formData.alter || '-'}</p>
+                          </div>
+                          <div>
+                            <p className="text-white/40 text-xs mb-1">Discord</p>
+                            <p className="text-white/90">{bewerbung.formData.discord || '-'}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <p className="text-white/40 text-xs mb-1">Erfahrung</p>
+                            <p className="text-white/90 whitespace-pre-wrap">{bewerbung.formData.erfahrung || '-'}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <p className="text-white/40 text-xs mb-1">Motivation</p>
+                            <p className="text-white/90 whitespace-pre-wrap">{bewerbung.formData.motivation || '-'}</p>
+                          </div>
+                          <div className="md:col-span-2">
+                            <p className="text-white/40 text-xs mb-1">Verfügbarkeit</p>
+                            <p className="text-white/90 whitespace-pre-wrap">{bewerbung.formData.verfuegbarkeit || '-'}</p>
+                          </div>
+                          {bewerbung.formData.zusatz && (
+                            <div className="md:col-span-2">
+                              <p className="text-white/40 text-xs mb-1">Zusätzliche Informationen</p>
+                              <p className="text-white/90 whitespace-pre-wrap">{bewerbung.formData.zusatz}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    {(b.status === 'Eingereicht' || b.status === 'In Bearbeitung') && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={(e) => { e.stopPropagation(); handleWithdraw(b.id); }} 
-                        className="text-red-400/70 hover:text-red-300 hover:bg-red-500/10 text-xs rounded-lg h-7"
+
+                  <div className="flex items-center gap-3 ml-4">
+                    {bewerbung.status === 'Eingereicht' || bewerbung.status === 'In Bearbeitung' ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleWithdraw(bewerbung.id)}
+                        className="rounded-xl border-red-500/20 text-red-300 hover:bg-red-500/10"
                       >
                         Zurückziehen
                       </Button>
-                    )}
-                    <ChevronRight className="w-4 h-4 text-white/20" />
+                    ) : null}
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelected(selected === bewerbung.id ? null : bewerbung.id)}
+                      className="rounded-xl"
+                    >
+                      <ChevronRight className={`w-5 h-5 transition-transform ${selected === bewerbung.id ? 'rotate-90' : ''}`} />
+                    </Button>
                   </div>
                 </div>
               </GlassCard>
