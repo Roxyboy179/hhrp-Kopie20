@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
@@ -138,11 +138,8 @@ function ErrorModal({ error, onClose }) {
   );
 }
 
-export default function LandingPage() {
-  const { user } = useAuth();
-  const router = useRouter();
+function ErrorHandler({ showError, setShowError }) {
   const searchParams = useSearchParams();
-  const [showError, setShowError] = useState(null);
 
   useEffect(() => {
     const error = searchParams.get('error');
@@ -152,13 +149,23 @@ export default function LandingPage() {
       const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
     }
-  }, [searchParams]);
+  }, [searchParams, setShowError]);
+
+  return showError ? <ErrorModal error={showError} onClose={() => setShowError(null)} /> : null;
+}
+
+export default function LandingPage() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const [showError, setShowError] = useState(null);
 
   const handleLogin = () => { window.location.replace('/api/auth/discord'); };
 
   return (
     <div className="space-y-0 pb-0 overflow-hidden">
-      {showError && <ErrorModal error={showError} onClose={() => setShowError(null)} />}
+      <Suspense fallback={null}>
+        <ErrorHandler showError={showError} setShowError={setShowError} />
+      </Suspense>
       
       {/* ========== HERO SECTION ========== */}
       <section className="relative min-h-screen flex items-center justify-center text-center px-4 overflow-hidden">
