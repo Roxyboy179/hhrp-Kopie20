@@ -2,10 +2,12 @@
 -- ADMIN-ACCOUNT ERSTELLEN (MA-001)
 -- ============================================
 -- WICHTIG: Dieses SQL im Supabase SQL Editor ausführen!
--- Das Passwort MUSS nach dem ersten Login geändert werden!
 
--- Temporäres Passwort: HHRP2025!Temp
--- Passwort-Hash für: HHRP2025!Temp
+-- Login-Daten:
+-- Mitarbeiter-Nummer: MA-001
+-- E-Mail: roxyboy2474@icloud.com
+-- Passwort: HHRP2025!Temp
+
 INSERT INTO admin_accounts (
   discord_user_id,
   discord_username,
@@ -20,12 +22,20 @@ INSERT INTO admin_accounts (
   'Roxyboy2474',
   'MA-001',
   'roxyboy2474@icloud.com',
-  '$2a$10$rOQJvS9LQm5uJYxF8qKOXeYGJvS9LQm5uJYxF8qKOXeYGJvS9LQm5u', -- Hash für 'HHRP2025!Temp'
+  '$2b$10$L4IAyFt/LiyijXsk3142DO1cLRAr0bpgKqs60ODkQ2fKsduNqBz/q',
   'Projektinhaber',
   'system',
   true
 )
-ON CONFLICT (discord_user_id) DO NOTHING;
+ON CONFLICT (discord_user_id) DO UPDATE
+SET password_hash = '$2b$10$L4IAyFt/LiyijXsk3142DO1cLRAr0bpgKqs60ODkQ2fKsduNqBz/q';
+
+-- ============================================
+-- Wenn der Account bereits existiert, Update:
+-- ============================================
+UPDATE admin_accounts 
+SET password_hash = '$2b$10$L4IAyFt/LiyijXsk3142DO1cLRAr0bpgKqs60ODkQ2fKsduNqBz/q'
+WHERE mitarbeiter_nummer = 'MA-001';
 
 -- ============================================
 -- Login-Daten:
@@ -33,9 +43,4 @@ ON CONFLICT (discord_user_id) DO NOTHING;
 -- Mitarbeiter-Nummer: MA-001
 -- E-Mail: roxyboy2474@icloud.com
 -- Passwort: HHRP2025!Temp
--- 
--- WICHTIG: Ändern Sie das Passwort nach dem ersten Login!
 -- ============================================
-
--- Optional: Weitere Admin-Accounts erstellen
--- Kopieren Sie einfach den INSERT-Block oben und ändern Sie die Werte
