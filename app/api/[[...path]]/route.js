@@ -693,3 +693,4 @@ export async function DELETE(request) {
 
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
+
