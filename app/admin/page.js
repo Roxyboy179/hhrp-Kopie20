@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/components/providers/AuthProvider';
 import { GlassCard } from '@/components/shared/GlassCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,7 +17,6 @@ const inputClass = "bg-white/[0.04] border-white/[0.08] text-white placeholder:t
 
 export default function AdminPage() {
   const router = useRouter();
-  const { user } = useAuth();
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
@@ -152,34 +150,6 @@ export default function AdminPage() {
                 Anmelden
               </button>
             </form>
-
-            {user && user.adminLevel > 0 && (
-              <div className="mt-6 text-center">
-                <Separator className="bg-white/[0.06] mb-6" />
-                <p className="text-white/30 text-sm mb-3">
-                  Angemeldet als <span className="text-blue-300 font-medium">{user.adminRole}</span>
-                </p>
-                <Button 
-                  variant="outline" 
-                  className="border-blue-500/20 text-blue-300 hover:bg-blue-500/10 rounded-xl"
-                  onClick={() => {
-                    const adminData = { 
-                      discordUserId: user.id, 
-                      discordUsername: user.globalName || user.username, 
-                      roleName: user.adminRole, 
-                      roleLevel: user.adminLevel, 
-                      canCreateAccounts: user.canCreateAccounts, 
-                      canSeeAll: user.canSeeAll, 
-                      viaDiscord: true 
-                    };
-                    setAdmin(adminData);
-                    fetchStats();
-                  }}
-                >
-                  Mit Discord-Rolle fortfahren
-                </Button>
-              </div>
-            )}
           </GlassCard>
         </div>
       </div>
