@@ -1,4 +1,5 @@
 import './globals.css';
+import RootClientLayout from './RootClientLayout';
 
 export const metadata = {
   title: 'Hamburg Horizon RP',
@@ -12,7 +13,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="de" className="dark">
       <body className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white antialiased">
-        {children}
+        <RootClientLayout>{children}</RootClientLayout>
       </body>
     </html>
   );
