@@ -13,6 +13,7 @@ import {
   getAllAdminAccounts,
   deleteAdminAccount
 } from '@/lib/supabase-helpers';
+import { sendNewBewerbungNotification, sendStatusUpdateDM } from '@/lib/discord-bot';
 
 // ===== CONFIGURATION =====
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
@@ -351,8 +352,8 @@ async function handleCreateBewerbung(request) {
       formData
     });
 
-    // Schönes Discord Embed senden
-    await sendDiscordEmbed(createBewerbungEmbed(bewerbung, 'erstellt'));
+    // Discord Bot Benachrichtigung senden
+    await sendNewBewerbungNotification(bewerbung, user);
 
     return NextResponse.json({ bewerbung, success: true });
   } catch (error) {
@@ -608,13 +609,9 @@ async function handleAdminUpdateBewerbung(request, id) {
     const updated = await updateBewerbung(id, updates);
     const newStatus = updated.status;
 
-    // Discord Embed im Channel
-    await sendDiscordEmbed(createBewerbungEmbed(updated, 'aktualisiert'));
-
     // DM an User bei Statusänderung
-    if (oldStatus !== newStatus && (newStatus === 'Angenommen' || newStatus === 'Abgelehnt')) {
-      const dmEmbed = createStatusChangeEmbed(updated, oldStatus, newStatus);
-      await sendUserDM(updated.discord_user_id, dmEmbed);
+    if (oldStatus !== newStatus) {
+      await sendStatusUpdateDM(updated.discord_user_id, newStatus, updated.id);
     }
 
     return NextResponse.json({ bewerbung: updated });
