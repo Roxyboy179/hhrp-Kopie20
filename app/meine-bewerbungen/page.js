@@ -64,6 +64,11 @@ export default function MeineBewerbungenPage() {
       const res = await fetch('/api/bewerbungen');
       const data = await res.json();
       console.log('[DEBUG] Bewerbungen geladen:', data.bewerbungen);
+      if (data.bewerbungen && data.bewerbungen.length > 0) {
+        console.log('[DEBUG] Erste Bewerbung:', JSON.stringify(data.bewerbungen[0], null, 2));
+        console.log('[DEBUG] formData vorhanden?', !!data.bewerbungen[0].formData);
+        console.log('[DEBUG] formData Keys:', data.bewerbungen[0].formData ? Object.keys(data.bewerbungen[0].formData) : 'keine');
+      }
       setBewerbungen(data.bewerbungen || []);
     } catch (e) {
       console.error(e);
