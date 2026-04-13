@@ -1,8 +1,17 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import fs from 'fs';
-import path from 'path';
-import { v4 as uuidv4 } from 'uuid';
+import { 
+  createBewerbung, 
+  getUserBewerbungen, 
+  getBewerbungById, 
+  getAllBewerbungen,
+  updateBewerbung,
+  deleteBewerbung,
+  createAdminAccount,
+  getAdminAccountByCredentials,
+  getAllAdminAccounts,
+  deleteAdminAccount
+} from '@/lib/supabase-helpers';
 
 // ===== CONFIGURATION =====
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
@@ -13,7 +22,6 @@ const DISCORD_CHANNEL_ID = process.env.DISCORD_CHANNEL_ID;
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 const JWT_SECRET = process.env.JWT_SECRET || 'hhrp-default-secret';
 const REDIRECT_URI = `${BASE_URL}/api/auth/callback`;
-const DATA_DIR = path.join(process.cwd(), 'data');
 
 // ===== ADMIN ROLE CONFIG =====
 const ADMIN_ROLES = {
@@ -50,370 +58,291 @@ function verifyToken(token) {
 }
 
 function getUserFromRequest(request) {
-  const token = request.cookies.get('hhrp_session')?.value;
+  const token = request.cookies.get('auth_token')?.value;
   if (!token) return null;
   return verifyToken(token);
 }
 
 function getAdminFromRequest(request) {
-  const token = request.cookies.get('hhrp_admin')?.value;
+  const token = request.cookies.get('admin_token')?.value;
   if (!token) return null;
   return verifyToken(token);
 }
 
 function getAdminContext(request) {
-  // Only return admin context if logged in via admin credentials
-  // NOT via Discord roles
   const adminUser = getAdminFromRequest(request);
   if (adminUser) return adminUser;
   return null;
 }
 
-// ===== FILE STORAGE HELPERS =====
-function ensureDir(dir) {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
-
-function saveBewerbung(userId, bewerbung) {
-  const dir = path.join(DATA_DIR, 'users', userId);
-  ensureDir(dir);
-  fs.writeFileSync(path.join(dir, `${bewerbung.id}.json`), JSON.stringify(bewerbung, null, 2));
-}
-
-function getUserBewerbungen(userId) {
-  const dir = path.join(DATA_DIR, 'users', userId);
-  if (!fs.existsSync(dir)) return [];
-  return fs.readdirSync(dir)
-    .filter(f => f.endsWith('.json'))
-    .map(f => {
-      try { return JSON.parse(fs.readFileSync(path.join(dir, f), 'utf-8')); }
-      catch { return null; }
-    })
-    .filter(Boolean)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-}
-
-function getBewerbungById(userId, id) {
-  const filePath = path.join(DATA_DIR, 'users', userId, `${id}.json`);
-  if (!fs.existsSync(filePath)) return null;
-  try { return JSON.parse(fs.readFileSync(filePath, 'utf-8')); }
-  catch { return null; }
-}
-
-function getAllBewerbungen() {
-  const usersDir = path.join(DATA_DIR, 'users');
-  if (!fs.existsSync(usersDir)) return [];
-  const result = [];
-  try {
-    for (const userId of fs.readdirSync(usersDir)) {
-      const userDir = path.join(usersDir, userId);
-      try {
-        if (fs.statSync(userDir).isDirectory()) {
-          for (const file of fs.readdirSync(userDir)) {
-            if (file.endsWith('.json')) {
-              try {
-                const data = JSON.parse(fs.readFileSync(path.join(userDir, file), 'utf-8'));
-                result.push(data);
-              } catch {}
-            }
-          }
-        }
-      } catch {}
-    }
-  } catch {}
-  return result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-}
-
-function updateBewerbung(userId, id, updates) {
-  const filePath = path.join(DATA_DIR, 'users', userId, `${id}.json`);
-  if (!fs.existsSync(filePath)) return null;
-  try {
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-    const updated = { ...data, ...updates, updatedAt: new Date().toISOString() };
-    fs.writeFileSync(filePath, JSON.stringify(updated, null, 2));
-    return updated;
-  } catch { return null; }
-}
-
-function saveAccount(account) {
-  const dir = path.join(DATA_DIR, 'accounts', account.id);
-  ensureDir(dir);
-  fs.writeFileSync(path.join(dir, 'anmeldedaten.json'), JSON.stringify(account, null, 2));
-}
-
-function getAccounts() {
-  const dir = path.join(DATA_DIR, 'accounts');
-  if (!fs.existsSync(dir)) return [];
-  const result = [];
-  try {
-    for (const accountId of fs.readdirSync(dir)) {
-      const filePath = path.join(dir, accountId, 'anmeldedaten.json');
-      if (fs.existsSync(filePath)) {
-        try {
-          const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-          result.push({ ...data, password: undefined, salt: undefined });
-        } catch {}
-      }
-    }
-  } catch {}
-  return result;
-}
-
-function getAccountByCredentials(mitarbeiterNr, email, password) {
-  const dir = path.join(DATA_DIR, 'accounts');
-  if (!fs.existsSync(dir)) return null;
-  try {
-    for (const accountId of fs.readdirSync(dir)) {
-      const filePath = path.join(dir, accountId, 'anmeldedaten.json');
-      if (fs.existsSync(filePath)) {
-        try {
-          const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-          if (data.mitarbeiterNummer === mitarbeiterNr && (data.email === email || data.username === email)) {
-            const hashedInput = crypto.createHash('sha256').update(password + data.salt).digest('hex');
-            if (hashedInput === data.password) return data;
-          }
-        } catch {}
-      }
-    }
-  } catch {}
-  return null;
-}
-
-function deleteAccount(accountId) {
-  const dir = path.join(DATA_DIR, 'accounts', accountId);
-  if (fs.existsSync(dir)) {
-    fs.rmSync(dir, { recursive: true });
-    return true;
-  }
-  return false;
-}
-
-// ===== DISCORD API HELPERS =====
-async function exchangeCode(code) {
-  const params = new URLSearchParams({
-    client_id: DISCORD_CLIENT_ID,
-    client_secret: DISCORD_CLIENT_SECRET,
-    grant_type: 'authorization_code',
-    code,
-    redirect_uri: REDIRECT_URI,
-  });
-  const res = await fetch('https://discord.com/api/v10/oauth2/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: params.toString(),
-  });
-  return res.json();
-}
-
-async function getDiscordUser(accessToken) {
-  const res = await fetch('https://discord.com/api/v10/users/@me', {
-    headers: { 'Authorization': `Bearer ${accessToken}` },
-  });
-  return res.json();
-}
-
+// ===== DISCORD HELPERS =====
 async function getGuildMember(userId) {
   try {
     const res = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD_ID}/members/${userId}`, {
-      headers: { 'Authorization': `Bot ${DISCORD_BOT_TOKEN}` },
+      headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` }
     });
     if (!res.ok) return null;
-    return res.json();
+    return await res.json();
   } catch {
     return null;
+  }
+}
+
+function getAdminRole(roles) {
+  for (const roleId of roles) {
+    if (ADMIN_ROLES[roleId]) return ADMIN_ROLES[roleId];
+  }
+  return null;
+}
+
+// ===== SCHÖNE DISCORD EMBEDS =====
+function getStatusColor(status) {
+  switch (status) {
+    case 'Eingereicht': return 3447003; // Blau
+    case 'In Bearbeitung': return 16776960; // Gelb
+    case 'Angenommen': return 5763719; // Grün
+    case 'Abgelehnt': return 15548997; // Rot
+    case 'Zurückgezogen': return 10070709; // Grau
+    default: return 3447003;
+  }
+}
+
+function getStatusEmoji(status) {
+  switch (status) {
+    case 'Eingereicht': return '📋';
+    case 'In Bearbeitung': return '🔄';
+    case 'Angenommen': return '✅';
+    case 'Abgelehnt': return '❌';
+    case 'Zurückgezogen': return '↩️';
+    default: return '📄';
   }
 }
 
 async function sendDiscordEmbed(embed) {
   try {
-    const res = await fetch(`https://discord.com/api/v10/channels/${DISCORD_CHANNEL_ID}/messages`, {
+    await fetch(`https://discord.com/api/v10/channels/${DISCORD_CHANNEL_ID}/messages`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
         'Content-Type': 'application/json',
+        Authorization: `Bot ${DISCORD_BOT_TOKEN}`
       },
-      body: JSON.stringify({ embeds: [embed] }),
+      body: JSON.stringify({ embeds: [embed] })
     });
-    return res.json();
-  } catch (e) {
-    console.error('Discord embed send error:', e);
-    return null;
+  } catch (error) {
+    console.error('Discord embed error:', error);
   }
 }
 
-function getAdminRole(memberRoles) {
-  let highestRole = null;
-  for (const roleId of memberRoles) {
-    if (ADMIN_ROLES[roleId]) {
-      if (!highestRole || ADMIN_ROLES[roleId].level > highestRole.level) {
-        highestRole = { ...ADMIN_ROLES[roleId], roleId };
-      }
-    }
-  }
-  return highestRole;
-}
-
-function snowflakeToDate(snowflake) {
+async function sendUserDM(userId, embed) {
   try {
-    const DISCORD_EPOCH = 1420070400000n;
-    const timestamp = (BigInt(snowflake) >> 22n) + DISCORD_EPOCH;
-    return new Date(Number(timestamp));
-  } catch {
-    return new Date();
+    // Create DM channel
+    const dmRes = await fetch('https://discord.com/api/v10/users/@me/channels', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bot ${DISCORD_BOT_TOKEN}`
+      },
+      body: JSON.stringify({ recipient_id: userId })
+    });
+    
+    if (!dmRes.ok) return false;
+    const dmChannel = await dmRes.json();
+    
+    // Send message
+    await fetch(`https://discord.com/api/v10/channels/${dmChannel.id}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bot ${DISCORD_BOT_TOKEN}`
+      },
+      body: JSON.stringify({ embeds: [embed] })
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Discord DM error:', error);
+    return false;
   }
 }
 
-// ===== PATH HELPER =====
-function getPath(params) {
-  return params?.path?.join('/') || '';
+function createBewerbungEmbed(bewerbung, action = 'erstellt') {
+  const status = bewerbung.status || 'Eingereicht';
+  const username = bewerbung.username;
+  const userId = bewerbung.discord_user_id;
+  const bewerbungId = bewerbung.id.substring(0, 8);
+  
+  return {
+    title: `${getStatusEmoji(status)} Bewerbung ${action}`,
+    description: action === 'erstellt' 
+      ? `**${username}** hat eine neue Bewerbung eingereicht.`
+      : `Bewerbung von **${username}** wurde aktualisiert.`,
+    color: getStatusColor(status),
+    fields: [
+      { name: '👤 Bewerber', value: username, inline: true },
+      { name: '🆔 Bewerbungs-ID', value: `\`${bewerbungId}\``, inline: true },
+      { name: '📊 Status', value: `${getStatusEmoji(status)} ${status}`, inline: true },
+      ...(bewerbung.claimed_by_name ? [{ name: '👨‍💼 Bearbeitet von', value: bewerbung.claimed_by_name, inline: true }] : []),
+      { name: '📅 Eingereicht am', value: new Date(bewerbung.created_at).toLocaleString('de-DE'), inline: false },
+    ],
+    thumbnail: {
+      url: `https://cdn.discordapp.com/avatars/${userId}/a_1.png?size=256`
+    },
+    footer: {
+      text: 'Hamburg Horizon RP - Bewerbungssystem',
+      icon_url: 'https://cdn.discordapp.com/icons/1273340696916394076/a_1.png'
+    },
+    timestamp: new Date().toISOString()
+  };
 }
 
-// ===== AUTH HANDLERS =====
-async function handleDiscordAuth() {
-  const scopes = 'identify email';
-  const url = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(scopes)}`;
-  return NextResponse.redirect(url);
+function createStatusChangeEmbed(bewerbung, oldStatus, newStatus) {
+  const username = bewerbung.username;
+  const bewerbungId = bewerbung.id.substring(0, 8);
+  
+  return {
+    title: `${getStatusEmoji(newStatus)} Bewerbungsstatus geändert`,
+    description: `Deine Bewerbung wurde von **${oldStatus}** zu **${newStatus}** geändert.`,
+    color: getStatusColor(newStatus),
+    fields: [
+      { name: '📊 Alter Status', value: `${getStatusEmoji(oldStatus)} ${oldStatus}`, inline: true },
+      { name: '📊 Neuer Status', value: `${getStatusEmoji(newStatus)} ${newStatus}`, inline: true },
+      { name: '🆔 Bewerbungs-ID', value: `\`${bewerbungId}\``, inline: true },
+      ...(newStatus === 'Angenommen' ? [{ 
+        name: '🎉 Glückwunsch!', 
+        value: 'Deine Bewerbung wurde angenommen! Ein Teammitglied wird sich in Kürze bei dir melden.', 
+        inline: false 
+      }] : []),
+      ...(newStatus === 'Abgelehnt' ? [{ 
+        name: '💬 Hinweis', 
+        value: 'Deine Bewerbung wurde leider abgelehnt. Du kannst dich nach 30 Tagen erneut bewerben.', 
+        inline: false 
+      }] : []),
+    ],
+    thumbnail: {
+      url: `https://cdn.discordapp.com/avatars/${bewerbung.discord_user_id}/a_1.png?size=256`
+    },
+    footer: {
+      text: 'Hamburg Horizon RP - Bewerbungssystem',
+      icon_url: 'https://cdn.discordapp.com/icons/1273340696916394076/a_1.png'
+    },
+    timestamp: new Date().toISOString()
+  };
+}
+
+// ===== DISCORD OAUTH =====
+function handleDiscordAuth() {
+  const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify%20email`;
+  return NextResponse.redirect(authUrl, { status: 307 });
 }
 
 async function handleDiscordCallback(request) {
-  const { searchParams } = new URL(request.url);
-  const code = searchParams.get('code');
-  const error = searchParams.get('error');
-
-  if (error || !code) {
-    return NextResponse.redirect(`${BASE_URL}?error=auth_failed`);
-  }
+  const url = new URL(request.url);
+  const code = url.searchParams.get('code');
+  if (!code) return NextResponse.redirect(`${BASE_URL}/?error=no_code`);
 
   try {
-    const tokenData = await exchangeCode(code);
-    if (tokenData.error) {
-      console.error('Token exchange error:', tokenData);
-      return NextResponse.redirect(`${BASE_URL}?error=token_failed`);
-    }
+    const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: DISCORD_CLIENT_ID,
+        client_secret: DISCORD_CLIENT_SECRET,
+        grant_type: 'authorization_code',
+        code,
+        redirect_uri: REDIRECT_URI
+      })
+    });
 
-    const discordUser = await getDiscordUser(tokenData.access_token);
-    if (!discordUser.id) {
-      console.error('User fetch error:', discordUser);
-      return NextResponse.redirect(`${BASE_URL}?error=user_failed`);
-    }
+    if (!tokenRes.ok) return NextResponse.redirect(`${BASE_URL}/?error=token_failed`);
+    const { access_token } = await tokenRes.json();
+
+    const userRes = await fetch('https://discord.com/api/users/@me', {
+      headers: { Authorization: `Bearer ${access_token}` }
+    });
+
+    if (!userRes.ok) return NextResponse.redirect(`${BASE_URL}/?error=user_failed`);
+    const discordUser = await userRes.json();
 
     const member = await getGuildMember(discordUser.id);
-    if (!member) {
-      return NextResponse.redirect(`${BASE_URL}?error=not_member`);
-    }
+    if (!member) return NextResponse.redirect(`${BASE_URL}/?error=not_member`);
 
     const adminRole = getAdminRole(member.roles || []);
-    const createdAt = snowflakeToDate(discordUser.id).toISOString();
-
-    const sessionPayload = {
+    const user = {
       id: discordUser.id,
       username: discordUser.username,
       globalName: discordUser.global_name,
-      email: discordUser.email,
       avatar: discordUser.avatar,
-      createdAt,
-      roles: member.roles || [],
-      adminRole: adminRole ? adminRole.name : null,
-      adminLevel: adminRole ? adminRole.level : 0,
-      canCreateAccounts: adminRole ? adminRole.canCreateAccounts : false,
-      canSeeAll: adminRole ? adminRole.canSeeAll : false,
+      email: discordUser.email,
+      createdAt: new Date(parseInt((BigInt(discordUser.id) >> 22n) + 1420070400000n)).toISOString(),
+      adminLevel: adminRole?.level || 0,
+      adminRole: adminRole?.name || null,
+      canCreateAccounts: adminRole?.canCreateAccounts || false,
+      canSeeAll: adminRole?.canSeeAll || false,
     };
 
-    const token = createToken(sessionPayload);
-    const response = NextResponse.redirect(`${BASE_URL}?login=success`);
-    response.cookies.set('hhrp_session', token, {
+    const token = createToken(user);
+    const response = NextResponse.redirect(BASE_URL);
+    response.cookies.set('auth_token', token, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
-      path: '/',
+      maxAge: 7 * 24 * 60 * 60
     });
+
     return response;
-  } catch (e) {
-    console.error('Discord callback error:', e);
-    return NextResponse.redirect(`${BASE_URL}?error=server_error`);
+  } catch (error) {
+    console.error('OAuth error:', error);
+    return NextResponse.redirect(`${BASE_URL}/?error=auth_failed`);
   }
 }
 
-async function handleGetMe(request) {
+async function handleAuthMe(request) {
   const user = getUserFromRequest(request);
-  if (!user) return NextResponse.json({ user: null });
   return NextResponse.json({ user });
 }
 
 async function handleLogout() {
   const response = NextResponse.json({ success: true });
-  response.cookies.set('hhrp_session', '', { maxAge: 0, path: '/' });
+  response.cookies.delete('auth_token');
   return response;
 }
 
 // ===== BEWERBUNGEN HANDLERS =====
-async function handleGetBewerbungen(request) {
-  const user = getUserFromRequest(request);
-  if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
-  const bewerbungen = getUserBewerbungen(user.id);
-  return NextResponse.json({ bewerbungen });
-}
-
-async function handleGetBewerbung(request, id) {
-  const user = getUserFromRequest(request);
-  if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
-  const bewerbung = getBewerbungById(user.id, id);
-  if (!bewerbung) return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 });
-  return NextResponse.json({ bewerbung });
-}
-
-async function handleSubmitBewerbung(request) {
+async function handleCreateBewerbung(request) {
   const user = getUserFromRequest(request);
   if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
 
   try {
-    const body = await request.json();
-    const id = uuidv4();
+    const { formData } = await request.json();
 
-    const bewerbung = {
-      id,
-      userId: user.id,
-      username: user.username,
-      globalName: user.globalName,
+    const bewerbung = await createBewerbung({
+      discordUserId: user.id,
+      username: user.globalName || user.username,
       email: user.email,
       discordCreatedAt: user.createdAt,
-      avatar: user.avatar,
-      status: 'Eingereicht',
-      claimedBy: null,
-      claimedByName: null,
-      formData: body.formData,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+      formData
+    });
 
-    saveBewerbung(user.id, bewerbung);
-
-    try {
-      await sendDiscordEmbed({
-        title: 'Neue Bewerbung eingegangen!',
-        color: 3447003,
-        fields: [
-          { name: 'Bewerber', value: user.globalName || user.username, inline: true },
-          { name: 'Bewerbungs-ID', value: id.substring(0, 8), inline: true },
-          { name: 'Status', value: 'Eingereicht', inline: true },
-          { name: 'Discord', value: `<@${user.id}>`, inline: true },
-          { name: 'Vorname', value: body.formData?.vorname || '-', inline: true },
-          { name: 'Roblox-Name', value: body.formData?.robloxName || '-', inline: true },
-        ],
-        timestamp: new Date().toISOString(),
-        footer: { text: 'Hamburg Horizon RP - Bewerbungssystem' },
-      });
-    } catch (e) {
-      console.error('Discord send error:', e);
-    }
+    // Schönes Discord Embed senden
+    await sendDiscordEmbed(createBewerbungEmbed(bewerbung, 'erstellt'));
 
     return NextResponse.json({ bewerbung, success: true });
-  } catch (e) {
-    console.error('Submit error:', e);
-    return NextResponse.json({ error: 'Fehler beim Einreichen' }, { status: 500 });
+  } catch (error) {
+    console.error('Create bewerbung error:', error);
+    return NextResponse.json({ error: 'Fehler beim Erstellen' }, { status: 500 });
+  }
+}
+
+async function handleGetBewerbungen(request) {
+  const user = getUserFromRequest(request);
+  if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+
+  try {
+    const bewerbungen = await getUserBewerbungen(user.id);
+    return NextResponse.json({ bewerbungen });
+  } catch (error) {
+    console.error('Get bewerbungen error:', error);
+    return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
   }
 }
 
@@ -421,31 +350,26 @@ async function handleWithdrawBewerbung(request, id) {
   const user = getUserFromRequest(request);
   if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
 
-  const bewerbung = getBewerbungById(user.id, id);
-  if (!bewerbung) return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 });
-  if (bewerbung.status === 'Zurückgezogen') {
-    return NextResponse.json({ error: 'Bereits zurückgezogen' }, { status: 400 });
-  }
-
-  const updated = updateBewerbung(user.id, id, { status: 'Zurückgezogen' });
-
   try {
-    await sendDiscordEmbed({
-      title: 'Bewerbung zurückgezogen',
-      color: 15105570,
-      fields: [
-        { name: 'Bewerber', value: user.globalName || user.username, inline: true },
-        { name: 'Bewerbungs-ID', value: id.substring(0, 8), inline: true },
-        { name: 'Status', value: 'Zurückgezogen', inline: true },
-      ],
-      timestamp: new Date().toISOString(),
-      footer: { text: 'Hamburg Horizon RP - Bewerbungssystem' },
-    });
-  } catch (e) {
-    console.error('Discord send error:', e);
-  }
+    const bewerbung = await getBewerbungById(id);
+    if (!bewerbung || bewerbung.discord_user_id !== user.id) {
+      return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 });
+    }
 
-  return NextResponse.json({ bewerbung: updated, success: true });
+    if (bewerbung.status === 'Zurückgezogen') {
+      return NextResponse.json({ error: 'Bereits zurückgezogen' }, { status: 400 });
+    }
+
+    const updated = await updateBewerbung(id, { status: 'Zurückgezogen' });
+
+    // Discord Embed
+    await sendDiscordEmbed(createBewerbungEmbed(updated, 'zurückgezogen'));
+
+    return NextResponse.json({ bewerbung: updated, success: true });
+  } catch (error) {
+    console.error('Withdraw error:', error);
+    return NextResponse.json({ error: 'Fehler beim Zurückziehen' }, { status: 500 });
+  }
 }
 
 // ===== ADMIN HANDLERS =====
@@ -453,12 +377,12 @@ async function handleAdminLogin(request) {
   try {
     const { mitarbeiterNummer, email, password } = await request.json();
 
-    const account = getAccountByCredentials(mitarbeiterNummer, email, password);
+    const account = await getAdminAccountByCredentials(mitarbeiterNummer, email, password);
     if (!account) {
       return NextResponse.json({ error: 'Ungültige Anmeldedaten' }, { status: 401 });
     }
 
-    const member = await getGuildMember(account.discordUserId);
+    const member = await getGuildMember(account.discord_user_id);
     if (!member) {
       return NextResponse.json({ error: 'Discord-Mitgliedschaft nicht gefunden' }, { status: 403 });
     }
@@ -468,42 +392,40 @@ async function handleAdminLogin(request) {
       return NextResponse.json({ error: 'Keine Admin-Berechtigung auf Discord' }, { status: 403 });
     }
 
-    const sessionPayload = {
-      accountId: account.id,
-      discordUserId: account.discordUserId,
-      discordUsername: account.discordUsername,
-      mitarbeiterNummer: account.mitarbeiterNummer,
+    const admin = {
+      discordUserId: account.discord_user_id,
+      discordUsername: account.discord_username,
+      mitarbeiterNummer: account.mitarbeiter_nummer,
       roleName: adminRole.name,
       roleLevel: adminRole.level,
       canCreateAccounts: adminRole.canCreateAccounts,
       canSeeAll: adminRole.canSeeAll,
     };
 
-    const token = createToken(sessionPayload);
-    const response = NextResponse.json({ success: true, admin: sessionPayload });
-    response.cookies.set('hhrp_admin', token, {
+    const token = createToken(admin);
+    const response = NextResponse.json({ admin });
+    response.cookies.set('admin_token', token, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 24 * 60 * 60,
-      path: '/',
+      maxAge: 7 * 24 * 60 * 60
     });
+
     return response;
-  } catch (e) {
-    console.error('Admin login error:', e);
-    return NextResponse.json({ error: 'Fehler bei der Anmeldung' }, { status: 500 });
+  } catch (error) {
+    console.error('Admin login error:', error);
+    return NextResponse.json({ error: 'Anmeldefehler' }, { status: 500 });
   }
 }
 
-async function handleAdminGetMe(request) {
+async function handleAdminMe(request) {
   const admin = getAdminContext(request);
-  if (!admin) return NextResponse.json({ admin: null });
   return NextResponse.json({ admin });
 }
 
 async function handleAdminLogout() {
   const response = NextResponse.json({ success: true });
-  response.cookies.set('hhrp_admin', '', { maxAge: 0, path: '/' });
+  response.cookies.delete('admin_token');
   return response;
 }
 
@@ -511,30 +433,13 @@ async function handleAdminGetBewerbungen(request) {
   const admin = getAdminContext(request);
   if (!admin) return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 });
 
-  let bewerbungen = getAllBewerbungen();
-
-  if (!admin.canSeeAll) {
-    bewerbungen = bewerbungen.filter(b =>
-      !b.claimedBy || b.claimedBy === admin.discordUserId
-    );
+  try {
+    const bewerbungen = await getAllBewerbungen();
+    return NextResponse.json({ bewerbungen });
+  } catch (error) {
+    console.error('Admin get bewerbungen error:', error);
+    return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
   }
-
-  return NextResponse.json({ bewerbungen });
-}
-
-async function handleAdminGetBewerbung(request, id) {
-  const admin = getAdminContext(request);
-  if (!admin) return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 });
-
-  const all = getAllBewerbungen();
-  const bewerbung = all.find(b => b.id === id);
-  if (!bewerbung) return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 });
-
-  if (!admin.canSeeAll && bewerbung.claimedBy && bewerbung.claimedBy !== admin.discordUserId) {
-    return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 });
-  }
-
-  return NextResponse.json({ bewerbung });
 }
 
 async function handleAdminUpdateBewerbung(request, id) {
@@ -543,189 +448,169 @@ async function handleAdminUpdateBewerbung(request, id) {
 
   try {
     const body = await request.json();
-    const all = getAllBewerbungen();
-    const bewerbung = all.find(b => b.id === id);
-    if (!bewerbung) return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 });
-
-    if (body.action === 'claim' && bewerbung.claimedBy && bewerbung.claimedBy !== admin.discordUserId) {
-      return NextResponse.json({ error: 'Bereits von einem anderen Teammitglied übernommen' }, { status: 400 });
+    const bewerbung = await getBewerbungById(id);
+    
+    if (!bewerbung) {
+      return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 });
     }
 
+    const oldStatus = bewerbung.status;
     let updates = {};
+
     if (body.action === 'claim') {
       updates = {
-        claimedBy: admin.discordUserId,
-        claimedByName: admin.discordUsername || 'Admin',
         status: 'In Bearbeitung',
+        claimed_by: admin.discordUserId,
+        claimed_by_name: admin.discordUsername
       };
     } else if (body.action === 'unclaim') {
       updates = {
-        claimedBy: null,
-        claimedByName: null,
         status: 'Eingereicht',
+        claimed_by: null,
+        claimed_by_name: null
       };
     } else if (body.status) {
       updates = { status: body.status };
     }
 
-    const updated = updateBewerbung(bewerbung.userId, id, updates);
+    const updated = await updateBewerbung(id, updates);
+    const newStatus = updated.status;
 
-    const statusColors = {
-      'In Bearbeitung': 16776960,
-      'Angenommen': 5763719,
-      'Abgelehnt': 15548997,
-      'Eingereicht': 3447003,
-    };
+    // Discord Embed im Channel
+    await sendDiscordEmbed(createBewerbungEmbed(updated, 'aktualisiert'));
 
-    try {
-      await sendDiscordEmbed({
-        title: 'Bewerbung aktualisiert',
-        color: statusColors[updated.status] || 3447003,
-        fields: [
-          { name: 'Bewerber', value: updated.globalName || updated.username, inline: true },
-          { name: 'Bewerbungs-ID', value: id.substring(0, 8), inline: true },
-          { name: 'Neuer Status', value: updated.status, inline: true },
-          { name: 'Bearbeiter', value: admin.discordUsername || 'Admin', inline: true },
-        ],
-        timestamp: new Date().toISOString(),
-        footer: { text: 'Hamburg Horizon RP - Bewerbungssystem' },
-      });
-    } catch (e) {
-      console.error('Discord send error:', e);
+    // DM an User bei Statusänderung
+    if (oldStatus !== newStatus && (newStatus === 'Angenommen' || newStatus === 'Abgelehnt')) {
+      const dmEmbed = createStatusChangeEmbed(updated, oldStatus, newStatus);
+      await sendUserDM(updated.discord_user_id, dmEmbed);
     }
 
-    return NextResponse.json({ bewerbung: updated, success: true });
-  } catch (e) {
-    console.error('Update error:', e);
+    return NextResponse.json({ bewerbung: updated });
+  } catch (error) {
+    console.error('Admin update error:', error);
     return NextResponse.json({ error: 'Fehler beim Aktualisieren' }, { status: 500 });
   }
 }
 
 async function handleAdminGetAccounts(request) {
   const admin = getAdminContext(request);
-  if (!admin || admin.roleLevel < 3) {
+  if (!admin || (!admin.canCreateAccounts && admin.roleLevel < 3)) {
     return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 });
   }
-  const accounts = getAccounts();
-  return NextResponse.json({ accounts });
+
+  try {
+    const accounts = await getAllAdminAccounts();
+    return NextResponse.json({ accounts });
+  } catch (error) {
+    console.error('Get accounts error:', error);
+    return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
+  }
 }
 
-async function handleCreateAccount(request) {
+async function handleAdminCreateAccount(request) {
   const admin = getAdminContext(request);
   if (!admin || !admin.canCreateAccounts) {
     return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 });
   }
 
   try {
-    const { discordUserId, discordUsername, mitarbeiterNummer, email, password } = await request.json();
-
-    if (!discordUserId || !mitarbeiterNummer || !email || !password) {
-      return NextResponse.json({ error: 'Alle Felder sind erforderlich' }, { status: 400 });
-    }
-
-    const member = await getGuildMember(discordUserId);
+    const body = await request.json();
+    
+    const member = await getGuildMember(body.discordUserId);
     if (!member) {
-      return NextResponse.json({ error: 'Discord-Benutzer nicht auf dem Server' }, { status: 400 });
+      return NextResponse.json({ error: 'Discord-Benutzer nicht im Server' }, { status: 400 });
     }
 
     const adminRole = getAdminRole(member.roles || []);
-    if (!adminRole) {
-      return NextResponse.json({ error: 'Benutzer hat keine Admin-Rolle auf Discord' }, { status: 400 });
-    }
-
-    const salt = crypto.randomBytes(16).toString('hex');
-    const hashedPassword = crypto.createHash('sha256').update(password + salt).digest('hex');
-
-    const account = {
-      id: uuidv4(),
-      discordUserId,
-      discordUsername: discordUsername || 'Unbekannt',
-      mitarbeiterNummer,
-      email,
-      username: email,
-      password: hashedPassword,
-      salt,
-      roleName: adminRole.name,
-      createdAt: new Date().toISOString(),
-      createdBy: admin.discordUserId,
-    };
-
-    saveAccount(account);
-
-    return NextResponse.json({
-      success: true,
-      account: { ...account, password: undefined, salt: undefined },
+    
+    const account = await createAdminAccount({
+      discordUserId: body.discordUserId,
+      discordUsername: body.discordUsername || member.user.username,
+      mitarbeiterNummer: body.mitarbeiterNummer,
+      email: body.email,
+      password: body.password,
+      roleName: adminRole?.name,
+      createdBy: admin.discordUsername
     });
-  } catch (e) {
-    console.error('Create account error:', e);
+
+    return NextResponse.json({ account });
+  } catch (error) {
+    console.error('Create account error:', error);
+    if (error.code === '23505') {
+      return NextResponse.json({ error: 'Account existiert bereits' }, { status: 409 });
+    }
     return NextResponse.json({ error: 'Fehler beim Erstellen' }, { status: 500 });
   }
 }
 
-async function handleDeleteAccount(request, id) {
+async function handleAdminDeleteAccount(request, id) {
   const admin = getAdminContext(request);
   if (!admin || !admin.canCreateAccounts) {
     return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 });
   }
-  const deleted = deleteAccount(id);
-  if (!deleted) return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 });
-  return NextResponse.json({ success: true });
+
+  try {
+    await deleteAdminAccount(id);
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Delete account error:', error);
+    return NextResponse.json({ error: 'Fehler beim Löschen' }, { status: 500 });
+  }
 }
 
-// ===== MAIN ROUTE HANDLERS =====
-export async function GET(request, { params }) {
-  const p = getPath(params);
+// ===== ROUTER =====
+export async function GET(request) {
+  const url = new URL(request.url);
+  const p = url.pathname.replace('/api/', '');
 
   switch (p) {
     case 'auth/discord': return handleDiscordAuth();
     case 'auth/callback': return handleDiscordCallback(request);
-    case 'auth/me': return handleGetMe(request);
+    case 'auth/me': return handleAuthMe(request);
     case 'bewerbungen': return handleGetBewerbungen(request);
-    case 'admin/me': return handleAdminGetMe(request);
+    case 'admin/me': return handleAdminMe(request);
     case 'admin/bewerbungen': return handleAdminGetBewerbungen(request);
     case 'admin/accounts': return handleAdminGetAccounts(request);
-    default:
-      if (p.startsWith('bewerbungen/') && p !== 'bewerbungen/') {
-        return handleGetBewerbung(request, p.substring('bewerbungen/'.length));
-      }
-      if (p.startsWith('admin/bewerbungen/') && p !== 'admin/bewerbungen/') {
-        return handleAdminGetBewerbung(request, p.substring('admin/bewerbungen/'.length));
-      }
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
 
-export async function POST(request, { params }) {
-  const p = getPath(params);
+export async function POST(request) {
+  const url = new URL(request.url);
+  const p = url.pathname.replace('/api/', '');
 
   switch (p) {
     case 'auth/logout': return handleLogout();
-    case 'bewerbungen': return handleSubmitBewerbung(request);
+    case 'bewerbungen': return handleCreateBewerbung(request);
     case 'admin/login': return handleAdminLogin(request);
     case 'admin/logout': return handleAdminLogout();
-    case 'admin/accounts': return handleCreateAccount(request);
-    default:
-      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    case 'admin/accounts': return handleAdminCreateAccount(request);
+    default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
 
-export async function PUT(request, { params }) {
-  const p = getPath(params);
+export async function PUT(request) {
+  const url = new URL(request.url);
+  const p = url.pathname.replace('/api/', '');
 
-  if (p.startsWith('admin/bewerbungen/') && p !== 'admin/bewerbungen/') {
+  if (p.startsWith('admin/bewerbungen/')) {
     return handleAdminUpdateBewerbung(request, p.substring('admin/bewerbungen/'.length));
   }
+
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
 
-export async function DELETE(request, { params }) {
-  const p = getPath(params);
+export async function DELETE(request) {
+  const url = new URL(request.url);
+  const p = url.pathname.replace('/api/', '');
 
-  if (p.startsWith('bewerbungen/') && p !== 'bewerbungen/') {
+  if (p.startsWith('bewerbungen/')) {
     return handleWithdrawBewerbung(request, p.substring('bewerbungen/'.length));
   }
-  if (p.startsWith('admin/accounts/') && p !== 'admin/accounts/') {
-    return handleDeleteAccount(request, p.substring('admin/accounts/'.length));
+  
+  if (p.startsWith('admin/accounts/')) {
+    return handleAdminDeleteAccount(request, p.substring('admin/accounts/'.length));
   }
+
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
