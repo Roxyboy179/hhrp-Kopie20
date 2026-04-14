@@ -1558,28 +1558,85 @@ export async function GET(request) {
     }
   }
 
-  // ===== TEAM MEMBERS (PUBLIC) =====
+  // ===== TEAM MEMBERS (PUBLIC) - Live von Discord =====
   if (p === 'team/members') {
     try {
-      // Admin-Accounts aus Supabase
-      const { data: accounts, error } = await supabaseAdmin
-        .from('admin_accounts')
-        .select('discord_username, discord_user_id, role_name, is_active')
-        .eq('is_active', true)
-        .order('role_name', { ascending: true });
+      const GUILD_ID = process.env.DISCORD_GUILD_ID;
+      const BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
       
-      if (error) throw error;
+      // Alle Rollen sammeln
+      const allRoleIds = { ...ADMIN_ROLES, ...TEAM_ROLES };
+      const allRoleIdsList = Object.keys(allRoleIds);
       
-      const adminMembers = (accounts || []).map(a => ({
-        username: a.discord_username,
-        avatar: null,
-        discordId: a.discord_user_id || null,
-        roleName: a.role_name,
-        category: 'admin',
-      }));
+      // Discord Guild Members abrufen (max 1000)
+      let allMembers = [];
+      let after = '0';
+      let fetching = true;
       
-      // Alle Rollen-Strukturen (auch Team-Rollen)
-      const allRoles = [
+      while (fetching) {
+        const res = await fetch(`https://discord.com/api/v10/guilds/${GUILD_ID}/members?limit=1000&after=${after}`, {
+          headers: { 'Authorization': `Bot ${BOT_TOKEN}` },
+        });
+        
+        if (!res.ok) {
+          console.error('[TEAM] Discord API error:', res.status, await res.text());
+          break;
+        }
+        
+        const batch = await res.json();
+        if (batch.length === 0) break;
+        
+        allMembers = allMembers.concat(batch);
+        
+        if (batch.length < 1000) {
+          fetching = false;
+        } else {
+          after = batch[batch.length - 1].user.id;
+        }
+      }
+      
+      // Mitglieder nach Rollen filtern
+      const membersByRole = {};
+      
+      for (const member of allMembers) {
+        if (!member.user || member.user.bot) continue;
+        
+        const memberRoles = member.roles || [];
+        
+        for (const roleId of memberRoles) {
+          if (allRoleIds[roleId]) {
+            const roleName = allRoleIds[roleId].name;
+            if (!membersByRole[roleName]) membersByRole[roleName] = [];
+            
+            // Duplikate vermeiden (bei mehreren IDs für gleiche Rolle)
+            const alreadyAdded = membersByRole[roleName].some(m => m.discordId === member.user.id);
+            if (!alreadyAdded) {
+              const avatarUrl = member.user.avatar 
+                ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png?size=128`
+                : null;
+              
+              membersByRole[roleName].push({
+                username: member.user.global_name || member.user.username,
+                discordUsername: member.user.username,
+                discordId: member.user.id,
+                avatar: avatarUrl,
+                roleName: roleName,
+              });
+            }
+          }
+        }
+      }
+      
+      // Flat member list
+      const members = [];
+      for (const [roleName, roleMembers] of Object.entries(membersByRole)) {
+        for (const m of roleMembers) {
+          members.push(m);
+        }
+      }
+      
+      // Rollen-Struktur
+      const roles = [
         { name: 'Projektinhaber', level: 4, category: 'Leitung', desc: 'Gründer & Leitung des Projekts', icon: 'crown' },
         { name: 'Stl. Projektinhaber', level: 4, category: 'Leitung', desc: 'Stellvertretende Projektleitung', icon: 'crown' },
         { name: 'Teamkoordination', level: 3, category: 'Management', desc: 'Koordination des gesamten Teams', icon: 'star' },
@@ -1593,10 +1650,10 @@ export async function GET(request) {
         { name: 'Discord Team', level: 0, category: 'Discord', desc: 'Discord-Teammitglieder', icon: 'headphones' },
       ];
       
-      return NextResponse.json({ members: adminMembers, roles: allRoles });
+      return NextResponse.json({ members, roles, totalDiscordMembers: allMembers.length });
     } catch (error) {
       console.error('Team members error:', error);
-      return NextResponse.json({ members: [], roles: [] });
+      return NextResponse.json({ members: [], roles: [], error: error.message });
     }
   }
 
