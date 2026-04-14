@@ -41,7 +41,7 @@ function FormSection({ number, title, icon: Icon, children }) {
 }
 
 // ========== KARTEN-AUSWAHL ==========
-function BewerbungCards({ user, onSelect }) {
+function BewerbungCards({ user, onSelect, settings }) {
   const isTeamler = user?.isTeamMember || false;
 
   const cards = [
@@ -53,6 +53,7 @@ function BewerbungCards({ user, onSelect }) {
       color: 'from-neutral-800 to-neutral-900',
       borderHover: 'hover:border-white/20',
       show: !isTeamler,
+      isOpen: settings?.normal_open !== false
     },
     {
       type: 'praktikum',
@@ -62,6 +63,7 @@ function BewerbungCards({ user, onSelect }) {
       color: 'from-neutral-800 to-neutral-900',
       borderHover: 'hover:border-white/20',
       show: !isTeamler,
+      isOpen: settings?.praktikum_open !== false
     },
     {
       type: 'uprank',
@@ -72,6 +74,7 @@ function BewerbungCards({ user, onSelect }) {
       borderHover: 'hover:border-white/20',
       show: isTeamler,
       note: 'Nur für Teamler • Du kannst deine eigene Bewerbung nicht selbst bearbeiten',
+      isOpen: settings?.uprank_open !== false
     },
   ];
 
@@ -102,23 +105,39 @@ function BewerbungCards({ user, onSelect }) {
         {visibleCards.map((card, i) => (
           <button
             key={card.type}
-            onClick={() => onSelect(card.type)}
-            className={`group text-left p-8 rounded-2xl bg-gradient-to-b ${card.color} border border-neutral-800 ${card.borderHover} transition-all duration-500 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/30 animate-fade-in-up`}
+            onClick={() => card.isOpen ? onSelect(card.type) : null}
+            disabled={!card.isOpen}
+            className={`group relative text-left p-8 rounded-2xl bg-gradient-to-b ${card.color} border border-neutral-800 
+              ${card.isOpen ? `${card.borderHover} hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/30 cursor-pointer` : 'opacity-60 cursor-not-allowed'}
+              transition-all duration-500 animate-fade-in-up`}
             style={{ animationDelay: `${0.4 + i * 0.15}s`, animationFillMode: 'both' }}
           >
-            <div className="w-14 h-14 rounded-2xl bg-neutral-700/30 border border-neutral-700 flex items-center justify-center mb-5 text-neutral-400 group-hover:text-white group-hover:bg-neutral-700/50 transition-all duration-300">
+            {!card.isOpen && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-2xl backdrop-blur-sm z-10">
+                <div className="text-center px-6">
+                  <Lock className="w-10 h-10 text-red-400/70 mx-auto mb-3" />
+                  <p className="text-white font-semibold text-base">Bewerbungen geschlossen</p>
+                  <p className="text-white/50 text-xs mt-1">Derzeit nicht verfügbar</p>
+                </div>
+              </div>
+            )}
+            <div className={`w-14 h-14 rounded-2xl bg-neutral-700/30 border border-neutral-700 flex items-center justify-center mb-5 text-neutral-400 
+              ${card.isOpen ? 'group-hover:text-white group-hover:bg-neutral-700/50' : ''} 
+              transition-all duration-300 ${!card.isOpen && 'blur-[2px]'}`}>
               {card.icon}
             </div>
-            <h3 className="text-xl font-bold text-white mb-2 group-hover:text-white transition-colors">{card.title}</h3>
-            <p className="text-neutral-500 text-sm leading-relaxed mb-4">{card.desc}</p>
+            <h3 className={`text-xl font-bold text-white mb-2 transition-colors ${!card.isOpen && 'blur-[2px]'}`}>{card.title}</h3>
+            <p className={`text-neutral-500 text-sm leading-relaxed mb-4 ${!card.isOpen && 'blur-[2px]'}`}>{card.desc}</p>
             {card.note && (
-              <p className="text-neutral-600 text-xs flex items-center gap-1.5">
+              <p className={`text-neutral-600 text-xs flex items-center gap-1.5 ${!card.isOpen && 'blur-[2px]'}`}>
                 <Lock className="w-3 h-3" /> {card.note}
               </p>
             )}
-            <div className="mt-4 flex items-center gap-2 text-neutral-500 group-hover:text-white text-sm font-medium transition-colors">
-              Bewerbung starten <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </div>
+            {card.isOpen && (
+              <div className="mt-4 flex items-center gap-2 text-neutral-500 group-hover:text-white text-sm font-medium transition-colors">
+                Bewerbung starten <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </div>
+            )}
           </button>
         ))}
       </div>
