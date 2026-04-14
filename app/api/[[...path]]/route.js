@@ -508,30 +508,33 @@ async function handleAdminLogin(request) {
 
     console.log('[DEBUG] ✅ Account validated:', account.mitarbeiter_nummer);
 
-    // SCHRITT 2: Discord Member Check (OPTIONAL - kann später aktiviert werden)
-    // ERSTMAL DEAKTIVIERT FÜR TESTING!
-    /*
-    console.log('[DEBUG] Checking Discord member...');
-    const member = await getGuildMember(account.discord_user_id);
-    if (!member) {
-      console.log('[DEBUG] Discord member not found');
-      return NextResponse.json({ error: 'Discord-Mitgliedschaft nicht gefunden' }, { status: 403 });
-    }
-
-    const adminRole = getAdminRole(member.roles || []);
-    if (!adminRole) {
-      console.log('[DEBUG] No admin role found');
-      return NextResponse.json({ error: 'Keine Admin-Berechtigung auf Discord' }, { status: 403 });
-    }
-    */
-
-    // TEMPORÄR: Default Role wenn Discord-Check deaktiviert
-    const adminRole = {
-      name: account.role_name || 'Admin',
-      level: 4,
-      canCreateAccounts: true,
-      canSeeAll: true
+    // SCHRITT 2: Rolle aus Datenbank laden
+    console.log('[DEBUG] Loading role from database:', account.role_name);
+    
+    // Rollen-Konfiguration basierend auf DB role_name
+    const roleConfig = {
+      'Super Admin': { level: 4, canCreateAccounts: true, canSeeAll: true },
+      'Admin': { level: 3, canCreateAccounts: false, canSeeAll: true },
+      'Moderator': { level: 2, canCreateAccounts: false, canSeeAll: true },
+      'Projektinhaber': { level: 4, canCreateAccounts: true, canSeeAll: true },
+      'Stl. Projektinhaber': { level: 3, canCreateAccounts: false, canSeeAll: true },
+      'Teamkoordination': { level: 2, canCreateAccounts: false, canSeeAll: true },
+      'Qualitätsmanagement': { level: 2, canCreateAccounts: false, canSeeAll: true },
+      'Teamvertretung': { level: 1, canCreateAccounts: false, canSeeAll: false },
+      'Teamleitung': { level: 1, canCreateAccounts: false, canSeeAll: false },
+      'Stl. Teamleitung': { level: 1, canCreateAccounts: false, canSeeAll: false }
     };
+    
+    const adminRole = roleConfig[account.role_name] || { 
+      name: account.role_name || 'Admin',
+      level: 1, 
+      canCreateAccounts: false, 
+      canSeeAll: false 
+    };
+    
+    adminRole.name = account.role_name; // Name aus DB
+    
+    console.log('[DEBUG] Admin role loaded:', adminRole);
 
     console.log('[DEBUG] Creating admin session...');
     const admin = {
@@ -823,3 +826,4 @@ export async function DELETE(request) {
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
 
+F
