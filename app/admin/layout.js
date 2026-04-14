@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
@@ -8,20 +8,41 @@ import {
   Menu, X, Shield, ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 export default function AdminLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [admin, setAdmin] = useState(null);
 
+  useEffect(() => {
+    // Admin-Daten für Sidebar laden
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/me');
+        const data = await res.json();
+        if (data.admin) {
+          setAdmin(data.admin);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
+
+  // Navigation basierend auf Rechten
+  const canSeeAccounts = admin?.canCreateAccounts || (admin?.roleLevel >= 3);
+  
   const navItems = [
-    { href: '/admin', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
-    { href: '/admin/bewerbungen', label: 'Bewerbungen', icon: <FileText className="w-5 h-5" /> },
-    { href: '/admin/accounts', label: 'Accounts', icon: <UserPlus className="w-5 h-5" /> },
+    { href: '/admin', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, show: true },
+    { href: '/admin/bewerbungen', label: 'Bewerbungen', icon: <FileText className="w-5 h-5" />, show: true },
+    { href: '/admin/accounts', label: 'Accounts', icon: <UserPlus className="w-5 h-5" />, show: canSeeAccounts },
   ];
 
   const handleLogout = async () => {
     await fetch('/api/admin/logout', { method: 'POST' });
+    toast.success('Abgemeldet', { description: 'Du wurdest erfolgreich abgemeldet.' });
     router.push('/admin');
     window.location.reload();
   };
@@ -46,9 +67,17 @@ export default function AdminLayout({ children }) {
             </Link>
           </div>
 
+          {/* Admin Info */}
+          {admin && (
+            <div className="px-4 py-3 border-b border-white/[0.06]">
+              <p className="text-sm text-white/70 truncate">{admin.discordUsername}</p>
+              <p className="text-[10px] text-white/30">{admin.roleName} - Lv.{admin.roleLevel}</p>
+            </div>
+          )}
+
           {/* Navigation */}
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {navItems.map((item) => {
+            {navItems.filter(n => n.show).map((item) => {
               const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
               return (
                 <Link
@@ -76,7 +105,7 @@ export default function AdminLayout({ children }) {
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/[0.04] transition-all"
             >
               <Settings className="w-5 h-5" />
-              <span className="font-medium text-sm">Einstellungen</span>
+              <span className="font-medium text-sm">Zurück zur Webseite</span>
             </Link>
             <button
               onClick={handleLogout}

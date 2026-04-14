@@ -72,6 +72,7 @@ function getAdminFromRequest(request) {
 }
 
 function getAdminContext(request) {
+  // Admin-Login ist Pflicht! Nur admin_token prüfen (Credential-Login)
   const adminUser = getAdminFromRequest(request);
   if (adminUser) return adminUser;
   return null;
@@ -739,36 +740,87 @@ async function handleAdminGetAccounts(request) {
 async function handleAdminCreateAccount(request) {
   const admin = getAdminContext(request);
   if (!admin || !admin.canCreateAccounts) {
-    return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 });
+    return NextResponse.json({ error: 'Nicht autorisiert - Nur Projektinhaber können Accounts erstellen' }, { status: 403 });
   }
 
   try {
     const body = await request.json();
     
+    // Discord User prüfen
     const member = await getGuildMember(body.discordUserId);
     if (!member) {
-      return NextResponse.json({ error: 'Discord-Benutzer nicht im Server' }, { status: 400 });
+      return NextResponse.json({ error: 'Discord-Benutzer nicht im Server gefunden' }, { status: 400 });
     }
 
+    // Höchste Admin-Rolle automatisch erkennen
     const adminRole = getAdminRole(member.roles || []);
+    if (!adminRole) {
+      return NextResponse.json({ error: 'Dieser Discord-Benutzer hat keine Team-Rolle auf dem Server' }, { status: 400 });
+    }
+    
+    console.log('[ADMIN] Creating account for', member.user.username, 'with role:', adminRole.name, 'Level:', adminRole.level);
     
     const account = await createAdminAccount({
       discordUserId: body.discordUserId,
-      discordUsername: body.discordUsername || member.user.username,
+      discordUsername: member.user.username,
       mitarbeiterNummer: body.mitarbeiterNummer,
       email: body.email,
       password: body.password,
-      roleName: adminRole?.name,
+      roleName: adminRole.name,
       createdBy: admin.discordUsername
     });
 
-    return NextResponse.json({ account });
+    return NextResponse.json({ 
+      account, 
+      detectedRole: adminRole.name,
+      roleLevel: adminRole.level 
+    });
   } catch (error) {
     console.error('Create account error:', error);
     if (error.code === '23505') {
       return NextResponse.json({ error: 'Account existiert bereits' }, { status: 409 });
     }
-    return NextResponse.json({ error: 'Fehler beim Erstellen' }, { status: 500 });
+    return NextResponse.json({ error: 'Fehler beim Erstellen: ' + error.message }, { status: 500 });
+  }
+}
+
+// Discord-Rolle für eine User-ID prüfen (für Account-Formular)
+async function handleCheckDiscordRole(request) {
+  const admin = getAdminContext(request);
+  if (!admin || !admin.canCreateAccounts) {
+    return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 });
+  }
+
+  try {
+    const { discordUserId } = await request.json();
+    if (!discordUserId) {
+      return NextResponse.json({ error: 'Discord User ID fehlt' }, { status: 400 });
+    }
+
+    const member = await getGuildMember(discordUserId);
+    if (!member) {
+      return NextResponse.json({ error: 'Benutzer nicht auf dem Discord-Server gefunden', found: false }, { status: 404 });
+    }
+
+    const adminRole = getAdminRole(member.roles || []);
+    
+    return NextResponse.json({
+      found: true,
+      username: member.user.username,
+      globalName: member.nick || member.user.global_name || member.user.username,
+      avatar: member.user.avatar,
+      role: adminRole ? {
+        name: adminRole.name,
+        level: adminRole.level,
+        canCreateAccounts: adminRole.canCreateAccounts,
+        canSeeAll: adminRole.canSeeAll,
+      } : null,
+      hasTeamRole: !!adminRole,
+      allRoleIds: member.roles || [],
+    });
+  } catch (error) {
+    console.error('Check role error:', error);
+    return NextResponse.json({ error: 'Fehler beim Prüfen' }, { status: 500 });
   }
 }
 
@@ -876,6 +928,7 @@ export async function POST(request) {
     case 'admin/login': return handleAdminLogin(request);
     case 'admin/logout': return handleAdminLogout();
     case 'admin/accounts': return handleAdminCreateAccount(request);
+    case 'admin/check-role': return handleCheckDiscordRole(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }

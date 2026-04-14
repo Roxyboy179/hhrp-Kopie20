@@ -6,20 +6,34 @@ import { GlassCard } from '@/components/shared/GlassCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 import { 
   Loader2, Lock, LogIn, FileText, UserPlus, 
   Clock, CheckCircle2, XCircle, AlertTriangle,
-  TrendingUp, Users, Activity
+  Users, Shield, Eye, EyeOff
 } from 'lucide-react';
 
 const inputClass = "bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-blue-500/40 focus:ring-blue-500/20 rounded-xl";
+
+function getRoleBadgeColor(roleName) {
+  switch (roleName) {
+    case 'Projektinhaber': return 'bg-red-500/20 text-red-300 border-red-500/30';
+    case 'Stl. Projektinhaber': return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
+    case 'Teamkoordination': return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
+    case 'Qualitätsmanagement': return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+    case 'Teamvertretung': return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
+    case 'Teamleitung': return 'bg-green-500/20 text-green-300 border-green-500/30';
+    case 'Stl. Teamleitung': return 'bg-teal-500/20 text-teal-300 border-teal-500/30';
+    default: return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+  }
+}
 
 export default function AdminPage() {
   const router = useRouter();
   const [admin, setAdmin] = useState(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
   
   // Login Form State
   const [mitarbeiterNummer, setMitarbeiterNummer] = useState('');
@@ -69,8 +83,6 @@ export default function AdminPage() {
     setLoginLoading(true);
     setLoginError('');
     
-    console.log('[DEBUG] Login attempt:', { mitarbeiterNummer, email, password: '***' });
-    
     try {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
@@ -82,9 +94,7 @@ export default function AdminPage() {
         })
       });
       
-      console.log('[DEBUG] Response status:', res.status);
       const data = await res.json();
-      console.log('[DEBUG] Response data:', data);
       
       if (!res.ok) {
         throw new Error(data.error || 'Login fehlgeschlagen');
@@ -92,9 +102,14 @@ export default function AdminPage() {
       
       setAdmin(data.admin);
       await fetchStats();
+      
+      toast.success('Erfolgreich angemeldet', {
+        description: `Willkommen, ${data.admin.discordUsername}! Rolle: ${data.admin.roleName}`,
+      });
     } catch (e) {
       console.error('[DEBUG] Login error:', e);
       setLoginError(e.message);
+      toast.error('Anmeldung fehlgeschlagen', { description: e.message });
     } finally {
       setLoginLoading(false);
     }
@@ -105,6 +120,7 @@ export default function AdminPage() {
       await fetch('/api/admin/logout', { method: 'POST' });
       setAdmin(null);
       setStats(null);
+      toast.success('Abgemeldet', { description: 'Du wurdest erfolgreich abgemeldet.' });
     } catch (e) {
       console.error('[DEBUG] Logout error:', e);
     }
@@ -130,6 +146,7 @@ export default function AdminPage() {
               </div>
               <h2 className="text-2xl font-bold">Admin Panel</h2>
               <p className="text-white/40 text-sm mt-2">Melde dich mit deinen Anmeldedaten an</p>
+              <p className="text-white/25 text-xs mt-1">Deine Discord-Rolle bestimmt deine Berechtigungen</p>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-4">
@@ -159,15 +176,24 @@ export default function AdminPage() {
 
               <div className="space-y-2">
                 <Label className="text-white/60 text-sm">Passwort</Label>
-                <Input 
-                  type="password"
-                  value={password} 
-                  onChange={e => setPassword(e.target.value)} 
-                  placeholder="••••••••" 
-                  className={inputClass} 
-                  required 
-                  autoComplete="off"
-                />
+                <div className="relative">
+                  <Input 
+                    type={showPassword ? 'text' : 'password'}
+                    value={password} 
+                    onChange={e => setPassword(e.target.value)} 
+                    placeholder="Dein Passwort" 
+                    className={`${inputClass} pr-10`} 
+                    required 
+                    autoComplete="off"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               {loginError && (
@@ -207,13 +233,20 @@ export default function AdminPage() {
     );
   }
 
-  // DASHBOARD
+  // DASHBOARD - Rechte-basiert
+  const canSeeAccounts = admin.canCreateAccounts || admin.roleLevel >= 3;
+  
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-white/40 mt-1">Willkommen zurück, {admin.discordUsername}!</p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-white/40">Willkommen zurück, {admin.discordUsername}!</p>
+            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeColor(admin.roleName)}`}>
+              {admin.roleName} (Lv.{admin.roleLevel})
+            </span>
+          </div>
         </div>
         <Button 
           variant="outline" 
@@ -223,6 +256,20 @@ export default function AdminPage() {
           Abmelden
         </Button>
       </div>
+
+      {/* Rechte-Info */}
+      <GlassCard className="p-4">
+        <div className="flex items-center gap-3 text-sm">
+          <Shield className="w-4 h-4 text-blue-400" />
+          <span className="text-white/60">Deine Berechtigungen:</span>
+          <span className={`px-2 py-0.5 rounded text-xs ${admin.canSeeAll ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
+            {admin.canSeeAll ? 'Alle Bewerbungen sehen' : 'Eingeschränkte Sicht'}
+          </span>
+          <span className={`px-2 py-0.5 rounded text-xs ${admin.canCreateAccounts ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
+            {admin.canCreateAccounts ? 'Accounts erstellen' : 'Keine Account-Verwaltung'}
+          </span>
+        </div>
+      </GlassCard>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
         <GlassCard className="p-5">
@@ -268,14 +315,29 @@ export default function AdminPage() {
           <p className="text-white/40 text-sm">Bewerbungen anzeigen, bearbeiten und Status ändern</p>
         </GlassCard>
 
-        <GlassCard 
-          className="p-6 cursor-pointer hover:bg-white/[0.03] transition-colors"
-          onClick={() => router.push('/admin/accounts')}
-        >
-          <Users className="w-8 h-8 text-purple-400 mb-3" />
-          <h3 className="text-xl font-semibold mb-2">Admin Accounts</h3>
-          <p className="text-white/40 text-sm">Admin-Konten erstellen und verwalten</p>
-        </GlassCard>
+        {canSeeAccounts && (
+          <GlassCard 
+            className="p-6 cursor-pointer hover:bg-white/[0.03] transition-colors"
+            onClick={() => router.push('/admin/accounts')}
+          >
+            <Users className="w-8 h-8 text-purple-400 mb-3" />
+            <h3 className="text-xl font-semibold mb-2">Admin Accounts</h3>
+            <p className="text-white/40 text-sm">
+              {admin.canCreateAccounts 
+                ? 'Admin-Konten erstellen und verwalten' 
+                : 'Admin-Konten anzeigen'
+              }
+            </p>
+          </GlassCard>
+        )}
+
+        {!canSeeAccounts && (
+          <GlassCard className="p-6 opacity-40">
+            <Users className="w-8 h-8 text-white/20 mb-3" />
+            <h3 className="text-xl font-semibold mb-2 text-white/40">Admin Accounts</h3>
+            <p className="text-white/20 text-sm">Keine Berechtigung (min. Level 3 erforderlich)</p>
+          </GlassCard>
+        )}
       </div>
     </div>
   );

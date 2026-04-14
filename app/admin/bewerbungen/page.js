@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { GlassCard } from '@/components/shared/GlassCard';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
 import { 
   Loader2, RefreshCw, ArrowLeft, User, AlertTriangle,
-  Clock, CheckCircle2, XCircle, Filter, Search, Eye
+  Clock, CheckCircle2, XCircle, Filter, Search, Eye, Shield
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -63,6 +64,7 @@ export default function AdminBewerbungenPage() {
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [actionConfirm, setActionConfirm] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -103,6 +105,7 @@ export default function AdminBewerbungenPage() {
   };
 
   const handleAction = async (id, action, status) => {
+    setActionConfirm(null);
     try {
       const body = action ? { action } : { status };
       const res = await fetch(`/api/admin/bewerbungen/${id}`, {
@@ -112,9 +115,17 @@ export default function AdminBewerbungenPage() {
       });
       const data = await res.json();
       if (res.ok) {
+        const actionText = action === 'claim' ? 'übernommen' : 
+                          action === 'unclaim' ? 'freigegeben' :
+                          status === 'Angenommen' ? 'angenommen' :
+                          status === 'Abgelehnt' ? 'abgelehnt' : 'aktualisiert';
+        
+        toast.success(`Bewerbung ${actionText}`, {
+          description: `Die Bewerbung wurde erfolgreich ${actionText}.`,
+        });
+        
         await fetchBewerbungen();
         if (selected?.id === id) {
-          // formData als String parsen falls nötig
           const bewerbung = data.bewerbung;
           if (bewerbung && typeof bewerbung.formData === 'string') {
             try {
@@ -126,14 +137,15 @@ export default function AdminBewerbungenPage() {
           setSelected(bewerbung);
         }
       } else {
-        alert(data.error || 'Fehler');
+        toast.error('Fehler', { description: data.error || 'Aktion fehlgeschlagen' });
       }
     } catch (e) {
       console.error(e);
+      toast.error('Fehler', { description: 'Netzwerkfehler aufgetreten' });
     }
   };
 
-  if (loading) {
+  if (loading && !bewerbungen.length) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
@@ -141,10 +153,46 @@ export default function AdminBewerbungenPage() {
     );
   }
 
+  // Bestätigungs-Dialog
+  const ConfirmDialog = () => {
+    if (!actionConfirm) return null;
+    
+    const colorMap = {
+      'Angenommen': 'bg-green-600 hover:bg-green-700',
+      'Abgelehnt': 'bg-red-600 hover:bg-red-700',
+    };
+    
+    return (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <GlassCard className="p-6 max-w-md w-full animate-scale-in">
+          <h3 className="text-lg font-bold mb-2">{actionConfirm.title}</h3>
+          <p className="text-white/50 text-sm mb-6">{actionConfirm.description}</p>
+          <div className="flex gap-2 justify-end">
+            <Button 
+              variant="outline" 
+              onClick={() => setActionConfirm(null)} 
+              className="rounded-xl border-white/10"
+            >
+              Abbrechen
+            </Button>
+            <Button 
+              onClick={() => handleAction(actionConfirm.id, actionConfirm.action, actionConfirm.status)} 
+              className={`rounded-xl ${colorMap[actionConfirm.status] || 'bg-blue-600 hover:bg-blue-700'}`}
+            >
+              Bestätigen
+            </Button>
+          </div>
+        </GlassCard>
+      </div>
+    );
+  };
+
   if (selected) {
     const fd = selected.formData || {};
     return (
       <div className="p-6 space-y-6 max-w-5xl mx-auto">
+        <ConfirmDialog />
+        
         <Button 
           variant="ghost" 
           onClick={() => setSelected(null)} 
@@ -215,11 +263,29 @@ export default function AdminBewerbungenPage() {
                 <Button onClick={() => handleAction(selected.id, 'unclaim')} variant="outline" className="rounded-xl border-white/10">
                   Freigeben
                 </Button>
-                <Button onClick={() => handleAction(selected.id, null, 'Angenommen')} className="bg-green-600 hover:bg-green-700 rounded-xl">
-                  Annehmen
+                <Button 
+                  onClick={() => setActionConfirm({
+                    id: selected.id,
+                    action: null,
+                    status: 'Angenommen',
+                    title: 'Bewerbung annehmen?',
+                    description: `Möchtest du die Bewerbung von ${selected.username} wirklich annehmen? Der Bewerber wird per Discord-DM benachrichtigt.`
+                  })} 
+                  className="bg-green-600 hover:bg-green-700 rounded-xl"
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" /> Annehmen
                 </Button>
-                <Button onClick={() => handleAction(selected.id, null, 'Abgelehnt')} className="bg-red-600 hover:bg-red-700 rounded-xl">
-                  Ablehnen
+                <Button 
+                  onClick={() => setActionConfirm({
+                    id: selected.id,
+                    action: null,
+                    status: 'Abgelehnt',
+                    title: 'Bewerbung ablehnen?',
+                    description: `Möchtest du die Bewerbung von ${selected.username} wirklich ablehnen? Der Bewerber wird per Discord-DM benachrichtigt.`
+                  })} 
+                  className="bg-red-600 hover:bg-red-700 rounded-xl"
+                >
+                  <XCircle className="w-4 h-4 mr-2" /> Ablehnen
                 </Button>
               </>
             )}
@@ -231,16 +297,23 @@ export default function AdminBewerbungenPage() {
 
   const filtered = bewerbungen.filter(b => {
     if (filter !== 'all' && b.status !== filter) return false;
-    if (search && !b.username.toLowerCase().includes(search.toLowerCase()) && !b.id.includes(search)) return false;
+    if (search && !b.username?.toLowerCase().includes(search.toLowerCase()) && !b.id?.includes(search)) return false;
     return true;
   });
 
   return (
     <div className="p-6 space-y-6">
+      <ConfirmDialog />
+      
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold">Bewerbungen</h1>
-          <p className="text-white/40 text-sm mt-1">{bewerbungen.length} Bewerbungen insgesamt</p>
+          <p className="text-white/40 text-sm mt-1">
+            {bewerbungen.length} Bewerbungen insgesamt
+            {admin && (
+              <span className="ml-2 text-blue-400">| Rolle: {admin.roleName} (Lv.{admin.roleLevel})</span>
+            )}
+          </p>
         </div>
         <Button 
           variant="outline" 
@@ -263,7 +336,7 @@ export default function AdminBewerbungenPage() {
             />
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {['all', 'Eingereicht', 'In Bearbeitung', 'Angenommen', 'Abgelehnt'].map(f => (
             <Button
               key={f}
@@ -286,11 +359,11 @@ export default function AdminBewerbungenPage() {
           </GlassCard>
         ) : (
           filtered.map(b => (
-            <GlassCard key={b.id} hover className="p-5" onClick={() => setSelected(b)}>
+            <GlassCard key={b.id} hover className="p-5 cursor-pointer" onClick={() => setSelected(b)}>
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="font-semibold">#{b.id.substring(0, 8)}</span>
+                    <span className="font-semibold">#{b.id?.substring(0, 8)}</span>
                     <span className="text-white/60">{b.username}</span>
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(b.status)}`}>
                       <StatusIcon status={b.status} />

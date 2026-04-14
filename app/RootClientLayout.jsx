@@ -2,6 +2,7 @@
 
 import { AuthProvider, useAuth } from '@/components/providers/AuthProvider';
 import { Navbar } from '@/components/shared/Navbar';
+import { Toaster } from 'sonner';
 import Link from 'next/link';
 
 export default function RootClientLayout({ children }) {
@@ -10,6 +11,20 @@ export default function RootClientLayout({ children }) {
       <NavbarWrapper />
       <main className="pt-16 min-h-screen">{children}</main>
       <Footer />
+      <Toaster 
+        position="bottom-right" 
+        theme="dark"
+        toastOptions={{
+          style: {
+            background: 'rgba(15, 23, 42, 0.95)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            backdropFilter: 'blur(20px)',
+            color: 'white',
+          },
+        }}
+        richColors
+        closeButton
+      />
     </AuthProvider>
   );
 }
@@ -17,13 +32,6 @@ export default function RootClientLayout({ children }) {
 function NavbarWrapper() {
   const { user, loading } = useAuth();
   return <Navbar user={user} loading={loading} />;
-}
-
-function AuthErrorBanner() {
-  const { authError, clearError } = useAuth();
-  if (!authError) return null;
-  // Error display is handled in page.js now
-  return null;
 }
 
 function Footer() {

@@ -11,6 +11,7 @@ import {
   AlertTriangle, Clock, CheckCircle2, XCircle, Plus,
   User, Gamepad2, Users, Target, MessageSquare, Shield, Mic, BookOpen, Heart
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 function formatDateTime(dateStr) {
   if (!dateStr) return '-';
@@ -48,6 +49,7 @@ export default function MeineBewerbungenPage() {
   const [bewerbungen, setBewerbungen] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
+  const [withdrawConfirm, setWithdrawConfirm] = useState(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -79,15 +81,21 @@ export default function MeineBewerbungenPage() {
   };
 
   const handleWithdraw = async (id) => {
-    if (!confirm('Möchtest du diese Bewerbung wirklich zurückziehen?')) return;
+    setWithdrawConfirm(null);
     try {
       const res = await fetch(`/api/bewerbungen/${id}`, { method: 'DELETE' });
       if (res.ok) {
+        toast.success('Bewerbung zurückgezogen', {
+          description: 'Deine Bewerbung wurde erfolgreich zurückgezogen.',
+        });
         await fetchBewerbungen();
         setSelected(null);
+      } else {
+        toast.error('Fehler', { description: 'Bewerbung konnte nicht zurückgezogen werden.' });
       }
     } catch (e) {
       console.error(e);
+      toast.error('Fehler', { description: 'Ein Netzwerkfehler ist aufgetreten.' });
     }
   };
 
@@ -103,6 +111,33 @@ export default function MeineBewerbungenPage() {
 
   return (
     <div className="min-h-screen px-4 py-8">
+      {/* Zurückziehen-Bestätigung */}
+      {withdrawConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <GlassCard className="p-6 max-w-md w-full animate-scale-in">
+            <h3 className="text-lg font-bold mb-2">Bewerbung zurückziehen?</h3>
+            <p className="text-white/50 text-sm mb-6">
+              Möchtest du diese Bewerbung wirklich zurückziehen? Diese Aktion kann nicht rückgängig gemacht werden.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setWithdrawConfirm(null)} 
+                className="rounded-xl border-white/10"
+              >
+                Abbrechen
+              </Button>
+              <Button 
+                onClick={() => handleWithdraw(withdrawConfirm)} 
+                className="bg-red-600 hover:bg-red-700 rounded-xl"
+              >
+                Zurückziehen
+              </Button>
+            </div>
+          </GlassCard>
+        </div>
+      )}
+
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -289,7 +324,7 @@ export default function MeineBewerbungenPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleWithdraw(bewerbung.id)}
+                        onClick={() => setWithdrawConfirm(bewerbung.id)}
                         className="rounded-xl border-red-500/20 text-red-300 hover:bg-red-500/10"
                       >
                         Zurückziehen

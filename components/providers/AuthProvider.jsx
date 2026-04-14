@@ -1,8 +1,9 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 
-const AuthContext = createContext({ user: null, loading: true, refreshUser: () => {}, authError: null });
+const AuthContext = createContext({ user: null, loading: true, refreshUser: () => {} });
 
 const ERROR_MESSAGES = {
   'no_code': 'Discord-Anmeldung fehlgeschlagen: Kein Autorisierungscode erhalten.',
@@ -16,7 +17,6 @@ const ERROR_MESSAGES = {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [authError, setAuthError] = useState(null);
 
   const refreshUser = useCallback(async () => {
     setLoading(true);
@@ -24,9 +24,6 @@ export function AuthProvider({ children }) {
       const res = await fetch('/api/auth/me', { credentials: 'include' });
       const data = await res.json();
       setUser(data.user);
-      if (data.user) {
-        setAuthError(null);
-      }
     } catch (error) {
       console.error('Failed to fetch user:', error);
       setUser(null);
@@ -43,7 +40,14 @@ export function AuthProvider({ children }) {
       const auth = params.get('auth');
 
       if (error) {
-        setAuthError(ERROR_MESSAGES[error] || `Anmeldung fehlgeschlagen: ${error}`);
+        // Show error toast bottom-right
+        setTimeout(() => {
+          toast.error('Anmeldung fehlgeschlagen', {
+            description: ERROR_MESSAGES[error] || `Fehler: ${error}`,
+            duration: 8000,
+          });
+        }, 500);
+        
         // Clean URL params
         const url = new URL(window.location.href);
         url.searchParams.delete('error');
@@ -51,6 +55,14 @@ export function AuthProvider({ children }) {
       }
 
       if (auth === 'success') {
+        // Show success toast bottom-right
+        setTimeout(() => {
+          toast.success('Erfolgreich angemeldet', {
+            description: 'Willkommen bei Hamburg Horizon RP!',
+            duration: 4000,
+          });
+        }, 500);
+        
         // Clean URL params  
         const url = new URL(window.location.href);
         url.searchParams.delete('auth');
@@ -61,10 +73,8 @@ export function AuthProvider({ children }) {
     refreshUser();
   }, [refreshUser]);
 
-  const clearError = useCallback(() => setAuthError(null), []);
-
   return (
-    <AuthContext.Provider value={{ user, loading, refreshUser, authError, clearError }}>
+    <AuthContext.Provider value={{ user, loading, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
