@@ -21,7 +21,7 @@ function getRoleBadgeColor(roleName) {
     case 'Projektinhaber': return 'bg-red-500/20 text-red-300 border-red-500/30';
     case 'Stl. Projektinhaber': return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
     case 'Teamkoordination': return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
-    case 'Qualitaetsmanagement': return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+    case 'Qualitätsmanagement': return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
     case 'Teamvertretung': return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
     case 'Teamleitung': return 'bg-green-500/20 text-green-300 border-green-500/30';
     case 'Stl. Teamleitung': return 'bg-teal-500/20 text-teal-300 border-teal-500/30';
@@ -235,7 +235,7 @@ export default function AdminPage() {
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <div className="flex items-center gap-3 mt-1">
-            <p className="text-white/40">Willkommen zurueck, {admin.discordUsername}!</p>
+            <p className="text-white/40">Willkommen zurück, {admin.discordUsername}!</p>
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeColor(admin.roleName)}`}>
               {admin.roleName} (Lv.{admin.roleLevel})
             </span>
@@ -256,7 +256,7 @@ export default function AdminPage() {
           <Shield className="w-4 h-4 text-blue-400" />
           <span className="text-white/60">Deine Berechtigungen:</span>
           <span className={`px-2 py-0.5 rounded text-xs ${admin.canSeeAll ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
-            {admin.canSeeAll ? 'Alle Bewerbungen sehen' : 'Eingeschraenkte Sicht'}
+            {admin.canSeeAll ? 'Alle Bewerbungen sehen' : 'Eingeschränkte Sicht'}
           </span>
           <span className={`px-2 py-0.5 rounded text-xs ${admin.canCreateAccounts ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
             {admin.canCreateAccounts ? 'Accounts erstellen' : 'Keine Account-Verwaltung'}

@@ -32,7 +32,7 @@ function AdminLayoutInner({ children }) {
     { href: '/admin', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, show: true },
     { href: '/admin/bewerbungen', label: 'Bewerbungen', icon: <FileText className="w-5 h-5" />, show: true },
     { href: '/admin/bewerbung-verwaltung', label: 'Bewerbungs-Verwaltung', icon: <Sliders className="w-5 h-5" />, show: canManageBewerbungen },
-    { href: '/admin/logs', label: 'Aktivitaets-Logs', icon: <Clock className="w-5 h-5" />, show: true },
+    { href: '/admin/logs', label: 'Aktivitäts-Logs', icon: <Clock className="w-5 h-5" />, show: true },
     { href: '/admin/accounts', label: 'Accounts', icon: <UserPlus className="w-5 h-5" />, show: canSeeAccounts },
     { href: '/admin/einstellungen', label: 'Einstellungen', icon: <Settings className="w-5 h-5" />, show: true },
   ];
@@ -101,7 +101,7 @@ function AdminLayoutInner({ children }) {
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/[0.04] transition-all"
             >
               <Settings className="w-5 h-5" />
-              <span className="font-medium text-sm">Zurueck zur Webseite</span>
+              <span className="font-medium text-sm">Zurück zur Webseite</span>
             </Link>
             <button
               onClick={handleLogout}
