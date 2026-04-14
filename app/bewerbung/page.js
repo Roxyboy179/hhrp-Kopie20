@@ -42,7 +42,7 @@ function FormSection({ number, title, icon: Icon, children }) {
 
 // ========== KARTEN-AUSWAHL ==========
 function BewerbungCards({ user, onSelect }) {
-  const isTeamler = user?.adminLevel > 0;
+  const isTeamler = user?.isTeamMember || false;
 
   const cards = [
     {

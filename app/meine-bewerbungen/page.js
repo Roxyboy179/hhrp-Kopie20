@@ -208,12 +208,25 @@ export default function MeineBewerbungenPage() {
                       
                       {/* Bewerbungstyp anzeigen */}
                       {fd.bewerbungType && (
-                        <div className="mb-4 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04] inline-block">
-                          <span className="text-white/40 text-xs">
-                            {fd.bewerbungType === 'normal' && '📋 Team-Bewerbung'}
-                            {fd.bewerbungType === 'praktikum' && '💼 Praktikum-Bewerbung'}
-                            {fd.bewerbungType === 'uprank' && '⬆️ Uprank-Bewerbung'}
-                          </span>
+                        <div className="mb-4 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04] inline-flex items-center gap-2">
+                          {fd.bewerbungType === 'normal' && (
+                            <>
+                              <FileText className="w-3 h-3 text-blue-400" />
+                              <span className="text-white/40 text-xs">Team-Bewerbung</span>
+                            </>
+                          )}
+                          {fd.bewerbungType === 'praktikum' && (
+                            <>
+                              <Briefcase className="w-3 h-3 text-orange-400" />
+                              <span className="text-white/40 text-xs">Praktikum-Bewerbung</span>
+                            </>
+                          )}
+                          {fd.bewerbungType === 'uprank' && (
+                            <>
+                              <TrendingUp className="w-3 h-3 text-purple-400" />
+                              <span className="text-white/40 text-xs">Uprank-Bewerbung</span>
+                            </>
+                          )}
                         </div>
                       )}
                       

@@ -38,6 +38,18 @@ const ADMIN_ROLES = {
   '1273340696975380567': { name: 'Stl. Teamleitung', level: 1, canCreateAccounts: false, canSeeAll: false },
 };
 
+// ===== TEAM ROLES (Kein Admin-Zugriff, nur Uprank-Bewerbungen) =====
+const TEAM_ROLES = {
+  '1273340696975380565': { name: 'Roblox Manager', isTeamMember: true },
+  '1273340696975380566': { name: 'Discord Manager', isTeamMember: true },
+  '1273340696954273900': { name: 'Roblox Team', isTeamMember: true },
+  '1273340696954273899': { name: 'Roblox Team', isTeamMember: true },
+  '1273340696954273898': { name: 'Roblox Team', isTeamMember: true },
+  '1273340696954273897': { name: 'Discord Team', isTeamMember: true },
+  '1273340696954273896': { name: 'Discord Team', isTeamMember: true },
+  '1273340696954273895': { name: 'Discord Team', isTeamMember: true },
+};
+
 // ===== JWT HELPERS =====
 function createToken(payload) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
@@ -144,6 +156,16 @@ function getAdminRole(roles) {
     }
   }
   return bestRole;
+}
+
+function isTeamMember(roles) {
+  // Prüft ob User Team-Mitglied ist (KEIN Admin)
+  for (const roleId of roles) {
+    if (TEAM_ROLES[roleId]) {
+      return TEAM_ROLES[roleId];
+    }
+  }
+  return null;
 }
 
 // ===== SCHÖNE DISCORD EMBEDS =====
@@ -356,7 +378,10 @@ async function handleDiscordCallback(request) {
 
     // Step 4: Check admin roles (highest role wins)
     const adminRole = getAdminRole(member.roles || []);
+    const teamRole = isTeamMember(member.roles || []);
+    
     console.log('[OAUTH] Admin role:', adminRole?.name || 'none', 'Level:', adminRole?.level || 0);
+    console.log('[OAUTH] Team role:', teamRole?.name || 'none');
     
     const user = {
       id: discordUser.id,
@@ -369,6 +394,8 @@ async function handleDiscordCallback(request) {
       adminRole: adminRole?.name || null,
       canCreateAccounts: adminRole?.canCreateAccounts || false,
       canSeeAll: adminRole?.canSeeAll || false,
+      isTeamMember: !!(adminRole || teamRole), // Admin ODER Team
+      teamRole: teamRole?.name || null,
     };
 
     // Step 5: Create JWT and set cookie
@@ -420,17 +447,18 @@ async function handleCreateBewerbung(request) {
     // DEBUG: Log user and bewerbungType
     console.log('DEBUG - User:', JSON.stringify(user, null, 2));
     console.log('DEBUG - bewerbungType:', bewerbungType);
+    console.log('DEBUG - user.isTeamMember:', user.isTeamMember, typeof user.isTeamMember);
     console.log('DEBUG - user.adminLevel:', user.adminLevel, typeof user.adminLevel);
     
     // Teamler dürfen KEINE normale/Praktikum Bewerbung schreiben
-    if ((bewerbungType === 'normal' || bewerbungType === 'praktikum') && user.adminLevel > 0) {
-      console.log('DEBUG - Blocking admin from normal/praktikum application');
+    if ((bewerbungType === 'normal' || bewerbungType === 'praktikum') && user.isTeamMember) {
+      console.log('DEBUG - Blocking team member from normal/praktikum application');
       return NextResponse.json({ error: 'Du bist bereits im Team! Teamler können keine Team-Bewerbung einreichen.' }, { status: 403 });
     }
     
     // Nur Teamler dürfen Uprank-Bewerbungen schreiben
-    if (bewerbungType === 'uprank' && (!user.adminLevel || user.adminLevel === 0)) {
-      console.log('DEBUG - Blocking non-admin from uprank application');
+    if (bewerbungType === 'uprank' && !user.isTeamMember) {
+      console.log('DEBUG - Blocking non-team-member from uprank application');
       return NextResponse.json({ error: 'Uprank-Bewerbungen sind nur für Teamler möglich.' }, { status: 403 });
     }
     
