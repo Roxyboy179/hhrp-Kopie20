@@ -7,6 +7,7 @@ import {
   LayoutDashboard, FileText, UserPlus, Settings, LogOut, 
   Menu, X, Shield, ChevronRight
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function AdminLayout({ children }) {
   const pathname = usePathname();
@@ -20,27 +21,27 @@ export default function AdminLayout({ children }) {
   ];
 
   const handleLogout = async () => {
-    localStorage.removeItem('adminToken');
-    router.push('/');
+    await fetch('/api/admin/logout', { method: 'POST' });
+    router.push('/admin');
     window.location.reload();
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-black via-gray-900 to-black overflow-hidden">
+    <div className="flex h-screen bg-slate-950 overflow-hidden">
       {/* Sidebar */}
-      <aside className={`fixed md:relative z-50 h-full w-64 glass-apple-dark border-r border-white/10 transition-transform duration-300 ${
+      <aside className={`fixed md:relative z-50 h-full w-64 bg-slate-900/50 backdrop-blur-xl border-r border-white/[0.06] transition-transform duration-300 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       }`}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-6 border-b border-white/10">
+          <div className="p-6 border-b border-white/[0.06]">
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 bg-gradient-to-br from-gray-600 to-gray-800 rounded-2xl flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg">
                 <Shield className="w-5 h-5 text-white" />
               </div>
               <div>
-                <span className="font-bold text-lg tracking-tight text-white">HHRP Admin</span>
-                <span className="text-[10px] text-gray-400 block -mt-1">Hamburg Horizon RP</span>
+                <span className="font-bold text-lg tracking-tight">HHRP Admin</span>
+                <span className="text-[10px] text-white/30 block -mt-1">Hamburg Horizon RP</span>
               </div>
             </Link>
           </div>
@@ -56,8 +57,8 @@ export default function AdminLayout({ children }) {
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                     isActive
-                      ? 'bg-white/10 text-white shadow-lg'
-                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      ? 'bg-blue-500/20 text-blue-300 shadow-lg shadow-blue-500/10'
+                      : 'text-white/60 hover:text-white hover:bg-white/[0.04]'
                   }`}
                 >
                   {item.icon}
@@ -69,17 +70,17 @@ export default function AdminLayout({ children }) {
           </nav>
 
           {/* Bottom Actions */}
-          <div className="p-4 border-t border-white/10 space-y-2">
+          <div className="p-4 border-t border-white/[0.06] space-y-2">
             <Link
-              href="/einstellungen"
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+              href="/"
+              className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/[0.04] transition-all"
             >
               <Settings className="w-5 h-5" />
               <span className="font-medium text-sm">Einstellungen</span>
             </Link>
             <button
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-300 hover:text-red-200 hover:bg-red-500/10 transition-all"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400/70 hover:text-red-300 hover:bg-red-500/10 transition-all"
             >
               <LogOut className="w-5 h-5" />
               <span className="font-medium text-sm">Abmelden</span>
@@ -99,14 +100,16 @@ export default function AdminLayout({ children }) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile Header */}
-        <header className="md:hidden h-16 glass-apple-dark border-b border-white/10 flex items-center px-4">
-          <button
+        <header className="md:hidden h-16 bg-slate-900/50 backdrop-blur-xl border-b border-white/[0.06] flex items-center px-4">
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-gray-400 hover:text-white rounded-xl p-2"
+            className="text-white/70 hover:text-white rounded-xl"
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-          <span className="ml-4 font-bold text-white">HHRP Admin</span>
+          </Button>
+          <span className="ml-4 font-bold">HHRP Admin</span>
         </header>
 
         {/* Content Area */}

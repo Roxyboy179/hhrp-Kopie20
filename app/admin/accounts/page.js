@@ -1,382 +1,270 @@
-'use client'
+'use client';
 
-import { useState, useEffect } from 'react'
-import { Shield, Plus, Trash2, Loader2, UserPlus } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { GlassCard } from '@/components/shared/GlassCard';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { 
+  Loader2, UserPlus, Trash2, RefreshCw, Shield, AlertTriangle 
+} from 'lucide-react';
+
+const inputClass = "bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-blue-500/40 focus:ring-blue-500/20 rounded-xl";
+
+function formatDate(dateStr) {
+  if (!dateStr) return '-';
+  return new Date(dateStr).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
 
 export default function AdminAccountsPage() {
-  const router = useRouter()
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [currentUserRole, setCurrentUserRole] = useState('')
-  const [admins, setAdmins] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  
-  const [newAdmin, setNewAdmin] = useState({
+  const router = useRouter();
+  const [admin, setAdmin] = useState(null);
+  const [accounts, setAccounts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    discordUserId: '',
+    discordUsername: '',
     mitarbeiterNummer: '',
     email: '',
-    discordUsername: '',
-    password: '',
-    roleName: 'Moderator'
-  })
+    password: ''
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('adminToken')
-    if (!token) {
-      router.push('/admin/bewerbungen')
-      return
-    }
-    
-    setIsAuthenticated(true)
-    fetchAdmins(token)
-    checkUserRole(token)
-  }, [])
-
-  const checkUserRole = async (token) => {
-    try {
-      // Hier würden wir normalerweise die Rolle vom Server holen
-      // Für jetzt: MA-001 ist Super Admin
-      const response = await fetch('/api/admin/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/me');
+        const data = await res.json();
+        if (!data.admin) {
+          router.push('/admin');
+          return;
         }
-      })
-      
-      if (response.ok) {
-        const data = await response.json()
-        setCurrentUserRole(data.role || 'Admin')
-      }
-    } catch (error) {
-      console.error('Error checking role:', error)
-      // Fallback: MA-001 is Super Admin
-      setCurrentUserRole('Super Admin')
-    }
-  }
-
-  const fetchAdmins = async (token) => {
-    try {
-      setLoading(true)
-      const response = await fetch('/api/admin/accounts', {
-        headers: {
-          'Authorization': `Bearer ${token}`
+        if (!data.admin.canCreateAccounts && data.admin.roleLevel < 3) {
+          router.push('/admin');
+          return;
         }
-      })
-
-      const data = await response.json()
-      if (response.ok) {
-        setAdmins(data.admins || [])
+        setAdmin(data.admin);
+        await fetchAccounts();
+      } catch (e) {
+        console.error(e);
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Fetch Error:', error)
+    })();
+  }, []);
+
+  const fetchAccounts = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/accounts');
+      const data = await res.json();
+      setAccounts(data.accounts || []);
+    } catch (e) {
+      console.error(e);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
-  const handleCreateAdmin = async (e) => {
-    e.preventDefault()
-    
-    // Nur Super Admin kann Accounts erstellen
-    if (currentUserRole !== 'Super Admin') {
-      alert('❌ Nur Super Admins können neue Accounts erstellen!')
-      return
-    }
-
-    const token = localStorage.getItem('adminToken')
-    setLoading(true)
-
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError('');
     try {
-      const response = await fetch('/api/admin/accounts', {
+      const res = await fetch('/api/admin/accounts', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(newAdmin)
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        alert('✅ Admin Account erfolgreich erstellt!')
-        setShowCreateForm(false)
-        setNewAdmin({
-          mitarbeiterNummer: '',
-          email: '',
-          discordUsername: '',
-          password: '',
-          roleName: 'Moderator'
-        })
-        fetchAdmins(token)
-      } else {
-        alert('❌ Fehler: ' + (data.error || 'Unbekannter Fehler'))
-      }
-    } catch (error) {
-      console.error('Create Error:', error)
-      alert('❌ Netzwerkfehler')
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      await fetchAccounts();
+      setShowForm(false);
+      setFormData({ discordUserId: '', discordUsername: '', mitarbeiterNummer: '', email: '', password: '' });
+    } catch (e) {
+      setError(e.message);
     } finally {
-      setLoading(false)
+      setSubmitting(false);
     }
-  }
+  };
 
-  const handleDeleteAdmin = async (mitarbeiterNummer) => {
-    // Nur Super Admin kann Accounts löschen
-    if (currentUserRole !== 'Super Admin') {
-      alert('❌ Nur Super Admins können Accounts löschen!')
-      return
-    }
-
-    if (!confirm('Möchten Sie diesen Admin Account wirklich löschen?')) {
-      return
-    }
-
-    const token = localStorage.getItem('adminToken')
-
+  const handleDelete = async (id) => {
+    if (!confirm('Möchtest du diesen Account wirklich löschen?')) return;
     try {
-      const response = await fetch(`/api/admin/accounts/${mitarbeiterNummer}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (response.ok) {
-        alert('✅ Admin Account gelöscht!')
-        fetchAdmins(token)
-      } else {
-        const data = await response.json()
-        alert('❌ Fehler: ' + (data.error || 'Unbekannter Fehler'))
-      }
-    } catch (error) {
-      console.error('Delete Error:', error)
-      alert('❌ Netzwerkfehler')
+      const res = await fetch(`/api/admin/accounts/${id}`, { method: 'DELETE' });
+      if (res.ok) await fetchAccounts();
+    } catch (e) {
+      console.error(e);
     }
-  }
+  };
 
-  const getRoleBadgeColor = (role) => {
-    switch (role) {
-      case 'Super Admin':
-        return 'bg-red-500/10 text-red-300 border-red-500/30'
-      case 'Admin':
-        return 'bg-purple-500/10 text-purple-300 border-purple-500/30'
-      case 'Moderator':
-        return 'bg-blue-500/10 text-blue-300 border-blue-500/30'
-      default:
-        return 'bg-gray-500/10 text-gray-300 border-gray-500/30'
-    }
-  }
-
-  if (!isAuthenticated) {
-    return null
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black py-12 px-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="glass-apple rounded-3xl shadow-2xl p-8 mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-4xl font-bold text-white mb-2">
-                Admin Accounts Verwaltung
-              </h1>
-              <p className="text-gray-400">
-                Verwalte Teammitglieder und Berechtigungen
-              </p>
-              <p className="text-sm text-gray-500 mt-2">
-                Ihre Rolle: <span className={`px-2 py-1 rounded ${getRoleBadgeColor(currentUserRole)}`}>{currentUserRole}</span>
-              </p>
-            </div>
-            {currentUserRole === 'Super Admin' && (
-              <button
-                onClick={() => setShowCreateForm(!showCreateForm)}
-                className="flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl font-semibold hover:scale-105 transition-transform"
-              >
-                <Plus className="w-5 h-5" />
-                Neuer Admin
-              </button>
-            )}
-          </div>
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Admin Accounts</h1>
+          <p className="text-white/40 text-sm mt-1">{accounts.length} Accounts insgesamt</p>
         </div>
-
-        {/* Create Form */}
-        {showCreateForm && (
-          <div className="glass-apple rounded-2xl p-8 mb-8">
-            <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-              <UserPlus className="w-6 h-6" />
-              Neuen Admin Account erstellen
-            </h2>
-            <form onSubmit={handleCreateAdmin} className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-white font-semibold mb-2">
-                    Mitarbeiter-Nummer
-                  </label>
-                  <input
-                    type="text"
-                    value={newAdmin.mitarbeiterNummer}
-                    onChange={(e) => setNewAdmin({ ...newAdmin, mitarbeiterNummer: e.target.value })}
-                    required
-                    placeholder="MA-002"
-                    className="w-full px-4 py-3 glass-apple-dark rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-white font-semibold mb-2">
-                    Email/Username
-                  </label>
-                  <input
-                    type="text"
-                    value={newAdmin.email}
-                    onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })}
-                    required
-                    placeholder="admin@example.com"
-                    className="w-full px-4 py-3 glass-apple-dark rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
-                  />
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-white font-semibold mb-2">
-                    Discord Username
-                  </label>
-                  <input
-                    type="text"
-                    value={newAdmin.discordUsername}
-                    onChange={(e) => setNewAdmin({ ...newAdmin, discordUsername: e.target.value })}
-                    required
-                    placeholder="username#1234"
-                    className="w-full px-4 py-3 glass-apple-dark rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-white font-semibold mb-2">
-                    Passwort
-                  </label>
-                  <input
-                    type="password"
-                    value={newAdmin.password}
-                    onChange={(e) => setNewAdmin({ ...newAdmin, password: e.target.value })}
-                    required
-                    placeholder="••••••••"
-                    className="w-full px-4 py-3 glass-apple-dark rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-white font-semibold mb-2">
-                  Rolle
-                </label>
-                <select
-                  value={newAdmin.roleName}
-                  onChange={(e) => setNewAdmin({ ...newAdmin, roleName: e.target.value })}
-                  className="w-full px-4 py-3 glass-apple-dark rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-gray-600"
-                >
-                  <option value="Moderator">Moderator</option>
-                  <option value="Admin">Admin</option>
-                  <option value="Super Admin">Super Admin</option>
-                </select>
-              </div>
-
-              <div className="flex gap-4">
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl font-semibold hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Wird erstellt...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="w-5 h-5" />
-                      Account erstellen
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateForm(false)}
-                  className="px-6 py-3 glass-apple-dark text-gray-300 rounded-xl font-semibold hover:bg-white/5 transition-all"
-                >
-                  Abbrechen
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* Admins List */}
-        <div className="glass-apple rounded-2xl overflow-hidden">
-          {loading && admins.length === 0 ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-12 h-12 text-gray-400 animate-spin" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-white/5 border-b border-white/10">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Mitarbeiter-Nr.</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Email</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Discord</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Rolle</th>
-                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Status</th>
-                    {currentUserRole === 'Super Admin' && (
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Aktionen</th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/10">
-                  {admins.map((admin) => (
-                    <tr key={admin.mitarbeiterNummer} className="hover:bg-white/5 transition-colors">
-                      <td className="px-6 py-4 text-white font-mono text-sm">
-                        {admin.mitarbeiterNummer}
-                      </td>
-                      <td className="px-6 py-4 text-white">
-                        {admin.email}
-                      </td>
-                      <td className="px-6 py-4 text-gray-400">
-                        {admin.discordUsername || '-'}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-lg border text-sm font-semibold ${getRoleBadgeColor(admin.roleName)}`}>
-                          {admin.roleName}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-lg border text-sm font-semibold ${
-                          admin.isActive 
-                            ? 'bg-green-500/10 text-green-300 border-green-500/30'
-                            : 'bg-red-500/10 text-red-300 border-red-500/30'
-                        }`}>
-                          {admin.isActive ? 'Aktiv' : 'Inaktiv'}
-                        </span>
-                      </td>
-                      {currentUserRole === 'Super Admin' && (
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => handleDeleteAdmin(admin.mitarbeiterNummer)}
-                            disabled={admin.roleName === 'Super Admin'}
-                            className="flex items-center gap-2 px-3 py-1 bg-red-500/10 border border-red-500/30 text-red-300 rounded-lg text-sm font-semibold hover:bg-red-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Löschen
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={fetchAccounts} 
+            className="gap-2 rounded-xl border-white/10"
+          >
+            <RefreshCw className="w-4 h-4" /> Aktualisieren
+          </Button>
+          {admin?.canCreateAccounts && (
+            <Button 
+              onClick={() => setShowForm(!showForm)} 
+              className="bg-blue-600 hover:bg-blue-700 rounded-xl gap-2"
+            >
+              <UserPlus className="w-4 h-4" /> Account erstellen
+            </Button>
           )}
         </div>
       </div>
+
+      {showForm && (
+        <GlassCard className="p-6">
+          <h3 className="text-lg font-bold mb-4">Neuen Admin Account erstellen</h3>
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-white/60 text-sm">Discord User ID</Label>
+                <Input 
+                  value={formData.discordUserId} 
+                  onChange={e => setFormData({...formData, discordUserId: e.target.value})} 
+                  placeholder="123456789012345678" 
+                  className={inputClass} 
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white/60 text-sm">Discord Username</Label>
+                <Input 
+                  value={formData.discordUsername} 
+                  onChange={e => setFormData({...formData, discordUsername: e.target.value})} 
+                  placeholder="username" 
+                  className={inputClass} 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white/60 text-sm">Mitarbeiter Nummer</Label>
+                <Input 
+                  value={formData.mitarbeiterNummer} 
+                  onChange={e => setFormData({...formData, mitarbeiterNummer: e.target.value})} 
+                  placeholder="MA-001" 
+                  className={inputClass} 
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-white/60 text-sm">E-Mail</Label>
+                <Input 
+                  type="email"
+                  value={formData.email} 
+                  onChange={e => setFormData({...formData, email: e.target.value})} 
+                  placeholder="email@example.com" 
+                  className={inputClass} 
+                  required 
+                />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label className="text-white/60 text-sm">Passwort</Label>
+                <Input 
+                  type="password"
+                  value={formData.password} 
+                  onChange={e => setFormData({...formData, password: e.target.value})} 
+                  placeholder="••••••••" 
+                  className={inputClass} 
+                  required 
+                />
+              </div>
+            </div>
+            
+            {error && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                {error}
+              </div>
+            )}
+
+            <div className="flex gap-2 justify-end">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => { setShowForm(false); setError(''); }} 
+                className="rounded-xl border-white/10"
+              >
+                Abbrechen
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={submitting} 
+                className="bg-blue-600 hover:bg-blue-700 rounded-xl"
+              >
+                {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Erstellen'}
+              </Button>
+            </div>
+          </form>
+        </GlassCard>
+      )}
+
+      <div className="grid gap-4">
+        {accounts.length === 0 ? (
+          <GlassCard className="p-12 text-center">
+            <UserPlus className="w-12 h-12 text-white/20 mx-auto mb-4" />
+            <p className="text-white/40">Keine Accounts vorhanden</p>
+          </GlassCard>
+        ) : (
+          accounts.map(account => (
+            <GlassCard key={account.id} className="p-5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                    <Shield className="w-6 h-6 text-blue-400" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-3 mb-1">
+                      <span className="font-semibold">{account.mitarbeiterNummer}</span>
+                      <span className="text-white/60">{account.email}</span>
+                      {account.roleName && (
+                        <span className="px-2 py-0.5 rounded-full text-xs bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                          {account.roleName}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-white/30">
+                      {account.discordUsername && <span>Discord: {account.discordUsername}</span>}
+                      <span>Erstellt: {formatDate(account.createdAt)}</span>
+                    </div>
+                  </div>
+                </div>
+                {admin?.canCreateAccounts && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => handleDelete(account.id)} 
+                    className="text-red-400/70 hover:text-red-300 hover:bg-red-500/10 rounded-xl"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            </GlassCard>
+          ))
+        )}
+      </div>
     </div>
-  )
+  );
 }
