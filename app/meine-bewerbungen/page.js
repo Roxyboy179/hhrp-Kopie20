@@ -54,6 +54,13 @@ export default function MeineBewerbungenPage() {
     if (!authLoading && !user) { router.push('/'); return; }
     if (user) fetchBewerbungen();
     setTimeout(() => setVisible(true), 100);
+    
+    // Auto-Refresh alle 10 Sekunden
+    const interval = setInterval(() => {
+      if (user) silentRefresh();
+    }, 10000);
+    
+    return () => clearInterval(interval);
   }, [user, authLoading, router]);
 
   const fetchBewerbungen = async () => {
@@ -64,6 +71,19 @@ export default function MeineBewerbungenPage() {
       setBewerbungen(data.bewerbungen || []);
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
+  };
+  
+  // Stiller Refresh ohne Loading-State
+  const silentRefresh = async () => {
+    try {
+      const res = await fetch('/api/bewerbungen');
+      const data = await res.json();
+      if (data.bewerbungen) {
+        setBewerbungen(data.bewerbungen);
+      }
+    } catch (e) {
+      // Fehler still ignorieren
+    }
   };
 
   const handleWithdraw = async (id) => {
@@ -185,49 +205,131 @@ export default function MeineBewerbungenPage() {
                   <div className={`overflow-hidden transition-all duration-500 ${isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'}`}>
                     <div className="px-5 pb-6 pt-2">
                       <div className="divider-gradient mb-5" />
-                      <div className="grid md:grid-cols-2 gap-5">
-                        {[
-                          { icon: <User className="w-3 h-3" />, label: 'Vorname', value: fd.vorname },
-                          { icon: <User className="w-3 h-3" />, label: 'Alter', value: fd.alter },
-                          { icon: <Gamepad2 className="w-3 h-3" />, label: 'Roblox Name', value: fd.robloxName },
-                          { icon: <Clock className="w-3 h-3" />, label: 'Spielzeit', value: fd.spielzeit },
-                          { icon: <Users className="w-3 h-3" />, label: 'Fraktion', value: fd.fraktion },
-                          { icon: <Clock className="w-3 h-3" />, label: 'Stunden/Woche', value: fd.stundenProWoche },
-                        ].map((item, j) => item.value ? (
-                          <div key={j}>
-                            <p className="text-white/25 text-xs mb-1 flex items-center gap-1.5">{item.icon} {item.label}</p>
-                            <p className="text-white/70 text-sm">{item.value}</p>
-                          </div>
-                        ) : null)}
-                      </div>
-
-                      {/* Long text fields */}
-                      {[
-                        { icon: <Target className="w-3 h-3" />, label: 'Warum ins Team?', value: fd.warumTeam },
-                        { icon: <Heart className="w-3 h-3" />, label: 'Geduld & Stress', value: fd.geduldig },
-                        { icon: <MessageSquare className="w-3 h-3" />, label: 'Fail-RP Lösung', value: fd.failRpLoesung },
-                        { icon: <MessageSquare className="w-3 h-3" />, label: 'Streit-Lösung', value: fd.streitLoesung },
-                      ].map((item, j) => item.value ? (
-                        <div key={j} className="mt-4">
-                          <p className="text-white/25 text-xs mb-1.5 flex items-center gap-1.5">{item.icon} {item.label}</p>
-                          <p className="text-white/60 text-sm whitespace-pre-wrap leading-relaxed">{item.value}</p>
+                      
+                      {/* Bewerbungstyp anzeigen */}
+                      {fd.bewerbungType && (
+                        <div className="mb-4 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/[0.04] inline-block">
+                          <span className="text-white/40 text-xs">
+                            {fd.bewerbungType === 'normal' && '📋 Team-Bewerbung'}
+                            {fd.bewerbungType === 'praktikum' && '💼 Praktikum-Bewerbung'}
+                            {fd.bewerbungType === 'uprank' && '⬆️ Uprank-Bewerbung'}
+                          </span>
                         </div>
-                      ) : null)}
-
-                      {/* Checkboxes */}
-                      <div className="flex flex-wrap gap-2 mt-5">
-                        {[
-                          { key: 'hatMikro', icon: <Mic className="w-3 h-3" />, label: 'Mikrofon' },
-                          { key: 'kenntRegeln', icon: <BookOpen className="w-3 h-3" />, label: 'Regeln' },
-                          { key: 'bleibtNett', icon: <Heart className="w-3 h-3" />, label: 'Respektvoll' },
-                        ].map(item => (
-                          <div key={item.key} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
-                            {fd[item.key] ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400/70" /> : <XCircle className="w-3.5 h-3.5 text-red-400/50" />}
-                            {item.icon}
-                            <span className="text-xs text-white/40">{item.label}</span>
+                      )}
+                      
+                      {/* NORMALE BEWERBUNG */}
+                      {(!fd.bewerbungType || fd.bewerbungType === 'normal') && (
+                        <>
+                          <div className="grid md:grid-cols-2 gap-5">
+                            {[
+                              { icon: <User className="w-3 h-3" />, label: 'Vorname', value: fd.vorname },
+                              { icon: <User className="w-3 h-3" />, label: 'Alter', value: fd.alter },
+                              { icon: <Gamepad2 className="w-3 h-3" />, label: 'Roblox Name', value: fd.robloxName },
+                              { icon: <Clock className="w-3 h-3" />, label: 'Spielzeit', value: fd.spielzeit },
+                              { icon: <Users className="w-3 h-3" />, label: 'Fraktion', value: fd.fraktion },
+                              { icon: <Clock className="w-3 h-3" />, label: 'Stunden/Woche', value: fd.stundenProWoche },
+                              { icon: <MessageSquare className="w-3 h-3" />, label: 'Anderer Server', value: fd.andererServer },
+                              { icon: <AlertTriangle className="w-3 h-3" />, label: 'Bann/Warn', value: fd.bannWarn },
+                            ].map((item, j) => item.value ? (
+                              <div key={j}>
+                                <p className="text-white/25 text-xs mb-1 flex items-center gap-1.5">{item.icon} {item.label}</p>
+                                <p className="text-white/70 text-sm whitespace-pre-wrap">{item.value}</p>
+                              </div>
+                            ) : null)}
                           </div>
-                        ))}
-                      </div>
+
+                          {/* Long text fields */}
+                          {[
+                            { icon: <Target className="w-3 h-3" />, label: 'Warum ins Team?', value: fd.warumTeam },
+                            { icon: <Heart className="w-3 h-3" />, label: 'Geduld & Stress', value: fd.geduldig },
+                            { icon: <MessageSquare className="w-3 h-3" />, label: 'Fail-RP Lösung', value: fd.failRpLoesung },
+                            { icon: <MessageSquare className="w-3 h-3" />, label: 'Streit-Lösung', value: fd.streitLoesung },
+                          ].map((item, j) => item.value ? (
+                            <div key={j} className="mt-4">
+                              <p className="text-white/25 text-xs mb-1.5 flex items-center gap-1.5">{item.icon} {item.label}</p>
+                              <p className="text-white/60 text-sm whitespace-pre-wrap leading-relaxed">{item.value}</p>
+                            </div>
+                          ) : null)}
+                        </>
+                      )}
+                      
+                      {/* PRAKTIKUM BEWERBUNG */}
+                      {fd.bewerbungType === 'praktikum' && (
+                        <>
+                          <div className="grid md:grid-cols-2 gap-5">
+                            {[
+                              { icon: <User className="w-3 h-3" />, label: 'Vorname', value: fd.vorname },
+                              { icon: <User className="w-3 h-3" />, label: 'Alter', value: fd.alter },
+                              { icon: <Gamepad2 className="w-3 h-3" />, label: 'Roblox Name', value: fd.robloxName },
+                              { icon: <Users className="w-3 h-3" />, label: 'Fraktion', value: fd.fraktion },
+                              { icon: <Clock className="w-3 h-3" />, label: 'Spielzeit/Erfahrung', value: fd.spielzeit },
+                              { icon: <Clock className="w-3 h-3" />, label: 'Stunden/Woche', value: fd.stundenProWoche },
+                            ].map((item, j) => item.value ? (
+                              <div key={j}>
+                                <p className="text-white/25 text-xs mb-1 flex items-center gap-1.5">{item.icon} {item.label}</p>
+                                <p className="text-white/70 text-sm whitespace-pre-wrap">{item.value}</p>
+                              </div>
+                            ) : null)}
+                          </div>
+
+                          {/* Long text fields */}
+                          {fd.warumTeam && (
+                            <div className="mt-4">
+                              <p className="text-white/25 text-xs mb-1.5 flex items-center gap-1.5">
+                                <Target className="w-3 h-3" /> Warum Praktikum?
+                              </p>
+                              <p className="text-white/60 text-sm whitespace-pre-wrap leading-relaxed">{fd.warumTeam}</p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      
+                      {/* UPRANK BEWERBUNG */}
+                      {fd.bewerbungType === 'uprank' && (
+                        <>
+                          <div className="grid md:grid-cols-2 gap-5">
+                            {[
+                              { icon: <Clock className="w-3 h-3" />, label: 'Seit wann im Team', value: fd.seitWannImTeam },
+                              { icon: <Target className="w-3 h-3" />, label: 'Gewünschter Rang', value: fd.gewuenschterRang },
+                              { icon: <Clock className="w-3 h-3" />, label: 'Stunden/Woche', value: fd.stundenProWoche },
+                            ].map((item, j) => item.value ? (
+                              <div key={j}>
+                                <p className="text-white/25 text-xs mb-1 flex items-center gap-1.5">{item.icon} {item.label}</p>
+                                <p className="text-white/70 text-sm whitespace-pre-wrap">{item.value}</p>
+                              </div>
+                            ) : null)}
+                          </div>
+
+                          {/* Long text fields */}
+                          {[
+                            { icon: <Target className="w-3 h-3" />, label: 'Warum Uprank?', value: fd.warumUprank },
+                            { icon: <MessageSquare className="w-3 h-3" />, label: 'Aktuelle Aufgaben', value: fd.aktuelleAufgaben },
+                            { icon: <Shield className="w-3 h-3" />, label: 'Zusätzliche Verantwortung', value: fd.zusaetzlicheVerantwortung },
+                          ].map((item, j) => item.value ? (
+                            <div key={j} className="mt-4">
+                              <p className="text-white/25 text-xs mb-1.5 flex items-center gap-1.5">{item.icon} {item.label}</p>
+                              <p className="text-white/60 text-sm whitespace-pre-wrap leading-relaxed">{item.value}</p>
+                            </div>
+                          ) : null)}
+                        </>
+                      )}
+
+                      {/* Checkboxes nur für Normal & Praktikum */}
+                      {(!fd.bewerbungType || fd.bewerbungType === 'normal' || fd.bewerbungType === 'praktikum') && (
+                        <div className="flex flex-wrap gap-2 mt-5">
+                          {[
+                            { key: 'hatMikro', icon: <Mic className="w-3 h-3" />, label: 'Mikrofon' },
+                            { key: 'kenntRegeln', icon: <BookOpen className="w-3 h-3" />, label: 'Regeln' },
+                            { key: 'bleibtNett', icon: <Heart className="w-3 h-3" />, label: 'Respektvoll' },
+                          ].map(item => (
+                            <div key={item.key} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.02] border border-white/[0.04]">
+                              {fd[item.key] ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400/70" /> : <XCircle className="w-3.5 h-3.5 text-red-400/50" />}
+                              {item.icon}
+                              <span className="text-xs text-white/40">{item.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

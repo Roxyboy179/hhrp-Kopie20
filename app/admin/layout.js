@@ -18,7 +18,7 @@ export default function AdminLayout({ children }) {
 
   useEffect(() => {
     // Admin-Daten für Sidebar laden
-    (async () => {
+    const checkAdmin = async () => {
       try {
         const res = await fetch('/api/admin/me');
         const data = await res.json();
@@ -34,7 +34,14 @@ export default function AdminLayout({ children }) {
       } catch (e) {
         console.error(e);
       }
-    })();
+    };
+    
+    checkAdmin();
+    
+    // Auto-Check alle 15 Sekunden für Account-Status & Rollen-Updates
+    const interval = setInterval(checkAdmin, 15000);
+    
+    return () => clearInterval(interval);
   }, [router]);
 
   // Navigation basierend auf Rechten

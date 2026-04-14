@@ -71,7 +71,27 @@ export function AuthProvider({ children }) {
     }
 
     refreshUser();
+    
+    // Auto-Refresh User-Daten alle 30 Sekunden (Discord-Rollen sync)
+    const interval = setInterval(() => {
+      silentRefreshUser();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, [refreshUser]);
+  
+  // Stiller Refresh ohne Loading-State für Discord-Rollen
+  const silentRefreshUser = async () => {
+    try {
+      const res = await fetch('/api/auth/me', { credentials: 'include' });
+      const data = await res.json();
+      if (data.user) {
+        setUser(data.user);
+      }
+    } catch (error) {
+      // Fehler still ignorieren
+    }
+  };
 
   return (
     <AuthContext.Provider value={{ user, loading, refreshUser }}>

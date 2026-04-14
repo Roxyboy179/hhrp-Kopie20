@@ -273,23 +273,65 @@ export default function AdminBewerbungenPage() {
 
           {/* Bewerbungsdaten */}
           <div>
-            <h4 className="text-sm font-semibold text-blue-300 mb-3">Bewerbungsdaten</h4>
+            <h4 className="text-sm font-semibold text-blue-300 mb-3 flex items-center gap-2">
+              Bewerbungsdaten
+              {fd.bewerbungType && (
+                <span className="text-xs text-white/40 ml-2 px-2 py-1 rounded-full bg-white/[0.04]">
+                  {fd.bewerbungType === 'normal' && '📋 Team-Bewerbung'}
+                  {fd.bewerbungType === 'praktikum' && '💼 Praktikum'}
+                  {fd.bewerbungType === 'uprank' && '⬆️ Uprank'}
+                </span>
+              )}
+            </h4>
             <div className="space-y-0">
-              <DetailRow label="Vorname" value={fd.vorname} />
-              <DetailRow label="Alter" value={fd.alter} />
-              <DetailRow label="Roblox-Name" value={fd.robloxName} />
-              <DetailRow label="Spielzeit" value={fd.spielzeit} />
-              <DetailRow label="Fraktion" value={fd.fraktion} />
-              <DetailRow label="Anderer Server" value={fd.andererServer} />
-              <DetailRow label="Bann/Warn" value={fd.bannWarn} />
-              <DetailRow label="Warum ins Team?" value={fd.warumTeam} />
-              <DetailRow label="Geduldig?" value={fd.geduldig} />
-              <DetailRow label="Stunden/Woche" value={fd.stundenProWoche} />
-              <DetailRow label="Fail-RP Lösung" value={fd.failRpLoesung} />
-              <DetailRow label="Streit-Lösung" value={fd.streitLoesung} />
-              <DetailRow label="Hat Mikrofon" value={fd.hatMikro ? 'Ja' : 'Nein'} />
-              <DetailRow label="Kennt Regeln" value={fd.kenntRegeln ? 'Ja' : 'Nein'} />
-              <DetailRow label="Bleibt nett" value={fd.bleibtNett ? 'Ja' : 'Nein'} />
+              {/* NORMALE BEWERBUNG */}
+              {(!fd.bewerbungType || fd.bewerbungType === 'normal') && (
+                <>
+                  <DetailRow label="Vorname" value={fd.vorname} />
+                  <DetailRow label="Alter" value={fd.alter} />
+                  <DetailRow label="Roblox-Name" value={fd.robloxName} />
+                  <DetailRow label="Spielzeit" value={fd.spielzeit} />
+                  <DetailRow label="Fraktion" value={fd.fraktion} />
+                  <DetailRow label="Anderer Server" value={fd.andererServer} />
+                  <DetailRow label="Bann/Warn" value={fd.bannWarn} />
+                  <DetailRow label="Warum ins Team?" value={fd.warumTeam} />
+                  <DetailRow label="Geduldig?" value={fd.geduldig} />
+                  <DetailRow label="Stunden/Woche" value={fd.stundenProWoche} />
+                  <DetailRow label="Fail-RP Lösung" value={fd.failRpLoesung} />
+                  <DetailRow label="Streit-Lösung" value={fd.streitLoesung} />
+                  <DetailRow label="Hat Mikrofon" value={fd.hatMikro ? 'Ja' : 'Nein'} />
+                  <DetailRow label="Kennt Regeln" value={fd.kenntRegeln ? 'Ja' : 'Nein'} />
+                  <DetailRow label="Bleibt nett" value={fd.bleibtNett ? 'Ja' : 'Nein'} />
+                </>
+              )}
+              
+              {/* PRAKTIKUM BEWERBUNG */}
+              {fd.bewerbungType === 'praktikum' && (
+                <>
+                  <DetailRow label="Vorname" value={fd.vorname} />
+                  <DetailRow label="Alter" value={fd.alter} />
+                  <DetailRow label="Roblox-Name" value={fd.robloxName} />
+                  <DetailRow label="Fraktion" value={fd.fraktion} />
+                  <DetailRow label="Spielzeit/Erfahrung" value={fd.spielzeit} />
+                  <DetailRow label="Warum Praktikum?" value={fd.warumTeam} />
+                  <DetailRow label="Stunden/Woche" value={fd.stundenProWoche} />
+                  <DetailRow label="Hat Mikrofon" value={fd.hatMikro ? 'Ja' : 'Nein'} />
+                  <DetailRow label="Kennt Regeln" value={fd.kenntRegeln ? 'Ja' : 'Nein'} />
+                  <DetailRow label="Bleibt nett" value={fd.bleibtNett ? 'Ja' : 'Nein'} />
+                </>
+              )}
+              
+              {/* UPRANK BEWERBUNG */}
+              {fd.bewerbungType === 'uprank' && (
+                <>
+                  <DetailRow label="Seit wann im Team" value={fd.seitWannImTeam} />
+                  <DetailRow label="Aktuelle Aufgaben" value={fd.aktuelleAufgaben} />
+                  <DetailRow label="Gewünschter Rang" value={fd.gewuenschterRang} />
+                  <DetailRow label="Warum Uprank?" value={fd.warumUprank} />
+                  <DetailRow label="Zusätzliche Verantwortung" value={fd.zusaetzlicheVerantwortung} />
+                  <DetailRow label="Stunden/Woche" value={fd.stundenProWoche} />
+                </>
+              )}
             </div>
           </div>
 
