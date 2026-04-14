@@ -78,6 +78,9 @@ function Footer() {
               <Link href="/meine-bewerbungen" className="block text-sm transition-colors" style={{ color: 'rgba(var(--theme-accent-rgb), 0.45)' }}>
                 Meine Bewerbungen
               </Link>
+              <Link href="/faq" className="block text-sm transition-colors" style={{ color: 'rgba(var(--theme-accent-rgb), 0.45)' }}>
+                FAQ / Hilfe
+              </Link>
             </div>
           </div>
 

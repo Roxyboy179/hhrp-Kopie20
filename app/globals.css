@@ -199,6 +199,44 @@
   box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 30px rgba(var(--theme-accent-rgb, 255, 255, 255), 0.03);
 }
 
+/* ===== SMOOTH TRANSITIONS ===== */
+/* Theme-Wechsel & Tab-Wechsel sanft überblenden */
+body {
+  transition: background 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+*, *::before, *::after {
+  transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+/* Exclude inputs/textareas from universal transition to avoid typing lag */
+input, textarea, select, button, a, [role="button"] {
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+}
+
+/* Page transition animation */
+.page-transition-enter {
+  animation: pageIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== SKELETON LOADER ===== */
+.skeleton {
+  background: linear-gradient(90deg, 
+    rgba(var(--theme-accent-rgb, 255,255,255), 0.04) 25%, 
+    rgba(var(--theme-accent-rgb, 255,255,255), 0.08) 50%, 
+    rgba(var(--theme-accent-rgb, 255,255,255), 0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite ease-in-out;
+  border-radius: 0.75rem;
+}
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }

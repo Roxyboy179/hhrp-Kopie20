@@ -286,13 +286,15 @@ function BewerbungCards({ user, onSelect, settings }) {
       )}
 
       <div className={`grid ${visibleCards.length === 1 ? 'max-w-md mx-auto' : 'md:grid-cols-2'} gap-4 md:gap-5`}>
-        {visibleCards.map((card, i) => (
+        {visibleCards.map((card, i) => {
+          const hasDraft = typeof window !== 'undefined' && localStorage.getItem(`hhrp-draft-${card.type}`);
+          return (
           <button
             key={card.type}
             onClick={() => card.isOpen ? onSelect(card.type) : null}
             disabled={!card.isOpen}
-            className={`group relative text-left p-6 md:p-8 rounded-xl md:rounded-2xl bg-gradient-to-b ${card.color} border border-neutral-800 
-              ${card.isOpen ? `${card.borderHover} hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/30 cursor-pointer` : 'opacity-60 cursor-not-allowed'}
+            className={`group relative text-left p-6 md:p-8 rounded-xl md:rounded-2xl glass
+              ${card.isOpen ? 'hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/30 cursor-pointer' : 'opacity-60 cursor-not-allowed'}
               transition-all duration-500 animate-fade-in-up min-h-[44px]`}
             style={{ animationDelay: `${0.4 + i * 0.15}s`, animationFillMode: 'both' }}
           >
@@ -305,25 +307,30 @@ function BewerbungCards({ user, onSelect, settings }) {
                 </div>
               </div>
             )}
-            <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-neutral-700/30 border border-neutral-700 flex items-center justify-center mb-4 md:mb-5 text-neutral-400 
-              ${card.isOpen ? 'group-hover:text-white group-hover:bg-neutral-700/50' : ''} 
-              transition-all duration-300 ${!card.isOpen && 'blur-[2px]'}`}>
+            {hasDraft && card.isOpen && (
+              <div className="absolute top-3 right-3 px-2 py-1 rounded-lg text-[10px] font-bold" style={{ background: 'rgba(var(--theme-accent-rgb), 0.15)', color: 'var(--theme-accent)' }}>
+                ENTWURF
+              </div>
+            )}
+            <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl flex items-center justify-center mb-4 md:mb-5 transition-all duration-300 ${!card.isOpen && 'blur-[2px]'}`}
+              style={{ background: 'rgba(var(--theme-accent-rgb), 0.06)', border: '1px solid rgba(var(--theme-accent-rgb), 0.1)', color: 'rgba(var(--theme-accent-rgb), 0.5)' }}>
               {card.icon}
             </div>
             <h3 className={`text-lg md:text-xl font-bold text-white mb-2 transition-colors ${!card.isOpen && 'blur-[2px]'}`}>{card.title}</h3>
-            <p className={`text-neutral-500 text-xs md:text-sm leading-relaxed mb-3 md:mb-4 ${!card.isOpen && 'blur-[2px]'}`}>{card.desc}</p>
+            <p className={`text-xs md:text-sm leading-relaxed mb-3 md:mb-4 ${!card.isOpen && 'blur-[2px]'}`} style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>{card.desc}</p>
             {card.note && (
-              <p className={`text-neutral-600 text-xs flex items-center gap-1.5 ${!card.isOpen && 'blur-[2px]'}`}>
+              <p className={`text-xs flex items-center gap-1.5 ${!card.isOpen && 'blur-[2px]'}`} style={{ color: 'rgba(var(--theme-accent-rgb), 0.25)' }}>
                 <Lock className="w-3 h-3" /> {card.note}
               </p>
             )}
             {card.isOpen && (
-              <div className="mt-3 md:mt-4 flex items-center gap-2 text-neutral-500 group-hover:text-white text-xs md:text-sm font-medium transition-colors">
-                Bewerbung starten <ArrowRight className="w-3.5 h-3.5 md:w-4 md:h-4 group-hover:translate-x-1 transition-transform" />
+              <div className="mt-3 md:mt-4 flex items-center gap-2 text-xs md:text-sm font-medium transition-colors" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
+                {hasDraft ? 'Entwurf fortsetzen' : 'Bewerbung starten'} <ArrowRight className="w-3.5 h-3.5 md:w-4 md:h-4 group-hover:translate-x-1 transition-transform" />
               </div>
             )}
           </button>
-        ))}
+          );
+        })}
       </div>
 
       {!isTeamler && (
@@ -536,10 +543,47 @@ export default function BewerbungPage() {
 
   const handleSelect = (type) => {
     setSelectedType(type);
-    setFormData(initFormData(type));
+    // Prüfe ob ein Entwurf existiert
+    const draftKey = `hhrp-draft-${type}`;
+    const saved = localStorage.getItem(draftKey);
+    if (saved) {
+      try {
+        const draft = JSON.parse(saved);
+        setFormData(draft);
+        toast.success('Entwurf geladen', { description: 'Dein gespeicherter Entwurf wurde geladen.' });
+      } catch {
+        setFormData(initFormData(type));
+      }
+    } else {
+      setFormData(initFormData(type));
+    }
     setError('');
     setShowPreview(false);
   };
+
+  const handleSaveDraft = () => {
+    if (!selectedType) return;
+    const draftKey = `hhrp-draft-${selectedType}`;
+    localStorage.setItem(draftKey, JSON.stringify(formData));
+    toast.success('Entwurf gespeichert', { description: 'Du kannst jederzeit weitermachen.' });
+  };
+
+  const handleDeleteDraft = () => {
+    if (!selectedType) return;
+    const draftKey = `hhrp-draft-${selectedType}`;
+    localStorage.removeItem(draftKey);
+    toast.info('Entwurf gelöscht');
+  };
+
+  // Auto-Save Entwurf alle 30 Sekunden
+  useEffect(() => {
+    if (!selectedType || showPreview || submitted) return;
+    const interval = setInterval(() => {
+      const draftKey = `hhrp-draft-${selectedType}`;
+      localStorage.setItem(draftKey, JSON.stringify(formData));
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [selectedType, formData, showPreview, submitted]);
 
   const handlePreview = (e) => {
     e.preventDefault();
@@ -559,6 +603,7 @@ export default function BewerbungPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Fehler beim Einreichen');
       setSubmitted(true);
+      handleDeleteDraft(); // Entwurf löschen nach Einreichung
       toast.success('Bewerbung eingereicht!', { description: 'Wir melden uns bald bei dir.' });
       setTimeout(() => router.push('/meine-bewerbungen'), 2500);
     } catch (e) {
@@ -707,10 +752,10 @@ export default function BewerbungPage() {
 
           <div className="text-center mb-8 md:mb-10 animate-fade-in-up" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
             <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white mb-2 md:mb-3">{typeLabels[selectedType]}</h1>
-            <p className="text-neutral-500 text-sm md:text-base">Fülle alle Felder sorgfältig aus.</p>
+            <p className="text-sm md:text-base" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>Fülle alle Felder sorgfältig aus.</p>
           </div>
 
-          <div className="p-5 md:p-8 lg:p-10 rounded-2xl md:rounded-3xl bg-neutral-900/30 border border-neutral-800/60 animate-fade-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+          <div className="p-5 md:p-8 lg:p-10 rounded-2xl md:rounded-3xl glass animate-fade-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
             <form onSubmit={handlePreview} className="space-y-8 md:space-y-10">
               {selectedType === 'normal' && <NormalFormFields formData={formData} setFormData={setFormData} />}
               {selectedType === 'praktikum' && <PraktikumFormFields formData={formData} setFormData={setFormData} />}
@@ -749,15 +794,26 @@ export default function BewerbungPage() {
               )}
 
               <div className="pt-4 md:pt-6">
-                <div className="h-px bg-gradient-to-r from-transparent via-neutral-800 to-transparent mb-5 md:mb-6" />
-                <Button 
-                  type="submit" 
-                  className="w-full rounded-xl h-12 md:h-14 text-sm md:text-base font-semibold transition-all hover:scale-[1.01] active:scale-[0.99] min-h-[44px]"
-                  style={{ background: 'var(--theme-accent)', color: '#000', boxShadow: '0 15px 30px -10px rgba(var(--theme-accent-rgb), 0.15)' }}
-                >
-                  <Eye className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                  Weiter zur Vorschau
-                </Button>
+                <div className="h-px mb-5 md:mb-6" style={{ background: 'linear-gradient(to right, transparent, var(--theme-glass-border), transparent)' }} />
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    onClick={handleSaveDraft}
+                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium glass transition-all hover:bg-white/[0.04] min-h-[44px]"
+                    style={{ color: 'rgba(var(--theme-accent-rgb), 0.6)' }}
+                  >
+                    <Clock className="w-4 h-4" />
+                    Als Entwurf speichern
+                  </button>
+                  <Button 
+                    type="submit" 
+                    className="flex-1 rounded-xl h-12 md:h-14 text-sm md:text-base font-semibold transition-all hover:scale-[1.01] active:scale-[0.99] min-h-[44px]"
+                    style={{ background: 'var(--theme-accent)', color: '#000', boxShadow: '0 15px 30px -10px rgba(var(--theme-accent-rgb), 0.15)' }}
+                  >
+                    <Eye className="w-4 h-4 md:w-5 md:h-5 mr-2" />
+                    Weiter zur Vorschau
+                  </Button>
+                </div>
               </div>
             </form>
           </div>

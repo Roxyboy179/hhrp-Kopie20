@@ -27,7 +27,7 @@ export function Navbar({ user, loading }) {
   }, []);
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     window.location.href = '/';
   };
 
@@ -35,6 +35,7 @@ export function Navbar({ user, loading }) {
     { id: '/', label: 'Startseite', icon: <Globe className="w-4 h-4" />, show: true },
     { id: '/bewerbung', label: 'Team-Bewerbung', icon: <FileText className="w-4 h-4" />, show: true, requireAuth: true },
     { id: '/meine-bewerbungen', label: 'Meine Bewerbungen', icon: <Eye className="w-4 h-4" />, show: !!user },
+    { id: '/faq', label: 'FAQ', icon: <FileText className="w-4 h-4" />, show: true },
     { id: '/admin', label: 'Admin', icon: <Settings className="w-4 h-4" />, show: user?.adminLevel > 0 },
   ];
 
@@ -104,14 +105,14 @@ export function Navbar({ user, loading }) {
           ) : user ? (
             <div className="flex items-center gap-2">
               <NotificationBell />
-              <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06]">
+              <Link href="/profil" className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06] transition-all">
                 {user.avatar ? (
                   <img src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=32`} alt="" className="w-7 h-7 rounded-full" style={{ boxShadow: '0 0 0 2px rgba(var(--theme-accent-rgb), 0.2)' }} />
                 ) : (
                   <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: 'rgba(var(--theme-accent-rgb), 0.3)' }}><User className="w-3.5 h-3.5" /></div>
                 )}
                 <span className="text-sm text-white/70 max-w-[100px] truncate">{user.globalName || user.username}</span>
-              </div>
+              </Link>
               <Button variant="ghost" size="icon" onClick={handleLogout} className="text-white/30 hover:text-white hover:bg-white/[0.06] rounded-xl h-9 w-9">
                 <LogOut className="w-4 h-4" />
               </Button>
