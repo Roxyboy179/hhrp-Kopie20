@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, FileText, UserPlus, Settings, LogOut, 
-  Menu, X, Shield, ChevronRight
+  Menu, X, Shield, ChevronRight, Sliders
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -46,10 +46,12 @@ export default function AdminLayout({ children }) {
 
   // Navigation basierend auf Rechten
   const canSeeAccounts = admin?.canCreateAccounts || (admin?.roleLevel >= 3);
+  const canManageBewerbungen = admin?.roleLevel >= 3; // Nur Projektinhaber & Stl. Projektinhaber
   
   const navItems = [
     { href: '/admin', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, show: true },
     { href: '/admin/bewerbungen', label: 'Bewerbungen', icon: <FileText className="w-5 h-5" />, show: true },
+    { href: '/admin/bewerbung-verwaltung', label: 'Bewerbungs-Verwaltung', icon: <Sliders className="w-5 h-5" />, show: canManageBewerbungen },
     { href: '/admin/accounts', label: 'Accounts', icon: <UserPlus className="w-5 h-5" />, show: canSeeAccounts },
     { href: '/admin/einstellungen', label: 'Einstellungen', icon: <Settings className="w-5 h-5" />, show: true },
   ];

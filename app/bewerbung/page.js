@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { 
   FileText, Send, Loader2, AlertTriangle, CheckCircle2, ArrowLeft, ArrowRight,
   User, Gamepad2, Target, MessageSquare, 
-  Shield, Mic, BookOpen, Heart, TrendingUp, Briefcase, Lock
+  Shield, Mic, BookOpen, Heart, TrendingUp, Briefcase, Lock, Clock
 } from 'lucide-react';
 
 const inputClass = "bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/20 focus:border-white/20 focus:ring-white/10 rounded-xl transition-all duration-300 focus:bg-white/[0.05]";
@@ -359,7 +359,7 @@ export default function BewerbungPage() {
     }
   };
 
-  if (authLoading || checkingExisting) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin text-neutral-600" /></div>;
+  if (authLoading || checkingExisting || loadingSettings) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin text-neutral-600" /></div>;
   if (!user) return null;
   
   // Wenn bereits eine aktive Bewerbung existiert

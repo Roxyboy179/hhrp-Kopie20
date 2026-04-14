@@ -53,7 +53,7 @@ export default function MeineBewerbungenPage() {
 
   useEffect(() => {
     if (!authLoading && !user) { router.push('/'); return; }
-    if (user) fetchBewerbungen();
+    if (user && !authLoading) fetchBewerbungen();
     setTimeout(() => setVisible(true), 100);
     
     // Auto-Refresh alle 10 Sekunden
