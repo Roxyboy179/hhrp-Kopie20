@@ -13,7 +13,9 @@ import {
   getAllAdminAccounts,
   deleteAdminAccount,
   toggleAdminAccountStatus,
-  getAdminAccountById
+  getAdminAccountById,
+  getBewerbungSettings,
+  updateBewerbungSettings
 } from '@/lib/supabase-helpers';
 import { sendNewBewerbungNotification, sendStatusUpdateNotification, sendAccountStatusChangeNotification, sendPasswordChangeNotification } from '@/lib/discord-bot';
 
@@ -1145,6 +1147,41 @@ async function handleAdminToggleAccountStatus(request, id) {
   }
 }
 
+async function handleGetBewerbungSettings(request) {
+  try {
+    const settings = await getBewerbungSettings();
+    return NextResponse.json({ settings });
+  } catch (error) {
+    console.error('Get bewerbung settings error:', error);
+    return NextResponse.json({ error: 'Fehler beim Abrufen' }, { status: 500 });
+  }
+}
+
+async function handleUpdateBewerbungSettings(request) {
+  const admin = getAdminContext(request);
+  
+  // Nur Projektinhaber & Stl. Projektinhaber (Level 3+)
+  if (!admin || admin.adminLevel < 3) {
+    return NextResponse.json({ error: 'Nicht autorisiert - Nur Projektinhaber und Stl. Projektinhaber können Bewerbungen schließen' }, { status: 403 });
+  }
+
+  try {
+    const body = await request.json();
+    const { normalOpen, praktikumOpen, uprankOpen } = body;
+    
+    const settings = await updateBewerbungSettings({
+      normal_open: normalOpen,
+      praktikum_open: praktikumOpen,
+      uprank_open: uprankOpen
+    });
+    
+    return NextResponse.json({ success: true, settings });
+  } catch (error) {
+    console.error('Update bewerbung settings error:', error);
+    return NextResponse.json({ error: 'Fehler beim Aktualisieren' }, { status: 500 });
+  }
+}
+
 // ===== ROUTER =====
 export async function GET(request) {
   const url = new URL(request.url);
@@ -1215,6 +1252,7 @@ export async function GET(request) {
     case 'auth/me': return handleAuthMe(request);
     case 'bewerbungen': return handleGetBewerbungen(request);
     case 'bewerbungen/stats': return handleGetBewerbungenStats(request);
+    case 'bewerbung-settings': return handleGetBewerbungSettings(request);
     case 'settings/username': return handleUpdateUsername(request);
     case 'settings/password': return handleUpdatePassword(request);
     case 'admin/me': return handleAdminMe(request);
@@ -1232,6 +1270,7 @@ export async function POST(request) {
   switch (p) {
     case 'auth/logout': return handleLogout();
     case 'bewerbungen': return handleCreateBewerbung(request);
+    case 'bewerbung-settings': return handleUpdateBewerbungSettings(request);
     case 'admin/login': return handleAdminLogin(request);
     case 'admin/logout': return handleAdminLogout();
     case 'admin/accounts': return handleAdminCreateAccount(request);

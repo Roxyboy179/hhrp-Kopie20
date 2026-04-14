@@ -265,10 +265,30 @@ export default function BewerbungPage() {
   const [error, setError] = useState('');
   const [existingBewerbung, setExistingBewerbung] = useState(null);
   const [checkingExisting, setCheckingExisting] = useState(true);
+  const [bewerbungSettings, setBewerbungSettings] = useState({ normal_open: true, praktikum_open: true, uprank_open: true });
+  const [loadingSettings, setLoadingSettings] = useState(true);
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/?error=not_logged_in');
   }, [user, authLoading, router]);
+  
+  // Lade Bewerbungs-Settings
+  useEffect(() => {
+    fetchBewerbungSettings();
+  }, []);
+  
+  const fetchBewerbungSettings = async () => {
+    setLoadingSettings(true);
+    try {
+      const res = await fetch('/api/bewerbung-settings');
+      const data = await res.json();
+      setBewerbungSettings(data.settings || { normal_open: true, praktikum_open: true, uprank_open: true });
+    } catch (e) {
+      console.error('Fehler beim Laden der Settings:', e);
+    } finally {
+      setLoadingSettings(false);
+    }
+  };
   
   // Prüfe ob User bereits eine aktive Bewerbung hat
   useEffect(() => {
