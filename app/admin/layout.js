@@ -44,10 +44,12 @@ export default function AdminLayout({ children }) {
 
   const isLoginPage = pathname === '/admin';
 
-  // Auf Login-Seite oder kein Admin: Nur Content ohne Sidebar
-  if (isLoginPage || !admin) {
+  // Wenn kein Admin eingeloggt: Nur Content (Login-Formular)
+  if (!admin) {
     return <div className="min-h-screen bg-slate-950">{children}</div>;
   }
+
+  // Wenn eingeloggt: Zeige Sidebar + Navbar für ALLE Admin-Seiten (inkl. Dashboard)
 
   // Navigation basierend auf Rechten
   const canSeeAccounts = admin?.canCreateAccounts || (admin?.roleLevel >= 3);
