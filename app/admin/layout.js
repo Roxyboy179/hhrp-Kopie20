@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, FileText, UserPlus, Settings, LogOut, 
-  Menu, X, Shield, ChevronRight, Sliders
+  Menu, X, Shield, ChevronRight, Sliders, Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -159,6 +159,13 @@ export default function AdminLayout({ children }) {
 
         {/* Content Area */}
         <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+}
+ame="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>
