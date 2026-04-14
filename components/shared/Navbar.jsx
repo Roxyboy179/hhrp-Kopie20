@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Shield, LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2, Bell
+  Shield, LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2, Bell, Users
 } from 'lucide-react';
 import { NotificationBell } from '@/components/shared/NotificationBell';
 
@@ -36,6 +36,7 @@ export function Navbar({ user, loading }) {
     { id: '/bewerbung', label: 'Team-Bewerbung', icon: <FileText className="w-4 h-4" />, show: true, requireAuth: true },
     { id: '/meine-bewerbungen', label: 'Meine Bewerbungen', icon: <Eye className="w-4 h-4" />, show: !!user },
     { id: '/faq', label: 'FAQ', icon: <FileText className="w-4 h-4" />, show: true },
+    { id: '/team', label: 'Team', icon: <Users className="w-4 h-4" />, show: true },
     { id: '/admin', label: 'Admin', icon: <Settings className="w-4 h-4" />, show: user?.adminLevel > 0 },
   ];
 
@@ -76,7 +77,7 @@ export function Navbar({ user, loading }) {
               );
             }
             
-            return (
+  return (
               <a
                 key={n.id}
                 href={n.id}
@@ -95,8 +96,8 @@ export function Navbar({ user, loading }) {
               </a>
             );
           })}
-        </div>
-
+          </div>
+          
         <div className="flex items-center gap-3">
           {loading ? (
             <div className="w-9 h-9 rounded-xl bg-white/[0.04] flex items-center justify-center">

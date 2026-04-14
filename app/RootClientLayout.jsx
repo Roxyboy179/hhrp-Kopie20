@@ -1,34 +1,42 @@
 'use client';
 
+import { useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/components/providers/AuthProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { Navbar } from '@/components/shared/Navbar';
 import { ThemeButton } from '@/components/shared/ThemeButton';
+import { SplashScreen } from '@/components/shared/SplashScreen';
 import { CookieBanner } from '@/components/shared/CookieBanner';
 import { Toaster } from 'sonner';
 import Link from 'next/link';
 
 export default function RootClientLayout({ children }) {
+  const [splashDone, setSplashDone] = useState(false);
+  const handleSplashComplete = useCallback(() => setSplashDone(true), []);
+
   return (
     <AuthProvider>
       <ThemeProvider>
-        <LayoutContent>{children}</LayoutContent>
-        <CookieBanner />
-        <Toaster 
-          position="bottom-right" 
-          theme="dark"
-          toastOptions={{
-            style: {
-              background: 'rgba(15, 23, 42, 0.95)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(20px)',
-              color: 'white',
-            },
-          }}
-          richColors
-          closeButton
-        />
+        {!splashDone && <SplashScreen onComplete={handleSplashComplete} />}
+        <div style={{ opacity: splashDone ? 1 : 0, transition: 'opacity 0.5s ease' }}>
+          <LayoutContent>{children}</LayoutContent>
+          <CookieBanner />
+          <Toaster 
+            position="bottom-right" 
+            theme="dark"
+            toastOptions={{
+              style: {
+                background: 'rgba(15, 23, 42, 0.95)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(20px)',
+                color: 'white',
+              },
+            }}
+            richColors
+            closeButton
+          />
+        </div>
       </ThemeProvider>
     </AuthProvider>
   );

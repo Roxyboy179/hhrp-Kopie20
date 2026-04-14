@@ -1558,6 +1558,48 @@ export async function GET(request) {
     }
   }
 
+  // ===== TEAM MEMBERS (PUBLIC) =====
+  if (p === 'team/members') {
+    try {
+      // Admin-Accounts aus Supabase
+      const { data: accounts, error } = await supabaseAdmin
+        .from('admin_accounts')
+        .select('discord_username, discord_user_id, role_name, is_active')
+        .eq('is_active', true)
+        .order('role_name', { ascending: true });
+      
+      if (error) throw error;
+      
+      const adminMembers = (accounts || []).map(a => ({
+        username: a.discord_username,
+        avatar: null,
+        discordId: a.discord_user_id || null,
+        roleName: a.role_name,
+        category: 'admin',
+      }));
+      
+      // Alle Rollen-Strukturen (auch Team-Rollen)
+      const allRoles = [
+        { name: 'Projektinhaber', level: 4, category: 'Leitung', desc: 'Gründer & Leitung des Projekts', icon: 'crown' },
+        { name: 'Stl. Projektinhaber', level: 4, category: 'Leitung', desc: 'Stellvertretende Projektleitung', icon: 'crown' },
+        { name: 'Teamkoordination', level: 3, category: 'Management', desc: 'Koordination des gesamten Teams', icon: 'star' },
+        { name: 'Qualitätsmanagement', level: 3, category: 'Management', desc: 'Qualitätssicherung & Standards', icon: 'award' },
+        { name: 'Teamvertretung', level: 2, category: 'Führung', desc: 'Vertretung der Teaminteressen', icon: 'shield' },
+        { name: 'Teamleitung', level: 2, category: 'Führung', desc: 'Leitung einzelner Teambereiche', icon: 'shield' },
+        { name: 'Stl. Teamleitung', level: 2, category: 'Führung', desc: 'Stellvertretende Teamleitung', icon: 'shield' },
+        { name: 'Roblox Manager', level: 1, category: 'Roblox', desc: 'Verwaltung des Roblox-Bereichs', icon: 'gamepad' },
+        { name: 'Discord Manager', level: 1, category: 'Discord', desc: 'Verwaltung des Discord-Servers', icon: 'headphones' },
+        { name: 'Roblox Team', level: 0, category: 'Roblox', desc: 'Roblox-Teammitglieder', icon: 'gamepad' },
+        { name: 'Discord Team', level: 0, category: 'Discord', desc: 'Discord-Teammitglieder', icon: 'headphones' },
+      ];
+      
+      return NextResponse.json({ members: adminMembers, roles: allRoles });
+    } catch (error) {
+      console.error('Team members error:', error);
+      return NextResponse.json({ members: [], roles: [] });
+    }
+  }
+
   // ===== NOTIFICATIONS ROUTES =====
   if (p === 'notifications') {
     const user = getUserFromRequest(request);
@@ -1596,6 +1638,7 @@ export async function GET(request) {
     case 'admin/bewerbungen': return handleAdminGetBewerbungen(request);
     case 'admin/accounts': return handleAdminGetAccounts(request);
     case 'admin/settings': return handleAdminGetSettings(request);
+    case 'team/members': return handleGetTeamMembers(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
