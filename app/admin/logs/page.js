@@ -138,7 +138,7 @@ export default function AdminLogsPage() {
               <select
                 value={filters.actionType}
                 onChange={(e) => { setFilters({ ...filters, actionType: e.target.value }); setPage(1); }}
-                className="w-full bg-white/[0.03] border-white/[0.06] text-white rounded-xl p-2.5 text-sm"
+                className="w-full bg-white/[0.03] border border-white/[0.06] text-white rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-500/40 focus:ring-2 focus:ring-blue-500/20 [&>option]:bg-slate-900 [&>option]:text-white"
               >
                 <option value="">Alle Aktionen</option>
                 {Object.keys(ACTION_LABELS).map(key => (
