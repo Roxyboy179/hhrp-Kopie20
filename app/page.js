@@ -61,6 +61,15 @@ export default function HomePage() {
       <section className="relative px-6 pt-28 pb-20 md:pt-40 md:pb-28 overflow-hidden">
         <div className="max-w-5xl mx-auto relative z-10 text-center">
           
+          {/* Logo */}
+          <div className="animate-fade-in-down mb-8" style={{ animationDelay: '0s', animationFillMode: 'both' }}>
+            <img 
+              src="/logo.webp" 
+              alt="Hamburg Horizon RP" 
+              className="w-32 h-32 md:w-40 md:h-40 mx-auto rounded-2xl shadow-2xl shadow-black/50 ring-2 ring-white/10"
+            />
+          </div>
+          
           <div className="animate-fade-in-down" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-900 border border-neutral-800">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
