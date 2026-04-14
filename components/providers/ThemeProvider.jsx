@@ -78,12 +78,19 @@ export function ThemeProvider({ children }) {
 
   const applyTheme = (themeId) => {
     const theme = THEMES.find(t => t.id === themeId) || THEMES[0];
+    const root = document.documentElement;
     document.body.style.background = theme.bg;
     document.body.style.backgroundAttachment = 'fixed';
-    document.documentElement.style.setProperty('--theme-accent', theme.accent);
-    document.documentElement.style.setProperty('--theme-glass', theme.glass);
-    document.documentElement.style.setProperty('--theme-glass-border', theme.glassBorder);
-    document.documentElement.style.setProperty('--theme-primary-hsl', theme.primary);
+    root.style.setProperty('--theme-accent', theme.accent);
+    root.style.setProperty('--theme-glass', theme.glass);
+    root.style.setProperty('--theme-glass-border', theme.glassBorder);
+    root.style.setProperty('--theme-primary-hsl', theme.primary);
+    // RGB version for rgba() usage
+    const hex = theme.accent.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    root.style.setProperty('--theme-accent-rgb', `${r}, ${g}, ${b}`);
   };
 
   const setTheme = (themeId) => {

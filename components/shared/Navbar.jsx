@@ -81,9 +81,14 @@ export function Navbar({ user, loading }) {
                 href={n.id}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
                   isActive
-                    ? 'bg-blue-500/20 text-blue-300 shadow-inner shadow-blue-500/10'
+                    ? '' 
                     : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04]'
                 }`}
+                style={isActive ? {
+                  background: 'rgba(var(--theme-accent-rgb), 0.15)',
+                  color: 'var(--theme-accent)',
+                  boxShadow: 'inset 0 1px 2px rgba(var(--theme-accent-rgb), 0.1)'
+                } : {}}
               >
                 {n.icon}<span className="hidden lg:inline">{n.label}</span>
               </a>
@@ -101,9 +106,9 @@ export function Navbar({ user, loading }) {
               <NotificationBell />
               <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06]">
                 {user.avatar ? (
-                  <img src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=32`} alt="" className="w-7 h-7 rounded-full ring-2 ring-blue-500/20" />
+                  <img src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=32`} alt="" className="w-7 h-7 rounded-full" style={{ boxShadow: '0 0 0 2px rgba(var(--theme-accent-rgb), 0.2)' }} />
                 ) : (
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center"><User className="w-3.5 h-3.5" /></div>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: 'rgba(var(--theme-accent-rgb), 0.3)' }}><User className="w-3.5 h-3.5" /></div>
                 )}
                 <span className="text-sm text-white/70 max-w-[100px] truncate">{user.globalName || user.username}</span>
               </div>
@@ -117,7 +122,12 @@ export function Navbar({ user, loading }) {
                 e.preventDefault();
                 window.location.href = '/api/auth/discord';
               }}
-              className="flex items-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white px-4 py-2 rounded-xl text-sm font-medium shadow-lg shadow-[#5865F2]/25 hover:shadow-[#5865F2]/40 transition-all hover:scale-105 active:scale-95"
+              className="flex items-center gap-2 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all hover:scale-105 active:scale-95"
+              style={{
+                background: 'var(--theme-accent)',
+                color: '#000',
+                boxShadow: '0 10px 25px -5px rgba(var(--theme-accent-rgb), 0.25)'
+              }}
             >
               <DiscordIcon size={14} />
               <span className="hidden sm:inline">Anmelden</span>

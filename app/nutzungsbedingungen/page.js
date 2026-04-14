@@ -17,13 +17,13 @@ export default function NutzungsbedingungenPage() {
         <div className="prose prose-invert prose-neutral max-w-none">
           <h1 className="text-4xl font-bold text-white mb-8">Nutzungsbedingungen</h1>
           
-          <p className="text-neutral-400 mb-8">
+          <p className="mb-8" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
             Zuletzt aktualisiert: {new Date().toLocaleDateString('de-DE')}
           </p>
 
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-white mb-4">1. Geltungsbereich</h2>
-            <p className="text-neutral-400">
+            <p className="text-neutral-400" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               Diese Nutzungsbedingungen gelten für das Bewerbungsportal von Hamburg Horizon RP. 
               Mit der Nutzung des Portals akzeptieren Sie diese Bedingungen.
             </p>
@@ -35,7 +35,7 @@ export default function NutzungsbedingungenPage() {
             <p className="text-neutral-400 mb-4">
               Für die Nutzung des Bewerbungsportals benötigen Sie:
             </p>
-            <ul className="list-disc list-inside text-neutral-400 mb-4 space-y-2">
+            <ul className="list-disc list-inside text-neutral-400 mb-4 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               <li>Einen Discord-Account</li>
               <li>Mitgliedschaft im Hamburg Horizon RP Discord-Server</li>
               <li>Mindestalter von 13 Jahren</li>
@@ -45,7 +45,7 @@ export default function NutzungsbedingungenPage() {
             <p className="text-neutral-400 mb-4">
               Bei der Einreichung einer Bewerbung verpflichten Sie sich:
             </p>
-            <ul className="list-disc list-inside text-neutral-400 space-y-2">
+            <ul className="list-disc list-inside text-neutral-400 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               <li>Wahrheitsgemäße und vollständige Angaben zu machen</li>
               <li>Nur EINE aktive Bewerbung gleichzeitig einzureichen</li>
               <li>Respektvoll und professionell zu kommunizieren</li>
@@ -59,14 +59,14 @@ export default function NutzungsbedingungenPage() {
             <p className="text-neutral-400 mb-4">
               Folgende Bewerbungstypen stehen zur Verfügung:
             </p>
-            <ul className="list-disc list-inside text-neutral-400 mb-4 space-y-2">
+            <ul className="list-disc list-inside text-neutral-400 mb-4 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               <li><strong className="text-white">Team-Bewerbung:</strong> Für neue Bewerber ohne Team-Zugehörigkeit</li>
               <li><strong className="text-white">Praktikum:</strong> Für Bewerber, die das Team kennenlernen möchten</li>
               <li><strong className="text-white">Uprank:</strong> Nur für bestehende Teammitglieder (Beförderung)</li>
             </ul>
 
             <h3 className="text-xl font-semibold text-white mb-3">3.2 Bearbeitungszeit</h3>
-            <p className="text-neutral-400">
+            <p className="text-neutral-400" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               Bewerbungen werden in der Regel innerhalb von 7-14 Tagen bearbeitet. 
               Eine Garantie auf Annahme besteht nicht.
             </p>
@@ -77,7 +77,7 @@ export default function NutzungsbedingungenPage() {
             <p className="text-neutral-400 mb-4">
               Als Bewerber verpflichten Sie sich:
             </p>
-            <ul className="list-disc list-inside text-neutral-400 space-y-2">
+            <ul className="list-disc list-inside text-neutral-400 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               <li>Keine Mehrfachbewerbungen unter verschiedenen Namen einzureichen</li>
               <li>Auf Rückfragen zeitnah zu antworten</li>
               <li>Bei Rückzug der Bewerbung uns umgehend zu informieren</li>
@@ -90,7 +90,7 @@ export default function NutzungsbedingungenPage() {
             <p className="text-neutral-400 mb-4">
               Bewerbungen können abgelehnt werden bei:
             </p>
-            <ul className="list-disc list-inside text-neutral-400 space-y-2">
+            <ul className="list-disc list-inside text-neutral-400 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               <li>Unvollständigen oder falschen Angaben</li>
               <li>Verstoß gegen die Server-Regeln</li>
               <li>Beleidigendem oder unangemessenem Verhalten</li>
@@ -104,7 +104,7 @@ export default function NutzungsbedingungenPage() {
             <p className="text-neutral-400 mb-4">
               Hamburg Horizon RP haftet nicht für:
             </p>
-            <ul className="list-disc list-inside text-neutral-400 space-y-2">
+            <ul className="list-disc list-inside text-neutral-400 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               <li>Technische Störungen oder Ausfälle des Bewerbungsportals</li>
               <li>Verlust von Bewerbungsdaten durch höhere Gewalt</li>
               <li>Verzögerungen in der Bearbeitung</li>
@@ -116,7 +116,7 @@ export default function NutzungsbedingungenPage() {
             <p className="text-neutral-400 mb-4">
               Wir behalten uns das Recht vor, Nutzer von der Nutzung des Portals auszuschließen bei:
             </p>
-            <ul className="list-disc list-inside text-neutral-400 space-y-2">
+            <ul className="list-disc list-inside text-neutral-400 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               <li>Missbrauch des Bewerbungssystems</li>
               <li>Belästigung von Teammitgliedern</li>
               <li>Verstößen gegen diese Nutzungsbedingungen</li>
@@ -125,7 +125,7 @@ export default function NutzungsbedingungenPage() {
 
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-white mb-4">8. Änderungen der Nutzungsbedingungen</h2>
-            <p className="text-neutral-400">
+            <p className="text-neutral-400" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               Wir behalten uns vor, diese Nutzungsbedingungen jederzeit zu ändern. 
               Änderungen werden auf dieser Seite veröffentlicht und gelten ab dem Zeitpunkt der Veröffentlichung.
             </p>
@@ -133,7 +133,7 @@ export default function NutzungsbedingungenPage() {
 
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-white mb-4">9. Kontakt</h2>
-            <p className="text-neutral-400">
+            <p className="text-neutral-400" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               Bei Fragen zu diesen Nutzungsbedingungen kontaktieren Sie uns bitte über unseren Discord-Server.
             </p>
           </section>

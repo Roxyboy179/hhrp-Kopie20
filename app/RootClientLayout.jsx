@@ -56,12 +56,12 @@ function LayoutContent({ children }) {
 
 function Footer() {
   return (
-    <footer className="border-t border-white/5 bg-black/20 mt-auto">
+    <footer style={{ borderTop: '1px solid var(--theme-glass-border)', background: 'rgba(0,0,0,0.2)' }} className="mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
             <h3 className="font-bold text-lg mb-3">Hamburg Horizon RP</h3>
-            <p className="text-white/40 text-sm leading-relaxed">
+            <p className="text-sm leading-relaxed" style={{ color: 'rgba(var(--theme-accent-rgb), 0.35)' }}>
               Team-Bewerbungsportal für Hamburg Horizon Roleplay. Werde Teil unserer Community!
             </p>
           </div>
@@ -69,13 +69,13 @@ function Footer() {
           <div>
             <h3 className="font-semibold mb-3">Links</h3>
             <div className="space-y-2">
-              <Link href="/" className="block text-white/60 hover:text-white text-sm transition-colors">
+              <Link href="/" className="block text-sm transition-colors" style={{ color: 'rgba(var(--theme-accent-rgb), 0.45)' }}>
                 Startseite
               </Link>
-              <Link href="/bewerbung" className="block text-white/60 hover:text-white text-sm transition-colors">
+              <Link href="/bewerbung" className="block text-sm transition-colors" style={{ color: 'rgba(var(--theme-accent-rgb), 0.45)' }}>
                 Team-Bewerbung
               </Link>
-              <Link href="/meine-bewerbungen" className="block text-white/60 hover:text-white text-sm transition-colors">
+              <Link href="/meine-bewerbungen" className="block text-sm transition-colors" style={{ color: 'rgba(var(--theme-accent-rgb), 0.45)' }}>
                 Meine Bewerbungen
               </Link>
             </div>
@@ -84,17 +84,17 @@ function Footer() {
           <div>
             <h3 className="font-semibold mb-3">Rechtliches</h3>
             <div className="space-y-2">
-              <Link href="/datenschutz" className="block text-white/60 hover:text-white text-sm transition-colors">
+              <Link href="/datenschutz" className="block text-sm transition-colors" style={{ color: 'rgba(var(--theme-accent-rgb), 0.45)' }}>
                 Datenschutzerklärung
               </Link>
-              <Link href="/nutzungsbedingungen" className="block text-white/60 hover:text-white text-sm transition-colors">
+              <Link href="/nutzungsbedingungen" className="block text-sm transition-colors" style={{ color: 'rgba(var(--theme-accent-rgb), 0.45)' }}>
                 Nutzungsbedingungen
               </Link>
             </div>
           </div>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-white/5 text-center text-white/30 text-xs">
+        <div className="mt-8 pt-6 text-center text-xs" style={{ borderTop: '1px solid var(--theme-glass-border)', color: 'rgba(var(--theme-accent-rgb), 0.2)' }}>
           © {new Date().getFullYear()} Hamburg Horizon RP. Alle Rechte vorbehalten.
         </div>
       </div>

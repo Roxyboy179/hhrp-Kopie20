@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===== THEME SYSTEM CSS VARIABLES ===== */
+:root {
+  --theme-accent: #ffffff;
+  --theme-accent-rgb: 255, 255, 255;
+  --theme-glass: rgba(255,255,255,0.02);
+  --theme-glass-border: rgba(255,255,255,0.05);
+}
+
 @layer base {
   :root {
     --background: 0 0% 3%;
@@ -168,27 +176,27 @@
 /* Opacity start for delayed animations */
 .opacity-0-start { opacity: 0; }
 
-/* Glass effects - gray-black themed */
+/* Glass effects - themed */
 .glass {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--theme-glass, rgba(255, 255, 255, 0.02));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--theme-glass-border, rgba(255, 255, 255, 0.05));
 }
 .glass-strong {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--theme-glass, rgba(255, 255, 255, 0.04));
   backdrop-filter: blur(40px);
   -webkit-backdrop-filter: blur(40px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--theme-glass-border, rgba(255, 255, 255, 0.08));
 }
 .glass-card-hover {
   transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .glass-card-hover:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(var(--theme-accent-rgb, 255, 255, 255), 0.05);
+  border-color: rgba(var(--theme-accent-rgb, 255, 255, 255), 0.12);
   transform: translateY(-6px);
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255,255,255,0.02);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6), 0 0 30px rgba(var(--theme-accent-rgb, 255, 255, 255), 0.03);
 }
 
 /* Scrollbar */

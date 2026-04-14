@@ -143,13 +143,13 @@ export default function MeineBewerbungenPage() {
         <div className={`flex items-end justify-between mb-10 transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
           <div>
             <h1 className="text-3xl md:text-5xl font-bold text-white/90">Meine Bewerbungen</h1>
-            <p className="text-white/30 mt-2">{bewerbungen.length} Bewerbung{bewerbungen.length !== 1 ? 'en' : ''}</p>
+            <p className="mt-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.3)' }}>{bewerbungen.length} Bewerbung{bewerbungen.length !== 1 ? 'en' : ''}</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={fetchBewerbungen} className="rounded-xl border-white/[0.06] text-white/40 hover:text-white/70">
               <RefreshCw className="w-4 h-4" />
             </Button>
-            <Button onClick={() => router.push('/bewerbung')} className="bg-white text-black hover:bg-white/90 rounded-xl font-semibold">
+            <Button onClick={() => router.push('/bewerbung')} className="rounded-xl font-semibold" style={{ background: 'var(--theme-accent)', color: '#000' }}>
               <Plus className="w-4 h-4 mr-1" /> Neue Bewerbung
             </Button>
           </div>
@@ -160,7 +160,7 @@ export default function MeineBewerbungenPage() {
             <FileText className="w-14 h-14 text-white/10 mx-auto mb-5" />
             <h3 className="text-xl font-semibold text-white/60 mb-2">Noch keine Bewerbungen</h3>
             <p className="text-white/25 mb-8">Du hast noch keine Bewerbung eingereicht.</p>
-            <Button onClick={() => router.push('/bewerbung')} className="bg-white text-black hover:bg-white/90 rounded-xl font-semibold">
+            <Button onClick={() => router.push('/bewerbung')} className="rounded-xl font-semibold" style={{ background: 'var(--theme-accent)', color: '#000' }}>
               Jetzt bewerben
             </Button>
           </div>

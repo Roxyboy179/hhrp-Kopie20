@@ -14,16 +14,16 @@ export default function DatenschutzPage() {
           <ArrowLeft className="w-4 h-4 mr-2" /> Zurück
         </Button>
 
-        <div className="prose prose-invert prose-neutral max-w-none">
+        <div className="prose prose-invert prose-neutral max-w-none" style={{ '--tw-prose-body': 'rgba(var(--theme-accent-rgb), 0.45)' }}>
           <h1 className="text-4xl font-bold text-white mb-8">Datenschutzerklärung</h1>
           
-          <p className="text-neutral-400 mb-8">
+          <p className="mb-8" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
             Zuletzt aktualisiert: {new Date().toLocaleDateString('de-DE')}
           </p>
 
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-white mb-4">1. Verantwortlicher</h2>
-            <p className="text-neutral-400">
+            <p className="text-neutral-400" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               Verantwortlich für die Datenverarbeitung auf dieser Website ist:<br />
               Hamburg Horizon RP<br />
               Kontakt: Über Discord-Server
@@ -39,7 +39,7 @@ export default function DatenschutzPage() {
             <p className="text-neutral-400 mb-4">
               Für die Anmeldung nutzen wir Discord OAuth2. Dabei werden folgende Daten von Discord übermittelt:
             </p>
-            <ul className="list-disc list-inside text-neutral-400 mb-4 space-y-2">
+            <ul className="list-disc list-inside text-neutral-400 mb-4 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               <li>Discord User-ID</li>
               <li>Discord Benutzername</li>
               <li>Discord Avatar</li>
@@ -51,7 +51,7 @@ export default function DatenschutzPage() {
             <p className="text-neutral-400 mb-4">
               Bei Einreichung einer Bewerbung speichern wir die von Ihnen eingegebenen Daten:
             </p>
-            <ul className="list-disc list-inside text-neutral-400 mb-4 space-y-2">
+            <ul className="list-disc list-inside text-neutral-400 mb-4 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               <li>Vorname</li>
               <li>Alter</li>
               <li>Roblox-Benutzername</li>
@@ -65,7 +65,7 @@ export default function DatenschutzPage() {
             <p className="text-neutral-400 mb-4">
               Wir verwenden Ihre Daten ausschließlich für folgende Zwecke:
             </p>
-            <ul className="list-disc list-inside text-neutral-400 space-y-2">
+            <ul className="list-disc list-inside text-neutral-400 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               <li>Authentifizierung und Anmeldung</li>
               <li>Bearbeitung Ihrer Bewerbung</li>
               <li>Kontaktaufnahme via Discord bei Status-Änderungen</li>
@@ -75,7 +75,7 @@ export default function DatenschutzPage() {
 
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-white mb-4">4. Rechtsgrundlage</h2>
-            <p className="text-neutral-400">
+            <p className="text-neutral-400" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               Die Verarbeitung erfolgt auf Grundlage Ihrer Einwilligung (Art. 6 Abs. 1 lit. a DSGVO) sowie zur Erfüllung vorvertraglicher Maßnahmen (Art. 6 Abs. 1 lit. b DSGVO).
             </p>
           </section>
@@ -85,7 +85,7 @@ export default function DatenschutzPage() {
             <p className="text-neutral-400 mb-4">
               Ihre Bewerbungsdaten werden gespeichert:
             </p>
-            <ul className="list-disc list-inside text-neutral-400 space-y-2">
+            <ul className="list-disc list-inside text-neutral-400 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               <li>Bei Annahme: Solange Sie Teammitglied sind</li>
               <li>Bei Ablehnung: Bis zu 6 Monate nach Ablehnung</li>
               <li>Bei Rückzug: Sofortige Löschung auf Anfrage möglich</li>
@@ -97,7 +97,7 @@ export default function DatenschutzPage() {
             <p className="text-neutral-400 mb-4">
               Eine Weitergabe Ihrer Daten an Dritte erfolgt nur:
             </p>
-            <ul className="list-disc list-inside text-neutral-400 space-y-2">
+            <ul className="list-disc list-inside text-neutral-400 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               <li>An Discord (nur für Benachrichtigungen über Webhooks)</li>
               <li>An Hosting-Provider (Vercel, Supabase) zur technischen Bereitstellung</li>
             </ul>
@@ -108,7 +108,7 @@ export default function DatenschutzPage() {
             <p className="text-neutral-400 mb-4">
               Sie haben folgende Rechte bezüglich Ihrer personenbezogenen Daten:
             </p>
-            <ul className="list-disc list-inside text-neutral-400 space-y-2">
+            <ul className="list-disc list-inside text-neutral-400 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               <li><strong className="text-white">Auskunftsrecht:</strong> Sie können Auskunft über Ihre gespeicherten Daten verlangen</li>
               <li><strong className="text-white">Berichtigungsrecht:</strong> Sie können die Berichtigung unrichtiger Daten verlangen</li>
               <li><strong className="text-white">Löschungsrecht:</strong> Sie können die Löschung Ihrer Daten verlangen</li>
@@ -125,7 +125,7 @@ export default function DatenschutzPage() {
             <p className="text-neutral-400 mb-4">
               Unsere Website verwendet folgende Cookies:
             </p>
-            <ul className="list-disc list-inside text-neutral-400 space-y-2">
+            <ul className="list-disc list-inside text-neutral-400 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               <li><strong className="text-white">auth_token:</strong> Session-Cookie für Anmeldung (7 Tage Gültigkeit)</li>
               <li><strong className="text-white">admin_token:</strong> Session-Cookie für Admin-Panel (7 Tage Gültigkeit)</li>
               <li><strong className="text-white">cookie_consent:</strong> Speichert Ihre Cookie-Präferenzen (365 Tage)</li>
@@ -134,7 +134,7 @@ export default function DatenschutzPage() {
 
           <section className="mb-8">
             <h2 className="text-2xl font-bold text-white mb-4">9. Beschwerderecht</h2>
-            <p className="text-neutral-400">
+            <p className="text-neutral-400" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
               Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde über die Verarbeitung Ihrer personenbezogenen Daten zu beschweren.
             </p>
           </section>

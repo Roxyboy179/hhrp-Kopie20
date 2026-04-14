@@ -15,12 +15,12 @@ import {
   Shield, Mic, BookOpen, Heart, TrendingUp, Briefcase, Lock, Clock, BarChart3
 } from 'lucide-react';
 
-const inputClass = "bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/20 focus:border-white/20 focus:ring-white/10 rounded-xl transition-all duration-300 focus:bg-white/[0.05] min-h-[44px]";
+const inputClass = "bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/20 focus:ring-white/10 rounded-xl transition-all duration-300 focus:bg-white/[0.05] min-h-[44px]";
 
 function FormField({ label, required, children }) {
   return (
     <div className="space-y-2">
-      <Label className="text-white/40 text-sm">{label} {required && <span className="text-white/20">*</span>}</Label>
+      <Label className="text-sm" style={{ color: 'rgba(var(--theme-accent-rgb, 255,255,255), 0.4)' }}>{label} {required && <span style={{ color: 'rgba(var(--theme-accent-rgb, 255,255,255), 0.15)' }}>*</span>}</Label>
       {children}
     </div>
   );
@@ -30,12 +30,13 @@ function FormSection({ number, title, icon: Icon, children }) {
   return (
     <div className="space-y-5">
       <h3 className="text-base md:text-lg font-semibold flex items-center gap-3 text-white/80">
-        <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
-          <Icon className="w-4 h-4 md:w-5 md:h-5 text-white/40" />
+        <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl flex items-center justify-center"
+          style={{ background: 'rgba(var(--theme-accent-rgb, 255,255,255), 0.06)', border: '1px solid rgba(var(--theme-accent-rgb, 255,255,255), 0.1)' }}>
+          <Icon className="w-4 h-4 md:w-5 md:h-5" style={{ color: 'rgba(var(--theme-accent-rgb, 255,255,255), 0.4)' }} />
         </div>
-        <span className="text-white/25">{number}.</span> {title}
+        <span style={{ color: 'rgba(var(--theme-accent-rgb, 255,255,255), 0.2)' }}>{number}.</span> {title}
       </h3>
-      <div className="space-y-4 pl-5 md:pl-8 border-l border-white/[0.06]">{children}</div>
+      <div className="space-y-4 pl-5 md:pl-8" style={{ borderLeft: '1px solid var(--theme-glass-border, rgba(255,255,255,0.06))' }}>{children}</div>
     </div>
   );
 }
@@ -267,7 +268,7 @@ function BewerbungCards({ user, onSelect, settings }) {
     <div className="max-w-4xl mx-auto">
       <div className="text-center mb-8 md:mb-10 animate-fade-in-up px-4" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
         <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white mb-2 md:mb-3">Bewerbung einreichen</h1>
-        <p className="text-neutral-500 text-sm md:text-base lg:text-lg max-w-md mx-auto">
+        <p className="text-sm md:text-base lg:text-lg max-w-md mx-auto" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
           {isTeamler 
             ? 'Als Teamler kannst du eine Uprank-Bewerbung einreichen.'
             : 'Wähle den passenden Bewerbungstyp aus.'
@@ -751,7 +752,8 @@ export default function BewerbungPage() {
                 <div className="h-px bg-gradient-to-r from-transparent via-neutral-800 to-transparent mb-5 md:mb-6" />
                 <Button 
                   type="submit" 
-                  className="w-full bg-white text-black hover:bg-neutral-200 rounded-xl h-12 md:h-14 text-sm md:text-base font-semibold shadow-2xl shadow-white/5 transition-all hover:scale-[1.01] active:scale-[0.99] min-h-[44px]"
+                  className="w-full rounded-xl h-12 md:h-14 text-sm md:text-base font-semibold transition-all hover:scale-[1.01] active:scale-[0.99] min-h-[44px]"
+                  style={{ background: 'var(--theme-accent)', color: '#000', boxShadow: '0 15px 30px -10px rgba(var(--theme-accent-rgb), 0.15)' }}
                 >
                   <Eye className="w-4 h-4 md:w-5 md:h-5 mr-2" />
                   Weiter zur Vorschau
