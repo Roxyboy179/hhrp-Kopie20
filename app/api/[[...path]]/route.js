@@ -518,6 +518,119 @@ async function handleUpdatePassword(request) {
   }
 }
 
+// ============ ADMIN EINSTELLUNGEN ============
+
+async function handleAdminUpdateSettings(request) {
+  const admin = getAdminContext(request);
+  if (!admin) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+
+  try {
+    const { field, value, currentPassword, newPassword } = await request.json();
+    
+    if (field === 'email') {
+      if (!value || !value.includes('@')) {
+        return NextResponse.json({ error: 'Ungültige E-Mail-Adresse' }, { status: 400 });
+      }
+      const { error } = await supabaseAdmin
+        .from('admin_accounts')
+        .update({ email: value.trim() })
+        .eq('discord_user_id', admin.discordUserId);
+      if (error) throw error;
+      return NextResponse.json({ success: true, message: 'E-Mail wurde aktualisiert' });
+    }
+    
+    if (field === 'password') {
+      if (!currentPassword) {
+        return NextResponse.json({ error: 'Aktuelles Passwort erforderlich' }, { status: 400 });
+      }
+      if (!newPassword || newPassword.length < 6) {
+        return NextResponse.json({ error: 'Neues Passwort muss mindestens 6 Zeichen lang sein' }, { status: 400 });
+      }
+      
+      // Aktuelles Passwort prüfen
+      const { data: account } = await supabaseAdmin
+        .from('admin_accounts')
+        .select('*')
+        .eq('discord_user_id', admin.discordUserId)
+        .single();
+      
+      if (!account) {
+        return NextResponse.json({ error: 'Account nicht gefunden' }, { status: 404 });
+      }
+      
+      // Passwort vergleichen (bcrypt oder plaintext)
+      const bcrypt = await import('bcryptjs');
+      let passwordValid = false;
+      if (account.password_hash && account.password_hash.startsWith('$2')) {
+        passwordValid = await bcrypt.compare(currentPassword, account.password_hash);
+      } else {
+        passwordValid = (account.password_hash === currentPassword || account.password === currentPassword);
+      }
+      
+      if (!passwordValid) {
+        return NextResponse.json({ error: 'Aktuelles Passwort ist falsch' }, { status: 401 });
+      }
+      
+      // Neues Passwort hashen und speichern
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      const { error } = await supabaseAdmin
+        .from('admin_accounts')
+        .update({ password_hash: hashedPassword })
+        .eq('discord_user_id', admin.discordUserId);
+      if (error) throw error;
+      return NextResponse.json({ success: true, message: 'Passwort wurde aktualisiert' });
+    }
+    
+    if (field === 'mitarbeiterNummer') {
+      if (!value || value.trim().length < 2) {
+        return NextResponse.json({ error: 'Mitarbeiter-Nummer muss mindestens 2 Zeichen lang sein' }, { status: 400 });
+      }
+      const { error } = await supabaseAdmin
+        .from('admin_accounts')
+        .update({ mitarbeiter_nummer: value.trim() })
+        .eq('discord_user_id', admin.discordUserId);
+      if (error) throw error;
+      return NextResponse.json({ success: true, message: 'Mitarbeiter-Nummer wurde aktualisiert' });
+    }
+
+    return NextResponse.json({ error: 'Ungültiges Feld' }, { status: 400 });
+  } catch (error) {
+    console.error('Admin settings error:', error);
+    return NextResponse.json({ error: 'Fehler beim Aktualisieren: ' + error.message }, { status: 500 });
+  }
+}
+
+async function handleAdminGetSettings(request) {
+  const admin = getAdminContext(request);
+  if (!admin) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+
+  try {
+    const { data: account } = await supabaseAdmin
+      .from('admin_accounts')
+      .select('email, mitarbeiter_nummer, discord_username, discord_user_id, role_name, created_at')
+      .eq('discord_user_id', admin.discordUserId)
+      .single();
+    
+    if (!account) {
+      return NextResponse.json({ error: 'Account nicht gefunden' }, { status: 404 });
+    }
+    
+    return NextResponse.json({ 
+      settings: {
+        email: account.email,
+        mitarbeiterNummer: account.mitarbeiter_nummer,
+        discordUsername: account.discord_username,
+        discordUserId: account.discord_user_id,
+        roleName: account.role_name,
+        createdAt: account.created_at,
+      }
+    });
+  } catch (error) {
+    console.error('Get settings error:', error);
+    return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
+  }
+}
+
 async function handleWithdrawBewerbung(request, id) {
   const user = getUserFromRequest(request);
   if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
@@ -917,6 +1030,7 @@ export async function GET(request) {
     case 'admin/me': return handleAdminMe(request);
     case 'admin/bewerbungen': return handleAdminGetBewerbungen(request);
     case 'admin/accounts': return handleAdminGetAccounts(request);
+    case 'admin/settings': return handleAdminGetSettings(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
@@ -932,6 +1046,7 @@ export async function POST(request) {
     case 'admin/logout': return handleAdminLogout();
     case 'admin/accounts': return handleAdminCreateAccount(request);
     case 'admin/check-role': return handleCheckDiscordRole(request);
+    case 'admin/settings': return handleAdminUpdateSettings(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }

@@ -38,6 +38,7 @@ export default function AdminLayout({ children }) {
     { href: '/admin', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, show: true },
     { href: '/admin/bewerbungen', label: 'Bewerbungen', icon: <FileText className="w-5 h-5" />, show: true },
     { href: '/admin/accounts', label: 'Accounts', icon: <UserPlus className="w-5 h-5" />, show: canSeeAccounts },
+    { href: '/admin/einstellungen', label: 'Einstellungen', icon: <Settings className="w-5 h-5" />, show: true },
   ];
 
   const handleLogout = async () => {

@@ -34,7 +34,6 @@ export function Navbar({ user, loading }) {
     { id: '/', label: 'Startseite', icon: <Globe className="w-4 h-4" />, show: true },
     { id: '/bewerbung', label: 'Team-Bewerbung', icon: <FileText className="w-4 h-4" />, show: true, requireAuth: true },
     { id: '/meine-bewerbungen', label: 'Meine Bewerbungen', icon: <Eye className="w-4 h-4" />, show: !!user },
-    { id: '/einstellungen', label: 'Einstellungen', icon: <User className="w-4 h-4" />, show: !!user },
     { id: '/admin', label: 'Admin', icon: <Settings className="w-4 h-4" />, show: user?.adminLevel > 0 },
   ];
 
