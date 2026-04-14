@@ -492,9 +492,17 @@ async function handleAuthMe(request) {
 }
 
 async function handleLogout(request) {
-  // Cookie IMMER löschen - auch wenn Logging fehlschlägt
+  // BEIDE Cookies IMMER löschen - komplett abmelden (Discord + Admin)
   const response = NextResponse.json({ success: true });
   response.cookies.set('auth_token', '', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+    expires: new Date(0),
+  });
+  response.cookies.set('admin_token', '', {
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
@@ -515,7 +523,7 @@ async function handleLogout(request) {
       });
     }
   } catch (error) {
-    console.error('[LOGOUT] Logging error (cookie still deleted):', error);
+    console.error('[LOGOUT] Logging error (cookies still deleted):', error);
   }
   
   return response;
@@ -998,9 +1006,17 @@ async function handleAdminMe(request) {
 }
 
 async function handleAdminLogout(request) {
-  // Cookie IMMER löschen - auch wenn Logging fehlschlägt
+  // BEIDE Cookies IMMER löschen - komplett abmelden (Admin + Discord)
   const response = NextResponse.json({ success: true });
   response.cookies.set('admin_token', '', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+    expires: new Date(0),
+  });
+  response.cookies.set('auth_token', '', {
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
@@ -1025,7 +1041,7 @@ async function handleAdminLogout(request) {
       });
     }
   } catch (error) {
-    console.error('[ADMIN LOGOUT] Logging error (cookie still deleted):', error);
+    console.error('[ADMIN LOGOUT] Logging error (cookies still deleted):', error);
   }
   
   return response;

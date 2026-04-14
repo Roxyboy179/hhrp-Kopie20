@@ -305,7 +305,7 @@ export default function AdminPage() {
         >
           <FileText className="w-8 h-8 text-blue-400 mb-3" />
           <h3 className="text-xl font-semibold mb-2">Bewerbungen verwalten</h3>
-          <p className="text-white/40 text-sm">Bewerbungen anzeigen, bearbeiten und Status aendern</p>
+          <p className="text-white/40 text-sm">Bewerbungen anzeigen, bearbeiten und Status ändern</p>
         </GlassCard>
 
         {canSeeAccounts && (
