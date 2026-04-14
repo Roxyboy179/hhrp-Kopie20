@@ -13,7 +13,7 @@ import {
   getAllAdminAccounts,
   deleteAdminAccount
 } from '@/lib/supabase-helpers';
-import { sendNewBewerbungNotification, sendStatusUpdateDM } from '@/lib/discord-bot';
+import { sendNewBewerbungNotification, sendStatusUpdateNotification } from '@/lib/discord-bot';
 
 // ===== CONFIGURATION =====
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
@@ -422,8 +422,9 @@ async function handleCreateBewerbung(request) {
       formData
     });
 
-    // Discord Bot Benachrichtigung senden
-    await sendNewBewerbungNotification(bewerbung, user);
+    // Discord Bot Benachrichtigung senden (korrekte Argumente)
+    const username = user.globalName || user.username;
+    await sendNewBewerbungNotification(username, formData);
 
     return NextResponse.json({ bewerbung, success: true });
   } catch (error) {
@@ -707,9 +708,14 @@ async function handleAdminUpdateBewerbung(request, id) {
     const updated = await updateBewerbung(id, updates);
     const newStatus = updated.status;
 
-    // DM an User bei Statusänderung
+    // DM + Channel-Nachricht bei Statusänderung (korrekte Argumente!)
     if (oldStatus !== newStatus) {
-      await sendStatusUpdateDM(updated.discord_user_id, newStatus, updated.id);
+      await sendStatusUpdateNotification(
+        updated.discord_user_id,  // userId
+        updated.username,          // username
+        newStatus,                 // neuer Status
+        admin.discordUsername      // bearbeitet von
+      );
     }
 
     return NextResponse.json({ bewerbung: updated });
