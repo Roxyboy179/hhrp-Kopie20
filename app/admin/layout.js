@@ -15,6 +15,7 @@ export default function AdminLayout({ children }) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [admin, setAdmin] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Admin-Daten für Sidebar laden
@@ -33,6 +34,8 @@ export default function AdminLayout({ children }) {
         }
       } catch (e) {
         console.error(e);
+      } finally {
+        setLoading(false);
       }
     };
     
@@ -43,6 +46,27 @@ export default function AdminLayout({ children }) {
     
     return () => clearInterval(interval);
   }, [router]);
+
+  // Wenn nicht eingeloggt und nicht auf der Admin-Hauptseite (Login-Seite)
+  // Dann zeige nur den Content ohne Sidebar
+  const isLoginPage = pathname === '/admin';
+  const showSidebar = admin && !isLoginPage;
+
+  // Wenn kein Admin und nicht auf Login-Seite, redirecte
+  useEffect(() => {
+    if (!loading && !admin && !isLoginPage) {
+      router.push('/admin');
+    }
+  }, [loading, admin, isLoginPage, router]);
+
+  // Auf Login-Seite: Nur Content, keine Sidebar
+  if (isLoginPage || !admin) {
+    return (
+      <div className="min-h-screen bg-slate-950">
+        {children}
+      </div>
+    );
+  }
 
   // Navigation basierend auf Rechten
   const canSeeAccounts = admin?.canCreateAccounts || (admin?.roleLevel >= 3);

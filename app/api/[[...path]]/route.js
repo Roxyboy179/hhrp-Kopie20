@@ -491,7 +491,19 @@ async function handleAuthMe(request) {
   }
 }
 
-async function handleLogout() {
+async function handleLogout(request) {
+  const user = getUserFromRequest(request);
+  
+  // LOG: User Logout
+  if (user) {
+    await logActivity({
+      actionType: LOG_ACTIONS.USER_LOGOUT,
+      userId: user.id,
+      username: user.username || user.globalName,
+      ipAddress: getIpAddress(request),
+    });
+  }
+  
   const response = NextResponse.json({ success: true });
   response.cookies.delete('auth_token');
   return response;
@@ -798,6 +810,18 @@ async function handleWithdrawBewerbung(request, id) {
     // Discord Embed
     await sendDiscordEmbed(createBewerbungEmbed(updated, 'zurückgezogen'));
 
+    // LOG: Bewerbung zurückgezogen
+    await logActivity({
+      actionType: LOG_ACTIONS.BEWERBUNG_ZURÜCKGEZOGEN,
+      userId: user.id,
+      username: user.username || user.globalName,
+      bewerbungId: updated.id,
+      details: {
+        oldStatus: bewerbung.status,
+      },
+      ipAddress: getIpAddress(request),
+    });
+
     return NextResponse.json({ bewerbung: updated, success: true });
   } catch (error) {
     console.error('Withdraw error:', error);
@@ -910,6 +934,19 @@ async function handleAdminLogin(request) {
       maxAge: 7 * 24 * 60 * 60
     });
 
+    // LOG: Admin Login
+    await logActivity({
+      actionType: LOG_ACTIONS.ADMIN_LOGIN,
+      userId: admin.discordUserId,
+      username: admin.discordUsername,
+      details: {
+        mitarbeiterNummer: admin.mitarbeiterNummer,
+        roleName: admin.roleName,
+        roleLevel: admin.roleLevel,
+      },
+      ipAddress: getIpAddress(request),
+    });
+
     console.log('[DEBUG] ✅ Login successful!');
     console.log('[DEBUG] ========== LOGIN COMPLETE ==========');
     return response;
@@ -948,7 +985,23 @@ async function handleAdminMe(request) {
   return NextResponse.json({ admin });
 }
 
-async function handleAdminLogout() {
+async function handleAdminLogout(request) {
+  const admin = getAdminContext(request);
+  
+  // LOG: Admin Logout
+  if (admin) {
+    await logActivity({
+      actionType: LOG_ACTIONS.ADMIN_LOGOUT,
+      userId: admin.discordUserId || admin.mitarbeiterNummer,
+      username: admin.discordUsername,
+      details: {
+        roleName: admin.roleName,
+        roleLevel: admin.roleLevel,
+      },
+      ipAddress: getIpAddress(request),
+    });
+  }
+  
   const response = NextResponse.json({ success: true });
   response.cookies.delete('admin_token');
   return response;
@@ -1088,6 +1141,22 @@ async function handleAdminCreateAccount(request) {
       createdBy: admin.discordUsername
     });
 
+    // LOG: Admin-Account erstellt
+    await logActivity({
+      actionType: LOG_ACTIONS.ADMIN_ACCOUNT_ERSTELLT,
+      userId: admin.discordUserId,
+      username: admin.discordUsername,
+      targetUserId: body.discordUserId,
+      targetUsername: member.user.username,
+      details: {
+        mitarbeiterNummer: body.mitarbeiterNummer,
+        email: body.email,
+        roleName: adminRole.name,
+        roleLevel: adminRole.level,
+      },
+      ipAddress: getIpAddress(request),
+    });
+
     return NextResponse.json({ 
       account, 
       detectedRole: adminRole.name,
@@ -1149,7 +1218,25 @@ async function handleAdminDeleteAccount(request, id) {
   }
 
   try {
+    const targetAccount = await getAdminAccountById(id);
+    
     await deleteAdminAccount(id);
+    
+    // LOG: Admin-Account gelöscht
+    await logActivity({
+      actionType: LOG_ACTIONS.ADMIN_ACCOUNT_GELÖSCHT,
+      userId: admin.discordUserId,
+      username: admin.discordUsername,
+      targetUserId: targetAccount?.discord_user_id,
+      targetUsername: targetAccount?.discord_username,
+      details: {
+        mitarbeiterNummer: targetAccount?.mitarbeiter_nummer,
+        email: targetAccount?.email,
+        roleName: targetAccount?.role_name,
+      },
+      ipAddress: getIpAddress(request),
+    });
+    
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Delete account error:', error);
@@ -1180,6 +1267,22 @@ async function handleAdminToggleAccountStatus(request, id) {
       isActive,
       admin.discordUsername
     );
+    
+    // LOG: Admin-Account aktiviert/deaktiviert
+    await logActivity({
+      actionType: isActive ? LOG_ACTIONS.ADMIN_ACCOUNT_AKTIVIERT : LOG_ACTIONS.ADMIN_ACCOUNT_DEAKTIVIERT,
+      userId: admin.discordUserId,
+      username: admin.discordUsername,
+      targetUserId: account.discord_user_id,
+      targetUsername: account.discord_username,
+      details: {
+        mitarbeiterNummer: account.mitarbeiter_nummer,
+        email: account.email,
+        roleName: account.role_name,
+        newStatus: isActive ? 'aktiv' : 'deaktiviert',
+      },
+      ipAddress: getIpAddress(request),
+    });
     
     return NextResponse.json({ 
       success: true, 
@@ -1218,6 +1321,20 @@ async function handleUpdateBewerbungSettings(request) {
       normal_open: normalOpen,
       praktikum_open: praktikumOpen,
       uprank_open: uprankOpen
+    });
+    
+    // LOG: Bewerbungs-Settings geändert
+    await logActivity({
+      actionType: LOG_ACTIONS.BEWERBUNG_SETTINGS_GEÄNDERT,
+      userId: admin.discordUserId || admin.mitarbeiterNummer,
+      username: admin.discordUsername,
+      details: {
+        normalOpen,
+        praktikumOpen,
+        uprankOpen,
+        roleName: admin.roleName,
+      },
+      ipAddress: getIpAddress(request),
     });
     
     return NextResponse.json({ success: true, settings });
