@@ -1,0 +1,44 @@
+{
+  "name": "HHRP - Bewerbungsportal",
+  "short_name": "HHRP",
+  "description": "Hamburg Horizon Roleplay - Offizielles Bewerbungsportal",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#050505",
+  "theme_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "entertainment"],
+  "lang": "de-DE",
+  "dir": "ltr",
+  "scope": "/",
+  "shortcuts": [
+    {
+      "name": "Bewerbung",
+      "short_name": "Bewerben",
+      "description": "Direkt zur Bewerbung",
+      "url": "/bewerbung",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Team",
+      "short_name": "Team",
+      "description": "Unser Team ansehen",
+      "url": "/team",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

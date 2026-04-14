@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/components/providers/AuthProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { Navbar } from '@/components/shared/Navbar';
 import { ThemeButton } from '@/components/shared/ThemeButton';
 import { SplashScreen } from '@/components/shared/SplashScreen';
+import { InstallPrompt } from '@/components/shared/InstallPrompt';
+import { InstallButton } from '@/components/shared/InstallButton';
 import { CookieBanner } from '@/components/shared/CookieBanner';
 import { Toaster } from 'sonner';
 import Link from 'next/link';
@@ -15,6 +17,20 @@ export default function RootClientLayout({ children }) {
   const [splashDone, setSplashDone] = useState(false);
   const handleSplashComplete = useCallback(() => setSplashDone(true), []);
 
+  // Register Service Worker
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((registration) => {
+          console.log('Service Worker registered:', registration);
+        })
+        .catch((error) => {
+          console.log('Service Worker registration failed:', error);
+        });
+    }
+  }, []);
+
   return (
     <AuthProvider>
       <ThemeProvider>
@@ -22,6 +38,8 @@ export default function RootClientLayout({ children }) {
         <div style={{ opacity: splashDone ? 1 : 0, transition: 'opacity 0.5s ease' }}>
           <LayoutContent>{children}</LayoutContent>
           <CookieBanner />
+          <InstallPrompt />
+          <InstallButton />
           <Toaster 
             position="bottom-right" 
             theme="dark"

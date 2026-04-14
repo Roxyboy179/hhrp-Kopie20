@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<body>
+<canvas id="c192" width="192" height="192"></canvas>
+<canvas id="c512" width="512" height="512"></canvas>
+<script>
+function createIcon(canvasId, size) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  
+  // Background
+  ctx.fillStyle = '#050505';
+  ctx.fillRect(0, 0, size, size);
+  
+  // Accent glow
+  const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+  gradient.addColorStop(0, 'rgba(255,255,255,0.08)');
+  gradient.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, size, size);
+  
+  // Glass card
+  const cardSize = size * 0.6;
+  const cardX = (size - cardSize) / 2;
+  const cardY = (size - cardSize) / 2;
+  const radius = size * 0.15;
+  
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 2;
+  
+  ctx.beginPath();
+  ctx.moveTo(cardX + radius, cardY);
+  ctx.lineTo(cardX + cardSize - radius, cardY);
+  ctx.quadraticCurveTo(cardX + cardSize, cardY, cardX + cardSize, cardY + radius);
+  ctx.lineTo(cardX + cardSize, cardY + cardSize - radius);
+  ctx.quadraticCurveTo(cardX + cardSize, cardY + cardSize, cardX + cardSize - radius, cardY + cardSize);
+  ctx.lineTo(cardX + radius, cardY + cardSize);
+  ctx.quadraticCurveTo(cardX, cardY + cardSize, cardX, cardY + cardSize - radius);
+  ctx.lineTo(cardX, cardY + radius);
+  ctx.quadraticCurveTo(cardX, cardY, cardX + radius, cardY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  
+  // Letter H
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `bold ${size * 0.35}px Arial`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('H', size/2, size/2);
+  
+  return canvas.toDataURL();
+}
+
+const img192 = createIcon('c192', 192);
+const img512 = createIcon('c512', 512);
+
+console.log('Icons generated');
+</script>
+</body>
+</html>

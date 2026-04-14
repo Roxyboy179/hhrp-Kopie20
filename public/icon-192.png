@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0.08)"/>
+      <stop offset="100%" style="stop-color:rgba(255,255,255,0)"/>
+    </radialGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="192" height="192" fill="#050505"/>
+  
+  <!-- Glow -->
+  <rect width="192" height="192" fill="url(#glow)"/>
+  
+  <!-- Glass Card -->
+  <rect x="38.400000000000006" y="38.400000000000006" width="115.19999999999999" height="115.19999999999999" 
+        rx="28.799999999999997" fill="rgba(255,255,255,0.08)" 
+        stroke="rgba(255,255,255,0.15)" stroke-width="2"/>
+  
+  <!-- Letter H -->
+  <text x="50%" y="50%" font-family="Arial, sans-serif" font-size="67.19999999999999" 
+        font-weight="bold" fill="#ffffff" text-anchor="middle" dominant-baseline="central">H</text>
+</svg>
