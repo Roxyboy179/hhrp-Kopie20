@@ -7,12 +7,12 @@ import { GlassCard } from '@/components/shared/GlassCard';
 import { Button } from '@/components/ui/button';
 import { 
   FileText, Users, CheckCircle2, Clock, ArrowRight, 
-  Shield, Zap, Target, Loader2
+  Shield, Zap, Target, Loader2, AlertTriangle, X
 } from 'lucide-react';
 
 export default function HomePage() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, authError, clearError } = useAuth();
   const [stats, setStats] = useState({ total: 0, angenommen: 0, inBearbeitung: 0 });
 
   useEffect(() => {
@@ -41,6 +41,25 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen">
+      {/* Auth Error Banner */}
+      {authError && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-full max-w-lg px-4 animate-fade-in-down">
+          <div className="bg-red-500/15 backdrop-blur-xl border border-red-500/30 rounded-2xl p-4 flex items-start gap-3 shadow-2xl shadow-red-500/10">
+            <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-red-200 text-sm font-medium">Anmeldung fehlgeschlagen</p>
+              <p className="text-red-300/80 text-sm mt-1">{authError}</p>
+            </div>
+            <button 
+              onClick={clearError} 
+              className="text-red-400/60 hover:text-red-300 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="px-6 py-20 md:py-32">
         <div className="max-w-6xl mx-auto">

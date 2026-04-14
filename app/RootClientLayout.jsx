@@ -19,6 +19,13 @@ function NavbarWrapper() {
   return <Navbar user={user} loading={loading} />;
 }
 
+function AuthErrorBanner() {
+  const { authError, clearError } = useAuth();
+  if (!authError) return null;
+  // Error display is handled in page.js now
+  return null;
+}
+
 function Footer() {
   return (
     <footer className="border-t border-white/5 bg-black/20 mt-auto">

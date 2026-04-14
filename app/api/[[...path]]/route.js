@@ -129,10 +129,18 @@ async function getGuildMember(userId) {
 }
 
 function getAdminRole(roles) {
+  // Return the HIGHEST level role, not just the first match
+  let bestRole = null;
+  let bestRoleId = null;
   for (const roleId of roles) {
-    if (ADMIN_ROLES[roleId]) return ADMIN_ROLES[roleId];
+    if (ADMIN_ROLES[roleId]) {
+      if (!bestRole || ADMIN_ROLES[roleId].level > bestRole.level) {
+        bestRole = ADMIN_ROLES[roleId];
+        bestRoleId = roleId;
+      }
+    }
   }
-  return null;
+  return bestRole;
 }
 
 // ===== SCHÖNE DISCORD EMBEDS =====
@@ -278,9 +286,27 @@ function handleDiscordAuth() {
 async function handleDiscordCallback(request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
-  if (!code) return NextResponse.redirect(`${BASE_URL}/?error=no_code`);
+  const errorParam = url.searchParams.get('error');
+  
+  console.log('[OAUTH] ========== DISCORD CALLBACK ==========');
+  console.log('[OAUTH] Code present:', !!code);
+  console.log('[OAUTH] Error param:', errorParam);
+  console.log('[OAUTH] Redirect URI:', REDIRECT_URI);
+  
+  // Discord sends error param if user denied
+  if (errorParam) {
+    console.log('[OAUTH] Discord returned error:', errorParam);
+    return NextResponse.redirect(new URL(`/?error=discord_denied`, BASE_URL));
+  }
+  
+  if (!code) {
+    console.log('[OAUTH] No code in callback');
+    return NextResponse.redirect(new URL(`/?error=no_code`, BASE_URL));
+  }
 
   try {
+    // Step 1: Exchange code for token
+    console.log('[OAUTH] Step 1: Exchanging code for token...');
     const tokenRes = await fetch('https://discord.com/api/oauth2/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -293,20 +319,42 @@ async function handleDiscordCallback(request) {
       })
     });
 
-    if (!tokenRes.ok) return NextResponse.redirect(`${BASE_URL}/?error=token_failed`);
-    const { access_token } = await tokenRes.json();
+    if (!tokenRes.ok) {
+      const errText = await tokenRes.text();
+      console.error('[OAUTH] Token exchange failed:', tokenRes.status, errText);
+      return NextResponse.redirect(new URL(`/?error=token_failed`, BASE_URL));
+    }
+    const tokenData = await tokenRes.json();
+    const { access_token } = tokenData;
+    console.log('[OAUTH] Step 1 OK - Token received');
 
+    // Step 2: Get Discord user info
+    console.log('[OAUTH] Step 2: Getting user info...');
     const userRes = await fetch('https://discord.com/api/users/@me', {
       headers: { Authorization: `Bearer ${access_token}` }
     });
 
-    if (!userRes.ok) return NextResponse.redirect(`${BASE_URL}/?error=user_failed`);
+    if (!userRes.ok) {
+      const errText = await userRes.text();
+      console.error('[OAUTH] User fetch failed:', userRes.status, errText);
+      return NextResponse.redirect(new URL(`/?error=user_failed`, BASE_URL));
+    }
     const discordUser = await userRes.json();
+    console.log('[OAUTH] Step 2 OK - User:', discordUser.username, '(', discordUser.id, ')');
 
+    // Step 3: Check guild membership
+    console.log('[OAUTH] Step 3: Checking guild membership...');
     const member = await getGuildMember(discordUser.id);
-    if (!member) return NextResponse.redirect(`${BASE_URL}/?error=not_member`);
+    if (!member) {
+      console.error('[OAUTH] User is NOT a member of guild', DISCORD_GUILD_ID);
+      return NextResponse.redirect(new URL(`/?error=not_member`, BASE_URL));
+    }
+    console.log('[OAUTH] Step 3 OK - Member found, roles:', member.roles?.length);
 
+    // Step 4: Check admin roles (highest role wins)
     const adminRole = getAdminRole(member.roles || []);
+    console.log('[OAUTH] Admin role:', adminRole?.name || 'none', 'Level:', adminRole?.level || 0);
+    
     const user = {
       id: discordUser.id,
       username: discordUser.username,
@@ -320,19 +368,29 @@ async function handleDiscordCallback(request) {
       canSeeAll: adminRole?.canSeeAll || false,
     };
 
+    // Step 5: Create JWT and set cookie
     const token = createToken(user);
-    const response = NextResponse.redirect(BASE_URL);
+    console.log('[OAUTH] Step 5 - JWT created, redirecting to', BASE_URL);
+    
+    const redirectUrl = new URL('/', BASE_URL);
+    redirectUrl.searchParams.set('auth', 'success');
+    
+    const response = NextResponse.redirect(redirectUrl);
     response.cookies.set('auth_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: 'lax',
+      path: '/',
       maxAge: 7 * 24 * 60 * 60
     });
 
+    console.log('[OAUTH] ========== CALLBACK SUCCESS ==========');
     return response;
   } catch (error) {
-    console.error('OAuth error:', error);
-    return NextResponse.redirect(`${BASE_URL}/?error=auth_failed`);
+    console.error('[OAUTH] ========== CALLBACK ERROR ==========');
+    console.error('[OAUTH] Error:', error.message);
+    console.error('[OAUTH] Stack:', error.stack);
+    return NextResponse.redirect(new URL(`/?error=auth_failed`, BASE_URL));
   }
 }
 
@@ -508,10 +566,37 @@ async function handleAdminLogin(request) {
 
     console.log('[DEBUG] ✅ Account validated:', account.mitarbeiter_nummer);
 
-    // SCHRITT 2: Rolle aus Datenbank laden
-    console.log('[DEBUG] Loading role from database:', account.role_name);
+    // SCHRITT 2: Discord-Rollen LIVE aus der Discord API laden (nicht nur DB)
+    let liveRole = null;
+    if (account.discord_user_id && account.discord_user_id !== 'temporary-id') {
+      console.log('[DEBUG] Checking LIVE Discord roles for user:', account.discord_user_id);
+      const member = await getGuildMember(account.discord_user_id);
+      if (member) {
+        liveRole = getAdminRole(member.roles || []);
+        console.log('[DEBUG] LIVE Discord role:', liveRole?.name || 'none', 'Level:', liveRole?.level || 0);
+        
+        // Update role in database if changed
+        if (liveRole && liveRole.name !== account.role_name) {
+          console.log('[DEBUG] Role changed! DB:', account.role_name, '-> Discord:', liveRole.name);
+          try {
+            await supabaseAdmin
+              .from('admin_accounts')
+              .update({ role_name: liveRole.name })
+              .eq('id', account.id);
+            console.log('[DEBUG] ✅ Role updated in database');
+          } catch (updateErr) {
+            console.error('[DEBUG] Failed to update role in DB:', updateErr);
+          }
+        }
+      } else {
+        console.log('[DEBUG] Could not fetch Discord member, falling back to DB role');
+      }
+    }
+
+    // Use live Discord role if available, otherwise fall back to DB role
+    const roleName = liveRole?.name || account.role_name;
     
-    // Rollen-Konfiguration basierend auf DB role_name
+    // Rollen-Konfiguration basierend auf role_name
     const roleConfig = {
       'Super Admin': { level: 4, canCreateAccounts: true, canSeeAll: true },
       'Admin': { level: 3, canCreateAccounts: false, canSeeAll: true },
@@ -525,16 +610,16 @@ async function handleAdminLogin(request) {
       'Stl. Teamleitung': { level: 1, canCreateAccounts: false, canSeeAll: false }
     };
     
-    const adminRole = roleConfig[account.role_name] || { 
-      name: account.role_name || 'Admin',
+    const adminRole = liveRole || roleConfig[roleName] || { 
+      name: roleName || 'Admin',
       level: 1, 
       canCreateAccounts: false, 
       canSeeAll: false 
     };
     
-    adminRole.name = account.role_name; // Name aus DB
+    if (!adminRole.name) adminRole.name = roleName;
     
-    console.log('[DEBUG] Admin role loaded:', adminRole);
+    console.log('[DEBUG] Final admin role:', adminRole.name, 'Level:', adminRole.level);
 
     console.log('[DEBUG] Creating admin session...');
     const admin = {
@@ -551,8 +636,9 @@ async function handleAdminLogin(request) {
     const response = NextResponse.json({ admin });
     response.cookies.set('admin_token', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: true,
       sameSite: 'lax',
+      path: '/',
       maxAge: 7 * 24 * 60 * 60
     });
 
