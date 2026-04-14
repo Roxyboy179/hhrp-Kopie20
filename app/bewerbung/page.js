@@ -433,7 +433,7 @@ export default function BewerbungPage() {
           <Button variant="ghost" onClick={() => router.push('/')} className="mb-8 text-neutral-600 hover:text-neutral-300">
             <ArrowLeft className="w-4 h-4 mr-2" /> Zurück
           </Button>
-          <BewerbungCards user={user} onSelect={handleSelect} />
+          <BewerbungCards user={user} onSelect={handleSelect} settings={bewerbungSettings} />
         </div>
       </div>
     );
