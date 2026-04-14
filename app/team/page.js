@@ -39,21 +39,39 @@ export default function TeamPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchTeam();
-  }, []);
+    let cancelled = false;
+    const controller = new AbortController();
 
-  const fetchTeam = async () => {
-    try {
-      const res = await fetch('/api/team/members');
-      const data = await res.json();
-      setMembers(data.members || []);
-      setRoles(data.roles || []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchTeam = async () => {
+      try {
+        const res = await fetch('/api/team/members', {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        
+        if (!cancelled) {
+          setMembers(data.members || []);
+          setRoles(data.roles || []);
+        }
+      } catch (e) {
+        if (e.name !== 'AbortError' && !cancelled) {
+          console.error('Team fetch error:', e);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchTeam();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, []);
 
   // Group roles by category
   const groupedByCategory = {};
@@ -178,12 +196,21 @@ export default function TeamPage() {
                               {roleMembers.map((member, i) => (
                                 <GlassCard key={i} className="p-4" hover>
                                   <div className="flex items-center gap-3">
-                                    <div 
-                                      className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold"
-                                      style={{ background: badgeStyle.bg, color: badgeStyle.color, border: `1px solid ${badgeStyle.border}` }}
-                                    >
-                                      {member.username?.charAt(0)?.toUpperCase() || '?'}
-                                    </div>
+                                    {member.avatar ? (
+                                      <img 
+                                        src={member.avatar} 
+                                        alt={member.username}
+                                        className="w-12 h-12 rounded-xl object-cover"
+                                        style={{ border: `1px solid ${badgeStyle.border}` }}
+                                      />
+                                    ) : (
+                                      <div 
+                                        className="w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold"
+                                        style={{ background: badgeStyle.bg, color: badgeStyle.color, border: `1px solid ${badgeStyle.border}` }}
+                                      >
+                                        {member.username?.charAt(0)?.toUpperCase() || '?'}
+                                      </div>
+                                    )}
                                     <div className="min-w-0 flex-1">
                                       <h4 className="font-semibold text-white truncate text-sm">{member.username}</h4>
                                       <span 

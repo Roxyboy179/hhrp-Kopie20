@@ -1595,36 +1595,73 @@ export async function GET(request) {
         }
       }
       
-      // Mitglieder nach Rollen filtern
-      const membersByRole = {};
+      // Rollen-Struktur mit Levels (höher = wichtiger)
+      const roles = [
+        { name: 'Projektinhaber', level: 10, category: 'Leitung', desc: 'Gründer & Leitung des Projekts', icon: 'crown' },
+        { name: 'Stl. Projektinhaber', level: 9, category: 'Leitung', desc: 'Stellvertretende Projektleitung', icon: 'crown' },
+        { name: 'Teamkoordination', level: 8, category: 'Management', desc: 'Koordination des gesamten Teams', icon: 'star' },
+        { name: 'Qualitätsmanagement', level: 7, category: 'Management', desc: 'Qualitätssicherung & Standards', icon: 'award' },
+        { name: 'Teamvertretung', level: 6, category: 'Führung', desc: 'Vertretung der Teaminteressen', icon: 'shield' },
+        { name: 'Teamleitung', level: 5, category: 'Führung', desc: 'Leitung einzelner Teambereiche', icon: 'shield' },
+        { name: 'Stl. Teamleitung', level: 4, category: 'Führung', desc: 'Stellvertretende Teamleitung', icon: 'shield' },
+        { name: 'Roblox Manager', level: 3, category: 'Roblox', desc: 'Verwaltung des Roblox-Bereichs', icon: 'gamepad' },
+        { name: 'Discord Manager', level: 2, category: 'Discord', desc: 'Verwaltung des Discord-Servers', icon: 'headphones' },
+        { name: 'Roblox Team', level: 1, category: 'Roblox', desc: 'Roblox-Teammitglieder', icon: 'gamepad' },
+        { name: 'Discord Team', level: 0, category: 'Discord', desc: 'Discord-Teammitglieder', icon: 'headphones' },
+      ];
+      
+      // Rollen-Map für schnellen Level-Zugriff
+      const roleMap = {};
+      roles.forEach(r => roleMap[r.name] = r.level);
+      
+      // Mitglieder sammeln - pro Discord-User nur die höchste Rolle
+      const userHighestRole = {}; // discordId -> { role, level, userData }
       
       for (const member of allMembers) {
         if (!member.user || member.user.bot) continue;
         
         const memberRoles = member.roles || [];
+        const discordId = member.user.id;
+        
+        // Finde die höchste Rolle dieses Users
+        let highestRole = null;
+        let highestLevel = -1;
         
         for (const roleId of memberRoles) {
           if (allRoleIds[roleId]) {
             const roleName = allRoleIds[roleId].name;
-            if (!membersByRole[roleName]) membersByRole[roleName] = [];
+            const roleLevel = roleMap[roleName] ?? -1;
             
-            // Duplikate vermeiden (bei mehreren IDs für gleiche Rolle)
-            const alreadyAdded = membersByRole[roleName].some(m => m.discordId === member.user.id);
-            if (!alreadyAdded) {
-              const avatarUrl = member.user.avatar 
-                ? `https://cdn.discordapp.com/avatars/${member.user.id}/${member.user.avatar}.png?size=128`
-                : null;
-              
-              membersByRole[roleName].push({
-                username: member.user.global_name || member.user.username,
-                discordUsername: member.user.username,
-                discordId: member.user.id,
-                avatar: avatarUrl,
-                roleName: roleName,
-              });
+            if (roleLevel > highestLevel) {
+              highestLevel = roleLevel;
+              highestRole = roleName;
             }
           }
         }
+        
+        // Wenn User eine relevante Rolle hat, speichere nur die höchste
+        if (highestRole && highestLevel >= 0) {
+          const avatarUrl = member.user.avatar 
+            ? `https://cdn.discordapp.com/avatars/${discordId}/${member.user.avatar}.png?size=128`
+            : null;
+          
+          userHighestRole[discordId] = {
+            username: member.user.global_name || member.user.username,
+            discordUsername: member.user.username,
+            discordId: discordId,
+            avatar: avatarUrl,
+            roleName: highestRole,
+            roleLevel: highestLevel,
+          };
+        }
+      }
+      
+      // Gruppiere nach Rollen
+      const membersByRole = {};
+      for (const userData of Object.values(userHighestRole)) {
+        const roleName = userData.roleName;
+        if (!membersByRole[roleName]) membersByRole[roleName] = [];
+        membersByRole[roleName].push(userData);
       }
       
       // Flat member list
@@ -1634,21 +1671,6 @@ export async function GET(request) {
           members.push(m);
         }
       }
-      
-      // Rollen-Struktur
-      const roles = [
-        { name: 'Projektinhaber', level: 4, category: 'Leitung', desc: 'Gründer & Leitung des Projekts', icon: 'crown' },
-        { name: 'Stl. Projektinhaber', level: 4, category: 'Leitung', desc: 'Stellvertretende Projektleitung', icon: 'crown' },
-        { name: 'Teamkoordination', level: 3, category: 'Management', desc: 'Koordination des gesamten Teams', icon: 'star' },
-        { name: 'Qualitätsmanagement', level: 3, category: 'Management', desc: 'Qualitätssicherung & Standards', icon: 'award' },
-        { name: 'Teamvertretung', level: 2, category: 'Führung', desc: 'Vertretung der Teaminteressen', icon: 'shield' },
-        { name: 'Teamleitung', level: 2, category: 'Führung', desc: 'Leitung einzelner Teambereiche', icon: 'shield' },
-        { name: 'Stl. Teamleitung', level: 2, category: 'Führung', desc: 'Stellvertretende Teamleitung', icon: 'shield' },
-        { name: 'Roblox Manager', level: 1, category: 'Roblox', desc: 'Verwaltung des Roblox-Bereichs', icon: 'gamepad' },
-        { name: 'Discord Manager', level: 1, category: 'Discord', desc: 'Verwaltung des Discord-Servers', icon: 'headphones' },
-        { name: 'Roblox Team', level: 0, category: 'Roblox', desc: 'Roblox-Teammitglieder', icon: 'gamepad' },
-        { name: 'Discord Team', level: 0, category: 'Discord', desc: 'Discord-Teammitglieder', icon: 'headphones' },
-      ];
       
       return NextResponse.json({ members, roles, totalDiscordMembers: allMembers.length });
     } catch (error) {
