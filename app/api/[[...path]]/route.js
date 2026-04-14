@@ -199,6 +199,68 @@ export async function GET(request) {
       const bewerbungen = data.map(toCamelCase)
 
       return NextResponse.json({ bewerbungen })
+
+  // Admin Accounts: Alle Admins abrufen (GET)
+  if (path === '/api/admin/accounts') {
+    try {
+      const { authorized } = requireAuth(request)
+      if (!authorized) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      const { data, error } = await supabase
+        .from('admin_accounts')
+        .select('*')
+        .order('role_name', { ascending: false })
+
+      if (error) {
+        console.error('❌ DB Error:', error)
+        return NextResponse.json(
+          { error: 'Fehler beim Abrufen der Admins' },
+          { status: 500 }
+        )
+      }
+
+      const admins = data.map(toCamelCase)
+
+      return NextResponse.json({ admins })
+    } catch (error) {
+      console.error('❌ Fetch Admins Error:', error)
+      return NextResponse.json(
+        { error: 'Server Fehler' },
+        { status: 500 }
+      )
+    }
+  }
+
+  // Admin: User Info abrufen
+  if (path === '/api/admin/me') {
+    try {
+      const { authorized, user } = requireAuth(request)
+      if (!authorized) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      return NextResponse.json({
+        mitarbeiterNummer: user.mitarbeiterNummer,
+        email: user.email,
+        role: user.role
+      })
+    } catch (error) {
+      console.error('❌ User Info Error:', error)
+      return NextResponse.json(
+        { error: 'Server Fehler' },
+        { status: 500 }
+      )
+    }
+  }
+
     } catch (error) {
       console.error('❌ Admin Bewerbungen Error:', error)
       return NextResponse.json(
@@ -364,6 +426,135 @@ export async function PUT(request) {
         { error: 'Server Fehler' },
         { status: 500 }
       )
+    }
+  }
+
+
+  // Admin Accounts: Erstellen (POST)
+  if (path === '/api/admin/accounts') {
+    try {
+      const { authorized, user } = requireAuth(request)
+      if (!authorized) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      // Nur Super Admin kann Accounts erstellen
+      if (user.role !== 'Super Admin') {
+        return NextResponse.json(
+          { error: 'Keine Berechtigung. Nur Super Admins können Accounts erstellen.' },
+          { status: 403 }
+        )
+      }
+
+      const body = await request.json()
+      const { mitarbeiterNummer, email, discordUsername, password, roleName } = body
+
+      // Admin Account in DB erstellen
+      const { data: newAdmin, error } = await supabase
+        .from('admin_accounts')
+        .insert({
+          mitarbeiter_nummer: mitarbeiterNummer,
+          email: email,
+          discord_username: discordUsername,
+          password_hash: password,
+          role_name: roleName,
+          is_active: true
+        })
+        .select()
+        .single()
+
+      if (error) {
+        console.error('❌ DB Error:', error)
+        return NextResponse.json(
+          { error: 'Account konnte nicht erstellt werden' },
+          { status: 500 }
+        )
+      }
+
+      console.log('✅ Admin Account erstellt:', newAdmin.mitarbeiter_nummer)
+
+      return NextResponse.json({
+        success: true,
+        admin: toCamelCase(newAdmin)
+      })
+    } catch (error) {
+      console.error('❌ Create Admin Error:', error)
+      return NextResponse.json(
+        { error: 'Server Fehler' },
+        { status: 500 }
+      )
+
+// ==================== DELETE REQUESTS ====================
+export async function DELETE(request) {
+  const url = new URL(request.url)
+  const path = url.pathname
+
+  // Admin: Admin Account löschen
+  if (path.startsWith('/api/admin/accounts/')) {
+    try {
+      const { authorized, user } = requireAuth(request)
+      if (!authorized) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      // Nur Super Admin kann Accounts löschen
+      if (user.role !== 'Super Admin') {
+        return NextResponse.json(
+          { error: 'Keine Berechtigung. Nur Super Admins können Accounts löschen.' },
+          { status: 403 }
+        )
+      }
+
+      const mitarbeiterNummer = path.split('/').pop()
+
+      // Verhindere Löschung von Super Admins
+      const { data: adminToDelete } = await supabase
+        .from('admin_accounts')
+        .select('role_name')
+        .eq('mitarbeiter_nummer', mitarbeiterNummer)
+        .single()
+
+      if (adminToDelete && adminToDelete.role_name === 'Super Admin') {
+        return NextResponse.json(
+          { error: 'Super Admin Accounts können nicht gelöscht werden' },
+          { status: 403 }
+        )
+      }
+
+      const { error } = await supabase
+        .from('admin_accounts')
+        .delete()
+        .eq('mitarbeiter_nummer', mitarbeiterNummer)
+
+      if (error) {
+        console.error('❌ DB Error:', error)
+        return NextResponse.json(
+          { error: 'Account konnte nicht gelöscht werden' },
+          { status: 500 }
+        )
+      }
+
+      console.log('✅ Admin Account gelöscht:', mitarbeiterNummer)
+
+      return NextResponse.json({ success: true })
+    } catch (error) {
+      console.error('❌ Delete Admin Error:', error)
+      return NextResponse.json(
+        { error: 'Server Fehler' },
+        { status: 500 }
+      )
+    }
+  }
+
+  return NextResponse.json({ error: 'Not Found' }, { status: 404 })
+}
+
     }
   }
 
