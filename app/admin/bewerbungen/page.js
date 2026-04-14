@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { GlassCard } from '@/components/shared/GlassCard';
 import { Button } from '@/components/ui/button';
@@ -48,10 +48,11 @@ function StatusIcon({ status }) {
 }
 
 function DetailRow({ label, value }) {
+  if (!value && value !== false && value !== 0) return null;
   return (
-    <div className="grid grid-cols-[140px_1fr] gap-4 py-1.5">
+    <div className="grid grid-cols-[160px_1fr] gap-4 py-2 border-b border-white/[0.04]">
       <span className="text-white/40 text-sm">{label}</span>
-      <span className="text-white/80 text-sm whitespace-pre-wrap">{value || '-'}</span>
+      <span className="text-white/80 text-sm whitespace-pre-wrap">{String(value)}</span>
     </div>
   );
 }
@@ -61,10 +62,13 @@ export default function AdminBewerbungenPage() {
   const [admin, setAdmin] = useState(null);
   const [bewerbungen, setBewerbungen] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [actionConfirm, setActionConfirm] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const intervalRef = useRef(null);
+  const initialLoadDone = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -77,21 +81,24 @@ export default function AdminBewerbungenPage() {
         }
         setAdmin(data.admin);
         await fetchBewerbungen();
+        initialLoadDone.current = true;
       } catch (e) {
         console.error(e);
         setLoading(false);
       }
     })();
 
-    // Auto-Refresh alle 10 Sekunden
-    const interval = setInterval(() => {
-      fetchBewerbungen();
-    }, 10000);
+    // Stiller Auto-Refresh alle 5 Sekunden
+    intervalRef.current = setInterval(() => {
+      silentRefresh();
+    }, 5000);
 
-    return () => clearInterval(interval);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, []);
 
-  const fetchBewerbungen = async () => {
+  const fetchBewerbungen = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/admin/bewerbungen');
@@ -102,10 +109,27 @@ export default function AdminBewerbungenPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  // Komplett stiller Refresh - kein Loading, kein Flicker
+  const silentRefresh = useCallback(async () => {
+    try {
+      const res = await fetch('/api/admin/bewerbungen');
+      const data = await res.json();
+      if (data.bewerbungen) {
+        setBewerbungen(data.bewerbungen);
+      }
+    } catch (e) {
+      // Still fehlschlagen - kein UI-Update
+    }
+  }, []);
+
+  // Aktuelle ausgewählte Bewerbung aus der Liste
+  const selected = bewerbungen.find(b => b.id === selectedId) || null;
 
   const handleAction = async (id, action, status) => {
     setActionConfirm(null);
+    setActionLoading(true);
     try {
       const body = action ? { action } : { status };
       const res = await fetch(`/api/admin/bewerbungen/${id}`, {
@@ -124,17 +148,11 @@ export default function AdminBewerbungenPage() {
           description: `Die Bewerbung wurde erfolgreich ${actionText}.`,
         });
         
-        await fetchBewerbungen();
-        if (selected?.id === id) {
-          const bewerbung = data.bewerbung;
-          if (bewerbung && typeof bewerbung.formData === 'string') {
-            try {
-              bewerbung.formData = JSON.parse(bewerbung.formData);
-            } catch (e) {
-              console.error('Fehler beim Parsen von formData:', e);
-            }
-          }
-          setSelected(bewerbung);
+        // Liste still aktualisieren
+        if (data.bewerbung) {
+          setBewerbungen(prev => prev.map(b => b.id === id ? data.bewerbung : b));
+        } else {
+          await silentRefresh();
         }
       } else {
         toast.error('Fehler', { description: data.error || 'Aktion fehlgeschlagen' });
@@ -142,12 +160,14 @@ export default function AdminBewerbungenPage() {
     } catch (e) {
       console.error(e);
       toast.error('Fehler', { description: 'Netzwerkfehler aufgetreten' });
+    } finally {
+      setActionLoading(false);
     }
   };
 
   if (loading && !bewerbungen.length) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-full min-h-[400px]">
         <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
       </div>
     );
@@ -187,25 +207,35 @@ export default function AdminBewerbungenPage() {
     );
   };
 
+  // DETAIL-ANSICHT
   if (selected) {
-    const fd = selected.formData || {};
+    // formData richtig auslesen - unterstützt verschiedene Formate
+    let fd = {};
+    if (selected.formData) {
+      fd = typeof selected.formData === 'string' ? (() => { try { return JSON.parse(selected.formData); } catch(e) { return {}; } })() : selected.formData;
+    } else if (selected.form_data) {
+      fd = typeof selected.form_data === 'string' ? (() => { try { return JSON.parse(selected.form_data); } catch(e) { return {}; } })() : selected.form_data;
+    }
+
     return (
       <div className="p-6 space-y-6 max-w-5xl mx-auto">
         <ConfirmDialog />
         
         <Button 
           variant="ghost" 
-          onClick={() => setSelected(null)} 
+          onClick={() => setSelectedId(null)} 
           className="text-white/50 hover:text-white gap-2 rounded-xl"
         >
-          <ArrowLeft className="w-4 h-4" /> Zurück
+          <ArrowLeft className="w-4 h-4" /> Zurück zur Übersicht
         </Button>
 
         <GlassCard className="p-6 md:p-8 space-y-6">
           <div className="flex items-start justify-between flex-wrap gap-4">
             <div>
-              <h2 className="text-2xl font-bold">Bewerbung #{selected.id.substring(0, 8)}</h2>
-              <p className="text-sm text-white/35 mt-1">Eingereicht am {formatDateTime(selected.createdAt)}</p>
+              <h2 className="text-2xl font-bold">Bewerbung von {selected.username || 'Unbekannt'}</h2>
+              <p className="text-sm text-white/35 mt-1">
+                ID: {selected.id?.substring(0, 8)} | Eingereicht am {formatDateTime(selected.createdAt)}
+              </p>
             </div>
             <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${getStatusColor(selected.status)}`}>
               <StatusIcon status={selected.status} />
@@ -216,72 +246,98 @@ export default function AdminBewerbungenPage() {
           {selected.claimedByName && (
             <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 text-sm flex items-center gap-2">
               <User className="w-4 h-4" />
-              Wird bearbeitet von: {selected.claimedByName}
+              Wird bearbeitet von: <strong>{selected.claimedByName}</strong>
             </div>
           )}
 
+          {/* Discord-Daten */}
           <div className="p-4 rounded-xl bg-[#5865F2]/[0.08] border border-[#5865F2]/20">
-            <h4 className="text-xs font-semibold text-blue-300 mb-2 uppercase tracking-wider">Discord-Daten</h4>
-            <div className="grid sm:grid-cols-3 gap-2 text-sm">
-              <div><span className="text-white/40">Name:</span> <span className="text-white/80">{selected.username}</span></div>
-              <div><span className="text-white/40">E-Mail:</span> <span className="text-white/80">{selected.email || '-'}</span></div>
-              <div><span className="text-white/40">Seit:</span> <span className="text-white/80">{selected.discordCreatedAt ? formatDate(selected.discordCreatedAt) : '-'}</span></div>
+            <h4 className="text-xs font-semibold text-blue-300 mb-3 uppercase tracking-wider">Discord-Daten</h4>
+            <div className="grid sm:grid-cols-3 gap-3 text-sm">
+              <div>
+                <span className="text-white/40 text-xs">Name</span>
+                <p className="text-white/90 font-medium">{selected.username || '-'}</p>
+              </div>
+              <div>
+                <span className="text-white/40 text-xs">E-Mail</span>
+                <p className="text-white/90 font-medium">{selected.email || '-'}</p>
+              </div>
+              <div>
+                <span className="text-white/40 text-xs">Discord seit</span>
+                <p className="text-white/90 font-medium">{selected.discordCreatedAt ? formatDate(selected.discordCreatedAt) : '-'}</p>
+              </div>
             </div>
           </div>
 
           <Separator className="bg-white/[0.06]" />
 
-          <div className="space-y-1">
-            <h4 className="text-sm font-semibold text-blue-300 mb-2">Bewerbungsdaten</h4>
-            <DetailRow label="Vorname" value={fd.vorname} />
-            <DetailRow label="Alter" value={fd.alter} />
-            <DetailRow label="Roblox-Name" value={fd.robloxName} />
-            <DetailRow label="Spielzeit" value={fd.spielzeit} />
-            <DetailRow label="Fraktion" value={fd.fraktion} />
-            <DetailRow label="Anderer Server" value={fd.andererServer} />
-            <DetailRow label="Bann/Warn" value={fd.bannWarn} />
-            <DetailRow label="Warum Team?" value={fd.warumTeam} />
-            <DetailRow label="Geduldig?" value={fd.geduldig} />
-            <DetailRow label="Stunden/Woche" value={fd.stundenProWoche} />
-            <DetailRow label="Fail-RP Lösung" value={fd.failRpLoesung} />
-            <DetailRow label="Streit-Lösung" value={fd.streitLoesung} />
-            <DetailRow label="Mikro" value={fd.hatMikro ? 'Ja' : 'Nein'} />
-            <DetailRow label="Kennt Regeln" value={fd.kenntRegeln ? 'Ja' : 'Nein'} />
-            <DetailRow label="Bleibt nett" value={fd.bleibtNett ? 'Ja' : 'Nein'} />
+          {/* Bewerbungsdaten */}
+          <div>
+            <h4 className="text-sm font-semibold text-blue-300 mb-3">Bewerbungsdaten</h4>
+            <div className="space-y-0">
+              <DetailRow label="Vorname" value={fd.vorname} />
+              <DetailRow label="Alter" value={fd.alter} />
+              <DetailRow label="Roblox-Name" value={fd.robloxName} />
+              <DetailRow label="Spielzeit" value={fd.spielzeit} />
+              <DetailRow label="Fraktion" value={fd.fraktion} />
+              <DetailRow label="Anderer Server" value={fd.andererServer} />
+              <DetailRow label="Bann/Warn" value={fd.bannWarn} />
+              <DetailRow label="Warum ins Team?" value={fd.warumTeam} />
+              <DetailRow label="Geduldig?" value={fd.geduldig} />
+              <DetailRow label="Stunden/Woche" value={fd.stundenProWoche} />
+              <DetailRow label="Fail-RP Lösung" value={fd.failRpLoesung} />
+              <DetailRow label="Streit-Lösung" value={fd.streitLoesung} />
+              <DetailRow label="Hat Mikrofon" value={fd.hatMikro ? 'Ja' : 'Nein'} />
+              <DetailRow label="Kennt Regeln" value={fd.kenntRegeln ? 'Ja' : 'Nein'} />
+              <DetailRow label="Bleibt nett" value={fd.bleibtNett ? 'Ja' : 'Nein'} />
+            </div>
           </div>
 
           <Separator className="bg-white/[0.06]" />
 
+          {/* Aktionen */}
           <div className="flex flex-wrap gap-3">
             {!selected.claimedBy && selected.status === 'Eingereicht' && (
-              <Button onClick={() => handleAction(selected.id, 'claim')} className="bg-blue-600 hover:bg-blue-700 rounded-xl">
+              <Button 
+                onClick={() => handleAction(selected.id, 'claim')} 
+                disabled={actionLoading}
+                className="bg-blue-600 hover:bg-blue-700 rounded-xl"
+              >
+                {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <User className="w-4 h-4 mr-2" />}
                 Übernehmen
               </Button>
             )}
             {selected.claimedBy === admin?.discordUserId && (
               <>
-                <Button onClick={() => handleAction(selected.id, 'unclaim')} variant="outline" className="rounded-xl border-white/10">
+                <Button 
+                  onClick={() => handleAction(selected.id, 'unclaim')} 
+                  disabled={actionLoading}
+                  variant="outline" 
+                  className="rounded-xl border-white/10"
+                >
                   Freigeben
                 </Button>
                 <Button 
+                  disabled={actionLoading}
                   onClick={() => setActionConfirm({
                     id: selected.id,
                     action: null,
                     status: 'Angenommen',
                     title: 'Bewerbung annehmen?',
-                    description: `Möchtest du die Bewerbung von ${selected.username} wirklich annehmen? Der Bewerber wird per Discord-DM benachrichtigt.`
+                    description: `Möchtest du die Bewerbung von ${selected.username} wirklich annehmen? Der Bewerber wird per Discord benachrichtigt.`
                   })} 
                   className="bg-green-600 hover:bg-green-700 rounded-xl"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" /> Annehmen
                 </Button>
                 <Button 
+                  disabled={actionLoading}
                   onClick={() => setActionConfirm({
                     id: selected.id,
                     action: null,
                     status: 'Abgelehnt',
                     title: 'Bewerbung ablehnen?',
-                    description: `Möchtest du die Bewerbung von ${selected.username} wirklich ablehnen? Der Bewerber wird per Discord-DM benachrichtigt.`
+                    description: `Möchtest du die Bewerbung von ${selected.username} wirklich ablehnen? Der Bewerber wird per Discord benachrichtigt.`
                   })} 
                   className="bg-red-600 hover:bg-red-700 rounded-xl"
                 >
@@ -295,9 +351,13 @@ export default function AdminBewerbungenPage() {
     );
   }
 
+  // LISTE
   const filtered = bewerbungen.filter(b => {
     if (filter !== 'all' && b.status !== filter) return false;
-    if (search && !b.username?.toLowerCase().includes(search.toLowerCase()) && !b.id?.includes(search)) return false;
+    if (search) {
+      const s = search.toLowerCase();
+      if (!b.username?.toLowerCase().includes(s) && !b.id?.includes(s) && !b.email?.toLowerCase().includes(s)) return false;
+    }
     return true;
   });
 
@@ -309,15 +369,15 @@ export default function AdminBewerbungenPage() {
         <div>
           <h1 className="text-3xl font-bold">Bewerbungen</h1>
           <p className="text-white/40 text-sm mt-1">
-            {bewerbungen.length} Bewerbungen insgesamt
+            {bewerbungen.length} insgesamt
             {admin && (
-              <span className="ml-2 text-blue-400">| Rolle: {admin.roleName} (Lv.{admin.roleLevel})</span>
+              <span className="ml-2 text-blue-400">| {admin.roleName} (Lv.{admin.roleLevel})</span>
             )}
           </p>
         </div>
         <Button 
           variant="outline" 
-          onClick={fetchBewerbungen} 
+          onClick={() => fetchBewerbungen()} 
           className="gap-2 rounded-xl border-white/10"
         >
           <RefreshCw className="w-4 h-4" /> Aktualisieren
@@ -329,7 +389,7 @@ export default function AdminBewerbungenPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
             <Input
-              placeholder="Suchen..."
+              placeholder="Name oder ID suchen..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10 bg-white/[0.04] border-white/[0.08] rounded-xl"
@@ -342,16 +402,16 @@ export default function AdminBewerbungenPage() {
               key={f}
               variant={filter === f ? 'default' : 'outline'}
               onClick={() => setFilter(f)}
-              className="rounded-xl"
+              className={`rounded-xl ${filter === f ? '' : 'border-white/10'}`}
               size="sm"
             >
-              {f === 'all' ? 'Alle' : f}
+              {f === 'all' ? `Alle (${bewerbungen.length})` : `${f} (${bewerbungen.filter(b => b.status === f).length})`}
             </Button>
           ))}
         </div>
       </div>
 
-      <div className="grid gap-4">
+      <div className="grid gap-3">
         {filtered.length === 0 ? (
           <GlassCard className="p-12 text-center">
             <Filter className="w-12 h-12 text-white/20 mx-auto mb-4" />
@@ -359,23 +419,31 @@ export default function AdminBewerbungenPage() {
           </GlassCard>
         ) : (
           filtered.map(b => (
-            <GlassCard key={b.id} hover className="p-5 cursor-pointer" onClick={() => setSelected(b)}>
+            <GlassCard 
+              key={b.id} 
+              hover 
+              className="p-5 cursor-pointer transition-all hover:border-blue-500/20" 
+              onClick={() => setSelectedId(b.id)}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className="font-semibold">#{b.id?.substring(0, 8)}</span>
-                    <span className="text-white/60">{b.username}</span>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(b.status)}`}>
+                  <div className="flex items-center gap-3 mb-1.5 flex-wrap">
+                    <span className="font-semibold text-white">{b.username || 'Unbekannt'}</span>
+                    <span className="text-white/30 text-xs">#{b.id?.substring(0, 8)}</span>
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(b.status)}`}>
                       <StatusIcon status={b.status} />
                       {b.status}
                     </span>
                   </div>
-                  <p className="text-xs text-white/30">{formatDateTime(b.createdAt)}</p>
-                  {b.claimedByName && (
-                    <p className="text-xs text-yellow-300 mt-1">Bearbeitet von: {b.claimedByName}</p>
-                  )}
+                  <div className="flex items-center gap-4 text-xs text-white/30">
+                    <span>{formatDateTime(b.createdAt)}</span>
+                    {b.email && <span>{b.email}</span>}
+                    {b.claimedByName && (
+                      <span className="text-yellow-300/70">Bearbeitet von: {b.claimedByName}</span>
+                    )}
+                  </div>
                 </div>
-                <Eye className="w-5 h-5 text-white/30" />
+                <Eye className="w-5 h-5 text-white/20" />
               </div>
             </GlassCard>
           ))

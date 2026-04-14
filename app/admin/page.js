@@ -78,6 +78,13 @@ export default function AdminPage() {
     }
   };
 
+  // Stiller Auto-Refresh für Stats
+  useEffect(() => {
+    if (!admin) return;
+    const interval = setInterval(fetchStats, 10000);
+    return () => clearInterval(interval);
+  }, [admin]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoginLoading(true);

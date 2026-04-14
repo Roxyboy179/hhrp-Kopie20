@@ -718,7 +718,7 @@ async function handleAdminUpdateBewerbung(request, id) {
       );
     }
 
-    return NextResponse.json({ bewerbung: updated });
+    return NextResponse.json({ bewerbung: toCamelCase(updated) });
   } catch (error) {
     console.error('Admin update error:', error);
     return NextResponse.json({ error: 'Fehler beim Aktualisieren' }, { status: 500 });
