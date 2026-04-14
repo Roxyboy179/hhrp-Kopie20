@@ -597,11 +597,8 @@ async function handleAdminLogin(request) {
     // Use live Discord role if available, otherwise fall back to DB role
     const roleName = liveRole?.name || account.role_name;
     
-    // Rollen-Konfiguration basierend auf role_name
+    // Rollen-Konfiguration basierend auf role_name (NUR echte Discord-Ränge)
     const roleConfig = {
-      'Super Admin': { level: 4, canCreateAccounts: true, canSeeAll: true },
-      'Admin': { level: 3, canCreateAccounts: false, canSeeAll: true },
-      'Moderator': { level: 2, canCreateAccounts: false, canSeeAll: true },
       'Projektinhaber': { level: 4, canCreateAccounts: true, canSeeAll: true },
       'Stl. Projektinhaber': { level: 3, canCreateAccounts: false, canSeeAll: true },
       'Teamkoordination': { level: 2, canCreateAccounts: false, canSeeAll: true },
