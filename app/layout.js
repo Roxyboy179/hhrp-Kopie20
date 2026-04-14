@@ -12,7 +12,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="de" className="dark">
-      <body className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white antialiased">
+      <body className="min-h-screen bg-[#080808] text-white antialiased">
         <RootClientLayout>{children}</RootClientLayout>
       </body>
     </html>

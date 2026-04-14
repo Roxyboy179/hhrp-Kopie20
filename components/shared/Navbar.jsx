@@ -39,10 +39,10 @@ export function Navbar({ user, loading }) {
   ];
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-slate-950/80 backdrop-blur-2xl border-b border-white/[0.06] shadow-2xl shadow-black/20' : 'bg-transparent'}`}>
+    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-[#0a0a0a]/90 backdrop-blur-2xl border-b border-white/[0.04] shadow-2xl shadow-black/40' : 'bg-transparent'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3 cursor-pointer select-none group">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/25 group-hover:shadow-blue-500/40 transition-all group-hover:scale-105">
+          <div className="w-10 h-10 bg-gradient-to-br from-neutral-600 to-neutral-800 rounded-2xl flex items-center justify-center shadow-lg shadow-black/30 group-hover:shadow-black/50 transition-all group-hover:scale-105">
             <Shield className="w-5 h-5 text-white" />
           </div>
           <div className="hidden sm:block">
@@ -66,8 +66,8 @@ export function Navbar({ user, loading }) {
                   }}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
                     isActive
-                      ? 'bg-blue-500/20 text-blue-300 shadow-inner shadow-blue-500/10'
-                      : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04]'
+                      ? 'bg-white/[0.06] text-white/90 shadow-inner shadow-white/5'
+                      : 'text-white/30 hover:text-white/60 hover:bg-white/[0.03]'
                   }`}
                 >
                   {n.icon}<span className="hidden lg:inline">{n.label}</span>
