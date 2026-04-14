@@ -492,20 +492,32 @@ async function handleAuthMe(request) {
 }
 
 async function handleLogout(request) {
-  const user = getUserFromRequest(request);
+  // Cookie IMMER löschen - auch wenn Logging fehlschlägt
+  const response = NextResponse.json({ success: true });
+  response.cookies.set('auth_token', '', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+    expires: new Date(0),
+  });
   
-  // LOG: User Logout
-  if (user) {
-    await logActivity({
-      actionType: LOG_ACTIONS.USER_LOGOUT,
-      userId: user.id,
-      username: user.username || user.globalName,
-      ipAddress: getIpAddress(request),
-    });
+  try {
+    const user = getUserFromRequest(request);
+    // LOG: User Logout
+    if (user) {
+      await logActivity({
+        actionType: LOG_ACTIONS.USER_LOGOUT,
+        userId: user.id,
+        username: user.username || user.globalName,
+        ipAddress: getIpAddress(request),
+      });
+    }
+  } catch (error) {
+    console.error('[LOGOUT] Logging error (cookie still deleted):', error);
   }
   
-  const response = NextResponse.json({ success: true });
-  response.cookies.delete('auth_token');
   return response;
 }
 
@@ -986,24 +998,36 @@ async function handleAdminMe(request) {
 }
 
 async function handleAdminLogout(request) {
-  const admin = getAdminContext(request);
+  // Cookie IMMER löschen - auch wenn Logging fehlschlägt
+  const response = NextResponse.json({ success: true });
+  response.cookies.set('admin_token', '', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 0,
+    expires: new Date(0),
+  });
   
-  // LOG: Admin Logout
-  if (admin) {
-    await logActivity({
-      actionType: LOG_ACTIONS.ADMIN_LOGOUT,
-      userId: admin.discordUserId || admin.mitarbeiterNummer,
-      username: admin.discordUsername,
-      details: {
-        roleName: admin.roleName,
-        roleLevel: admin.roleLevel,
-      },
-      ipAddress: getIpAddress(request),
-    });
+  try {
+    const admin = getAdminContext(request);
+    // LOG: Admin Logout
+    if (admin) {
+      await logActivity({
+        actionType: LOG_ACTIONS.ADMIN_LOGOUT,
+        userId: admin.discordUserId || admin.mitarbeiterNummer,
+        username: admin.discordUsername,
+        details: {
+          roleName: admin.roleName,
+          roleLevel: admin.roleLevel,
+        },
+        ipAddress: getIpAddress(request),
+      });
+    }
+  } catch (error) {
+    console.error('[ADMIN LOGOUT] Logging error (cookie still deleted):', error);
   }
   
-  const response = NextResponse.json({ success: true });
-  response.cookies.delete('admin_token');
   return response;
 }
 
@@ -1514,11 +1538,11 @@ export async function POST(request) {
   const p = url.pathname.replace('/api/', '');
 
   switch (p) {
-    case 'auth/logout': return handleLogout();
+    case 'auth/logout': return handleLogout(request);
     case 'bewerbungen': return handleCreateBewerbung(request);
     case 'bewerbung-settings': return handleUpdateBewerbungSettings(request);
     case 'admin/login': return handleAdminLogin(request);
-    case 'admin/logout': return handleAdminLogout();
+    case 'admin/logout': return handleAdminLogout(request);
     case 'admin/accounts': return handleAdminCreateAccount(request);
     case 'admin/check-role': return handleCheckDiscordRole(request);
     case 'admin/settings': return handleAdminUpdateSettings(request);
