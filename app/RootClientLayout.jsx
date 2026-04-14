@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/components/providers/AuthProvider';
 import { Navbar } from '@/components/shared/Navbar';
 import { Toaster } from 'sonner';
@@ -8,9 +9,7 @@ import Link from 'next/link';
 export default function RootClientLayout({ children }) {
   return (
     <AuthProvider>
-      <NavbarWrapper />
-      <main className="pt-16 min-h-screen">{children}</main>
-      <Footer />
+      <LayoutContent>{children}</LayoutContent>
       <Toaster 
         position="bottom-right" 
         theme="dark"
@@ -29,9 +28,23 @@ export default function RootClientLayout({ children }) {
   );
 }
 
-function NavbarWrapper() {
+function LayoutContent({ children }) {
+  const pathname = usePathname();
   const { user, loading } = useAuth();
-  return <Navbar user={user} loading={loading} />;
+  const isAdmin = pathname?.startsWith('/admin');
+
+  // Admin-Seiten: Kein globales Navbar/Footer (Admin hat eigenes Layout)
+  if (isAdmin) {
+    return <>{children}</>;
+  }
+
+  return (
+    <>
+      <Navbar user={user} loading={loading} />
+      <main className="pt-16 min-h-screen">{children}</main>
+      <Footer />
+    </>
+  );
 }
 
 function Footer() {
