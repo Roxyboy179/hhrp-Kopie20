@@ -52,6 +52,7 @@ export default function AdminLayout({ children }) {
     { href: '/admin', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, show: true },
     { href: '/admin/bewerbungen', label: 'Bewerbungen', icon: <FileText className="w-5 h-5" />, show: true },
     { href: '/admin/bewerbung-verwaltung', label: 'Bewerbungs-Verwaltung', icon: <Sliders className="w-5 h-5" />, show: canManageBewerbungen },
+    { href: '/admin/logs', label: 'Aktivitäts-Logs', icon: <Clock className="w-5 h-5" />, show: true },
     { href: '/admin/accounts', label: 'Accounts', icon: <UserPlus className="w-5 h-5" />, show: canSeeAccounts },
     { href: '/admin/einstellungen', label: 'Einstellungen', icon: <Settings className="w-5 h-5" />, show: true },
   ];
@@ -159,13 +160,6 @@ export default function AdminLayout({ children }) {
 
         {/* Content Area */}
         <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
-      </div>
-    </div>
-  );
-}
-ame="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>
