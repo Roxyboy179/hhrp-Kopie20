@@ -84,7 +84,22 @@ export default function AdminAccountsPage() {
     try {
       const res = await fetch('/api/admin/accounts');
       const data = await res.json();
-      setAccounts(data.accounts || []);
+      // Nach Rang sortieren (höchster zuerst)
+      const roleOrder = {
+        'Projektinhaber': 1,
+        'Stl. Projektinhaber': 2,
+        'Teamkoordination': 3,
+        'Qualitätsmanagement': 4,
+        'Teamvertretung': 5,
+        'Teamleitung': 6,
+        'Stl. Teamleitung': 7,
+      };
+      const sorted = (data.accounts || []).sort((a, b) => {
+        const orderA = roleOrder[a.roleName] || 99;
+        const orderB = roleOrder[b.roleName] || 99;
+        return orderA - orderB;
+      });
+      setAccounts(sorted);
     } catch (e) {
       console.error(e);
     } finally {
