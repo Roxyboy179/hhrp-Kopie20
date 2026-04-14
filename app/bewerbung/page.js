@@ -21,9 +21,7 @@ export default function BewerbungPage() {
     setLoading(true)
 
     try {
-      // Discord User ID aus Discord Name extrahieren (vereinfacht)
-      // In Produktion: Discord OAuth verwenden
-      const discordUserId = '123456789' // Placeholder
+      const discordUserId = '123456789'
 
       const response = await fetch('/api/bewerbung', {
         method: 'POST',
@@ -58,23 +56,23 @@ export default function BewerbungPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 py-12 px-6">
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black py-12 px-6">
       <div className="max-w-4xl mx-auto">
         {/* Back Button */}
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-purple-200 hover:text-white mb-8 transition-colors"
+          className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-8 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
           Zurück zur Startseite
         </Link>
 
         {/* Form Card */}
-        <div className="backdrop-blur-lg bg-white/10 rounded-3xl border border-white/20 shadow-2xl p-8 md:p-12">
+        <div className="glass-apple rounded-3xl shadow-2xl p-8 md:p-12">
           <h1 className="text-4xl font-bold text-white mb-2">
             Bewerbungsformular
           </h1>
-          <p className="text-purple-200 mb-8">
+          <p className="text-gray-400 mb-8">
             Fülle alle Felder sorgfältig aus. Deine Bewerbung wird von unserem Team geprüft.
           </p>
 
@@ -90,7 +88,7 @@ export default function BewerbungPage() {
                 value={formData.discordName}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 backdrop-blur-sm"
+                className="w-full px-4 py-3 glass-apple-dark rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
                 placeholder="Dein Discord Name#1234"
               />
             </div>
@@ -107,7 +105,7 @@ export default function BewerbungPage() {
                 onChange={handleChange}
                 required
                 min="16"
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 backdrop-blur-sm"
+                className="w-full px-4 py-3 glass-apple-dark rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
                 placeholder="Mindestalter: 16"
               />
             </div>
@@ -123,7 +121,7 @@ export default function BewerbungPage() {
                 onChange={handleChange}
                 required
                 rows={4}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 backdrop-blur-sm resize-none"
+                className="w-full px-4 py-3 glass-apple-dark rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600 resize-none"
                 placeholder="Erzähle uns, warum du Teil unserer Community werden möchtest..."
               />
             </div>
@@ -139,7 +137,7 @@ export default function BewerbungPage() {
                 onChange={handleChange}
                 required
                 rows={4}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 backdrop-blur-sm resize-none"
+                className="w-full px-4 py-3 glass-apple-dark rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600 resize-none"
                 placeholder="Beschreibe deine bisherigen RP-Erfahrungen..."
               />
             </div>
@@ -155,7 +153,7 @@ export default function BewerbungPage() {
                 onChange={handleChange}
                 required
                 rows={6}
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 backdrop-blur-sm resize-none"
+                className="w-full px-4 py-3 glass-apple-dark rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600 resize-none"
                 placeholder="Erzähle die Geschichte deines Charakters..."
               />
             </div>
@@ -164,7 +162,7 @@ export default function BewerbungPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+              className="w-full py-4 bg-white text-black rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>

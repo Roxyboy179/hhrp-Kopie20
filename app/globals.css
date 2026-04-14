@@ -7,11 +7,11 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-black text-white;
   }
 }
 
-/* Glassmorphism Animations */
+/* Apple Glassmorphism Animations */
 @layer utilities {
   @keyframes blob {
     0% {
@@ -40,21 +40,38 @@
     animation-delay: 4s;
   }
 
+  /* Apple Glass Effect */
+  .glass-apple {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  }
+
+  .glass-apple-dark {
+    background: rgba(17, 17, 17, 0.7);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  }
+
   /* Custom Scrollbar */
   ::-webkit-scrollbar {
     width: 10px;
   }
 
   ::-webkit-scrollbar-track {
-    background: rgba(15, 23, 42, 0.5);
+    background: rgba(17, 17, 17, 0.5);
   }
 
   ::-webkit-scrollbar-thumb {
-    background: rgba(168, 85, 247, 0.5);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 5px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(168, 85, 247, 0.8);
+    background: rgba(255, 255, 255, 0.3);
   }
 }

@@ -92,31 +92,31 @@ export default function EinstellungenPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 py-12 px-6">
+    <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black py-12 px-6">
       <div className="max-w-4xl mx-auto">
         {/* Back Button */}
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-purple-200 hover:text-white mb-8 transition-colors"
+          className="inline-flex items-center gap-2 text-gray-400 hover:text-white mb-8 transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
           Zurück zur Startseite
         </Link>
 
         {/* Header */}
-        <div className="backdrop-blur-lg bg-white/10 rounded-3xl border border-white/20 shadow-2xl p-8 mb-8">
+        <div className="glass-apple rounded-3xl shadow-2xl p-8 mb-8">
           <h1 className="text-4xl font-bold text-white mb-2">
             Einstellungen
           </h1>
-          <p className="text-purple-200">
+          <p className="text-gray-400">
             Verwalte deine Account-Einstellungen
           </p>
         </div>
 
         {/* Username Ändern */}
-        <div className="backdrop-blur-lg bg-white/10 rounded-2xl border border-white/20 shadow-xl p-8 mb-6">
+        <div className="glass-apple rounded-2xl shadow-xl p-8 mb-6">
           <div className="flex items-center gap-3 mb-6">
-            <User className="w-6 h-6 text-purple-400" />
+            <User className="w-6 h-6 text-gray-400" />
             <h2 className="text-2xl font-bold text-white">
               Username ändern
             </h2>
@@ -131,14 +131,14 @@ export default function EinstellungenPage() {
                 value={usernameData.newUsername}
                 onChange={(e) => setUsernameData({ newUsername: e.target.value })}
                 required
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 backdrop-blur-sm"
+                className="w-full px-4 py-3 glass-apple-dark rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
                 placeholder="Neuer Username"
               />
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+              className="w-full py-3 bg-white text-black rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -153,9 +153,9 @@ export default function EinstellungenPage() {
         </div>
 
         {/* Passwort Ändern */}
-        <div className="backdrop-blur-lg bg-white/10 rounded-2xl border border-white/20 shadow-xl p-8">
+        <div className="glass-apple rounded-2xl shadow-xl p-8">
           <div className="flex items-center gap-3 mb-6">
-            <Lock className="w-6 h-6 text-purple-400" />
+            <Lock className="w-6 h-6 text-gray-400" />
             <h2 className="text-2xl font-bold text-white">
               Passwort ändern
             </h2>
@@ -170,7 +170,7 @@ export default function EinstellungenPage() {
                 value={passwordData.currentPassword}
                 onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
                 required
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 backdrop-blur-sm"
+                className="w-full px-4 py-3 glass-apple-dark rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
                 placeholder="••••••••"
               />
             </div>
@@ -183,7 +183,7 @@ export default function EinstellungenPage() {
                 value={passwordData.newPassword}
                 onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
                 required
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 backdrop-blur-sm"
+                className="w-full px-4 py-3 glass-apple-dark rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
                 placeholder="••••••••"
               />
             </div>
@@ -196,14 +196,14 @@ export default function EinstellungenPage() {
                 value={passwordData.confirmPassword}
                 onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
                 required
-                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-500 backdrop-blur-sm"
+                className="w-full px-4 py-3 glass-apple-dark rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-600"
                 placeholder="••••••••"
               />
             </div>
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
+              className="w-full py-3 bg-white text-black rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
