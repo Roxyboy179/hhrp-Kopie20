@@ -33,12 +33,16 @@ export const metadata = {
     icon: '/logo.webp',
     apple: '/logo.webp',
   },
-  themeColor: '#000000',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="de" className="dark">
+      <head>
+        {/* Preconnect für bessere Performance */}
+        <link rel="preconnect" href={process.env.NEXT_PUBLIC_BASE_URL || 'https://hamburg-horizon-rp320.vercel.app'} />
+        <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_BASE_URL || 'https://hamburg-horizon-rp320.vercel.app'} />
+      </head>
       <body className="min-h-screen bg-[#080808] text-white antialiased">
         <RootClientLayout>{children}</RootClientLayout>
       </body>

@@ -15,12 +15,12 @@ function AnimatedCounter({ value, suffix = '' }) {
     const end = parseInt(value) || 0;
     if (end === 0) { setCount(0); return; }
     let start = 0;
-    const increment = end / 60;
+    const increment = end / 40; // Schnellere Animation
     const timer = setInterval(() => {
       start += increment;
       if (start >= end) { setCount(end); clearInterval(timer); }
       else setCount(Math.floor(start));
-    }, 16);
+    }, 20);
     return () => clearInterval(timer);
   }, [value]);
   return <span>{count}{suffix}</span>;
@@ -30,8 +30,11 @@ export default function HomePage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [stats, setStats] = useState({ total: 0, angenommen: 0, inBearbeitung: 0 });
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
+    // Prüfe ob Mobile Device
+    setIsMobile(window.innerWidth < 768);
     fetchStats();
   }, []);
 
@@ -52,33 +55,35 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen relative">
-      {/* Ambient Glow */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full bg-neutral-800/20 blur-[150px]" />
-      </div>
+      {/* Ambient Glow - reduziert für Mobile Performance */}
+      {!isMobile && (
+        <div className="fixed inset-0 pointer-events-none overflow-hidden">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full bg-neutral-800/20 blur-[150px]" />
+        </div>
+      )}
 
       {/* === HERO === */}
       <section className="relative px-6 pt-28 pb-20 md:pt-40 md:pb-28 overflow-hidden">
         <div className="max-w-5xl mx-auto relative z-10 text-center">
           
-          <div className="animate-fade-in-down" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
+          <div className={isMobile ? "" : "animate-fade-in-down"} style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-900 border border-neutral-800">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
               <span className="text-xs text-neutral-400 tracking-wider uppercase font-medium">Bewerbungen offen</span>
             </div>
           </div>
           
-          <h1 className="mt-8 text-5xl md:text-7xl lg:text-8xl font-bold leading-[1.05] tracking-tight animate-fade-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
+          <h1 className={`mt-8 text-5xl md:text-7xl lg:text-8xl font-bold leading-[1.05] tracking-tight ${!isMobile ? 'animate-fade-in-up' : ''}`} style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
             <span className="text-white">Werde Teil</span>
             <br />
             <span className="text-neutral-500">unseres Teams</span>
           </h1>
           
-          <p className="mt-6 text-lg md:text-xl text-neutral-500 max-w-xl mx-auto leading-relaxed animate-fade-in-up" style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
+          <p className={`mt-6 text-lg md:text-xl text-neutral-500 max-w-xl mx-auto leading-relaxed ${!isMobile ? 'animate-fade-in-up' : ''}`} style={{ animationDelay: '0.4s', animationFillMode: 'both' }}>
             Bewirb dich für das Team von Hamburg Horizon Roleplay und gestalte gemeinsam mit uns die Community.
           </p>
 
-          <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center animate-fade-in-up" style={{ animationDelay: '0.6s', animationFillMode: 'both' }}>
+          <div className={`mt-10 flex flex-col sm:flex-row gap-4 justify-center ${!isMobile ? 'animate-fade-in-up' : ''}`} style={{ animationDelay: '0.6s', animationFillMode: 'both' }}>
             {user ? (
               <>
                 <Button 
