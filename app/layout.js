@@ -6,10 +6,11 @@ export const metadata = {
   description: 'Offizielles Bewerbungsportal von Hamburg Horizon RP. Bewirb dich jetzt für unser Team! Wir suchen motivierte Mitglieder für Team-Positionen, Praktika und Beförderungen. Starte deine Karriere bei Hamburg Horizon Roleplay.',
   keywords: 'Hamburg Horizon RP, Bewerbung, Team, Praktikum, Uprank, Bewerbungsportal, Hamburg RP, Roleplay Team',
   authors: [{ name: 'Hamburg Horizon RP Team' }],
+  metadataBase: new URL(process.env.NEXT_PUBLIC_BASE_URL || 'https://hamburg-horizon-rp320.vercel.app'),
   openGraph: {
     title: 'Bewerbungsportal - Hamburg Horizon RP',
     description: 'Offizielles Bewerbungsportal von Hamburg Horizon RP. Bewirb dich jetzt für unser Team! Team-Bewerbung • Praktikum • Uprank. Werde Teil unserer professionellen Roleplay-Community und gestalte Hamburg Horizon mit uns!',
-    url: 'https://hamburg-horizon-rp320.vercel.app',
+    url: '/',
     siteName: 'Hamburg Horizon RP',
     images: [
       {
