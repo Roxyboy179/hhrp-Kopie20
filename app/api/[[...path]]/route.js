@@ -15,7 +15,7 @@ import {
   toggleAdminAccountStatus,
   getAdminAccountById
 } from '@/lib/supabase-helpers';
-import { sendNewBewerbungNotification, sendStatusUpdateNotification } from '@/lib/discord-bot';
+import { sendNewBewerbungNotification, sendStatusUpdateNotification, sendAccountStatusChangeNotification, sendPasswordChangeNotification } from '@/lib/discord-bot';
 
 // ===== CONFIGURATION =====
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
@@ -596,6 +596,12 @@ async function handleAdminUpdateSettings(request) {
         .eq('discord_user_id', admin.discordUserId);
       if (error) throw error;
       
+      // Discord-Benachrichtigung senden
+      await sendPasswordChangeNotification(
+        admin.discordUsername || account.discord_username,
+        account.mitarbeiter_nummer
+      );
+      
       // AUTOMATISCHE ABMELDUNG: Admin-Token löschen
       const response = NextResponse.json({ 
         success: true, 
@@ -1034,6 +1040,14 @@ async function handleAdminToggleAccountStatus(request, id) {
     }
     
     const account = await toggleAdminAccountStatus(id, isActive);
+    
+    // Discord-Benachrichtigung senden
+    await sendAccountStatusChangeNotification(
+      account.discord_username || account.email,
+      account.mitarbeiter_nummer,
+      isActive,
+      admin.discordUsername
+    );
     
     return NextResponse.json({ 
       success: true, 
