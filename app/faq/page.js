@@ -178,7 +178,7 @@ export default function FAQPage() {
           <h3 className="text-xl font-bold text-white mb-2">Noch Fragen?</h3>
           <p className="mb-6" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>Kontaktiere uns direkt auf dem Discord-Server!</p>
           <a
-            href="https://discord.gg/hamburg-horizon-rp"
+            href="https://discord.gg/g784tka9sh"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02]"
