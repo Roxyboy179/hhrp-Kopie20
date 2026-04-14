@@ -72,10 +72,10 @@ export function AuthProvider({ children }) {
 
     refreshUser();
     
-    // Auto-Refresh User-Daten alle 30 Sekunden (Discord-Rollen sync)
+    // Auto-Refresh User-Daten alle 5 Sekunden (Discord-Rollen live sync)
     const interval = setInterval(() => {
       silentRefreshUser();
-    }, 30000);
+    }, 5000);
     
     return () => clearInterval(interval);
   }, [refreshUser]);

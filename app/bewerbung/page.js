@@ -263,10 +263,38 @@ export default function BewerbungPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
+  const [existingBewerbung, setExistingBewerbung] = useState(null);
+  const [checkingExisting, setCheckingExisting] = useState(true);
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/?error=not_logged_in');
   }, [user, authLoading, router]);
+  
+  // Prüfe ob User bereits eine aktive Bewerbung hat
+  useEffect(() => {
+    if (user && !authLoading) {
+      checkExistingBewerbung();
+    }
+  }, [user, authLoading]);
+  
+  const checkExistingBewerbung = async () => {
+    setCheckingExisting(true);
+    try {
+      const res = await fetch('/api/bewerbungen');
+      const data = await res.json();
+      
+      // Prüfe ob es eine aktive Bewerbung gibt (nicht Angenommen, Abgelehnt oder Zurückgezogen)
+      const activeBewerbung = data.bewerbungen?.find(b => 
+        b.status === 'Eingereicht' || b.status === 'In Bearbeitung'
+      );
+      
+      setExistingBewerbung(activeBewerbung || null);
+    } catch (e) {
+      console.error('Fehler beim Prüfen der Bewerbungen:', e);
+    } finally {
+      setCheckingExisting(false);
+    }
+  };
 
   const initFormData = (type) => {
     const base = { bewerbungType: type };
@@ -311,8 +339,45 @@ export default function BewerbungPage() {
     }
   };
 
-  if (authLoading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin text-neutral-600" /></div>;
+  if (authLoading || checkingExisting) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin text-neutral-600" /></div>;
   if (!user) return null;
+  
+  // Wenn bereits eine aktive Bewerbung existiert
+  if (existingBewerbung) {
+    const statusColors = {
+      'Eingereicht': 'bg-blue-500/10 border-blue-500/20 text-blue-300',
+      'In Bearbeitung': 'bg-yellow-500/10 border-yellow-500/20 text-yellow-300',
+    };
+    
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <div className="max-w-md w-full animate-scale-in">
+          <Button variant="ghost" onClick={() => router.push('/')} className="mb-4 text-neutral-600 hover:text-neutral-300">
+            <ArrowLeft className="w-4 h-4 mr-2" /> Zurück
+          </Button>
+          <div className="p-10 rounded-3xl bg-neutral-900/50 border border-neutral-800 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mx-auto mb-5">
+              <AlertTriangle className="w-8 h-8 text-orange-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-3">Bereits eine Bewerbung aktiv</h2>
+            <p className="text-neutral-500 mb-2">
+              Du hast bereits eine Bewerbung eingereicht, die noch bearbeitet wird.
+            </p>
+            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm border ${statusColors[existingBewerbung.status]} mt-4 mb-6`}>
+              <Clock className="w-4 h-4" />
+              Status: {existingBewerbung.status}
+            </div>
+            <p className="text-neutral-600 text-sm mb-8">
+              Du kannst erst eine neue Bewerbung einreichen, wenn deine aktuelle Bewerbung bearbeitet wurde.
+            </p>
+            <Button onClick={() => router.push('/meine-bewerbungen')} className="bg-white text-black hover:bg-neutral-200 rounded-xl w-full h-11">
+              Meine Bewerbungen ansehen
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (submitted) {
     const typeLabels = { normal: 'Team-Bewerbung', praktikum: 'Praktikum-Bewerbung', uprank: 'Uprank-Bewerbung' };

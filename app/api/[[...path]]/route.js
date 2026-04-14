@@ -426,7 +426,51 @@ async function handleDiscordCallback(request) {
 
 async function handleAuthMe(request) {
   const user = getUserFromRequest(request);
-  return NextResponse.json({ user });
+  if (!user) return NextResponse.json({ user: null });
+  
+  try {
+    // LIVE Discord-Rollen prüfen
+    const member = await getGuildMember(user.id);
+    
+    if (!member) {
+      // User ist nicht mehr im Discord Server - Token löschen
+      const response = NextResponse.json({ user: null });
+      response.cookies.delete('auth_token');
+      return response;
+    }
+    
+    // Rollen neu berechnen
+    const adminRole = getAdminRole(member.roles || []);
+    const teamRole = isTeamMember(member.roles || []);
+    
+    // Aktualisierte User-Daten
+    const updatedUser = {
+      ...user,
+      adminLevel: adminRole?.level || 0,
+      adminRole: adminRole?.name || null,
+      canCreateAccounts: adminRole?.canCreateAccounts || false,
+      canSeeAll: adminRole?.canSeeAll || false,
+      isTeamMember: !!(adminRole || teamRole),
+      teamRole: teamRole?.name || null,
+    };
+    
+    // Token aktualisieren
+    const newToken = createToken(updatedUser);
+    const response = NextResponse.json({ user: updatedUser });
+    response.cookies.set('auth_token', newToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60, // 7 Tage
+    });
+    
+    return response;
+  } catch (error) {
+    console.error('[AUTH ME] Error checking Discord roles:', error);
+    // Bei Fehler: Altes Token-Daten zurückgeben
+    return NextResponse.json({ user });
+  }
 }
 
 async function handleLogout() {
@@ -449,6 +493,19 @@ async function handleCreateBewerbung(request) {
     console.log('DEBUG - bewerbungType:', bewerbungType);
     console.log('DEBUG - user.isTeamMember:', user.isTeamMember, typeof user.isTeamMember);
     console.log('DEBUG - user.adminLevel:', user.adminLevel, typeof user.adminLevel);
+    
+    // Prüfe ob User bereits eine aktive Bewerbung hat
+    const existingBewerbungen = await getUserBewerbungen(user.id);
+    const activeBewerbung = existingBewerbungen.find(b => 
+      b.status === 'Eingereicht' || b.status === 'In Bearbeitung'
+    );
+    
+    if (activeBewerbung) {
+      console.log('DEBUG - User already has active bewerbung:', activeBewerbung.id);
+      return NextResponse.json({ 
+        error: 'Du hast bereits eine aktive Bewerbung. Bitte warte, bis diese bearbeitet wurde.' 
+      }, { status: 400 });
+    }
     
     // Teamler dürfen KEINE normale/Praktikum Bewerbung schreiben
     if ((bewerbungType === 'normal' || bewerbungType === 'praktikum') && user.isTeamMember) {
