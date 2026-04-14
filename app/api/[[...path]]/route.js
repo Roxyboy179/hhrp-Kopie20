@@ -19,6 +19,7 @@ import {
 } from '@/lib/supabase-helpers';
 import { sendNewBewerbungNotification, sendStatusUpdateNotification, sendAccountStatusChangeNotification, sendPasswordChangeNotification } from '@/lib/discord-bot';
 import { logActivity, cleanupOldLogs, getLogs, getIpAddress, LOG_ACTIONS } from '@/lib/activity-logger';
+import { createNotification, getUserNotifications, getUnreadCount, markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/notifications';
 
 // ===== CONFIGURATION =====
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
@@ -1109,6 +1110,31 @@ async function handleAdminUpdateBewerbung(request, id) {
         admin.discordUsername      // bearbeitet von
       );
       
+      // In-App Benachrichtigung erstellen
+      const statusMessages = {
+        'In Bearbeitung': 'Deine Bewerbung wird jetzt bearbeitet!',
+        'Angenommen': 'Herzlichen Glückwunsch! Deine Bewerbung wurde angenommen!',
+        'Abgelehnt': 'Deine Bewerbung wurde leider abgelehnt.',
+        'Eingereicht': 'Deine Bewerbung wurde zurückgesetzt.',
+      };
+      const statusTitles = {
+        'In Bearbeitung': 'Bewerbung in Bearbeitung',
+        'Angenommen': 'Bewerbung Angenommen!',
+        'Abgelehnt': 'Bewerbung Abgelehnt',
+        'Eingereicht': 'Bewerbung Status Update',
+      };
+      try {
+        await createNotification({
+          userId: updated.discord_user_id,
+          type: 'bewerbung_status',
+          title: statusTitles[newStatus] || 'Bewerbung Update',
+          message: statusMessages[newStatus] || `Status geändert: ${oldStatus} → ${newStatus}`,
+          data: { bewerbungId: updated.id, oldStatus, newStatus, changedBy: admin.discordUsername },
+        });
+      } catch (notifErr) {
+        console.error('[NOTIFICATION] Error creating notification:', notifErr);
+      }
+      
       // LOG: Bewerbungs-Status geändert
       await logActivity({
         actionType: LOG_ACTIONS.BEWERBUNG_STATUS_GEÄNDERT,
@@ -1532,6 +1558,31 @@ export async function GET(request) {
     }
   }
 
+  // ===== NOTIFICATIONS ROUTES =====
+  if (p === 'notifications') {
+    const user = getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    try {
+      const notifications = await getUserNotifications(user.id);
+      const unreadCount = await getUnreadCount(user.id);
+      return NextResponse.json({ notifications, unreadCount });
+    } catch (error) {
+      console.error('Get notifications error:', error);
+      return NextResponse.json({ notifications: [], unreadCount: 0 });
+    }
+  }
+
+  if (p === 'notifications/unread-count') {
+    const user = getUserFromRequest(request);
+    if (!user) return NextResponse.json({ unreadCount: 0 });
+    try {
+      const unreadCount = await getUnreadCount(user.id);
+      return NextResponse.json({ unreadCount });
+    } catch (error) {
+      return NextResponse.json({ unreadCount: 0 });
+    }
+  }
+
   switch (p) {
     case 'auth/discord': return handleDiscordAuth();
     case 'auth/callback': return handleDiscordCallback(request);
@@ -1552,6 +1603,32 @@ export async function GET(request) {
 export async function POST(request) {
   const url = new URL(request.url);
   const p = url.pathname.replace('/api/', '');
+
+  // Notification routes
+  if (p === 'notifications/read-all') {
+    const user = getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    try {
+      const count = await markAllNotificationsAsRead(user.id);
+      return NextResponse.json({ success: true, count });
+    } catch (error) {
+      console.error('Mark all read error:', error);
+      return NextResponse.json({ error: 'Fehler' }, { status: 500 });
+    }
+  }
+
+  if (p.startsWith('notifications/') && p.endsWith('/read')) {
+    const user = getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    const notifId = p.replace('notifications/', '').replace('/read', '');
+    try {
+      const notification = await markNotificationAsRead(user.id, notifId);
+      return NextResponse.json({ success: true, notification });
+    } catch (error) {
+      console.error('Mark read error:', error);
+      return NextResponse.json({ error: 'Fehler' }, { status: 500 });
+    }
+  }
 
   switch (p) {
     case 'auth/logout': return handleLogout(request);

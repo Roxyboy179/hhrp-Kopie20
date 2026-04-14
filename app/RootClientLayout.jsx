@@ -2,7 +2,9 @@
 
 import { usePathname } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/components/providers/AuthProvider';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { Navbar } from '@/components/shared/Navbar';
+import { ThemeButton } from '@/components/shared/ThemeButton';
 import { CookieBanner } from '@/components/shared/CookieBanner';
 import { Toaster } from 'sonner';
 import Link from 'next/link';
@@ -10,22 +12,24 @@ import Link from 'next/link';
 export default function RootClientLayout({ children }) {
   return (
     <AuthProvider>
-      <LayoutContent>{children}</LayoutContent>
-      <CookieBanner />
-      <Toaster 
-        position="bottom-right" 
-        theme="dark"
-        toastOptions={{
-          style: {
-            background: 'rgba(15, 23, 42, 0.95)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            color: 'white',
-          },
-        }}
-        richColors
-        closeButton
-      />
+      <ThemeProvider>
+        <LayoutContent>{children}</LayoutContent>
+        <CookieBanner />
+        <Toaster 
+          position="bottom-right" 
+          theme="dark"
+          toastOptions={{
+            style: {
+              background: 'rgba(15, 23, 42, 0.95)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(20px)',
+              color: 'white',
+            },
+          }}
+          richColors
+          closeButton
+        />
+      </ThemeProvider>
     </AuthProvider>
   );
 }
@@ -45,6 +49,7 @@ function LayoutContent({ children }) {
       <Navbar user={user} loading={loading} />
       <main className="pt-16 min-h-screen">{children}</main>
       <Footer />
+      <ThemeButton />
     </>
   );
 }

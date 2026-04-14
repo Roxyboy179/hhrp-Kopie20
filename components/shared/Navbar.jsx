@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Shield, LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2
+  Shield, LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2, Bell
 } from 'lucide-react';
+import { NotificationBell } from '@/components/shared/NotificationBell';
 
 const DiscordIcon = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 127.14 96.36" fill="currentColor">
@@ -97,6 +98,7 @@ export function Navbar({ user, loading }) {
             </div>
           ) : user ? (
             <div className="flex items-center gap-2">
+              <NotificationBell />
               <div className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06]">
                 {user.avatar ? (
                   <img src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=32`} alt="" className="w-7 h-7 rounded-full ring-2 ring-blue-500/20" />
