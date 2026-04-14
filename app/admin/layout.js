@@ -1,67 +1,46 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, FileText, UserPlus, Settings, LogOut, 
   Menu, X, Shield, ChevronRight, Sliders, Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { AdminAuthProvider, useAdminAuth } from '@/components/providers/AdminAuthProvider';
 
 export default function AdminLayout({ children }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [admin, setAdmin] = useState(null);
+  return (
+    <AdminAuthProvider>
+      <AdminLayoutInner>{children}</AdminLayoutInner>
+    </AdminAuthProvider>
+  );
+}
 
-  useEffect(() => {
-    // Admin-Daten für Sidebar laden
-    const checkAdmin = async () => {
-      try {
-        const res = await fetch('/api/admin/me');
-        const data = await res.json();
-        if (data.admin) {
-          setAdmin(data.admin);
-        } else if (data.forceLogout) {
-          // Account wurde deaktiviert - zur Login-Seite
-          toast.error('Account deaktiviert', { 
-            description: data.error || 'Dein Account wurde deaktiviert.' 
-          });
-          router.push('/admin');
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    };
-    
-    checkAdmin();
-    
-    // Auto-Check alle 15 Sekunden für Account-Status & Rollen-Updates
-    const interval = setInterval(checkAdmin, 15000);
-    
-    return () => clearInterval(interval);
-  }, [router]);
+function AdminLayoutInner({ children }) {
+  const pathname = usePathname();
+  const { admin, logout } = useAdminAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Navigation basierend auf Rechten
   const canSeeAccounts = admin?.canCreateAccounts || (admin?.roleLevel >= 3);
-  const canManageBewerbungen = admin?.roleLevel >= 3; // Nur Projektinhaber & Stl. Projektinhaber
+  const canManageBewerbungen = admin?.roleLevel >= 3;
   
   const navItems = [
     { href: '/admin', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, show: true },
     { href: '/admin/bewerbungen', label: 'Bewerbungen', icon: <FileText className="w-5 h-5" />, show: true },
     { href: '/admin/bewerbung-verwaltung', label: 'Bewerbungs-Verwaltung', icon: <Sliders className="w-5 h-5" />, show: canManageBewerbungen },
-    { href: '/admin/logs', label: 'Aktivitäts-Logs', icon: <Clock className="w-5 h-5" />, show: true },
+    { href: '/admin/logs', label: 'Aktivitaets-Logs', icon: <Clock className="w-5 h-5" />, show: true },
     { href: '/admin/accounts', label: 'Accounts', icon: <UserPlus className="w-5 h-5" />, show: canSeeAccounts },
     { href: '/admin/einstellungen', label: 'Einstellungen', icon: <Settings className="w-5 h-5" />, show: true },
   ];
 
   const handleLogout = async () => {
-    await fetch('/api/admin/logout', { method: 'POST' });
-    toast.success('Abgemeldet', { description: 'Du wurdest erfolgreich abgemeldet.' });
-    router.push('/admin');
-    window.location.reload();
+    await logout();
+    toast.success('Abgemeldet', { description: 'Du wurdest komplett abgemeldet.' });
+    window.location.href = '/';
   };
 
   return (
@@ -122,7 +101,7 @@ export default function AdminLayout({ children }) {
               className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/60 hover:text-white hover:bg-white/[0.04] transition-all"
             >
               <Settings className="w-5 h-5" />
-              <span className="font-medium text-sm">Zurück zur Webseite</span>
+              <span className="font-medium text-sm">Zurueck zur Webseite</span>
             </Link>
             <button
               onClick={handleLogout}

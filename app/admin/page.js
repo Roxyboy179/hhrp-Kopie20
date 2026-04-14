@@ -12,6 +12,7 @@ import {
   Clock, CheckCircle2, XCircle, AlertTriangle,
   Users, Shield, Eye, EyeOff
 } from 'lucide-react';
+import { useAdminAuth } from '@/components/providers/AdminAuthProvider';
 
 const inputClass = "bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-blue-500/40 focus:ring-blue-500/20 rounded-xl";
 
@@ -20,7 +21,7 @@ function getRoleBadgeColor(roleName) {
     case 'Projektinhaber': return 'bg-red-500/20 text-red-300 border-red-500/30';
     case 'Stl. Projektinhaber': return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
     case 'Teamkoordination': return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
-    case 'Qualitätsmanagement': return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
+    case 'Qualitaetsmanagement': return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
     case 'Teamvertretung': return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
     case 'Teamleitung': return 'bg-green-500/20 text-green-300 border-green-500/30';
     case 'Stl. Teamleitung': return 'bg-teal-500/20 text-teal-300 border-teal-500/30';
@@ -30,8 +31,7 @@ function getRoleBadgeColor(roleName) {
 
 export default function AdminPage() {
   const router = useRouter();
-  const [admin, setAdmin] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { admin, loading, setAdmin, logout } = useAdminAuth();
   const [stats, setStats] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   
@@ -42,28 +42,9 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    try {
-      const res = await fetch('/api/admin/me');
-      const data = await res.json();
-      if (data.admin) {
-        setAdmin(data.admin);
-        await fetchStats();
-      }
-    } catch (e) {
-      console.error('[DEBUG] Auth check error:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const fetchStats = async () => {
     try {
-      const res = await fetch('/api/admin/bewerbungen');
+      const res = await fetch('/api/admin/bewerbungen', { credentials: 'include' });
       const data = await res.json();
       const bewerbungen = data.bewerbungen || [];
       setStats({
@@ -78,7 +59,16 @@ export default function AdminPage() {
     }
   };
 
-  // Stiller Auto-Refresh für Stats
+  // Stats laden wenn Admin eingeloggt ist
+  useEffect(() => {
+    if (admin) {
+      fetchStats();
+    } else {
+      setStats(null);
+    }
+  }, [admin]);
+
+  // Stiller Auto-Refresh fuer Stats
   useEffect(() => {
     if (!admin) return;
     const interval = setInterval(fetchStats, 10000);
@@ -94,6 +84,7 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           mitarbeiterNummer: mitarbeiterNummer.trim(),
           email: email.trim(),
@@ -107,8 +98,8 @@ export default function AdminPage() {
         throw new Error(data.error || 'Login fehlgeschlagen');
       }
       
+      // Shared Context aktualisieren - Layout-Sidebar wird SOFORT aktualisiert!
       setAdmin(data.admin);
-      await fetchStats();
       
       toast.success('Erfolgreich angemeldet', {
         description: `Willkommen, ${data.admin.discordUsername}! Rolle: ${data.admin.roleName}`,
@@ -123,14 +114,9 @@ export default function AdminPage() {
   };
 
   const handleLogout = async () => {
-    try {
-      await fetch('/api/admin/logout', { method: 'POST' });
-      setAdmin(null);
-      setStats(null);
-      toast.success('Abgemeldet', { description: 'Du wurdest erfolgreich abgemeldet.' });
-    } catch (e) {
-      console.error('[DEBUG] Logout error:', e);
-    }
+    await logout();
+    toast.success('Abgemeldet', { description: 'Du wurdest komplett abgemeldet.' });
+    window.location.href = '/';
   };
 
   if (loading) {
@@ -249,7 +235,7 @@ export default function AdminPage() {
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <div className="flex items-center gap-3 mt-1">
-            <p className="text-white/40">Willkommen zurück, {admin.discordUsername}!</p>
+            <p className="text-white/40">Willkommen zurueck, {admin.discordUsername}!</p>
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeColor(admin.roleName)}`}>
               {admin.roleName} (Lv.{admin.roleLevel})
             </span>
@@ -270,7 +256,7 @@ export default function AdminPage() {
           <Shield className="w-4 h-4 text-blue-400" />
           <span className="text-white/60">Deine Berechtigungen:</span>
           <span className={`px-2 py-0.5 rounded text-xs ${admin.canSeeAll ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
-            {admin.canSeeAll ? 'Alle Bewerbungen sehen' : 'Eingeschränkte Sicht'}
+            {admin.canSeeAll ? 'Alle Bewerbungen sehen' : 'Eingeschraenkte Sicht'}
           </span>
           <span className={`px-2 py-0.5 rounded text-xs ${admin.canCreateAccounts ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
             {admin.canCreateAccounts ? 'Accounts erstellen' : 'Keine Account-Verwaltung'}
@@ -319,7 +305,7 @@ export default function AdminPage() {
         >
           <FileText className="w-8 h-8 text-blue-400 mb-3" />
           <h3 className="text-xl font-semibold mb-2">Bewerbungen verwalten</h3>
-          <p className="text-white/40 text-sm">Bewerbungen anzeigen, bearbeiten und Status ändern</p>
+          <p className="text-white/40 text-sm">Bewerbungen anzeigen, bearbeiten und Status aendern</p>
         </GlassCard>
 
         {canSeeAccounts && (
