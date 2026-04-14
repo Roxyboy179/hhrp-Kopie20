@@ -2,13 +2,13 @@ import './globals.css';
 import RootClientLayout from './RootClientLayout';
 
 export const metadata = {
-  title: 'Hamburg Horizon RP - Bewerbungsportal',
-  description: 'Werde Teil des Hamburg Horizon Roleplay Teams! Realismus trifft auf Spannung - Schreibe deine eigene Geschichte in unserem professionellen Roblox Roleplay Server. Jetzt bewerben und Teil einer lebendigen Community werden!',
-  keywords: 'Hamburg Horizon RP, Roleplay, Roblox, Team Bewerbung, Hamburg RP, Roleplay Server, Community',
+  title: 'Bewerbungsportal - Hamburg Horizon RP',
+  description: 'Offizielles Bewerbungsportal von Hamburg Horizon RP. Bewirb dich jetzt für unser Team! Wir suchen motivierte Mitglieder für Team-Positionen, Praktika und Beförderungen. Starte deine Karriere bei Hamburg Horizon Roleplay.',
+  keywords: 'Hamburg Horizon RP, Bewerbung, Team, Praktikum, Uprank, Bewerbungsportal, Hamburg RP, Roleplay Team',
   authors: [{ name: 'Hamburg Horizon RP Team' }],
   openGraph: {
-    title: 'Hamburg Horizon RP - Bewerbungsportal',
-    description: 'Werde Teil des Hamburg Horizon Roleplay Teams! Realismus trifft auf Spannung - Schreibe deine eigene Geschichte in unserem professionellen Roblox Roleplay Server. Bewirb dich jetzt als Teammitglied oder für ein Praktikum!',
+    title: 'Bewerbungsportal - Hamburg Horizon RP',
+    description: 'Offizielles Bewerbungsportal von Hamburg Horizon RP. Bewirb dich jetzt für unser Team! Team-Bewerbung • Praktikum • Uprank. Werde Teil unserer professionellen Roleplay-Community und gestalte Hamburg Horizon mit uns!',
     url: 'https://hamburg-horizon-rp320.vercel.app',
     siteName: 'Hamburg Horizon RP',
     images: [
@@ -16,7 +16,7 @@ export const metadata = {
         url: '/embed.webp',
         width: 1200,
         height: 630,
-        alt: 'Hamburg Horizon RP - Realismus. Spannung. Deine Story.',
+        alt: 'Hamburg Horizon RP Bewerbungsportal - Jetzt bewerben!',
       },
     ],
     locale: 'de_DE',
@@ -24,8 +24,8 @@ export const metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Hamburg Horizon RP - Bewerbungsportal',
-    description: 'Werde Teil des Hamburg Horizon Roleplay Teams! Realismus trifft auf Spannung - Schreibe deine eigene Geschichte. Bewirb dich jetzt!',
+    title: 'Bewerbungsportal - Hamburg Horizon RP',
+    description: 'Offizielles Bewerbungsportal von Hamburg Horizon RP. Bewirb dich jetzt für unser Team! Team-Bewerbung • Praktikum • Uprank',
     images: ['/embed.webp'],
   },
   icons: {
