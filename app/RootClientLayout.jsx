@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/components/providers/AuthProvider';
 import { Navbar } from '@/components/shared/Navbar';
+import { CookieBanner } from '@/components/shared/CookieBanner';
 import { Toaster } from 'sonner';
 import Link from 'next/link';
 
@@ -10,6 +11,7 @@ export default function RootClientLayout({ children }) {
   return (
     <AuthProvider>
       <LayoutContent>{children}</LayoutContent>
+      <CookieBanner />
       <Toaster 
         position="bottom-right" 
         theme="dark"
