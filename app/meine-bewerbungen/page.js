@@ -53,8 +53,10 @@ export default function MeineBewerbungenPage() {
 
   useEffect(() => {
     if (!authLoading && !user) { router.push('/'); return; }
-    if (user && !authLoading) fetchBewerbungen();
-    setTimeout(() => setVisible(true), 100);
+    if (user && !authLoading) {
+      fetchBewerbungen();
+      setTimeout(() => setVisible(true), 100);
+    }
     
     // Auto-Refresh alle 10 Sekunden
     const interval = setInterval(() => {
@@ -65,13 +67,15 @@ export default function MeineBewerbungenPage() {
   }, [user, authLoading, router]);
 
   const fetchBewerbungen = async () => {
-    setLoading(true);
     try {
       const res = await fetch('/api/bewerbungen');
       const data = await res.json();
       setBewerbungen(data.bewerbungen || []);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+    } catch (e) { 
+      console.error(e);
+    } finally { 
+      setLoading(false);
+    }
   };
   
   // Stiller Refresh ohne Loading-State
@@ -103,14 +107,11 @@ export default function MeineBewerbungenPage() {
     }
   };
 
-  if (authLoading || loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-white/30" />
-      </div>
-    );
+  // Redirect wenn nicht eingeloggt (ohne Spinner)
+  if (!authLoading && !user) {
+    router.push('/');
+    return null;
   }
-  if (!user) return null;
 
   return (
     <div className="min-h-screen px-4 py-8">

@@ -272,33 +272,35 @@ export default function BewerbungPage() {
     if (!authLoading && !user) router.push('/?error=not_logged_in');
   }, [user, authLoading, router]);
   
-  // Lade Bewerbungs-Settings
+  // Lade Bewerbungs-Settings im Hintergrund
   useEffect(() => {
     fetchBewerbungSettings();
   }, []);
   
   const fetchBewerbungSettings = async () => {
-    setLoadingSettings(true);
     try {
       const res = await fetch('/api/bewerbung-settings');
       const data = await res.json();
       setBewerbungSettings(data.settings || { normal_open: true, praktikum_open: true, uprank_open: true });
     } catch (e) {
       console.error('Fehler beim Laden der Settings:', e);
+      // Fallback zu default
+      setBewerbungSettings({ normal_open: true, praktikum_open: true, uprank_open: true });
     } finally {
       setLoadingSettings(false);
     }
   };
   
-  // Prüfe ob User bereits eine aktive Bewerbung hat
+  // Prüfe ob User bereits eine aktive Bewerbung hat (im Hintergrund)
   useEffect(() => {
     if (user && !authLoading) {
       checkExistingBewerbung();
+    } else if (!authLoading && !user) {
+      setCheckingExisting(false);
     }
   }, [user, authLoading]);
   
   const checkExistingBewerbung = async () => {
-    setCheckingExisting(true);
     try {
       const res = await fetch('/api/bewerbungen');
       const data = await res.json();
@@ -359,7 +361,11 @@ export default function BewerbungPage() {
     }
   };
 
-  if (authLoading || checkingExisting || loadingSettings) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-8 h-8 animate-spin text-neutral-600" /></div>;
+  // Redirect wenn nicht eingeloggt (ohne Spinner)
+  useEffect(() => {
+    if (!authLoading && !user) router.push('/?error=not_logged_in');
+  }, [user, authLoading, router]);
+
   if (!user) return null;
   
   // Wenn bereits eine aktive Bewerbung existiert
