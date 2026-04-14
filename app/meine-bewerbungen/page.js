@@ -8,7 +8,8 @@ import { toast } from 'sonner';
 import { 
   Loader2, FileText, RefreshCw, ChevronRight, ArrowLeft, 
   AlertTriangle, Clock, CheckCircle2, XCircle, Plus,
-  User, Gamepad2, Users, Target, MessageSquare, Shield, Mic, BookOpen, Heart
+  User, Gamepad2, Users, Target, MessageSquare, Shield, Mic, BookOpen, Heart,
+  TrendingUp, Briefcase
 } from 'lucide-react';
 
 function formatDateTime(dateStr) {

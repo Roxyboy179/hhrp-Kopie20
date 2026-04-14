@@ -8,7 +8,8 @@ import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { 
   Loader2, RefreshCw, ArrowLeft, User, AlertTriangle,
-  Clock, CheckCircle2, XCircle, Filter, Search, Eye, Shield
+  Clock, CheckCircle2, XCircle, Filter, Search, Eye, Shield,
+  FileText, Briefcase, TrendingUp
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -276,10 +277,25 @@ export default function AdminBewerbungenPage() {
             <h4 className="text-sm font-semibold text-blue-300 mb-3 flex items-center gap-2">
               Bewerbungsdaten
               {fd.bewerbungType && (
-                <span className="text-xs text-white/40 ml-2 px-2 py-1 rounded-full bg-white/[0.04]">
-                  {fd.bewerbungType === 'normal' && '📋 Team-Bewerbung'}
-                  {fd.bewerbungType === 'praktikum' && '💼 Praktikum'}
-                  {fd.bewerbungType === 'uprank' && '⬆️ Uprank'}
+                <span className="text-xs text-white/40 ml-2 px-2 py-1 rounded-full bg-white/[0.04] inline-flex items-center gap-1.5">
+                  {fd.bewerbungType === 'normal' && (
+                    <>
+                      <FileText className="w-3 h-3 text-blue-400" />
+                      <span>Team-Bewerbung</span>
+                    </>
+                  )}
+                  {fd.bewerbungType === 'praktikum' && (
+                    <>
+                      <Briefcase className="w-3 h-3 text-orange-400" />
+                      <span>Praktikum</span>
+                    </>
+                  )}
+                  {fd.bewerbungType === 'uprank' && (
+                    <>
+                      <TrendingUp className="w-3 h-3 text-purple-400" />
+                      <span>Uprank</span>
+                    </>
+                  )}
                 </span>
               )}
             </h4>
