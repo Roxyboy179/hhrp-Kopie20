@@ -245,23 +245,9 @@ export default function AdminPage() {
   
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <div className="flex items-center gap-3 mt-1">
-            <p className="text-white/40">Willkommen zurück, {admin.discordUsername}!</p>
-            <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeColor(admin.roleName)}`}>
-              {admin.roleName} (Lv.{admin.roleLevel})
-            </span>
-          </div>
-        </div>
-        <Button 
-          variant="outline" 
-          onClick={handleLogout}
-          className="rounded-xl border-white/10"
-        >
-          Abmelden
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <p className="text-white/40 mt-1">Übersicht deiner Berechtigungen und Schnellzugriff</p>
       </div>
 
       {/* Rechte-Info */}
