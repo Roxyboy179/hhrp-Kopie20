@@ -18,59 +18,40 @@ export default function AdminLayout({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Admin-Daten für Sidebar laden
-    const checkAdmin = async () => {
-      try {
-        const res = await fetch('/api/admin/me');
-        const data = await res.json();
-        if (data.admin) {
-          setAdmin(data.admin);
-        } else if (data.forceLogout) {
-          // Account wurde deaktiviert - zur Login-Seite
-          toast.error('Account deaktiviert', { 
-            description: data.error || 'Dein Account wurde deaktiviert.' 
-          });
-          router.push('/admin');
-        }
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     checkAdmin();
-    
-    // Auto-Check alle 15 Sekunden für Account-Status & Rollen-Updates
     const interval = setInterval(checkAdmin, 15000);
-    
     return () => clearInterval(interval);
-  }, [router]);
+  }, []);
 
-  // Wenn nicht eingeloggt und nicht auf der Admin-Hauptseite (Login-Seite)
-  // Dann zeige nur den Content ohne Sidebar
-  const isLoginPage = pathname === '/admin';
-  const showSidebar = admin && !isLoginPage;
-
-  // Wenn kein Admin und nicht auf Login-Seite, redirecte
-  useEffect(() => {
-    if (!loading && !admin && !isLoginPage) {
-      router.push('/admin');
+  const checkAdmin = async () => {
+    try {
+      const res = await fetch('/api/admin/me');
+      const data = await res.json();
+      if (data.admin) {
+        setAdmin(data.admin);
+      } else if (data.forceLogout) {
+        toast.error('Account deaktiviert', { 
+          description: data.error || 'Dein Account wurde deaktiviert.' 
+        });
+        setAdmin(null);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
-  }, [loading, admin, isLoginPage, router]);
+  };
 
-  // Auf Login-Seite: Nur Content, keine Sidebar
+  const isLoginPage = pathname === '/admin';
+
+  // Auf Login-Seite oder kein Admin: Nur Content ohne Sidebar
   if (isLoginPage || !admin) {
-    return (
-      <div className="min-h-screen bg-slate-950">
-        {children}
-      </div>
-    );
+    return <div className="min-h-screen bg-slate-950">{children}</div>;
   }
 
   // Navigation basierend auf Rechten
   const canSeeAccounts = admin?.canCreateAccounts || (admin?.roleLevel >= 3);
-  const canManageBewerbungen = admin?.roleLevel >= 3; // Nur Projektinhaber & Stl. Projektinhaber
+  const canManageBewerbungen = admin?.roleLevel >= 3;
   
   const navItems = [
     { href: '/admin', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" />, show: true },
@@ -83,9 +64,9 @@ export default function AdminLayout({ children }) {
 
   const handleLogout = async () => {
     await fetch('/api/admin/logout', { method: 'POST' });
-    toast.success('Abgemeldet', { description: 'Du wurdest erfolgreich abgemeldet.' });
+    toast.success('Abgemeldet');
+    setAdmin(null);
     router.push('/admin');
-    window.location.reload();
   };
 
   return (
@@ -95,20 +76,18 @@ export default function AdminLayout({ children }) {
         sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
       }`}>
         <div className="flex flex-col h-full">
-          {/* Logo */}
           <div className="p-6 border-b border-white/[0.06]">
-            <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center shadow-lg">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center">
                 <Shield className="w-5 h-5 text-white" />
               </div>
               <div>
-                <span className="font-bold text-lg tracking-tight">HHRP Admin</span>
+                <span className="font-bold text-lg">HHRP Admin</span>
                 <span className="text-[10px] text-white/30 block -mt-1">Hamburg Horizon RP</span>
               </div>
             </Link>
           </div>
 
-          {/* Admin Info */}
           {admin && (
             <div className="px-4 py-3 border-b border-white/[0.06]">
               <p className="text-sm text-white/70 truncate">{admin.discordUsername}</p>
@@ -116,7 +95,6 @@ export default function AdminLayout({ children }) {
             </div>
           )}
 
-          {/* Navigation */}
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {navItems.filter(n => n.show).map((item) => {
               const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
@@ -127,7 +105,7 @@ export default function AdminLayout({ children }) {
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                     isActive
-                      ? 'bg-blue-500/20 text-blue-300 shadow-lg shadow-blue-500/10'
+                      ? 'bg-blue-500/20 text-blue-300'
                       : 'text-white/60 hover:text-white hover:bg-white/[0.04]'
                   }`}
                 >
@@ -139,7 +117,6 @@ export default function AdminLayout({ children }) {
             })}
           </nav>
 
-          {/* Bottom Actions */}
           <div className="p-4 border-t border-white/[0.06] space-y-2">
             <Link
               href="/"
@@ -159,7 +136,6 @@ export default function AdminLayout({ children }) {
         </div>
       </aside>
 
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
@@ -167,22 +143,33 @@ export default function AdminLayout({ children }) {
         />
       )}
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Mobile Header */}
-        <header className="md:hidden h-16 bg-slate-900/50 backdrop-blur-xl border-b border-white/[0.06] flex items-center px-4">
+        {/* Top Navigation Bar - Immer sichtbar wenn eingeloggt */}
+        <header className="h-16 bg-slate-900/50 backdrop-blur-xl border-b border-white/[0.06] flex items-center px-4 md:px-6">
+          {/* Mobile Menu Button */}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="text-white/70 hover:text-white rounded-xl"
+            className="md:hidden text-white/70 hover:text-white rounded-xl"
           >
             {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
-          <span className="ml-4 font-bold">HHRP Admin</span>
+          
+          <span className="ml-4 md:ml-0 font-bold text-white">HHRP Admin</span>
+          
+          {/* Desktop: Admin Info */}
+          <div className="ml-auto hidden md:flex items-center gap-4">
+            <div className="text-right">
+              <p className="text-sm text-white/80 font-medium">{admin.discordUsername}</p>
+              <p className="text-xs text-white/40">{admin.roleName}</p>
+            </div>
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+              <Shield className="w-5 h-5 text-white" />
+            </div>
+          </div>
         </header>
 
-        {/* Content Area */}
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
