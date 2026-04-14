@@ -1,20 +1,19 @@
-import './globals.css';
-import RootClientLayout from './RootClientLayout';
+import './globals.css'
+import { Inter } from 'next/font/google'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'Hamburg Horizon RP',
-  description: 'Realismus. Spannung. Deine Story. - Notruf Hamburg Roleplay',
-  icons: {
-    icon: '/favicon.ico',
-  },
-};
+  title: 'Hamburg Horizon RP - Bewerbungssystem',
+  description: 'Bewerbungssystem für Hamburg Horizon Roleplay Server',
+}
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="de" className="dark">
-      <body className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 text-white antialiased">
-        <RootClientLayout>{children}</RootClientLayout>
+    <html lang="de">
+      <body className={inter.className}>
+        {children}
       </body>
     </html>
-  );
+  )
 }
