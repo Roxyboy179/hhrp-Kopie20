@@ -24,12 +24,18 @@ export default function AdminLayout({ children }) {
         const data = await res.json();
         if (data.admin) {
           setAdmin(data.admin);
+        } else if (data.forceLogout) {
+          // Account wurde deaktiviert - zur Login-Seite
+          toast.error('Account deaktiviert', { 
+            description: data.error || 'Dein Account wurde deaktiviert.' 
+          });
+          router.push('/admin');
         }
       } catch (e) {
         console.error(e);
       }
     })();
-  }, []);
+  }, [router]);
 
   // Navigation basierend auf Rechten
   const canSeeAccounts = admin?.canCreateAccounts || (admin?.roleLevel >= 3);

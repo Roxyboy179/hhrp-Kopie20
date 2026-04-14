@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { 
   Loader2, UserPlus, Trash2, RefreshCw, Shield, AlertTriangle,
-  Search, CheckCircle2, XCircle, Eye, EyeOff
+  Search, CheckCircle2, XCircle, Eye, EyeOff, Ban, CheckCheck
 } from 'lucide-react';
 
 const inputClass = "bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-blue-500/40 focus:ring-blue-500/20 rounded-xl";
@@ -200,6 +200,31 @@ export default function AdminAccountsPage() {
     } catch (e) {
       console.error(e);
       toast.error('Fehler', { description: 'Account konnte nicht gelöscht werden.' });
+    }
+  };
+  
+  const handleToggleStatus = async (id, currentStatus, name) => {
+    const newStatus = !currentStatus;
+    try {
+      const res = await fetch(`/api/admin/accounts/${id}/toggle-status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: newStatus })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      
+      toast.success(
+        newStatus ? 'Account aktiviert' : 'Account deaktiviert',
+        { description: newStatus 
+          ? `${name} wurde aktiviert.` 
+          : `${name} wurde deaktiviert und wird automatisch abgemeldet.` 
+        }
+      );
+      
+      await fetchAccounts();
+    } catch (e) {
+      toast.error('Fehler', { description: e.message });
     }
   };
 
@@ -463,17 +488,30 @@ export default function AdminAccountsPage() {
           accounts.map(account => (
             <GlassCard key={account.id} className="p-5">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
                     <Shield className="w-6 h-6 text-blue-400" />
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <div className="flex items-center gap-3 mb-1 flex-wrap">
                       <span className="font-semibold">{account.mitarbeiterNummer}</span>
                       <span className="text-white/60 text-sm">{account.email}</span>
                       {account.roleName && (
                         <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeColor(account.roleName)}`}>
                           {account.roleName}
+                        </span>
+                      )}
+                      {/* Status Badge */}
+                      {account.isActive === false && (
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium border bg-red-500/20 text-red-300 border-red-500/30">
+                          <Ban className="w-3 h-3 inline mr-1" />
+                          Deaktiviert
+                        </span>
+                      )}
+                      {account.isActive === true && (
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium border bg-green-500/20 text-green-300 border-green-500/30">
+                          <CheckCheck className="w-3 h-3 inline mr-1" />
+                          Aktiv
                         </span>
                       )}
                     </div>
@@ -485,18 +523,48 @@ export default function AdminAccountsPage() {
                   </div>
                 </div>
                 {admin?.canCreateAccounts && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => setDeleteConfirm({ 
-                      id: account.id, 
-                      name: account.discordUsername || account.email,
-                      ma: account.mitarbeiterNummer 
-                    })} 
-                    className="text-red-400/70 hover:text-red-300 hover:bg-red-500/10 rounded-xl"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {/* Toggle Status Button */}
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => handleToggleStatus(
+                        account.id, 
+                        account.isActive, 
+                        account.discordUsername || account.email
+                      )}
+                      className={`rounded-xl text-xs ${
+                        account.isActive === false 
+                          ? 'text-green-400/70 hover:text-green-300 hover:bg-green-500/10' 
+                          : 'text-orange-400/70 hover:text-orange-300 hover:bg-orange-500/10'
+                      }`}
+                    >
+                      {account.isActive === false ? (
+                        <>
+                          <CheckCheck className="w-4 h-4 mr-1" />
+                          Aktivieren
+                        </>
+                      ) : (
+                        <>
+                          <Ban className="w-4 h-4 mr-1" />
+                          Deaktivieren
+                        </>
+                      )}
+                    </Button>
+                    {/* Delete Button */}
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => setDeleteConfirm({ 
+                        id: account.id, 
+                        name: account.discordUsername || account.email,
+                        ma: account.mitarbeiterNummer 
+                      })} 
+                      className="text-red-400/70 hover:text-red-300 hover:bg-red-500/10 rounded-xl"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 )}
               </div>
             </GlassCard>

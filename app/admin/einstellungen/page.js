@@ -117,7 +117,18 @@ export default function AdminEinstellungenPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      toast.success('Passwort aktualisiert', { description: data.message });
+      
+      toast.success('Passwort aktualisiert', { 
+        description: 'Du wirst automatisch abgemeldet...' 
+      });
+      
+      // Automatische Abmeldung nach Passwort-Änderung
+      if (data.forceLogout) {
+        setTimeout(() => {
+          router.push('/admin');
+        }, 2000);
+      }
+      
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');

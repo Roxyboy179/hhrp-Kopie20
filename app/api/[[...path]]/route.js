@@ -11,7 +11,9 @@ import {
   createAdminAccount,
   getAdminAccountByCredentials,
   getAllAdminAccounts,
-  deleteAdminAccount
+  deleteAdminAccount,
+  toggleAdminAccountStatus,
+  getAdminAccountById
 } from '@/lib/supabase-helpers';
 import { sendNewBewerbungNotification, sendStatusUpdateNotification } from '@/lib/discord-bot';
 
@@ -413,6 +415,26 @@ async function handleCreateBewerbung(request) {
 
   try {
     const { formData } = await request.json();
+    const bewerbungType = formData?.bewerbungType || 'normal';
+    
+    // DEBUG: Log user and bewerbungType
+    console.log('DEBUG - User:', JSON.stringify(user, null, 2));
+    console.log('DEBUG - bewerbungType:', bewerbungType);
+    console.log('DEBUG - user.adminLevel:', user.adminLevel, typeof user.adminLevel);
+    
+    // Teamler dürfen KEINE normale/Praktikum Bewerbung schreiben
+    if ((bewerbungType === 'normal' || bewerbungType === 'praktikum') && user.adminLevel > 0) {
+      console.log('DEBUG - Blocking admin from normal/praktikum application');
+      return NextResponse.json({ error: 'Du bist bereits im Team! Teamler können keine Team-Bewerbung einreichen.' }, { status: 403 });
+    }
+    
+    // Nur Teamler dürfen Uprank-Bewerbungen schreiben
+    if (bewerbungType === 'uprank' && (!user.adminLevel || user.adminLevel === 0)) {
+      console.log('DEBUG - Blocking non-admin from uprank application');
+      return NextResponse.json({ error: 'Uprank-Bewerbungen sind nur für Teamler möglich.' }, { status: 403 });
+    }
+    
+    console.log('DEBUG - Allowing application submission');
 
     const bewerbung = await createBewerbung({
       discordUserId: user.id,
@@ -422,9 +444,11 @@ async function handleCreateBewerbung(request) {
       formData
     });
 
-    // Discord Bot Benachrichtigung senden (korrekte Argumente)
+    // Discord Bot Benachrichtigung
     const username = user.globalName || user.username;
-    await sendNewBewerbungNotification(username, formData);
+    const typeLabels = { normal: 'Team-Bewerbung', praktikum: 'Praktikum-Bewerbung', uprank: 'Uprank-Bewerbung' };
+    const enrichedData = { ...formData, bewerbungTypeLabel: typeLabels[bewerbungType] || 'Bewerbung' };
+    await sendNewBewerbungNotification(username, enrichedData);
 
     return NextResponse.json({ bewerbung, success: true });
   } catch (error) {
@@ -558,27 +582,29 @@ async function handleAdminUpdateSettings(request) {
         return NextResponse.json({ error: 'Account nicht gefunden' }, { status: 404 });
       }
       
-      // Passwort vergleichen (bcrypt oder plaintext)
-      const bcrypt = await import('bcryptjs');
-      let passwordValid = false;
-      if (account.password_hash && account.password_hash.startsWith('$2')) {
-        passwordValid = await bcrypt.compare(currentPassword, account.password_hash);
-      } else {
-        passwordValid = (account.password_hash === currentPassword || account.password === currentPassword);
-      }
+      // Passwort vergleichen (Klartext)
+      const passwordValid = (account.password_hash === currentPassword || account.password === currentPassword);
       
       if (!passwordValid) {
         return NextResponse.json({ error: 'Aktuelles Passwort ist falsch' }, { status: 401 });
       }
       
-      // Neues Passwort hashen und speichern
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      // Neues Passwort speichern (Klartext)
       const { error } = await supabaseAdmin
         .from('admin_accounts')
-        .update({ password_hash: hashedPassword })
+        .update({ password_hash: newPassword })
         .eq('discord_user_id', admin.discordUserId);
       if (error) throw error;
-      return NextResponse.json({ success: true, message: 'Passwort wurde aktualisiert' });
+      
+      // AUTOMATISCHE ABMELDUNG: Admin-Token löschen
+      const response = NextResponse.json({ 
+        success: true, 
+        message: 'Passwort wurde aktualisiert. Du wirst automatisch abgemeldet.',
+        forceLogout: true // Signal für Frontend
+      });
+      response.cookies.delete('admin_token');
+      
+      return response;
     }
     
     if (field === 'mitarbeiterNummer') {
@@ -678,6 +704,14 @@ async function handleAdminLogin(request) {
       console.log('[DEBUG] ❌ Login failed: Invalid credentials');
       return NextResponse.json({ error: 'Ungültige Anmeldedaten' }, { status: 401 });
     }
+    
+    // SCHRITT 1.5: Account-Status prüfen
+    if (account.is_active === false) {
+      console.log('[DEBUG] ❌ Login failed: Account deactivated');
+      return NextResponse.json({ 
+        error: 'Dein Account wurde vom Projektinhaber deaktiviert. Bitte kontaktiere die Projektleitung.' 
+      }, { status: 403 });
+    }
 
     console.log('[DEBUG] ✅ Account validated:', account.mitarbeiter_nummer);
 
@@ -765,6 +799,30 @@ async function handleAdminLogin(request) {
 
 async function handleAdminMe(request) {
   const admin = getAdminContext(request);
+  if (!admin) return NextResponse.json({ admin: null });
+  
+  // Prüfe ob Account noch aktiv ist (LIVE aus DB)
+  try {
+    const { data: account } = await supabaseAdmin
+      .from('admin_accounts')
+      .select('is_active')
+      .eq('discord_user_id', admin.discordUserId)
+      .single();
+    
+    if (account && account.is_active === false) {
+      // Account wurde deaktiviert - automatisch abmelden
+      const response = NextResponse.json({ 
+        admin: null,
+        error: 'Dein Account wurde deaktiviert',
+        forceLogout: true
+      });
+      response.cookies.delete('admin_token');
+      return response;
+    }
+  } catch (error) {
+    console.error('[ADMIN ME] Error checking account status:', error);
+  }
+  
   return NextResponse.json({ admin });
 }
 
@@ -797,6 +855,12 @@ async function handleAdminUpdateBewerbung(request, id) {
     
     if (!bewerbung) {
       return NextResponse.json({ error: 'Nicht gefunden' }, { status: 404 });
+    }
+
+    // Uprank-Bewerbung: Eigene Bewerbung NICHT selbst bearbeiten
+    const fd = typeof bewerbung.form_data === 'string' ? JSON.parse(bewerbung.form_data) : (bewerbung.form_data || {});
+    if (fd.bewerbungType === 'uprank' && bewerbung.discord_user_id === admin.discordUserId) {
+      return NextResponse.json({ error: 'Du kannst deine eigene Uprank-Bewerbung nicht selbst bearbeiten.' }, { status: 403 });
     }
 
     const oldStatus = bewerbung.status;
@@ -955,6 +1019,33 @@ async function handleAdminDeleteAccount(request, id) {
   }
 }
 
+async function handleAdminToggleAccountStatus(request, id) {
+  const admin = getAdminContext(request);
+  if (!admin || !admin.canCreateAccounts) {
+    return NextResponse.json({ error: 'Nicht autorisiert - Nur Projektinhaber können Accounts deaktivieren' }, { status: 403 });
+  }
+
+  try {
+    const body = await request.json();
+    const { isActive } = body;
+    
+    if (typeof isActive !== 'boolean') {
+      return NextResponse.json({ error: 'isActive muss ein Boolean sein' }, { status: 400 });
+    }
+    
+    const account = await toggleAdminAccountStatus(id, isActive);
+    
+    return NextResponse.json({ 
+      success: true, 
+      account,
+      message: isActive ? 'Account wurde aktiviert' : 'Account wurde deaktiviert. Der Benutzer wird beim nächsten Request automatisch abgemeldet.'
+    });
+  } catch (error) {
+    console.error('Toggle account status error:', error);
+    return NextResponse.json({ error: 'Fehler beim Aktualisieren' }, { status: 500 });
+  }
+}
+
 // ===== ROUTER =====
 export async function GET(request) {
   const url = new URL(request.url);
@@ -986,7 +1077,7 @@ export async function GET(request) {
           mitarbeiter_nummer: a.mitarbeiter_nummer, 
           email: a.email,
           discord_username: a.discord_username,
-          password_hash: a.password_hash // Zeigen für Debug
+          password_hash: a.password_hash // Klartext Passwort
         })),
         error: error?.message || error,
         rawError: error
@@ -1063,6 +1154,11 @@ export async function PUT(request) {
 
   if (p.startsWith('admin/bewerbungen/')) {
     return handleAdminUpdateBewerbung(request, p.substring('admin/bewerbungen/'.length));
+  }
+  
+  if (p.startsWith('admin/accounts/') && p.includes('/toggle-status')) {
+    const id = p.substring('admin/accounts/'.length).replace('/toggle-status', '');
+    return handleAdminToggleAccountStatus(request, id);
   }
 
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
