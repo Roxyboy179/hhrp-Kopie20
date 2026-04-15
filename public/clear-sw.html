@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Service Worker Cache löschen - HHRP</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #050505;
+      color: white;
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    .container {
+      max-width: 500px;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      color: #3b82f6;
+    }
+    p {
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 1.5rem;
+      line-height: 1.6;
+    }
+    button {
+      background: #3b82f6;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      cursor: pointer;
+      margin: 0.5rem;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: #2563eb;
+      transform: translateY(-1px);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .success {
+      color: #22c55e;
+      font-weight: 600;
+    }
+    .error {
+      color: #ef4444;
+      font-weight: 600;
+    }
+    #status {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      background: rgba(255,255,255,0.05);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧹 Cache & Service Worker löschen</h1>
+    <p>
+      Wenn Updates nicht gespeichert werden, liegt das oft am Service Worker Cache. 
+      Klicke auf "Cache löschen" um alle gecachten Daten und Service Worker zu entfernen.
+    </p>
+    
+    <button onclick="clearEverything()">Cache löschen</button>
+    <button onclick="goHome()">Zurück zur Startseite</button>
+    
+    <div id="status"></div>
+  </div>
+
+  <script>
+    async function clearEverything() {
+      const status = document.getElementById('status');
+      status.innerHTML = '<p>Lösche Cache und Service Worker...</p>';
+      
+      try {
+        // 1. Alle Service Worker deregistrieren
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (const registration of registrations) {
+            await registration.unregister();
+            console.log('✅ Service Worker deregistriert');
+          }
+        }
+        
+        // 2. Alle Caches löschen
+        if ('caches' in window) {
+          const cacheNames = await caches.keys();
+          for (const name of cacheNames) {
+            await caches.delete(name);
+            console.log('✅ Cache gelöscht:', name);
+          }
+        }
+        
+        // 3. LocalStorage löschen (optional)
+        localStorage.clear();
+        
+        // 4. SessionStorage löschen (optional)
+        sessionStorage.clear();
+        
+        status.innerHTML = `
+          <p class="success">✅ Erfolgreich gelöscht!</p>
+          <p>Alle Service Worker, Caches und lokalen Daten wurden entfernt.</p>
+          <p>Die Seite wird in 2 Sekunden neu geladen...</p>
+        `;
+        
+        // Seite nach 2 Sekunden neu laden
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
+        
+      } catch (error) {
+        console.error('Fehler beim Löschen:', error);
+        status.innerHTML = `
+          <p class="error">❌ Fehler beim Löschen</p>
+          <p>${error.message}</p>
+          <p>Versuche einen "Hard Refresh": Strg+Shift+R (Windows) oder Cmd+Shift+R (Mac)</p>
+        `;
+      }
+    }
+    
+    function goHome() {
+      window.location.href = '/';
+    }
+  </script>
+</body>
+</html>

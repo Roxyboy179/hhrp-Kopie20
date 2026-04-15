@@ -21,12 +21,30 @@ export default function SystemStatusPage() {
   const canManageStatus = admin?.roleLevel >= 4;
 
   useEffect(() => {
+    // WICHTIG: Cache für diese API-Route löschen beim Laden der Seite
+    if ('caches' in window) {
+      caches.keys().then((names) => {
+        names.forEach((name) => {
+          caches.open(name).then((cache) => {
+            cache.delete('/api/admin/system-status');
+          });
+        });
+      });
+    }
+    
     fetchStatus();
   }, []);
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch('/api/admin/system-status');
+      // Cache-Busting: Füge Timestamp hinzu um gecachte Responses zu vermeiden
+      const res = await fetch('/api/admin/system-status?_=' + Date.now(), {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setStatus(data.status || status);
@@ -46,19 +64,43 @@ export default function SystemStatusPage() {
 
     setSaving(true);
     try {
+      console.log('📤 Sending update:', status);
+      
       const res = await fetch('/api/admin/system-status', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+        },
         body: JSON.stringify(status),
       });
 
+      const data = await res.json();
+      console.log('📥 Response:', data);
+
       if (res.ok) {
         toast.success('Status gespeichert', { description: 'System-Status wurde aktualisiert.' });
+        
+        // Cache löschen und Daten neu laden um Persistenz zu verifizieren
+        if ('caches' in window) {
+          caches.keys().then((names) => {
+            names.forEach((name) => {
+              caches.open(name).then((cache) => {
+                cache.delete('/api/admin/system-status');
+              });
+            });
+          });
+        }
+        
+        // Warte kurz und lade dann neu um zu verifizieren
+        setTimeout(() => {
+          fetchStatus();
+        }, 500);
       } else {
-        const data = await res.json();
         throw new Error(data.error || 'Fehler beim Speichern');
       }
     } catch (e) {
+      console.error('❌ Save error:', e);
       toast.error('Fehler', { description: e.message });
     } finally {
       setSaving(false);

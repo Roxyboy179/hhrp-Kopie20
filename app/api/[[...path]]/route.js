@@ -1968,51 +1968,66 @@ async function handleUpdateSystemStatus(request) {
 
     const body = await request.json();
     
+    console.log('📥 Received system status update:', body);
+    
     // Update or insert system_status
     const { data: existing } = await supabaseAdmin
       .from('system_status')
       .select('id')
       .single();
 
+    const updateData = {
+      wartungsmodus: typeof body.wartungsmodus === 'boolean' ? body.wartungsmodus : false,
+      geplante_wartung: typeof body.geplante_wartung === 'boolean' ? body.geplante_wartung : false,
+      wartung_start: body.wartung_start || null,
+      wartung_ende: body.wartung_ende || null,
+      wartung_nachricht: body.wartung_nachricht || '',
+      updated_at: new Date().toISOString(),
+    };
+
+    console.log('💾 Saving to database:', updateData);
+
     let result;
     if (existing) {
       result = await supabaseAdmin
         .from('system_status')
-        .update({
-          wartungsmodus: body.wartungsmodus || false,
-          geplante_wartung: body.geplante_wartung || false,
-          wartung_start: body.wartung_start || null,
-          wartung_ende: body.wartung_ende || null,
-          wartung_nachricht: body.wartung_nachricht || '',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', existing.id);
+        .update(updateData)
+        .eq('id', existing.id)
+        .select();
     } else {
+      const insertData = {
+        wartungsmodus: typeof body.wartungsmodus === 'boolean' ? body.wartungsmodus : false,
+        geplante_wartung: typeof body.geplante_wartung === 'boolean' ? body.geplante_wartung : false,
+        wartung_start: body.wartung_start || null,
+        wartung_ende: body.wartung_ende || null,
+        wartung_nachricht: body.wartung_nachricht || '',
+      };
       result = await supabaseAdmin
         .from('system_status')
-        .insert({
-          wartungsmodus: body.wartungsmodus || false,
-          geplante_wartung: body.geplante_wartung || false,
-          wartung_start: body.wartung_start || null,
-          wartung_ende: body.wartung_ende || null,
-          wartung_nachricht: body.wartung_nachricht || '',
-        });
+        .insert(insertData)
+        .select();
     }
 
     if (result.error) {
-      console.error('Update system_status error:', result.error);
-      return NextResponse.json({ error: 'Fehler beim Speichern' }, { status: 500 });
+      console.error('❌ Database error:', result.error);
+      return NextResponse.json({ error: 'Fehler beim Speichern: ' + result.error.message }, { status: 500 });
     }
+
+    console.log('✅ Saved successfully:', result.data);
 
     // Log activity
     await logActivity({
-      adminId: admin.id,
-      action: 'update_system_status',
-      details: `Wartungsmodus: ${body.wartungsmodus ? 'AN' : 'AUS'}, Geplante Wartung: ${body.geplante_wartung ? 'AN' : 'AUS'}`,
+      actionType: LOG_ACTIONS.SYSTEM_STATUS_GEÄNDERT || 'system_status_changed',
+      userId: admin.discordUserId || admin.mitarbeiterNummer,
+      username: admin.discordUsername,
+      details: {
+        wartungsmodus: updateData.wartungsmodus,
+        geplante_wartung: updateData.geplante_wartung,
+      },
       ipAddress: getIpAddress(request),
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, status: result.data?.[0] });
   } catch (error) {
     console.error('System status update error:', error);
     return NextResponse.json({ error: 'Fehler' }, { status: 500 });
