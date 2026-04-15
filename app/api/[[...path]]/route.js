@@ -2254,36 +2254,63 @@ async function handleResetDaily(request) {
   }
 }
 
-// Bot Status Check - prüft ob Discord Bot läuft
+// Bot Status Check - prüft ob Bot Daten in Supabase hat UND ob sie aktuell sind
 async function handleBotStatus(request) {
   try {
-    // Prüfe ob Bot-Prozess läuft
-    const { exec } = require('child_process');
-    const { promisify } = require('util');
-    const execAsync = promisify(exec);
+    // Prüfe ob Bot-Daten in Supabase vorhanden sind
+    const { data, error } = await supabaseAdmin
+      .from('user_data')
+      .select('id, updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(1);
     
-    try {
-      // Suche nach Node-Prozess mit "bot" im Pfad (aber nicht mongodb)
-      const { stdout } = await execAsync('ps aux | grep "node.*bot" | grep -v grep | grep -v mongodb || true');
-      
-      const isOnline = stdout.trim().length > 0;
-      
-      return NextResponse.json({ 
-        isOnline,
-        status: isOnline ? 'online' : 'offline',
-        message: isOnline ? 'Discord Bot ist online' : 'Discord Bot ist offline',
-        checkedAt: new Date().toISOString()
-      });
-    } catch (execError) {
-      // Fehler beim Ausführen des Befehls = Bot ist wahrscheinlich offline
-      console.error('Bot status check error:', execError);
+    if (error) {
+      console.error('Bot status check error:', error);
       return NextResponse.json({ 
         isOnline: false,
-        status: 'offline',
-        message: 'Discord Bot ist offline',
+        status: 'error',
+        message: 'Fehler beim Prüfen des Bot-Status',
         checkedAt: new Date().toISOString()
       });
     }
+    
+    // Wenn keine Daten vorhanden = Bot war noch nie online
+    if (!data || data.length === 0) {
+      return NextResponse.json({ 
+        isOnline: false,
+        status: 'offline',
+        message: 'Discord Bot ist offline (keine Daten)',
+        checkedAt: new Date().toISOString()
+      });
+    }
+    
+    // Prüfe wie alt die Daten sind
+    const lastUpdate = new Date(data[0].updated_at);
+    const minutesSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60);
+    
+    // Bot synct alle 5 Minuten - wenn Daten älter als 10 Minuten = Bot ist offline
+    const MAX_AGE_MINUTES = 10;
+    const isOnline = minutesSinceUpdate < MAX_AGE_MINUTES;
+    
+    let message;
+    if (isOnline) {
+      if (minutesSinceUpdate < 1) {
+        message = 'Discord Bot ist online (Daten gerade eben aktualisiert)';
+      } else {
+        message = `Discord Bot ist online (Letzte Sync vor ${Math.round(minutesSinceUpdate)} Min.)`;
+      }
+    } else {
+      message = `Discord Bot ist offline (Letzte Sync vor ${Math.round(minutesSinceUpdate)} Min.)`;
+    }
+    
+    return NextResponse.json({ 
+      isOnline,
+      status: isOnline ? 'online' : 'offline',
+      message,
+      checkedAt: new Date().toISOString(),
+      lastSync: data[0].updated_at,
+      minutesSinceSync: Math.round(minutesSinceUpdate)
+    });
   } catch (error) {
     console.error('Bot status exception:', error);
     return NextResponse.json({ 
