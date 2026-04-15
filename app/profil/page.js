@@ -848,8 +848,8 @@ export default function ProfilPage() {
         {/* Tab Content */}
         {activeTab === 'overview' && (
           <>
-            {/* Bot Status Check - zeige Loading/Error wenn Bot offline */}
-            {botStatus.checking ? (
+            {/* Bot Status Check - zeige nur Error wenn Bot offline */}
+            {!botStatus.isOnline && !botStatus.checking ? (
               <BotStatusCard status={botStatus} onRetry={loadData} />
             ) : (
               <>
@@ -1086,8 +1086,8 @@ export default function ProfilPage() {
         {/* Bankkarten Tab */}
         {activeTab === 'cards' && (
           <>
-            {/* Bot Status Check - zeige Loading wenn Bot am prüfen ist */}
-            {botStatus.checking ? (
+            {/* Bot Status Check - zeige nur Error wenn Bot offline */}
+            {!botStatus.isOnline && !botStatus.checking ? (
               <BotStatusCard status={botStatus} onRetry={loadData} />
             ) : (
               <div className="space-y-6">
