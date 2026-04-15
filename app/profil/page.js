@@ -30,19 +30,25 @@ function BankCard({ card, userName }) {
   };
 
   const bankColors = {
-    'elite_federal': 'from-purple-600 via-blue-600 to-purple-700',
-    'hamburg_horizon': 'from-blue-600 via-cyan-600 to-blue-700',
+    'elite_federal': 'from-slate-700 via-slate-600 to-slate-800',
+    'hamburg_horizon': 'from-slate-700 via-slate-600 to-slate-800',
     'deutsche_bank': 'from-slate-700 via-slate-600 to-slate-800',
-    'sparkasse': 'from-red-600 via-red-500 to-red-700'
+    'sparkasse': 'from-slate-700 via-slate-600 to-slate-800'
   };
 
   const bankName = bankNames[card.bankId] || 'Hamburg Bank';
   const gradient = bankColors[card.bankId] || 'from-gray-700 via-gray-600 to-gray-800';
 
   const formatCardNumber = (num) => {
-    if (!num) return '•••• •••• •••• ••••';
-    const str = num.toString().padStart(16, '0');
-    return str.match(/.{1,4}/g)?.join(' ') || str;
+    if (!num) return '0000 0000 0000 0000';
+    const str = num.toString();
+    // Wenn die Nummer kürzer als 16 Zeichen ist, zeige sie direkt formatiert
+    if (str.length <= 12) {
+      return str.match(/.{1,4}/g)?.join(' ') || str;
+    }
+    // Sonst formatiere als 4x4 Gruppen
+    const padded = str.padStart(16, '0');
+    return padded.match(/.{1,4}/g)?.join(' ') || str;
   };
 
   const copyToClipboard = (text, label) => {
@@ -176,6 +182,7 @@ export default function ProfilPage() {
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
 
   useEffect(() => {
     if (!authLoading) {
@@ -578,20 +585,19 @@ export default function ProfilPage() {
         {activeTab === 'cards' && (
           <div className="space-y-6">
             {loading ? (
-              <div className="grid md:grid-cols-2 gap-6">
-                <SkeletonCard />
-                <SkeletonCard />
-              </div>
+              <SkeletonCard />
             ) : cards.length > 0 ? (
               <>
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-3 mb-4">
                   <CreditCard className="w-6 h-6 text-white/60" />
                   <h2 className="text-xl font-bold text-white">Meine Bankkarten</h2>
                   <span className="px-2 py-1 rounded-full bg-white/10 text-white/50 text-xs">
                     {cards.length}
                   </span>
                 </div>
-                <div className="grid md:grid-cols-2 gap-6">
+
+                {/* Karten Grid - Zentriert */}
+                <div className="max-w-2xl mx-auto">
                   {cards.map((card, i) => (
                     <BankCard 
                       key={i} 
