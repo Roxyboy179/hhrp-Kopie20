@@ -1878,6 +1878,7 @@ export async function POST(request) {
     case 'admin/settings': return handleAdminUpdateSettings(request);
     case 'admin/system-status': return handleUpdateSystemStatus(request); // Same as PUT
     case 'user/rewards/claim': return handleClaimReward(request);
+    case 'user/rewards/daily': return handleDailyBonus(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
@@ -2138,3 +2139,72 @@ async function handleGetMyBewerbungen(request) {
     return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
   }
 }
+
+
+async function handleDailyBonus(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    // Prüfe ob User heute bereits Daily Bonus geholt hat
+    const today = new Date().toISOString().split('T')[0];
+    
+    const { data: existingReward, error: checkError } = await supabaseAdmin
+      .from('rewards')
+      .select('*')
+      .eq('discord_user_id', user.id)
+      .eq('reward_type', 'daily_bonus')
+      .gte('created_at', `${today}T00:00:00`)
+      .maybeSingle();
+
+    if (existingReward) {
+      return NextResponse.json({ 
+        error: 'Du hast deinen Daily Bonus heute bereits abgeholt! Komm morgen wieder.' 
+      }, { status: 400 });
+    }
+
+    // Daily Bonus Amount
+    const dailyAmount = 1000;
+
+    // Erstelle neuen Daily Bonus Reward
+    const { data: reward, error: insertError } = await supabaseAdmin
+      .from('rewards')
+      .insert({
+        discord_user_id: user.id,
+        reward_type: 'daily_bonus',
+        amount: dailyAmount,
+        claimed: true, // Sofort als claimed markieren
+        processed: false,
+        description: 'Täglicher Bonus'
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Insert daily bonus error:', insertError);
+      return NextResponse.json({ error: 'Fehler beim Erstellen des Daily Bonus' }, { status: 500 });
+    }
+
+    // Notification erstellen
+    await createNotification({
+      userId: user.id,
+      type: 'daily_bonus',
+      title: '🎁 Daily Bonus erhalten!',
+      message: `Du hast deinen täglichen Bonus von €${dailyAmount} erhalten! Der Bot wird dir das Geld in Kürze gutschreiben.`,
+      relatedData: { rewardId: reward.id, amount: dailyAmount }
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      reward,
+      amount: dailyAmount,
+      message: `€${dailyAmount} Daily Bonus erhalten! Der Bot wird dir das Geld in Kürze gutschreiben.`
+    });
+  } catch (error) {
+    console.error('Daily bonus exception:', error);
+    return NextResponse.json({ error: 'Fehler beim Daily Bonus' }, { status: 500 });
+  }
+}
+

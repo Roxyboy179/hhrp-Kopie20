@@ -125,13 +125,9 @@ function IDCard({ character, avatarUrl, userId }) {
                 <div className="text-[10px] opacity-70">
                   <span className="font-semibold">Erstellt am:</span> {issueDate.toLocaleDateString('de-DE')}
                 </div>
-                <button 
-                  className="text-[9px] opacity-60 hover:opacity-100 flex items-center gap-1"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <IdCard className="w-3 h-3" />
-                  <span>Umdrehen</span>
-                </button>
+                <div className="text-[9px] opacity-40">
+                  Klicken zum Umdrehen
+                </div>
               </div>
             </div>
           </div>
@@ -202,13 +198,7 @@ function IDCard({ character, avatarUrl, userId }) {
                     <Building2 className="w-3 h-3" />
                     <span className="font-medium">HHRP ID</span>
                   </div>
-                  <button 
-                    className="hover:opacity-100 flex items-center gap-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <IdCard className="w-3 h-3" />
-                    <span>Umdrehen</span>
-                  </button>
+                  <span className="opacity-40">Klicken zum Umdrehen</span>
                 </div>
                 <p className="text-[8px] opacity-40 leading-relaxed">
                   Dieser Ausweis ist Eigentum von Hamburg Horizon RP. Bei Verlust oder Diebstahl unverzüglich melden.
@@ -216,16 +206,6 @@ function IDCard({ character, avatarUrl, userId }) {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Flip Indicator */}
-      <div className="text-center mt-3">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
-          <IdCard className="w-3.5 h-3.5 text-white/60" />
-          <p className="text-xs text-white/60">
-            {isFlipped ? 'Rückseite' : 'Vorderseite'}
-          </p>
         </div>
       </div>
     </div>
@@ -486,16 +466,6 @@ function BankCard({ card, userName }) {
           </div>
         </div>
       </div>
-
-      {/* Flip Indicator */}
-      <div className="text-center mt-4">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10">
-          <CreditCard className="w-4 h-4 text-white/60" />
-          <p className="text-sm text-white/60">
-            {isFlipped ? 'Rückseite' : 'Vorderseite'}
-          </p>
-        </div>
-      </div>
     </div>
   );
 }
@@ -732,19 +702,36 @@ export default function ProfilPage() {
                   </div>
                   <div>
                     <h3 className="text-xl font-bold text-white mb-1">Täglicher Bonus</h3>
-                    <p className="text-sm text-white/60">Hol dir deinen kostenlosen Bonus jeden Tag ab!</p>
+                    <p className="text-sm text-white/60">Hol dir €5.000 kostenlos jeden Tag ab!</p>
                   </div>
                 </div>
                 <Button
-                  onClick={() => {
-                    toast.info('Täglicher Bonus', {
-                      description: 'Um deinen täglichen Bonus zu claimen, nutze den Discord Bot mit dem Befehl: /daily'
-                    });
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/user/rewards/daily', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                      });
+                      const data = await res.json();
+                      
+                      if (res.ok) {
+                        toast.success('🎁 Daily Bonus erhalten!', {
+                          description: `Du hast €${data.amount} erhalten! Der Bot wird dir das Geld in Kürze gutschreiben.`
+                        });
+                        // Reload rewards
+                        loadData();
+                      } else {
+                        toast.error('Fehler', { description: data.error || 'Daily Bonus konnte nicht abgeholt werden' });
+                      }
+                    } catch (error) {
+                      toast.error('Fehler', { description: 'Netzwerkfehler' });
+                    }
                   }}
+                  disabled={claiming}
                   className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 px-8 py-6 text-lg"
                 >
                   <Gift className="w-5 h-5 mr-2" />
-                  Daily Bonus claimen
+                  Daily Bonus abholen
                 </Button>
               </div>
             </div>

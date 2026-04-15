@@ -16,6 +16,8 @@ import Link from 'next/link';
 
 export default function RootClientLayout({ children }) {
   const [splashDone, setSplashDone] = useState(false);
+  const pathname = usePathname();
+  const isProfilePage = pathname === '/profil';
   const handleSplashComplete = useCallback(() => setSplashDone(true), []);
 
   // Register Service Worker
@@ -60,8 +62,8 @@ export default function RootClientLayout({ children }) {
           <WartungsBanner />
           <LayoutContent>{children}</LayoutContent>
           <CookieBanner />
-          <InstallPrompt />
-          <InstallButton />
+          {!isProfilePage && <InstallPrompt />}
+          {!isProfilePage && <InstallButton />}
           <Toaster 
             position="bottom-right" 
             theme="dark"
@@ -86,6 +88,7 @@ function LayoutContent({ children }) {
   const pathname = usePathname();
   const { user, loading } = useAuth();
   const isAdmin = pathname?.startsWith('/admin');
+  const isProfilePage = pathname === '/profil';
   const [wartungsmodus, setWartungsmodus] = useState(false);
   const [wartungsLoading, setWartungsLoading] = useState(true);
   const [showBanner, setShowBanner] = useState(false);
@@ -131,7 +134,7 @@ function LayoutContent({ children }) {
       <Navbar user={user} loading={loading} />
       <main className={showBanner ? "pt-16 min-h-screen" : "pt-16 min-h-screen"}>{children}</main>
       <Footer />
-      <ThemeButton />
+      {!isProfilePage && <ThemeButton />}
     </>
   );
 }
