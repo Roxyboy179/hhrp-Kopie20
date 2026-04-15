@@ -716,25 +716,25 @@ export default function ProfilPage() {
     <div className="min-h-screen px-4 py-8 pt-24">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header mit Discord Avatar */}
-        <div className="glass rounded-2xl p-6 border border-white/[0.08]">
-          <div className="flex items-center gap-4">
+        <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
             {avatarUrl ? (
               <img 
                 src={avatarUrl} 
                 alt={user.username}
-                className="w-20 h-20 rounded-full ring-2 ring-white/10"
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full ring-2 ring-white/10"
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-3xl font-bold">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-2xl sm:text-3xl font-bold">
                 {user.username?.[0]?.toUpperCase()}
               </div>
             )}
-            <div className="flex-1">
-              <h1 className="text-3xl font-bold text-white">{user.username}</h1>
-              <p className="text-white/40 text-sm">Discord ID: {user.id}</p>
+            <div className="flex-1 text-center sm:text-left">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white break-all">{user.username}</h1>
+              <p className="text-white/40 text-xs sm:text-sm break-all">Discord ID: {user.id}</p>
             </div>
             {userData?.lastSync && (
-              <div className="text-right">
+              <div className="text-center sm:text-right w-full sm:w-auto">
                 <p className="text-xs text-white/30">Letzte Sync</p>
                 <p className="text-xs text-white/50">
                   {new Date(userData.lastSync).toLocaleString('de-DE')}
@@ -746,20 +746,20 @@ export default function ProfilPage() {
 
         {/* Tab Navigation */}
         <div className="glass rounded-2xl p-2 border border-white/[0.08]">
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all ${
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 sm:px-4 rounded-xl transition-all text-sm sm:text-base ${
                     activeTab === tab.id
                       ? 'bg-white/10 text-white border border-white/20'
                       : 'text-white/50 hover:text-white/70 hover:bg-white/5'
                   }`}
                 >
-                  <Icon className="w-5 h-5" />
+                  <Icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                   <span className="font-medium">{tab.label}</span>
                 </button>
               );
@@ -872,13 +872,13 @@ export default function ProfilPage() {
 
             {/* Money Overview */}
             {!botStatus.isOnline ? null : loading ? (
-              <div className="grid md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <SkeletonCard />
                 <SkeletonCard />
                 <SkeletonCard />
               </div>
             ) : (
-              <div className="grid md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="glass rounded-xl p-6 border border-white/[0.08]">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
@@ -907,7 +907,7 @@ export default function ProfilPage() {
                   </div>
                 </div>
 
-                <div className="glass rounded-xl p-6 border border-white/[0.08]">
+                <div className="glass rounded-xl p-6 border border-white/[0.08] sm:col-span-2 md:col-span-1">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
                       <TrendingUp className="w-6 h-6 text-purple-400" />
@@ -923,7 +923,7 @@ export default function ProfilPage() {
               </div>
             )}
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Character Info */}
               {!botStatus.isOnline ? null : loading ? (
                 <SkeletonCard />
@@ -1075,7 +1075,7 @@ export default function ProfilPage() {
                     </div>
 
                     {/* Grid: Bankkarte links, Personalausweis rechts */}
-                    <div className="grid md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Bankkarte */}
                       <div>
                         <h3 className="text-sm font-semibold text-white/70 mb-3 flex items-center gap-2">
