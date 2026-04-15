@@ -21,6 +21,101 @@ function SkeletonCard({ className = "" }) {
   );
 }
 
+function BotStatusCard({ status, onRetry }) {
+  if (status.checking) {
+    // Loading State
+    return (
+      <div className="glass rounded-2xl p-8 border border-blue-500/30 bg-gradient-to-br from-blue-500/10 to-cyan-500/10">
+        <div className="flex flex-col items-center justify-center text-center space-y-6">
+          <div className="relative">
+            <div className="w-24 h-24 rounded-full bg-blue-500/20 flex items-center justify-center">
+              <Loader2 className="w-12 h-12 text-blue-400 animate-spin" />
+            </div>
+            <div className="absolute inset-0 rounded-full border-4 border-blue-500/30 animate-ping"></div>
+          </div>
+          
+          <div className="space-y-2">
+            <h3 className="text-2xl font-bold text-white">Bitte warte einen Moment</h3>
+            <p className="text-white/60 max-w-md">
+              Wir verbinden uns mit dem Discord Bot Server und laden deine Daten...
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 text-sm text-white/40">
+            <Clock className="w-4 h-4 animate-pulse" />
+            <span>Dies dauert normalerweise nur wenige Sekunden</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!status.isOnline || status.error) {
+    // Error State
+    return (
+      <div className="glass rounded-2xl p-8 border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-orange-500/10">
+        <div className="flex flex-col items-center justify-center text-center space-y-6">
+          <div className="w-24 h-24 rounded-full bg-yellow-500/20 flex items-center justify-center">
+            <svg 
+              className="w-12 h-12 text-yellow-400" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
+              />
+            </svg>
+          </div>
+          
+          <div className="space-y-3">
+            <h3 className="text-2xl font-bold text-white">Verbindungsproblem</h3>
+            <p className="text-white/70 max-w-lg">
+              Wir haben derzeit Probleme, die Daten vom Discord Bot Server zu laden.
+            </p>
+            {status.error && (
+              <div className="glass rounded-lg p-4 border border-white/10 bg-white/5">
+                <p className="text-sm text-white/50">{status.error}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-3 w-full max-w-md">
+            <Button
+              onClick={onRetry}
+              className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+            >
+              <svg 
+                className="w-5 h-5 mr-2" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+                />
+              </svg>
+              Erneut versuchen
+            </Button>
+            
+            <p className="text-xs text-white/40">
+              💡 Der Discord Bot wird regelmäßig geprüft. Bitte habe etwas Geduld.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 function IDCard({ character, avatarUrl, userId }) {
   const [isFlipped, setIsFlipped] = useState(false);
   
@@ -480,6 +575,7 @@ export default function ProfilPage() {
   const [claiming, setClaiming] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const [botStatus, setBotStatus] = useState({ isOnline: true, checking: true, error: null });
 
   useEffect(() => {
     if (!authLoading) {
@@ -493,6 +589,8 @@ export default function ProfilPage() {
 
   const loadData = async () => {
     try {
+      setBotStatus({ isOnline: true, checking: true, error: null });
+      
       //Lade alles parallel im Hintergrund
       const [userRes, rewardsRes, bewerbungenRes] = await Promise.all([
         fetch('/api/user/data', { cache: 'no-store' }),
@@ -504,8 +602,27 @@ export default function ProfilPage() {
         const json = await userRes.json();
         // Daten sind direkt in json.data.data
         const actualData = json.data?.data || json.data || null;
+        
+        // Prüfe ob Bot-Daten vorhanden sind
+        if (!actualData || Object.keys(actualData).length === 0) {
+          setBotStatus({ 
+            isOnline: false, 
+            checking: false, 
+            error: 'Der Discord Bot liefert keine Daten zurück. Bitte versuche es später erneut.' 
+          });
+        } else {
+          setBotStatus({ isOnline: true, checking: false, error: null });
+        }
+        
         setUserData(actualData);
         console.log('User data loaded:', actualData);
+      } else {
+        // API-Fehler = Bot offline oder Problem
+        setBotStatus({ 
+          isOnline: false, 
+          checking: false, 
+          error: 'Verbindungsprobleme mit dem Discord Bot. Die Daten können momentan nicht geladen werden.' 
+        });
       }
 
       if (rewardsRes.ok) {
@@ -519,6 +636,11 @@ export default function ProfilPage() {
       }
     } catch (error) {
       console.error('Load data error:', error);
+      setBotStatus({ 
+        isOnline: false, 
+        checking: false, 
+        error: 'Netzwerkfehler beim Laden der Daten vom Discord Bot.' 
+      });
     } finally {
       setLoading(false);
     }
@@ -693,29 +815,34 @@ export default function ProfilPage() {
         {/* Tab Content */}
         {activeTab === 'overview' && (
           <>
-            {/* Daily Bonus Widget */}
-            <div className="glass rounded-2xl p-6 border border-green-500/20 bg-gradient-to-br from-green-500/5 to-emerald-500/5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-                    <Gift className="w-8 h-8 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white mb-1">Täglicher Bonus</h3>
-                    <p className="text-sm text-white/60">Hol dir €5.000 kostenlos jeden Tag ab!</p>
-                  </div>
-                </div>
-                <Button
-                  onClick={async () => {
-                    try {
-                      const res = await fetch('/api/user/rewards/daily', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' }
-                      });
-                      const data = await res.json();
-                      
-                      if (res.ok) {
-                        toast.success('🎁 Daily Bonus erhalten!', {
+            {/* Bot Status Check - zeige Loading/Error wenn Bot offline */}
+            {(botStatus.checking || !botStatus.isOnline) ? (
+              <BotStatusCard status={botStatus} onRetry={loadData} />
+            ) : (
+              <>
+                {/* Daily Bonus Widget */}
+                <div className="glass rounded-2xl p-6 border border-green-500/20 bg-gradient-to-br from-green-500/5 to-emerald-500/5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                        <Gift className="w-8 h-8 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-white mb-1">Täglicher Bonus</h3>
+                        <p className="text-sm text-white/60">Hol dir €5.000 kostenlos jeden Tag ab!</p>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch('/api/user/rewards/daily', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                          });
+                          const data = await res.json();
+                          
+                          if (res.ok) {
+                            toast.success('🎁 Daily Bonus erhalten!', {
                           description: `Du hast €${data.amount} erhalten! Der Bot wird dir das Geld in Kürze gutschreiben.`
                         });
                         // Reload rewards
@@ -918,63 +1045,72 @@ export default function ProfilPage() {
                 </p>
               </div>
             )}
+              </>
+            )}
           </>
         )}
 
         {/* Bankkarten Tab */}
         {activeTab === 'cards' && (
-          <div className="space-y-6">
-            {loading ? (
-              <SkeletonCard />
-            ) : cards.length > 0 ? (
-              <>
-                <div className="flex items-center gap-3 mb-4">
-                  <CreditCard className="w-6 h-6 text-white/60" />
-                  <h2 className="text-xl font-bold text-white">Meine Dokumente</h2>
-                </div>
-
-                {/* Grid: Bankkarte links, Personalausweis rechts */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  {/* Bankkarte */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-white/70 mb-3 flex items-center gap-2">
-                      <CreditCard className="w-4 h-4" />
-                      Bankkarte
-                    </h3>
-                    <div className="max-w-md">
-                      <BankCard 
-                        card={cards[0]} 
-                        userName={character?.name || user.username}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Personalausweis */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-white/70 mb-3 flex items-center gap-2">
-                      <IdCard className="w-4 h-4" />
-                      Personalausweis
-                    </h3>
-                    <div className="max-w-md">
-                      <IDCard 
-                        character={character}
-                        avatarUrl={avatarUrl}
-                        userId={user.id}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </>
+          <>
+            {/* Bot Status Check - zeige Loading/Error wenn Bot offline */}
+            {(botStatus.checking || !botStatus.isOnline) ? (
+              <BotStatusCard status={botStatus} onRetry={loadData} />
             ) : (
-              <div className="glass rounded-2xl p-12 text-center border border-white/[0.08]">
-                <CreditCard className="w-16 h-16 mx-auto mb-4 text-white/20" />
-                <h3 className="text-xl font-bold text-white mb-2">Keine Dokumente</h3>
-                <p className="text-white/40 max-w-md mx-auto">
-                  Du hast noch keine Bankkarten. Erstelle eine im Discord Bot!
-                </p>
+              <div className="space-y-6">
+                {loading ? (
+                  <SkeletonCard />
+                ) : cards.length > 0 ? (
+                  <>
+                    <div className="flex items-center gap-3 mb-4">
+                      <CreditCard className="w-6 h-6 text-white/60" />
+                      <h2 className="text-xl font-bold text-white">Meine Dokumente</h2>
+                    </div>
+
+                    {/* Grid: Bankkarte links, Personalausweis rechts */}
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {/* Bankkarte */}
+                      <div>
+                        <h3 className="text-sm font-semibold text-white/70 mb-3 flex items-center gap-2">
+                          <CreditCard className="w-4 h-4" />
+                          Bankkarte
+                        </h3>
+                        <div className="max-w-md">
+                          <BankCard 
+                            card={cards[0]} 
+                            userName={character?.name || user.username}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Personalausweis */}
+                      <div>
+                        <h3 className="text-sm font-semibold text-white/70 mb-3 flex items-center gap-2">
+                          <IdCard className="w-4 h-4" />
+                          Personalausweis
+                        </h3>
+                        <div className="max-w-md">
+                          <IDCard 
+                            character={character}
+                            avatarUrl={avatarUrl}
+                            userId={user.id}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="glass rounded-2xl p-12 text-center border border-white/[0.08]">
+                    <CreditCard className="w-16 h-16 mx-auto mb-4 text-white/20" />
+                    <h3 className="text-xl font-bold text-white mb-2">Keine Dokumente</h3>
+                    <p className="text-white/40 max-w-md mx-auto">
+                      Du hast noch keine Bankkarten. Erstelle eine im Discord Bot!
+                    </p>
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
 
         {/* Bewerbungen Tab */}
