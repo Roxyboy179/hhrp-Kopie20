@@ -2166,7 +2166,7 @@ async function handleDailyBonus(request) {
     }
 
     // Daily Bonus Amount
-    const dailyAmount = 1000;
+    const dailyAmount = 5000;
 
     // Erstelle neuen Daily Bonus Reward
     const { data: reward, error: insertError } = await supabaseAdmin
