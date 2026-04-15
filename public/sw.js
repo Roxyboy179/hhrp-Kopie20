@@ -1,7 +1,8 @@
 // Service Worker für HHRP PWA
-const CACHE_NAME = 'hhrp-v1';
+const CACHE_NAME = 'hhrp-v2';
 const urlsToCache = [
   '/',
+  '/offline',
   '/bewerbung',
   '/team',
   '/faq',
@@ -58,7 +59,24 @@ self.addEventListener('fetch', (event) => {
       })
       .catch(() => {
         // Fallback zu Cache bei Netzwerkfehler
-        return caches.match(event.request);
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          
+          // Wenn keine Seite gecached ist und es eine Navigation ist, zeige Offline-Seite
+          if (event.request.mode === 'navigate') {
+            return caches.match('/offline');
+          }
+          
+          return new Response('Offline - keine gecachte Version verfügbar', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: new Headers({
+              'Content-Type': 'text/plain'
+            })
+          });
+        });
       })
   );
 });
@@ -70,6 +88,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
+            console.log('Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })

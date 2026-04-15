@@ -1,12 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 export function SplashScreen({ onComplete }) {
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState(0); // 0=logo, 1=text, 2=bar, 3=fade
+  const [isPWA, setIsPWA] = useState(false);
 
   useEffect(() => {
+    // Check if running as PWA (standalone mode)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                        window.navigator.standalone === true;
+    
+    setIsPWA(isStandalone);
+
+    // Skip splash if not PWA
+    if (!isStandalone) {
+      onComplete();
+      return;
+    }
+
     // Check if already shown this session
     if (sessionStorage.getItem('hhrp-splash-shown')) {
       onComplete();
@@ -38,6 +51,9 @@ export function SplashScreen({ onComplete }) {
     };
     requestAnimationFrame(animate);
   }, [phase]);
+
+  // Don't render if not PWA
+  if (!isPWA) return null;
 
   return (
     <div 
