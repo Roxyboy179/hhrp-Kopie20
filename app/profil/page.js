@@ -22,36 +22,9 @@ function SkeletonCard({ className = "" }) {
 }
 
 function BotStatusCard({ status, onRetry }) {
-  if (status.checking) {
-    // Loading State
-    return (
-      <div className="glass rounded-2xl p-8 border border-blue-500/30 bg-gradient-to-br from-blue-500/10 to-cyan-500/10">
-        <div className="flex flex-col items-center justify-center text-center space-y-6">
-          <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-blue-500/20 flex items-center justify-center">
-              <Loader2 className="w-12 h-12 text-blue-400 animate-spin" />
-            </div>
-            <div className="absolute inset-0 rounded-full border-4 border-blue-500/30 animate-ping"></div>
-          </div>
-          
-          <div className="space-y-2">
-            <h3 className="text-2xl font-bold text-white">Bitte warte einen Moment</h3>
-            <p className="text-white/60 max-w-md">
-              Wir verbinden uns mit dem Discord Bot Server und laden deine Daten...
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 text-sm text-white/40">
-            <Clock className="w-4 h-4 animate-pulse" />
-            <span>Dies dauert normalerweise nur wenige Sekunden</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!status.isOnline || status.error) {
-    // Error State
+  // Zeige immer nur die gelbe Error-Karte, keine blaue Loading-Karte
+  if (!status.isOnline || status.error || status.checking) {
+    // Error State - NUR GELBE KARTE
     return (
       <div className="glass rounded-2xl p-8 border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-orange-500/10">
         <div className="flex flex-col items-center justify-center text-center space-y-6">
