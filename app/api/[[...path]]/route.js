@@ -1795,24 +1795,28 @@ export async function GET(request) {
     }
   }
 
-  // === Public System Status (for banner) ===
+  // === Public System Status (for banner and maintenance mode) ===
   if (p === 'system-status/public') {
     try {
       const { data, error } = await supabaseAdmin
         .from('system_status')
-        .select('geplante_wartung, wartung_start, wartung_ende, wartung_nachricht')
+        .select('wartungsmodus, geplante_wartung, wartung_start, wartung_ende, wartung_nachricht')
         .limit(1)
         .maybeSingle();
 
       if (error || !data) {
         return NextResponse.json({ 
+          wartungsmodus: false,
           geplante_wartung: false 
         });
       }
 
       return NextResponse.json(data);
     } catch (error) {
-      return NextResponse.json({ geplante_wartung: false });
+      return NextResponse.json({ 
+        wartungsmodus: false,
+        geplante_wartung: false 
+      });
     }
   }
 

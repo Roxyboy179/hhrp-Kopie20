@@ -1,130 +1,144 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AlertTriangle, X } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import { AlertTriangle, Clock, X, Wrench, Calendar, Flag } from 'lucide-react';
 
 export function WartungsBanner() {
   const [status, setStatus] = useState(null);
   const [dismissed, setDismissed] = useState(false);
-  const [timeLeft, setTimeLeft] = useState('');
-  const pathname = usePathname();
-
-  // Nicht auf Admin-Seiten anzeigen
-  const isAdminPage = pathname?.startsWith('/admin');
+  const [countdown, setCountdown] = useState('');
 
   useEffect(() => {
-    if (isAdminPage) return;
-
     fetchStatus();
-    const interval = setInterval(fetchStatus, 60000); // Update every minute
+    
+    // Alle 30 Sekunden aktualisieren
+    const interval = setInterval(fetchStatus, 30000);
     return () => clearInterval(interval);
-  }, [isAdminPage]); // Dependency array hinzugefügt
+  }, []);
 
   useEffect(() => {
     if (!status?.geplante_wartung || !status?.wartung_start) return;
 
     const updateCountdown = () => {
-      const start = new Date(status.wartung_start).getTime();
-      const now = Date.now();
+      const now = new Date();
+      const start = new Date(status.wartung_start);
       const diff = start - now;
 
       if (diff <= 0) {
-        setTimeLeft('Wartung läuft');
+        setCountdown('Die Wartung hat begonnen');
         return;
       }
 
-      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 
-      if (hours > 24) {
-        const days = Math.floor(hours / 24);
-        setTimeLeft(`in ${days} Tag${days > 1 ? 'en' : ''}`);
+      if (days > 0) {
+        setCountdown(`in ${days} Tag${days > 1 ? 'en' : ''} ${hours} Stunde${hours !== 1 ? 'n' : ''}`);
       } else if (hours > 0) {
-        setTimeLeft(`in ${hours}h ${minutes}m`);
+        setCountdown(`in ${hours} Stunde${hours !== 1 ? 'n' : ''} ${minutes} Minute${minutes !== 1 ? 'n' : ''}`);
       } else {
-        setTimeLeft(`in ${minutes} Minute${minutes > 1 ? 'n' : ''}`);
+        setCountdown(`in ${minutes} Minute${minutes !== 1 ? 'n' : ''}`);
       }
     };
 
     updateCountdown();
-    const interval = setInterval(updateCountdown, 30000); // Update every 30s
-    return () => clearInterval(interval);
-  }, [status]); // Dependency array
+    const countdownInterval = setInterval(updateCountdown, 60000); // Jede Minute
+    return () => clearInterval(countdownInterval);
+  }, [status]);
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch('/api/system-status/public');
+      const res = await fetch('/api/system-status/public', {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
       if (res.ok) {
         const data = await res.json();
         setStatus(data);
       }
     } catch (e) {
-      console.error('Failed to fetch system status:', e);
+      console.error('Fehler beim Laden des Wartungsstatus:', e);
     }
   };
 
-  if (isAdminPage || !status?.geplante_wartung || dismissed) return null;
+  // Nicht anzeigen wenn: keine geplante Wartung, dismissed, oder keine Daten
+  if (!status?.geplante_wartung || dismissed) return null;
 
   return (
-    <div
-      className="fixed top-0 left-0 right-0 z-[9996] animate-slide-down"
-      style={{ animation: 'slideDown 0.3s ease-out' }}
-    >
-      <div
-        className="glass border-b"
-        style={{
-          background: 'rgba(234,179,8,0.95)',
-          borderColor: 'rgba(234,179,8,0.3)',
-          backdropFilter: 'blur(20px)',
-        }}
-      >
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <AlertTriangle className="w-5 h-5 flex-shrink-0" style={{ color: '#78350f' }} />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold" style={{ color: '#78350f' }}>
-                Geplante Wartung {timeLeft}
+    <div className="relative w-full bg-gradient-to-r from-yellow-500/10 via-orange-500/10 to-red-500/10 border-b-2 border-yellow-500/30 backdrop-blur-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4 flex-1">
+            {/* Icon mit Animation */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-yellow-400 rounded-full blur-lg opacity-30 animate-pulse"></div>
+              <div className="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-yellow-400/20 to-orange-500/20 border border-yellow-400/30 flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-yellow-300" />
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <Wrench className="w-4 h-4 text-yellow-300" />
+                <span className="text-base font-bold text-yellow-200">
+                  Geplante Wartungsarbeiten
+                </span>
+                {countdown && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-yellow-400/20 border border-yellow-400/30 text-xs font-semibold text-yellow-200">
+                    <Clock className="w-3 h-3" />
+                    {countdown}
+                  </span>
+                )}
+              </div>
+              
+              <p className="text-sm text-yellow-100/90 leading-relaxed">
+                {status.wartung_nachricht || 'Wir führen Wartungsarbeiten durch, um unseren Service zu verbessern.'}
               </p>
-              <p className="text-xs truncate" style={{ color: '#92400e' }}>
-                {status.wartung_nachricht}
-              </p>
+
+              {/* Zeitangaben */}
+              {(status.wartung_start || status.wartung_ende) && (
+                <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-yellow-200/70">
+                  {status.wartung_start && (
+                    <span className="flex items-center gap-1.5">
+                      <Calendar className="w-3.5 h-3.5" />
+                      Start: {new Date(status.wartung_start).toLocaleString('de-DE', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  )}
+                  {status.wartung_ende && (
+                    <span className="flex items-center gap-1.5">
+                      <Flag className="w-3.5 h-3.5" />
+                      Ende: {new Date(status.wartung_ende).toLocaleString('de-DE', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {status.wartung_start && (
-            <div className="hidden md:block text-xs font-medium" style={{ color: '#92400e' }}>
-              {new Date(status.wartung_start).toLocaleString('de-DE', {
-                day: '2-digit',
-                month: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </div>
-          )}
-
+          {/* Close Button */}
           <button
             onClick={() => setDismissed(true)}
-            className="w-6 h-6 rounded-lg flex items-center justify-center transition-all hover:scale-110 flex-shrink-0"
-            style={{ background: 'rgba(120,53,15,0.2)', color: '#78350f' }}
+            className="p-2 rounded-lg hover:bg-white/10 transition-colors text-yellow-200/60 hover:text-yellow-200"
+            aria-label="Banner schließen"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes slideDown {
-          from {
-            opacity: 0;
-            transform: translateY(-100%);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }
