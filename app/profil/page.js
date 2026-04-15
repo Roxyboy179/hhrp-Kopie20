@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useRouter } from 'next/navigation';
-import DailyBonusModal from '@/components/DailyBonusModal';
+import DailyBonusCard from '@/components/DailyBonusCard';
 import { 
   Wallet, CreditCard, Trophy, Gift, User, Award, Clock, TrendingUp, 
   Check, Loader2, FileText, Calendar, Mail, ExternalLink, LayoutDashboard, IdCard, ClipboardList,
@@ -974,34 +974,6 @@ export default function ProfilPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [botStatus, setBotStatus] = useState({ isOnline: true, checking: true, error: null });
-  const [showDailyBonus, setShowDailyBonus] = useState(false);
-  const [checkedDaily, setCheckedDaily] = useState(false);
-
-  // Check for daily bonus when user logs in
-  useEffect(() => {
-    if (user && !authLoading && !checkedDaily) {
-      checkDailyBonus();
-    }
-  }, [user, authLoading, checkedDaily]);
-
-  const checkDailyBonus = async () => {
-    try {
-      const res = await fetch('/api/check-daily');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.canClaim) {
-          // Warte 1 Sekunde, dann zeige Modal
-          setTimeout(() => {
-            setShowDailyBonus(true);
-          }, 1000);
-        }
-      }
-    } catch (e) {
-      console.error('Daily bonus check error:', e);
-    } finally {
-      setCheckedDaily(true);
-    }
-  };
 
   useEffect(() => {
     if (!authLoading) {
@@ -1269,48 +1241,14 @@ export default function ProfilPage() {
               <BotStatusCard status={botStatus} onRetry={loadData} />
             ) : (
               <>
-                {/* Daily Bonus Widget */}
-                <div className="glass rounded-2xl p-6 border border-green-500/20 bg-gradient-to-br from-green-500/5 to-emerald-500/5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-                        <Gift className="w-8 h-8 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-white mb-1">Täglicher Bonus</h3>
-                        <p className="text-sm text-white/60">Hol dir €5.000 kostenlos jeden Tag ab!</p>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={async () => {
-                        try {
-                          const res = await fetch('/api/user/rewards/daily', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' }
-                          });
-                          const data = await res.json();
-                          
-                          if (res.ok) {
-                            toast.success('🎁 Daily Bonus erhalten!', {
-                          description: `Du hast €${data.amount} erhalten! Der Bot wird dir das Geld in Kürze gutschreiben.`
-                        });
-                        // Reload rewards
-                        loadData();
-                      } else {
-                        toast.error('Fehler', { description: data.error || 'Daily Bonus konnte nicht abgeholt werden' });
-                      }
-                    } catch (error) {
-                      toast.error('Fehler', { description: 'Netzwerkfehler' });
-                    }
+                {/* Daily Bonus Card */}
+                <DailyBonusCard 
+                  userId={user?.id}
+                  onSuccess={() => {
+                    // Reload data after claiming
+                    loadData();
                   }}
-                  disabled={claiming}
-                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 px-8 py-6 text-lg"
-                >
-                  <Gift className="w-5 h-5 mr-2" />
-                  Daily Bonus abholen
-                </Button>
-              </div>
-            </div>
+                />
 
             {/* Money Overview */}
             {!botStatus.isOnline ? null : loading ? (
@@ -1663,11 +1601,6 @@ export default function ProfilPage() {
           </div>
         )}
       </div>
-
-      {/* Daily Bonus Modal */}
-      {showDailyBonus && (
-        <DailyBonusModal onClose={() => setShowDailyBonus(false)} />
-      )}
     </div>
   );
 }
