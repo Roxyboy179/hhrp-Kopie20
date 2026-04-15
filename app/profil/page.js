@@ -617,7 +617,24 @@ export default function ProfilPage() {
     try {
       setBotStatus({ isOnline: true, checking: true, error: null });
       
-      //Lade alles parallel im Hintergrund
+      // 1. ZUERST: Prüfe ob Bot online ist
+      const botStatusRes = await fetch('/api/bot/status', { cache: 'no-store' });
+      const botStatusData = await botStatusRes.json();
+      
+      console.log('[Bot Status]', botStatusData);
+      
+      // Wenn Bot offline ist, zeige Error und stoppe
+      if (!botStatusData.isOnline) {
+        setBotStatus({ 
+          isOnline: false, 
+          checking: false, 
+          error: 'Der Discord Bot ist derzeit offline. Deine Profildaten können nicht geladen werden.' 
+        });
+        setLoading(false);
+        return;
+      }
+      
+      // 2. Bot ist online, lade die Daten
       const [userRes, rewardsRes, bewerbungenRes] = await Promise.all([
         fetch('/api/user/data', { cache: 'no-store' }),
         fetch('/api/user/rewards', { cache: 'no-store' }),
@@ -626,28 +643,18 @@ export default function ProfilPage() {
 
       if (userRes.ok) {
         const json = await userRes.json();
-        // Daten sind direkt in json.data.data
         const actualData = json.data?.data || json.data || null;
         
-        // Prüfe ob Bot-Daten vorhanden sind
-        if (!actualData || Object.keys(actualData).length === 0) {
-          setBotStatus({ 
-            isOnline: false, 
-            checking: false, 
-            error: 'Der Discord Bot liefert keine Daten zurück. Bitte versuche es später erneut.' 
-          });
-        } else {
-          setBotStatus({ isOnline: true, checking: false, error: null });
-        }
-        
+        // Bot ist online, Daten sind da
+        setBotStatus({ isOnline: true, checking: false, error: null });
         setUserData(actualData);
         console.log('User data loaded:', actualData);
       } else {
-        // API-Fehler = Bot offline oder Problem
+        // Bot ist online, aber API-Fehler
         setBotStatus({ 
-          isOnline: false, 
+          isOnline: true, 
           checking: false, 
-          error: 'Verbindungsprobleme mit dem Discord Bot. Die Daten können momentan nicht geladen werden.' 
+          error: 'Fehler beim Laden der Daten. Bitte versuche es später erneut.' 
         });
       }
 
@@ -665,7 +672,7 @@ export default function ProfilPage() {
       setBotStatus({ 
         isOnline: false, 
         checking: false, 
-        error: 'Netzwerkfehler beim Laden der Daten vom Discord Bot.' 
+        error: 'Netzwerkfehler. Bitte überprüfe deine Internetverbindung.' 
       });
     } finally {
       setLoading(false);

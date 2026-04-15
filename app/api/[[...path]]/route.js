@@ -1829,6 +1829,11 @@ export async function GET(request) {
     return handleGetUserData(request);
   }
 
+  // === Bot Status ===
+  if (p === 'bot/status') {
+    return handleBotStatus(request);
+  }
+
   // === Meine Bewerbungen ===
   if (p === 'bewerbungen/me') {
     return handleGetMyBewerbungen(request);
@@ -1879,6 +1884,8 @@ export async function POST(request) {
     case 'admin/system-status': return handleUpdateSystemStatus(request); // Same as PUT
     case 'user/rewards/claim': return handleClaimReward(request);
     case 'user/rewards/daily': return handleDailyBonus(request);
+    case 'user/rewards/reset-daily': return handleResetDaily(request);
+    case 'bot/status': return handleBotStatus(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
@@ -2213,4 +2220,79 @@ async function handleDailyBonus(request) {
     return NextResponse.json({ error: 'Fehler beim Daily Bonus' }, { status: 500 });
   }
 }
+
+
+
+async function handleResetDaily(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    
+    const { error } = await supabaseAdmin
+      .from('rewards')
+      .delete()
+      .eq('discord_user_id', user.id)
+      .eq('reward_type', 'daily_bonus')
+      .gte('created_at', `${today}T00:00:00`);
+
+    if (error) {
+      console.error('Reset daily error:', error);
+      return NextResponse.json({ error: 'Fehler beim Zurücksetzen' }, { status: 500 });
+    }
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Daily Bonus wurde zurückgesetzt! Du kannst jetzt nochmal claimen.' 
+    });
+  } catch (error) {
+    console.error('Reset daily exception:', error);
+    return NextResponse.json({ error: 'Fehler' }, { status: 500 });
+  }
+}
+
+// Bot Status Check - prüft ob Discord Bot läuft
+async function handleBotStatus(request) {
+  try {
+    // Prüfe ob Bot-Prozess läuft
+    const { exec } = require('child_process');
+    const { promisify } = require('util');
+    const execAsync = promisify(exec);
+    
+    try {
+      // Suche nach Node-Prozess mit "bot" im Pfad (aber nicht mongodb)
+      const { stdout } = await execAsync('ps aux | grep "node.*bot" | grep -v grep | grep -v mongodb || true');
+      
+      const isOnline = stdout.trim().length > 0;
+      
+      return NextResponse.json({ 
+        isOnline,
+        status: isOnline ? 'online' : 'offline',
+        message: isOnline ? 'Discord Bot ist online' : 'Discord Bot ist offline',
+        checkedAt: new Date().toISOString()
+      });
+    } catch (execError) {
+      // Fehler beim Ausführen des Befehls = Bot ist wahrscheinlich offline
+      console.error('Bot status check error:', execError);
+      return NextResponse.json({ 
+        isOnline: false,
+        status: 'offline',
+        message: 'Discord Bot ist offline',
+        checkedAt: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    console.error('Bot status exception:', error);
+    return NextResponse.json({ 
+      isOnline: false,
+      status: 'error',
+      message: 'Fehler beim Prüfen des Bot-Status',
+      error: error.message 
+    }, { status: 500 });
+  }
+}
+
 
