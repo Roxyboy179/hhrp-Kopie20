@@ -11,6 +11,7 @@ import { InstallPrompt } from '@/components/shared/InstallPrompt';
 import { InstallButton } from '@/components/shared/InstallButton';
 import { CookieBanner } from '@/components/shared/CookieBanner';
 import { WartungsBanner } from '@/components/shared/WartungsBanner';
+import { BetaNotice } from '@/components/shared/BetaNotice';
 import { Toaster } from 'sonner';
 import Link from 'next/link';
 
@@ -64,6 +65,7 @@ export default function RootClientLayout({ children }) {
           <WartungsBanner />
           <LayoutContent>{children}</LayoutContent>
           <CookieBanner />
+          <BetaNotice />
           {!isProfilePage && !isLegalPage && <InstallPrompt />}
           {!isProfilePage && !isLegalPage && <InstallButton />}
           <Toaster 
