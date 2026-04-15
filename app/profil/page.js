@@ -10,7 +10,7 @@ import {
   Wallet, CreditCard, Trophy, Gift, User, Award, Clock, TrendingUp, 
   Check, Loader2, FileText, Calendar, Mail, ExternalLink, LayoutDashboard, IdCard, ClipboardList,
   Building2, Hash, Key, Copy, ArrowUpRight, ArrowDownRight, AlertCircle, 
-  Shield, Star, MessageSquare, Ban, ChevronUp
+  Shield, Star, MessageSquare, Ban, ChevronUp, ShieldCheck, CheckCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -1601,9 +1601,9 @@ export default function ProfilPage() {
                       {userData.transactions
                         .slice((transactionsPage - 1) * itemsPerPage, transactionsPage * itemsPerPage)
                         .map((transaction, index) => {
-                          const isNew = transaction.created_at && 
-                            (new Date() - new Date(transaction.created_at)) < 24 * 60 * 60 * 1000;
-                          const isIncome = transaction.type === 'income' || transaction.amount > 0;
+                          const isNew = transaction.timestamp && 
+                            (new Date() - new Date(transaction.timestamp)) < 24 * 60 * 60 * 1000;
+                          const isIncome = transaction.amount > 0;
                           
                           return (
                             <div 
@@ -1643,40 +1643,23 @@ export default function ProfilPage() {
                                             NEU
                                           </span>
                                         )}
-                                        {transaction.category && (
-                                          <span className="px-2 py-1 rounded-lg bg-white/10 text-white/70 text-[10px] font-medium">
-                                            {transaction.category}
+                                        {transaction.type && (
+                                          <span className="px-2 py-1 rounded-lg bg-white/10 text-white/70 text-[10px] font-medium uppercase">
+                                            {transaction.type}
                                           </span>
                                         )}
                                       </div>
-                                      <p className="text-sm sm:text-base text-white font-semibold mb-1 break-words">
-                                        {transaction.description || transaction.reason || 'Keine Beschreibung'}
+                                      <p className="text-sm sm:text-base text-white font-semibold mb-1 break-words leading-relaxed">
+                                        {transaction.details || 'Keine Beschreibung'}
                                       </p>
-                                      {transaction.id && (
-                                        <p className="text-xs text-white/40 mb-2">
-                                          ID: {transaction.id}
-                                        </p>
-                                      )}
                                     </div>
                                   </div>
                                   
                                   <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-white/50">
-                                    {transaction.from && (
-                                      <div className="flex items-center gap-1">
-                                        <User className="w-3 h-3" />
-                                        <span>Von: {transaction.from}</span>
-                                      </div>
-                                    )}
-                                    {transaction.to && (
-                                      <div className="flex items-center gap-1">
-                                        <ArrowUpRight className="w-3 h-3" />
-                                        <span>An: {transaction.to}</span>
-                                      </div>
-                                    )}
-                                    {transaction.date && (
+                                    {transaction.timestamp && (
                                       <div className="flex items-center gap-1">
                                         <Clock className="w-3 h-3" />
-                                        <span>{new Date(transaction.date).toLocaleDateString('de-DE', {
+                                        <span>{new Date(transaction.timestamp).toLocaleDateString('de-DE', {
                                           day: '2-digit',
                                           month: '2-digit',
                                           year: 'numeric',
