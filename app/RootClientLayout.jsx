@@ -24,11 +24,31 @@ export default function RootClientLayout({ children }) {
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
-          console.log('Service Worker registered:', registration);
+          console.log('✅ Service Worker registered:', registration);
+          
+          // Check for updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            console.log('🔄 New Service Worker found, installing...');
+            
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('✨ New Service Worker installed! Page will reload to activate...');
+                // Aktiviere neuen SW und lade Seite neu
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
+                window.location.reload();
+              }
+            });
+          });
         })
         .catch((error) => {
-          console.log('Service Worker registration failed:', error);
+          console.log('❌ Service Worker registration failed:', error);
         });
+
+      // Listen for controller change (new SW activated)
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log('🔄 Service Worker controller changed');
+      });
     }
   }, []);
 

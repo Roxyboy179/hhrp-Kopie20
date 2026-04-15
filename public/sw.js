@@ -1,105 +1,204 @@
-// Service Worker für HHRP PWA
-const CACHE_NAME = 'hhrp-v2';
-const urlsToCache = [
-  '/',
-  '/offline',
-  '/bewerbung',
-  '/team',
-  '/faq',
+// Service Worker für HHRP PWA - Optimiert für Supabase
+const CACHE_NAME = 'hhrp-v3';
+const OFFLINE_CACHE = 'hhrp-offline-v3';
+
+// Statische Assets die gecacht werden sollen
+const STATIC_ASSETS = [
+  '/icon-192.png',
+  '/icon-512.png',
+  '/logo.webp',
+  '/favicon.png',
 ];
 
-// Install Event
+// Install Event - Cache nur statische Assets und Offline-Seite
 self.addEventListener('install', (event) => {
+  console.log('[SW] Installing...');
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('Cache opened');
-        return cache.addAll(urlsToCache);
+    Promise.all([
+      // Cache statische Assets
+      caches.open(CACHE_NAME).then((cache) => {
+        console.log('[SW] Caching static assets');
+        return cache.addAll(STATIC_ASSETS).catch((error) => {
+          console.log('[SW] Cache static assets error:', error);
+        });
+      }),
+      // Cache Offline-Seite separat
+      caches.open(OFFLINE_CACHE).then((cache) => {
+        console.log('[SW] Caching offline page');
+        return fetch('/offline').then((response) => {
+          return cache.put('/offline', response);
+        }).catch((error) => {
+          console.log('[SW] Cache offline page error:', error);
+        });
       })
-      .catch((error) => {
-        console.log('Cache addAll error:', error);
-      })
+    ])
   );
   self.skipWaiting();
 });
 
-// Fetch Event - Network First Strategy (nur für HTTP/HTTPS GET requests)
+// Fetch Event - Intelligentes Caching
 self.addEventListener('fetch', (event) => {
   // Nur GET-Requests cachen - POST, PUT, DELETE werden nicht gecached
   if (event.request.method !== 'GET') {
     return;
   }
 
-  // Nur HTTP/HTTPS Requests cachen
+  // Nur HTTP/HTTPS Requests
   if (!event.request.url.startsWith('http')) {
     return;
   }
 
-  // Ignoriere chrome-extension und andere Protokolle
   const url = new URL(event.request.url);
+  
+  // Ignoriere chrome-extension und andere Protokolle
   if (url.protocol !== 'http:' && url.protocol !== 'https:') {
     return;
   }
 
+  // ⚠️ KRITISCH: API-Calls NIEMALS cachen (immer frische Daten von Supabase!)
+  if (url.pathname.startsWith('/api/')) {
+    console.log('[SW] API call - Network only:', url.pathname);
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        // Bei Netzwerkfehler für API-Calls: Keine gecachte Response zurückgeben
+        return new Response(JSON.stringify({ error: 'Offline - keine Verbindung' }), {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: { 'Content-Type': 'application/json' }
+        });
+      })
+    );
+    return;
+  }
+
+  // Statische Assets: Cache-First
+  if (STATIC_ASSETS.includes(url.pathname) || url.pathname.match(/\.(png|jpg|jpeg|svg|webp|ico|css|js)$/)) {
+    event.respondWith(
+      caches.match(event.request).then((cached) => {
+        if (cached) {
+          return cached;
+        }
+        return fetch(event.request).then((response) => {
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        });
+      })
+    );
+    return;
+  }
+
+  // HTML-Seiten: Network-First, bei Offline → Offline-Seite
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Nur erfolgreiche GET-Responses cachen
-        if (!response || response.status !== 200 || response.type === 'error') {
-          return response;
-        }
-
-        // Clone the response
-        const responseToCache = response.clone();
-        
-        caches.open(CACHE_NAME)
-          .then((cache) => {
+        // Erfolgreiche Responses können gecacht werden (optional)
+        if (response && response.status === 200 && event.request.mode === 'navigate') {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
-          })
-          .catch((error) => {
-            console.log('Cache put error:', error);
           });
-        
+        }
         return response;
       })
       .catch(() => {
-        // Fallback zu Cache bei Netzwerkfehler
+        console.log('[SW] Network failed, checking cache...');
+        // Versuche gecachte Version zu laden
         return caches.match(event.request).then((cachedResponse) => {
           if (cachedResponse) {
+            console.log('[SW] Serving from cache');
             return cachedResponse;
           }
           
-          // Wenn keine Seite gecached ist und es eine Navigation ist, zeige Offline-Seite
+          // Wenn es eine Navigation ist und keine gecachte Version existiert → Offline-Seite
           if (event.request.mode === 'navigate') {
-            return caches.match('/offline');
+            console.log('[SW] Serving offline page');
+            return caches.match('/offline').then((offlinePage) => {
+              if (offlinePage) {
+                return offlinePage;
+              }
+              // Fallback: Inline Offline-Seite
+              return new Response(`
+                <!DOCTYPE html>
+                <html lang="de">
+                <head>
+                  <meta charset="UTF-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <title>Offline - HHRP</title>
+                  <style>
+                    body { margin: 0; padding: 0; background: #050505; color: white; font-family: system-ui; display: flex; align-items: center; justify-content: center; min-height: 100vh; text-align: center; }
+                    .container { max-width: 500px; padding: 2rem; }
+                    h1 { font-size: 2rem; margin-bottom: 1rem; }
+                    p { color: rgba(255,255,255,0.6); margin-bottom: 2rem; }
+                    button { background: #ef4444; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-size: 1rem; cursor: pointer; }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <h1>📵 Keine Verbindung</h1>
+                    <p>Du bist offline. Bitte überprüfe deine Internetverbindung.</p>
+                    <button onclick="location.reload()">Erneut versuchen</button>
+                  </div>
+                </body>
+                </html>
+              `, {
+                status: 200,
+                headers: { 'Content-Type': 'text/html' }
+              });
+            });
           }
           
-          return new Response('Offline - keine gecachte Version verfügbar', {
+          // Für andere Ressourcen
+          return new Response('Offline', {
             status: 503,
             statusText: 'Service Unavailable',
-            headers: new Headers({
-              'Content-Type': 'text/plain'
-            })
+            headers: { 'Content-Type': 'text/plain' }
           });
         });
       })
   );
 });
 
-// Activate Event
+// Activate Event - Alte Caches löschen
 self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('Deleting old cache:', cacheName);
+          // Lösche alle Caches außer den aktuellen
+          if (cacheName !== CACHE_NAME && cacheName !== OFFLINE_CACHE) {
+            console.log('[SW] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     })
   );
+  // Übernehme sofort die Kontrolle über alle Clients
   self.clients.claim();
+  console.log('[SW] Activated and ready!');
 });
 
+// Message Event - Ermöglicht manuelles Cache-Clearing vom Client
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            console.log('[SW] Clearing cache:', cacheName);
+            return caches.delete(cacheName);
+          })
+        );
+      })
+    );
+  }
+});
