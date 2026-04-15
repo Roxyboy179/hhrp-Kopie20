@@ -19,7 +19,7 @@ export function WartungsBanner() {
     fetchStatus();
     const interval = setInterval(fetchStatus, 60000); // Update every minute
     return () => clearInterval(interval);
-  }, [isAdminPage]);
+  }, [isAdminPage]); // Dependency array hinzugefügt
 
   useEffect(() => {
     if (!status?.geplante_wartung || !status?.wartung_start) return;
@@ -50,7 +50,7 @@ export function WartungsBanner() {
     updateCountdown();
     const interval = setInterval(updateCountdown, 30000); // Update every 30s
     return () => clearInterval(interval);
-  }, [status]);
+  }, [status]); // Dependency array
 
   const fetchStatus = async () => {
     try {

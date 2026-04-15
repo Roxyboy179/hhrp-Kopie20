@@ -23,8 +23,13 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
-// Fetch Event - Network First Strategy (nur für HTTP/HTTPS)
+// Fetch Event - Network First Strategy (nur für HTTP/HTTPS GET requests)
 self.addEventListener('fetch', (event) => {
+  // Nur GET-Requests cachen - POST, PUT, DELETE werden nicht gecached
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
   // Nur HTTP/HTTPS Requests cachen
   if (!event.request.url.startsWith('http')) {
     return;
@@ -39,7 +44,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Nur erfolgreiche Responses cachen
+        // Nur erfolgreiche GET-Responses cachen
         if (!response || response.status !== 200 || response.type === 'error') {
           return response;
         }
