@@ -21,6 +21,211 @@ function SkeletonCard({ className = "" }) {
   );
 }
 
+function IDCard({ character, avatarUrl, userId }) {
+  const [isFlipped, setIsFlipped] = useState(false);
+  
+  // Berechne Geburtsdatum aus Alter
+  const calculateBirthDate = (age) => {
+    if (!age) return 'N/A';
+    const currentYear = new Date().getFullYear();
+    const birthYear = currentYear - age;
+    return `${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}.${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}.${birthYear}`;
+  };
+
+  const birthDate = calculateBirthDate(character?.age);
+  const issueDate = new Date(2020, 3, 15); // Beispiel: 15.04.2020
+
+  return (
+    <div className="w-full perspective-1000">
+      <div 
+        className="relative w-full aspect-[1.586/1] cursor-pointer group"
+        onClick={() => setIsFlipped(!isFlipped)}
+      >
+        <div 
+          className={`relative w-full h-full transition-transform duration-700 transform-style-3d`}
+          style={{
+            transformStyle: 'preserve-3d',
+            transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+          }}
+        >
+          {/* VORDERSEITE */}
+          <div 
+            className="absolute inset-0 backface-hidden rounded-2xl bg-gradient-to-br from-gray-800 via-gray-900 to-black shadow-2xl overflow-hidden"
+            style={{ backfaceVisibility: 'hidden' }}
+          >
+            {/* Wasserzeichen */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
+              <span className="text-[160px] font-black tracking-wider rotate-[-20deg] select-none">
+                HHRP
+              </span>
+            </div>
+
+            {/* Decorative waves */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-gray-700/20 rounded-full translate-y-24 -translate-x-24"></div>
+
+            <div className="relative h-full p-5 sm:p-6 flex flex-col text-white">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest opacity-70 mb-0.5">Bundesrepublik Deutschland</p>
+                  <h2 className="text-base font-bold">PERSONALAUSWEIS</h2>
+                </div>
+                <img src="/icon-192.png" alt="HHRP" className="w-10 h-10 rounded-lg" />
+              </div>
+
+              {/* Content Grid */}
+              <div className="flex gap-3 flex-1">
+                {/* Photo */}
+                <div className="w-20 h-24 bg-gray-700 rounded overflow-hidden flex-shrink-0 border-2 border-gray-600">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Photo" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gray-600 flex items-center justify-center">
+                      <User className="w-10 h-10 text-gray-400" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 space-y-1.5 text-xs">
+                  <div>
+                    <p className="text-[9px] opacity-60 uppercase">Nachname</p>
+                    <p className="font-semibold text-sm">{character?.nachname || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[9px] opacity-60 uppercase">Vorname</p>
+                    <p className="font-semibold">{character?.vorname || 'N/A'}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <p className="text-[9px] opacity-60 uppercase">Geburtsdatum</p>
+                      <p className="font-semibold text-[11px]">{birthDate}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] opacity-60 uppercase">Geschlecht</p>
+                      <p className="font-semibold text-[11px]">{character?.geschlecht || 'N/A'}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[9px] opacity-60 uppercase">Wohnort</p>
+                    <p className="font-semibold text-[11px]">{character?.herkunft || 'Hamburg'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-between pt-2 border-t border-white/20">
+                <div className="text-[10px] opacity-70">
+                  <span className="font-semibold">Erstellt am:</span> {issueDate.toLocaleDateString('de-DE')}
+                </div>
+                <button 
+                  className="text-[9px] opacity-60 hover:opacity-100 flex items-center gap-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <IdCard className="w-3 h-3" />
+                  <span>Umdrehen</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* RÜCKSEITE */}
+          <div 
+            className="absolute inset-0 backface-hidden rounded-2xl bg-gradient-to-br from-gray-800 via-gray-900 to-black shadow-2xl overflow-hidden"
+            style={{ 
+              backfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)'
+            }}
+          >
+            {/* Wasserzeichen */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
+              <span className="text-[160px] font-black tracking-wider rotate-[20deg] select-none">
+                HHRP
+              </span>
+            </div>
+
+            {/* Decorative waves */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
+
+            <div className="relative h-full p-5 sm:p-6 flex flex-col justify-between text-white">
+              {/* Barcode Area */}
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[10px] opacity-60 uppercase mb-1.5">Ausweis-Nummer</p>
+                  <p className="text-lg font-mono font-bold tracking-wider">{userId?.slice(0, 12) || 'N/A'}</p>
+                </div>
+
+                {/* Barcode */}
+                <div className="bg-white/95 rounded-lg p-2">
+                  <div className="flex gap-[1px] h-14">
+                    {[...Array(30)].map((_, i) => (
+                      <div 
+                        key={i} 
+                        className="flex-1 bg-gray-800"
+                        style={{ opacity: Math.random() > 0.3 ? 1 : 0.3 }}
+                      ></div>
+                    ))}
+                  </div>
+                  <p className="text-center text-[8px] text-gray-800 font-mono mt-1">{userId?.slice(0, 16) || 'N/A'}</p>
+                </div>
+
+                <div>
+                  <p className="text-[9px] opacity-60 uppercase mb-1">Ausgestellt am</p>
+                  <p className="font-semibold text-sm">{issueDate.toLocaleDateString('de-DE')}</p>
+                </div>
+
+                <div>
+                  <p className="text-[9px] opacity-60 uppercase mb-1">Ausstellende Behörde</p>
+                  <p className="text-xs font-semibold">Hamburg Horizon RP</p>
+                  <p className="text-[10px] opacity-50">Bürgerbüro Hamburg</p>
+                </div>
+
+                <div className="pt-2 border-t border-white/20">
+                  <p className="text-xs text-green-400 font-semibold flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5" />
+                    Unbegrenzt gültig
+                  </p>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="pt-3 border-t border-white/20">
+                <div className="flex items-center justify-between text-[9px] opacity-60 mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <Building2 className="w-3 h-3" />
+                    <span className="font-medium">HHRP ID</span>
+                  </div>
+                  <button 
+                    className="hover:opacity-100 flex items-center gap-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <IdCard className="w-3 h-3" />
+                    <span>Umdrehen</span>
+                  </button>
+                </div>
+                <p className="text-[8px] opacity-40 leading-relaxed">
+                  Dieser Ausweis ist Eigentum von Hamburg Horizon RP. Bei Verlust oder Diebstahl unverzüglich melden.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Flip Indicator */}
+      <div className="text-center mt-3">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">
+          <IdCard className="w-3.5 h-3.5 text-white/60" />
+          <p className="text-xs text-white/60">
+            {isFlipped ? 'Rückseite' : 'Vorderseite'}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BankCard({ card, userName }) {
   const [isFlipped, setIsFlipped] = useState(false);
   
@@ -137,13 +342,10 @@ function BankCard({ card, userName }) {
                   <p className="text-[10px] opacity-60 uppercase tracking-wider">Card Holder</p>
                   <p className="text-sm font-medium uppercase tracking-wider">{userName}</p>
                 </div>
-                <button 
-                  className="opacity-60 hover:opacity-100 transition-opacity text-[10px] flex items-center gap-1.5"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <CreditCard className="w-3.5 h-3.5" />
-                  <span>Umdrehen</span>
-                </button>
+                <div className="text-right">
+                  <p className="text-[10px] opacity-60">Erstellt am</p>
+                  <p className="text-[10px] font-semibold">15.04.2020</p>
+                </div>
               </div>
             </div>
           </div>
@@ -401,7 +603,7 @@ export default function ProfilPage() {
 
   const tabs = [
     { id: 'overview', label: 'Übersicht', icon: LayoutDashboard },
-    { id: 'cards', label: 'Bankkarten', icon: IdCard },
+    { id: 'cards', label: 'Meine Dokumente', icon: IdCard },
     { id: 'applications', label: 'Bewerbungen', icon: ClipboardList }
   ];
 
@@ -709,27 +911,45 @@ export default function ProfilPage() {
               <>
                 <div className="flex items-center gap-3 mb-4">
                   <CreditCard className="w-6 h-6 text-white/60" />
-                  <h2 className="text-xl font-bold text-white">Meine Bankkarten</h2>
-                  <span className="px-2 py-1 rounded-full bg-white/10 text-white/50 text-xs">
-                    {cards.length}
-                  </span>
+                  <h2 className="text-xl font-bold text-white">Meine Dokumente</h2>
                 </div>
 
-                {/* Karten Grid - Zentriert */}
-                <div className="max-w-2xl mx-auto">
-                  {cards.map((card, i) => (
-                    <BankCard 
-                      key={i} 
-                      card={card} 
-                      userName={character?.name || user.username}
-                    />
-                  ))}
+                {/* Grid: Bankkarte links, Personalausweis rechts */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Bankkarte */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-white/70 mb-3 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4" />
+                      Bankkarte
+                    </h3>
+                    <div className="max-w-md">
+                      <BankCard 
+                        card={cards[0]} 
+                        userName={character?.name || user.username}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Personalausweis */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-white/70 mb-3 flex items-center gap-2">
+                      <IdCard className="w-4 h-4" />
+                      Personalausweis
+                    </h3>
+                    <div className="max-w-md">
+                      <IDCard 
+                        character={character}
+                        avatarUrl={avatarUrl}
+                        userId={user.id}
+                      />
+                    </div>
+                  </div>
                 </div>
               </>
             ) : (
               <div className="glass rounded-2xl p-12 text-center border border-white/[0.08]">
                 <CreditCard className="w-16 h-16 mx-auto mb-4 text-white/20" />
-                <h3 className="text-xl font-bold text-white mb-2">Keine Bankkarten</h3>
+                <h3 className="text-xl font-bold text-white mb-2">Keine Dokumente</h3>
                 <p className="text-white/40 max-w-md mx-auto">
                   Du hast noch keine Bankkarten. Erstelle eine im Discord Bot!
                 </p>
