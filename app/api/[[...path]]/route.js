@@ -1752,6 +1752,88 @@ export async function POST(request) {
     }
   }
 
+  // === System Status ===
+  if (p === 'admin/system-status') {
+    try {
+      const admin = await verifyAdminToken(request);
+      if (!admin) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      // Get or create system_status table entry
+      const { data, error } = await supabaseAdmin
+        .from('system_status')
+        .select('*')
+        .single();
+
+      if (error && error.code === 'PGRST116') {
+        // No entry exists, create default
+        const { data: newData, error: createError } = await supabaseAdmin
+          .from('system_status')
+          .insert({
+            wartungsmodus: false,
+            geplante_wartung: false,
+            wartung_start: null,
+            wartung_ende: null,
+            wartung_nachricht: 'Wir führen gerade Wartungsarbeiten durch.',
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Create system_status error:', createError);
+          return NextResponse.json({ 
+            status: {
+              wartungsmodus: false,
+              geplante_wartung: false,
+              wartung_start: '',
+              wartung_ende: '',
+              wartung_nachricht: 'Wir führen gerade Wartungsarbeiten durch.',
+            }
+          });
+        }
+
+        return NextResponse.json({ status: newData });
+      }
+
+      if (error) {
+        console.error('Get system_status error:', error);
+        return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
+      }
+
+      return NextResponse.json({ status: data || {
+        wartungsmodus: false,
+        geplante_wartung: false,
+        wartung_start: '',
+        wartung_ende: '',
+        wartung_nachricht: 'Wir führen gerade Wartungsarbeiten durch.',
+      }});
+    } catch (error) {
+      console.error('System status error:', error);
+      return NextResponse.json({ error: 'Fehler' }, { status: 500 });
+    }
+  }
+
+  // === Public System Status (for banner) ===
+  if (p === 'system-status/public') {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('system_status')
+        .select('geplante_wartung, wartung_start, wartung_ende, wartung_nachricht')
+        .single();
+
+      if (error) {
+        return NextResponse.json({ 
+          geplante_wartung: false 
+        });
+      }
+
+      return NextResponse.json(data || { geplante_wartung: false });
+    } catch (error) {
+      return NextResponse.json({ geplante_wartung: false });
+    }
+  }
+
   switch (p) {
     case 'auth/logout': return handleLogout(request);
     case 'bewerbungen': return handleCreateBewerbung(request);
@@ -1761,13 +1843,81 @@ export async function POST(request) {
     case 'admin/accounts': return handleAdminCreateAccount(request);
     case 'admin/check-role': return handleCheckDiscordRole(request);
     case 'admin/settings': return handleAdminUpdateSettings(request);
+    case 'admin/system-status': return handleUpdateSystemStatus(request); // Same as PUT
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+}
+
+// Handler for updating system status (used by both POST and PUT)
+async function handleUpdateSystemStatus(request) {
+  try {
+    const admin = await verifyAdminToken(request);
+    // Nur Projektinhaber (Level 4) dürfen System-Status ändern
+    if (!admin || admin.roleLevel < 4) {
+      return NextResponse.json({ error: 'Unauthorized - Nur Projektinhaber' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    
+    // Update or insert system_status
+    const { data: existing } = await supabaseAdmin
+      .from('system_status')
+      .select('id')
+      .single();
+
+    let result;
+    if (existing) {
+      result = await supabaseAdmin
+        .from('system_status')
+        .update({
+          wartungsmodus: body.wartungsmodus || false,
+          geplante_wartung: body.geplante_wartung || false,
+          wartung_start: body.wartung_start || null,
+          wartung_ende: body.wartung_ende || null,
+          wartung_nachricht: body.wartung_nachricht || '',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id);
+    } else {
+      result = await supabaseAdmin
+        .from('system_status')
+        .insert({
+          wartungsmodus: body.wartungsmodus || false,
+          geplante_wartung: body.geplante_wartung || false,
+          wartung_start: body.wartung_start || null,
+          wartung_ende: body.wartung_ende || null,
+          wartung_nachricht: body.wartung_nachricht || '',
+        });
+    }
+
+    if (result.error) {
+      console.error('Update system_status error:', result.error);
+      return NextResponse.json({ error: 'Fehler beim Speichern' }, { status: 500 });
+    }
+
+    // Log activity
+    await logActivity({
+      adminId: admin.id,
+      action: 'update_system_status',
+      details: `Wartungsmodus: ${body.wartungsmodus ? 'AN' : 'AUS'}, Geplante Wartung: ${body.geplante_wartung ? 'AN' : 'AUS'}`,
+      ipAddress: getIpAddress(request),
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('System status update error:', error);
+    return NextResponse.json({ error: 'Fehler' }, { status: 500 });
   }
 }
 
 export async function PUT(request) {
   const url = new URL(request.url);
   const p = url.pathname.replace('/api/', '');
+
+  // === Update System Status ===
+  if (p === 'admin/system-status') {
+    return handleUpdateSystemStatus(request);
+  }
 
   switch (p) {
     case 'settings/username': return handleUpdateUsername(request);
@@ -1801,3 +1951,4 @@ export async function DELETE(request) {
 
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
+

@@ -10,6 +10,7 @@ import { SplashScreen } from '@/components/shared/SplashScreen';
 import { InstallPrompt } from '@/components/shared/InstallPrompt';
 import { InstallButton } from '@/components/shared/InstallButton';
 import { CookieBanner } from '@/components/shared/CookieBanner';
+import { WartungsBanner } from '@/components/shared/WartungsBanner';
 import { Toaster } from 'sonner';
 import Link from 'next/link';
 
@@ -36,6 +37,7 @@ export default function RootClientLayout({ children }) {
       <ThemeProvider>
         {!splashDone && <SplashScreen onComplete={handleSplashComplete} />}
         <div style={{ opacity: splashDone ? 1 : 0, transition: 'opacity 0.5s ease' }}>
+          <WartungsBanner />
           <LayoutContent>{children}</LayoutContent>
           <CookieBanner />
           <InstallPrompt />

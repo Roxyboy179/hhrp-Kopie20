@@ -34,6 +34,7 @@ function AdminLayoutInner({ children }) {
     { href: '/admin/bewerbung-verwaltung', label: 'Bewerbungs-Verwaltung', icon: <Sliders className="w-5 h-5" />, show: canManageBewerbungen },
     { href: '/admin/logs', label: 'Aktivitäts-Logs', icon: <Clock className="w-5 h-5" />, show: true },
     { href: '/admin/accounts', label: 'Accounts', icon: <UserPlus className="w-5 h-5" />, show: canSeeAccounts },
+    { href: '/admin/system-status', label: 'System-Status', icon: <Shield className="w-5 h-5" />, show: admin?.roleLevel >= 4 },
     { href: '/admin/einstellungen', label: 'Einstellungen', icon: <Settings className="w-5 h-5" />, show: true },
   ];
 
