@@ -57,7 +57,6 @@ export default function RootClientLayout({ children }) {
       <ThemeProvider>
         {!splashDone && <SplashScreen onComplete={handleSplashComplete} />}
         <div style={{ opacity: splashDone ? 1 : 0, transition: 'opacity 0.5s ease' }}>
-          <WartungsBanner />
           <LayoutContent>{children}</LayoutContent>
           <CookieBanner />
           <InstallPrompt />
