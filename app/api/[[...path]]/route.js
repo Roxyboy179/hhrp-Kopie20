@@ -1833,6 +1833,11 @@ export async function GET(request) {
   if (p === 'bot/status') {
     return handleBotStatus(request);
   }
+  
+  // === Check Daily Bonus ===
+  if (p === 'check-daily') {
+    return handleCheckDaily(request);
+  }
 
   // === Meine Bewerbungen ===
   if (p === 'bewerbungen/me') {
