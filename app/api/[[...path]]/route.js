@@ -2162,6 +2162,16 @@ async function handleDailyBonus(request) {
       return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
     }
 
+    // Parse request body to check if PWA
+    let isPWA = false;
+    try {
+      const body = await request.json();
+      isPWA = body.isPWA || false;
+    } catch (e) {
+      // No body or invalid JSON, assume not PWA
+      isPWA = false;
+    }
+
     // Prüfe ob User heute bereits Daily Bonus geholt hat
     const today = new Date().toISOString().split('T')[0];
     
@@ -2179,8 +2189,8 @@ async function handleDailyBonus(request) {
       }, { status: 400 });
     }
 
-    // Daily Bonus Amount
-    const dailyAmount = 5000;
+    // Daily Bonus Amount: PWA = €20.000, Browser = €5.000
+    const dailyAmount = isPWA ? 20000 : 5000;
 
     // Erstelle neuen Daily Bonus Reward
     const { data: reward, error: insertError } = await supabaseAdmin
@@ -2191,7 +2201,7 @@ async function handleDailyBonus(request) {
         amount: dailyAmount,
         claimed: true, // Sofort als claimed markieren
         processed: false,
-        description: 'Täglicher Bonus'
+        description: isPWA ? 'Täglicher Bonus (PWA 4x)' : 'Täglicher Bonus'
       })
       .select()
       .single();

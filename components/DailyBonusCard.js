@@ -20,12 +20,14 @@ export default function DailyBonusCard({ userId, onSuccess }) {
   const [claimed, setClaimed] = useState(false);
   const [canClaim, setCanClaim] = useState(true);
   const [error, setError] = useState(null);
-  const [amount, setAmount] = useState(20000);
-  const [showCard, setShowCard] = useState(false);
+  const [isPWAUser, setIsPWAUser] = useState(false);
+  const [amount, setAmount] = useState(5000);
 
   useEffect(() => {
-    // Nur in PWA anzeigen
-    setShowCard(isPWA());
+    // Prüfe ob PWA und setze Betrag entsprechend
+    const pwaStatus = isPWA();
+    setIsPWAUser(pwaStatus);
+    setAmount(pwaStatus ? 20000 : 5000);
   }, []);
 
   const handleClaim = async () => {
@@ -36,12 +38,13 @@ export default function DailyBonusCard({ userId, onSuccess }) {
       const response = await fetch('/api/daily-bonus', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPWA: isPWAUser })
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setAmount(data.amount || 20000);
+        setAmount(data.amount || (isPWAUser ? 20000 : 5000));
         setClaimed(true);
         setCanClaim(false);
         
@@ -60,11 +63,6 @@ export default function DailyBonusCard({ userId, onSuccess }) {
       setClaiming(false);
     }
   };
-
-  // Nicht anzeigen wenn nicht in PWA
-  if (!showCard) {
-    return null;
-  }
 
   // Don't show if already claimed
   if (!canClaim && !claimed) {
@@ -150,12 +148,14 @@ export default function DailyBonusCard({ userId, onSuccess }) {
         </div>
       )}
 
-      {/* PWA Badge */}
-      <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
-        <div className="px-2 py-0.5 sm:px-2.5 sm:py-1 bg-green-500/20 border border-green-500/30 rounded-full">
-          <p className="text-[10px] sm:text-xs font-semibold text-green-400">PWA</p>
+      {/* PWA Badge - Nur für PWA Nutzer */}
+      {isPWAUser && (
+        <div className="absolute top-2 right-2 sm:top-3 sm:right-3">
+          <div className="px-2 py-0.5 sm:px-2.5 sm:py-1 bg-gradient-to-r from-green-500/30 to-emerald-500/30 border border-green-400/40 rounded-full shadow-lg">
+            <p className="text-[10px] sm:text-xs font-bold text-green-300">PWA 4x</p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
