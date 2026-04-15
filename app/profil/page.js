@@ -1722,36 +1722,38 @@ export default function ProfilPage() {
                       {userData.invoices
                         .slice((invoicesPage - 1) * itemsPerPage, invoicesPage * itemsPerPage)
                         .map((invoice, index) => {
-                      const isNew = invoice.created_at && 
-                        (new Date() - new Date(invoice.created_at)) < 24 * 60 * 60 * 1000;
-                      const isPaid = invoice.status === 'paid' || invoice.status === 'bezahlt';
-                      const isPending = invoice.status === 'pending' || invoice.status === 'offen';
-                      
-                      return (
-                        <div 
-                          key={index}
-                          className={`p-4 sm:p-5 rounded-xl border transition-all ${
-                            isNew 
-                              ? 'bg-blue-500/10 border-blue-500/30 animate-pulse-slow' 
-                              : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.05]'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3 sm:gap-4">
-                            {/* Icon */}
-                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                              isPaid 
-                                ? 'bg-green-500/20' 
-                                : isPending 
-                                ? 'bg-yellow-500/20' 
-                                : 'bg-red-500/20'
-                            }`}>
-                              {isPaid ? (
-                                <Check className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
-                              ) : isPending ? (
-                                <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" />
-                              ) : (
-                                <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" />
-                              )}
+                          const isNew = invoice.createdAt && 
+                            (new Date() - new Date(invoice.createdAt)) < 24 * 60 * 60 * 1000;
+                          const isPaid = invoice.paidAt || invoice.status === 'paid';
+                          const isCancelled = invoice.status === 'cancelled';
+                          const isPending = invoice.status === 'pending' || invoice.status === 'offen';
+                          
+                          return (
+                            <div 
+                              key={index}
+                              className={`p-4 sm:p-5 rounded-xl border transition-all ${
+                                isNew 
+                                  ? 'bg-blue-500/10 border-blue-500/30 animate-pulse-slow' 
+                                  : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.05]'
+                              }`}
+                            >
+                              <div className="flex items-start gap-3 sm:gap-4">
+                                {/* Icon */}
+                                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                                  isCancelled
+                                    ? 'bg-gray-500/20'
+                                    : isPaid 
+                                    ? 'bg-green-500/20' 
+                                    : 'bg-yellow-500/20'
+                                }`}>
+                                  {isCancelled ? (
+                                    <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400" />
+                                  ) : isPaid ? (
+                                    <Check className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
+                                  ) : (
+                                    <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" />
+                                  )}
+                                </div>
                             </div>
 
                             {/* Content */}
@@ -1760,7 +1762,7 @@ export default function ProfilPage() {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap mb-2">
                                     <span className="text-sm sm:text-base font-bold text-white">
-                                      Rechnung #{invoice.invoice_number || invoice.number || index + 1}
+                                      {invoice.bürgerName || 'Rechnung'}
                                     </span>
                                     {isNew && (
                                       <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-[10px] font-bold animate-bounce">
@@ -1768,78 +1770,83 @@ export default function ProfilPage() {
                                       </span>
                                     )}
                                     <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
-                                      isPaid 
+                                      isCancelled
+                                        ? 'bg-gray-500/20 text-gray-400'
+                                        : isPaid 
                                         ? 'bg-green-500/20 text-green-400'
-                                        : isPending 
-                                        ? 'bg-yellow-500/20 text-yellow-400'
-                                        : 'bg-red-500/20 text-red-400'
+                                        : 'bg-yellow-500/20 text-yellow-400'
                                     }`}>
-                                      {isPaid ? 'Bezahlt' : isPending ? 'Offen' : invoice.status}
+                                      {isCancelled ? 'Storniert' : isPaid ? 'Bezahlt' : 'Offen'}
                                     </span>
-                                    {invoice.category && (
-                                      <span className="px-2 py-1 rounded-lg bg-white/10 text-white/60 text-[10px] font-medium">
-                                        {invoice.category}
-                                      </span>
-                                    )}
                                   </div>
                                   
-                                  <p className="text-sm sm:text-base text-white font-semibold mb-2 break-words">
-                                    {invoice.description || invoice.reason || 'Keine Beschreibung'}
-                                  </p>
+                                  {/* Strafen Liste */}
+                                  {invoice.strafen && invoice.strafen.length > 0 && (
+                                    <div className="mb-3 space-y-1">
+                                      {invoice.strafen.map((strafe, idx) => (
+                                        <div key={idx} className="flex items-center justify-between bg-white/[0.03] px-3 py-2 rounded-lg">
+                                          <span className="text-xs sm:text-sm text-white/90">{strafe.name}</span>
+                                          <span className="text-xs sm:text-sm text-white font-medium">{strafe.price?.toLocaleString?.()}€</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
                                   
-                                  {(invoice.id || invoice.invoiceId) && (
-                                    <p className="text-xs text-white/40 mb-2">
-                                      ID: {invoice.id || invoice.invoiceId}
+                                  {invoice.versicherungsTyp && (
+                                    <p className="text-xs text-white/50 mb-2 flex items-center gap-1">
+                                      <ShieldCheck className="w-3 h-3" />
+                                      {invoice.versicherungsTyp}
                                     </p>
                                   )}
                                   
-                                  {invoice.notes && (
-                                    <p className="text-xs text-white/50 mb-2 italic">
-                                      Notiz: {invoice.notes}
+                                  {invoice.paidBySchutzbrief && (
+                                    <p className="text-xs text-blue-400 mb-2 flex items-center gap-1">
+                                      <CheckCircle className="w-3 h-3" />
+                                      Bezahlt durch Schutzbrief
                                     </p>
                                   )}
                                 </div>
+                                
                                 <div className="text-right">
                                   <p className="text-lg sm:text-xl font-bold text-white mb-1">
-                                    {invoice.amount?.toLocaleString?.() || invoice.amount}€
+                                    {invoice.totalAmount?.toLocaleString?.()}€
                                   </p>
-                                  {invoice.dueDate && (
-                                    <p className="text-xs text-white/40">
-                                      Fällig: {new Date(invoice.dueDate).toLocaleDateString('de-DE')}
+                                  {invoice.refunded && invoice.refundAmount > 0 && (
+                                    <p className="text-xs text-green-400">
+                                      +{invoice.refundAmount?.toLocaleString?.()}€ erstattet
                                     </p>
                                   )}
                                 </div>
                               </div>
                               
                               <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-white/50">
-                                {invoice.recipient && (
+                                {invoice.beamterTag && (
                                   <div className="flex items-center gap-1">
-                                    <User className="w-3 h-3" />
-                                    <span>An: {invoice.recipient}</span>
+                                    <Shield className="w-3 h-3" />
+                                    <span>Beamter: {invoice.beamterTag}</span>
                                   </div>
                                 )}
-                                {invoice.issuer && (
-                                  <div className="flex items-center gap-1">
-                                    <Building2 className="w-3 h-3" />
-                                    <span>Von: {invoice.issuer}</span>
-                                  </div>
-                                )}
-                                {invoice.date && (
+                                {invoice.createdAt && (
                                   <div className="flex items-center gap-1">
                                     <Calendar className="w-3 h-3" />
-                                    <span>Erstellt: {new Date(invoice.date).toLocaleDateString('de-DE', {
+                                    <span>{new Date(invoice.createdAt).toLocaleDateString('de-DE', {
                                       day: '2-digit',
                                       month: '2-digit',
                                       year: 'numeric'
                                     })}</span>
                                   </div>
                                 )}
+                                {invoice.paidAt && (
+                                  <div className="flex items-center gap-1">
+                                    <Check className="w-3 h-3" />
+                                    <span>Bezahlt: {new Date(invoice.paidAt).toLocaleDateString('de-DE')}</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
                   </div>
                   
                   <Pagination 
@@ -1892,8 +1899,8 @@ export default function ProfilPage() {
                         {userData.personalakte
                           .slice((personalaktePage - 1) * itemsPerPage, personalaktePage * itemsPerPage)
                           .map((record, index) => {
-                        const isNew = record.created_at && 
-                          (new Date() - new Date(record.created_at)) < 24 * 60 * 60 * 1000;
+                        const isNew = (record.createdAt || record.date) && 
+                          (new Date() - new Date(record.createdAt || record.date)) < 24 * 60 * 60 * 1000;
                         
                         const typeConfig = {
                           warning: { 
