@@ -11,11 +11,12 @@ export function InstallButton() {
   const [showButton, setShowButton] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const pathname = usePathname();
-
-  // Nicht auf Admin-Seiten anzeigen - sehr strikte Prüfung
-  if (pathname?.includes('/admin')) return null;
+  const isAdminPage = pathname?.includes('/admin');
 
   useEffect(() => {
+    // Don't run on admin pages
+    if (isAdminPage) return;
+
     // Check if already installed
     if (window.matchMedia('(display-mode: standalone)').matches || 
         window.navigator.standalone === true) {
@@ -40,7 +41,7 @@ export function InstallButton() {
       clearTimeout(timer);
       window.removeEventListener('beforeinstallprompt', handler);
     };
-  }, []);
+  }, [isAdminPage]);
 
   const handleInstall = async () => {
     if (deferredPrompt) {
@@ -58,11 +59,10 @@ export function InstallButton() {
     }
   };
 
-  // Don't show if installed
-  if (isInstalled) return null;
-  
-  // Show button after delay or when prompt is available
-  if (!showButton) return null;
+  // Don't render if on admin page, installed, or not ready
+  if (isAdminPage || isInstalled || !showButton) {
+    return null;
+  }
 
   return (
     <>

@@ -10,11 +10,12 @@ export function InstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const pathname = usePathname();
-
-  // Nicht auf Admin-Seiten anzeigen - sehr strikte Prüfung
-  if (pathname?.includes('/admin')) return null;
+  const isAdminPage = pathname?.includes('/admin');
 
   useEffect(() => {
+    // Don't run on admin pages
+    if (isAdminPage) return;
+
     // Check if already dismissed
     const dismissed = localStorage.getItem('hhrp-install-dismissed');
     if (dismissed) return;
@@ -48,7 +49,7 @@ export function InstallPrompt() {
       clearTimeout(fallbackTimer);
       window.removeEventListener('beforeinstallprompt', handler);
     };
-  }, [deferredPrompt]);
+  }, [deferredPrompt, isAdminPage]);
 
   const handleInstall = async () => {
     if (deferredPrompt) {
@@ -71,7 +72,10 @@ export function InstallPrompt() {
     localStorage.setItem('hhrp-install-dismissed', 'true');
   };
 
-  if (!showPrompt) return null;
+  // Don't render if on admin page or not showing
+  if (isAdminPage || !showPrompt) {
+    return null;
+  }
 
   return (
     <>
