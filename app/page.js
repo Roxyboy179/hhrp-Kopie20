@@ -7,7 +7,7 @@ import { GlassCard } from '@/components/shared/GlassCard';
 import { Button } from '@/components/ui/button';
 import { 
   FileText, Users, CheckCircle2, Clock, ArrowRight, 
-  Zap, Target, Loader2, ChevronDown, Sparkles
+  Zap, Target, Loader2, ChevronDown, Sparkles, UserCircle
 } from 'lucide-react';
 
 function AnimatedCounter({ value, suffix = '' }) {
@@ -103,6 +103,19 @@ export default function HomePage() {
                 >
                   <FileText className="w-6 h-6 mr-3" />
                   Jetzt bewerben
+                </Button>
+                <Button 
+                  size="lg"
+                  variant="outline"
+                  onClick={() => router.push('/profil')}
+                  className="rounded-2xl h-16 px-12 text-lg transition-all glass"
+                  style={{ 
+                    borderColor: 'rgba(var(--theme-accent-rgb), 0.15)',
+                    color: 'rgba(var(--theme-accent-rgb), 0.6)'
+                  }}
+                >
+                  <UserCircle className="w-6 h-6 mr-3" />
+                  Zu Meinem Profil
                 </Button>
                 <Button 
                   size="lg"
