@@ -738,6 +738,17 @@ export default function ProfilPage() {
     { id: 'applications', label: 'Bewerbungen', icon: ClipboardList }
   ];
 
+  // Wenn Bot offline ist, zeige NUR die Error-Karte (nichts anderes)
+  if (!botStatus.isOnline && !botStatus.checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-8">
+        <div className="max-w-3xl w-full">
+          <BotStatusCard status={botStatus} onRetry={loadData} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen px-4 py-8 pt-24">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -849,7 +860,7 @@ export default function ProfilPage() {
         {activeTab === 'overview' && (
           <>
             {/* Bot Status Check - zeige Loading/Error wenn Bot offline */}
-            {(botStatus.checking || !botStatus.isOnline) ? (
+            {botStatus.checking ? (
               <BotStatusCard status={botStatus} onRetry={loadData} />
             ) : (
               <>
@@ -1086,8 +1097,8 @@ export default function ProfilPage() {
         {/* Bankkarten Tab */}
         {activeTab === 'cards' && (
           <>
-            {/* Bot Status Check - zeige Loading/Error wenn Bot offline */}
-            {(botStatus.checking || !botStatus.isOnline) ? (
+            {/* Bot Status Check - zeige Loading wenn Bot am prüfen ist */}
+            {botStatus.checking ? (
               <BotStatusCard status={botStatus} onRetry={loadData} />
             ) : (
               <div className="space-y-6">
