@@ -5,6 +5,7 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { useRouter } from 'next/navigation';
 import DailyBonusCard from '@/components/DailyBonusCard';
 import AnimatedValue from '@/components/AnimatedValue';
+import Pagination from '@/components/Pagination';
 import { 
   Wallet, CreditCard, Trophy, Gift, User, Award, Clock, TrendingUp, 
   Check, Loader2, FileText, Calendar, Mail, ExternalLink, LayoutDashboard, IdCard, ClipboardList,
@@ -974,6 +975,10 @@ export default function ProfilPage() {
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [transactionsPage, setTransactionsPage] = useState(1);
+  const [invoicesPage, setInvoicesPage] = useState(1);
+  const [personalaktePage, setPersonalaktePage] = useState(1);
+  const itemsPerPage = 20;
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [botStatus, setBotStatus] = useState({ isOnline: true, checking: true, error: null });
 
@@ -1591,87 +1596,98 @@ export default function ProfilPage() {
                 </div>
 
                 {userData?.transactions && userData.transactions.length > 0 ? (
-                  <div className="space-y-3">
-                    {userData.transactions.slice(0, 20).map((transaction, index) => {
-                      const isNew = transaction.created_at && 
-                        (new Date() - new Date(transaction.created_at)) < 24 * 60 * 60 * 1000;
-                      const isIncome = transaction.type === 'income' || transaction.amount > 0;
-                      
-                      return (
-                        <div 
-                          key={index}
-                          className={`p-4 sm:p-5 rounded-xl border transition-all ${
-                            isNew 
-                              ? 'bg-blue-500/10 border-blue-500/30 animate-pulse-slow' 
-                              : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.05]'
-                          }`}
-                        >
-                          <div className="flex items-start gap-3 sm:gap-4">
-                            {/* Icon */}
-                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                              isIncome 
-                                ? 'bg-green-500/20' 
-                                : 'bg-red-500/20'
-                            }`}>
-                              {isIncome ? (
-                                <ArrowDownRight className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
-                              ) : (
-                                <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" />
-                              )}
-                            </div>
+                  <>
+                    <div className="space-y-3">
+                      {userData.transactions
+                        .slice((transactionsPage - 1) * itemsPerPage, transactionsPage * itemsPerPage)
+                        .map((transaction, index) => {
+                          const isNew = transaction.created_at && 
+                            (new Date() - new Date(transaction.created_at)) < 24 * 60 * 60 * 1000;
+                          const isIncome = transaction.type === 'income' || transaction.amount > 0;
+                          
+                          return (
+                            <div 
+                              key={index}
+                              className={`p-4 sm:p-5 rounded-xl border transition-all ${
+                                isNew 
+                                  ? 'bg-blue-500/10 border-blue-500/30 animate-pulse-slow' 
+                                  : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.05]'
+                              }`}
+                            >
+                              <div className="flex items-start gap-3 sm:gap-4">
+                                {/* Icon */}
+                                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                                  isIncome 
+                                    ? 'bg-green-500/20' 
+                                    : 'bg-red-500/20'
+                                }`}>
+                                  {isIncome ? (
+                                    <ArrowDownRight className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
+                                  ) : (
+                                    <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" />
+                                  )}
+                                </div>
 
-                            {/* Content */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between gap-2 mb-2">
+                                {/* Content */}
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                    <span className={`text-lg sm:text-xl font-bold ${
-                                      isIncome ? 'text-green-400' : 'text-red-400'
-                                    }`}>
-                                      {transaction.amount > 0 ? '+' : ''}{transaction.amount?.toLocaleString?.() || transaction.amount}€
-                                    </span>
-                                    {isNew && (
-                                      <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-[10px] font-bold animate-bounce">
-                                        NEU
-                                      </span>
+                                  <div className="flex items-start justify-between gap-2 mb-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                        <span className={`text-lg sm:text-xl font-bold ${
+                                          isIncome ? 'text-green-400' : 'text-red-400'
+                                        }`}>
+                                          {transaction.amount > 0 ? '+' : ''}{transaction.amount?.toLocaleString?.() || transaction.amount}€
+                                        </span>
+                                        {isNew && (
+                                          <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-[10px] font-bold animate-bounce">
+                                            NEU
+                                          </span>
+                                        )}
+                                      </div>
+                                      <p className="text-sm sm:text-base text-white font-medium mb-1 break-words">
+                                        {transaction.description || transaction.reason || 'Keine Beschreibung'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-white/50">
+                                    {transaction.from && (
+                                      <div className="flex items-center gap-1">
+                                        <User className="w-3 h-3" />
+                                        <span>{transaction.from}</span>
+                                      </div>
+                                    )}
+                                    {transaction.to && (
+                                      <div className="flex items-center gap-1">
+                                        <ArrowUpRight className="w-3 h-3" />
+                                        <span>{transaction.to}</span>
+                                      </div>
+                                    )}
+                                    {transaction.date && (
+                                      <div className="flex items-center gap-1">
+                                        <Clock className="w-3 h-3" />
+                                        <span>{new Date(transaction.date).toLocaleDateString('de-DE', {
+                                          day: '2-digit',
+                                          month: '2-digit',
+                                          year: 'numeric'
+                                        })}</span>
+                                      </div>
                                     )}
                                   </div>
-                                  <p className="text-sm sm:text-base text-white font-medium mb-1 break-words">
-                                    {transaction.description || transaction.reason || 'Keine Beschreibung'}
-                                  </p>
                                 </div>
                               </div>
-                              
-                              <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-white/50">
-                                {transaction.from && (
-                                  <div className="flex items-center gap-1">
-                                    <User className="w-3 h-3" />
-                                    <span>{transaction.from}</span>
-                                  </div>
-                                )}
-                                {transaction.to && (
-                                  <div className="flex items-center gap-1">
-                                    <ArrowUpRight className="w-3 h-3" />
-                                    <span>{transaction.to}</span>
-                                  </div>
-                                )}
-                                {transaction.date && (
-                                  <div className="flex items-center gap-1">
-                                    <Clock className="w-3 h-3" />
-                                    <span>{new Date(transaction.date).toLocaleDateString('de-DE', {
-                                      day: '2-digit',
-                                      month: '2-digit',
-                                      year: 'numeric'
-                                    })}</span>
-                                  </div>
-                                )}
-                              </div>
                             </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                          );
+                        })}
+                    </div>
+                    
+                    <Pagination 
+                      currentPage={transactionsPage}
+                      totalItems={userData.transactions.length}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={setTransactionsPage}
+                    />
+                  </>
                 ) : (
                   <div className="text-center py-8 sm:py-12">
                     <TrendingUp className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-white/20" />
@@ -1706,8 +1722,11 @@ export default function ProfilPage() {
                 </div>
 
                 {userData?.invoices && userData.invoices.length > 0 ? (
-                  <div className="space-y-3">
-                    {userData.invoices.slice(0, 20).map((invoice, index) => {
+                  <>
+                    <div className="space-y-3">
+                      {userData.invoices
+                        .slice((invoicesPage - 1) * itemsPerPage, invoicesPage * itemsPerPage)
+                        .map((invoice, index) => {
                       const isNew = invoice.created_at && 
                         (new Date() - new Date(invoice.created_at)) < 24 * 60 * 60 * 1000;
                       const isPaid = invoice.status === 'paid' || invoice.status === 'bezahlt';
@@ -1798,6 +1817,14 @@ export default function ProfilPage() {
                       );
                     })}
                   </div>
+                  
+                  <Pagination 
+                    currentPage={invoicesPage}
+                    totalItems={userData.invoices.length}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setInvoicesPage}
+                  />
+                </>
                 ) : (
                   <div className="text-center py-8 sm:py-12">
                     <FileText className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-white/20" />
@@ -1832,12 +1859,15 @@ export default function ProfilPage() {
                 </div>
 
                 {userData?.personalakte && userData.personalakte.length > 0 ? (
-                  <div className="relative">
-                    {/* Timeline Line */}
-                    <div className="absolute left-5 sm:left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-white/20 via-white/10 to-transparent"></div>
-                    
-                    <div className="space-y-4 sm:space-y-6">
-                      {userData.personalakte.slice(0, 20).map((record, index) => {
+                  <>
+                    <div className="relative">
+                      {/* Timeline Line */}
+                      <div className="absolute left-5 sm:left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-white/20 via-white/10 to-transparent"></div>
+                      
+                      <div className="space-y-4 sm:space-y-6">
+                        {userData.personalakte
+                          .slice((personalaktePage - 1) * itemsPerPage, personalaktePage * itemsPerPage)
+                          .map((record, index) => {
                         const isNew = record.created_at && 
                           (new Date() - new Date(record.created_at)) < 24 * 60 * 60 * 1000;
                         
@@ -1981,7 +2011,15 @@ export default function ProfilPage() {
                         );
                       })}
                     </div>
+                    
+                    <Pagination 
+                      currentPage={personalaktePage}
+                      totalItems={userData.personalakte.length}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={setPersonalaktePage}
+                    />
                   </div>
+                </>
                 ) : (
                   <div className="text-center py-8 sm:py-12">
                     <Award className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-white/20" />
