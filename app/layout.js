@@ -2,7 +2,7 @@ import './globals.css';
 import RootClientLayout from './RootClientLayout';
 
 export const metadata = {
-  title: 'HHRP - Bewerbungsportal',
+  title: 'HHRP',
   description: 'Offizielles Bewerbungsportal von Hamburg Horizon RP. Bewirb dich jetzt für unser Team! Wir suchen motivierte Mitglieder für Team-Positionen, Praktika und Beförderungen. Starte deine Karriere bei Hamburg Horizon Roleplay.',
   keywords: 'Hamburg Horizon RP, Bewerbung, Team, Praktikum, Uprank, Bewerbungsportal, Hamburg RP, Roleplay Team',
   authors: [{ name: 'Hamburg Horizon RP Team' }],
@@ -11,10 +11,10 @@ export const metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'HHRP - Bewerbungsportal',
+    title: 'HHRP',
   },
   openGraph: {
-    title: 'HHRP - Bewerbungsportal',
+    title: 'HHRP',
     description: 'Offizielles Bewerbungsportal von Hamburg Horizon RP. Bewirb dich jetzt für unser Team! Team-Bewerbung • Praktikum • Uprank. Werde Teil unserer professionellen Roleplay-Community und gestalte Hamburg Horizon mit uns!',
     url: '/',
     siteName: 'Hamburg Horizon RP',
@@ -31,7 +31,7 @@ export const metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HHRP - Bewerbungsportal',
+    title: 'HHRP',
     description: 'Offizielles Bewerbungsportal von Hamburg Horizon RP. Bewirb dich jetzt für unser Team! Team-Bewerbung • Praktikum • Uprank',
     images: ['/embed.webp'],
   },
