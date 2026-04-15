@@ -1885,6 +1885,8 @@ export async function POST(request) {
     case 'user/rewards/claim': return handleClaimReward(request);
     case 'user/rewards/daily': return handleDailyBonus(request);
     case 'user/rewards/reset-daily': return handleResetDaily(request);
+    case 'daily-bonus': return handleDailyBonus(request);
+    case 'check-daily': return handleCheckDaily(request);
     case 'bot/status': return handleBotStatus(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
@@ -2221,6 +2223,45 @@ async function handleDailyBonus(request) {
   }
 }
 
+
+
+async function handleCheckDaily(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ canClaim: false, reason: 'not_logged_in' });
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Prüfe ob User heute schon Bonus bekommen hat
+    const { data, error } = await supabaseAdmin
+      .from('rewards')
+      .select('id, created_at')
+      .eq('discord_user_id', user.id)
+      .eq('reward_type', 'daily_bonus')
+      .gte('created_at', `${today}T00:00:00`)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      console.error('Check daily error:', error);
+      return NextResponse.json({ canClaim: false, reason: 'error' });
+    }
+
+    // Wenn kein Reward für heute existiert, kann User claimen
+    const canClaim = !data || data.length === 0;
+    
+    return NextResponse.json({ 
+      canClaim,
+      reason: canClaim ? 'available' : 'already_claimed',
+      lastClaim: data && data.length > 0 ? data[0].created_at : null
+    });
+  } catch (error) {
+    console.error('Check daily exception:', error);
+    return NextResponse.json({ canClaim: false, reason: 'error' });
+  }
+}
 
 
 async function handleResetDaily(request) {

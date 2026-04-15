@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useRouter } from 'next/navigation';
+import DailyBonusModal from '@/components/DailyBonusModal';
 import { 
   Wallet, CreditCard, Trophy, Gift, User, Award, Clock, TrendingUp, 
   Check, Loader2, FileText, Calendar, Mail, ExternalLink, LayoutDashboard, IdCard, ClipboardList,
@@ -151,84 +152,84 @@ function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-gray-700/20 rounded-full translate-y-24 -translate-x-24"></div>
 
-            <div className="relative h-full p-5 sm:p-6 flex flex-col text-white">
+            <div className="relative h-full p-6 flex flex-col text-white">
               {/* Header */}
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-start justify-between mb-4">
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest opacity-70 mb-0.5">Bundesrepublik HHRP</p>
-                  <h2 className="text-base font-bold">FÜHRERSCHEIN</h2>
+                  <p className="text-xs uppercase tracking-widest opacity-70 mb-1">Bundesrepublik HHRP</p>
+                  <h2 className="text-lg font-bold">FÜHRERSCHEIN</h2>
                 </div>
-                <img src="/icon-192.png" alt="HHRP" className="w-10 h-10 rounded-lg" />
+                <img src="/icon-192.png" alt="HHRP" className="w-12 h-12 rounded-lg" />
               </div>
 
               {hasAnyLicense ? (
                 <>
                   {/* Foto & Info */}
-                  <div className="flex gap-3 flex-1">
-                    <div className="w-20 h-24 bg-gray-700 rounded overflow-hidden flex-shrink-0 border-2 border-gray-600">
+                  <div className="flex gap-4 flex-1">
+                    <div className="w-24 h-28 bg-gray-700 rounded overflow-hidden flex-shrink-0 border-2 border-gray-600">
                       {avatarUrl ? (
                         <img src={avatarUrl} alt="Photo" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-gray-600 flex items-center justify-center">
-                          <User className="w-10 h-10 text-gray-400" />
+                          <User className="w-12 h-12 text-gray-400" />
                         </div>
                       )}
                     </div>
 
-                    <div className="flex-1 space-y-1.5 text-xs">
+                    <div className="flex-1 space-y-2 text-sm">
                       <div>
-                        <p className="text-[9px] opacity-60 uppercase">Nachname</p>
-                        <p className="font-semibold text-sm">{character?.nachname || 'N/A'}</p>
+                        <p className="text-xs opacity-60 uppercase">Nachname</p>
+                        <p className="font-semibold text-base">{character?.nachname || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-[9px] opacity-60 uppercase">Vorname</p>
+                        <p className="text-xs opacity-60 uppercase">Vorname</p>
                         <p className="font-semibold">{character?.vorname || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-[9px] opacity-60 uppercase">Geburtsdatum</p>
-                        <p className="font-semibold text-[11px]">{birthDate}</p>
+                        <p className="text-xs opacity-60 uppercase">Geburtsdatum</p>
+                        <p className="font-semibold">{birthDate}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Führerschein-Klassen */}
-                  <div className="pt-2 border-t border-white/20">
-                    <p className="text-[9px] opacity-70 uppercase mb-2">Klassen</p>
+                  <div className="pt-3 border-t border-white/20 mt-auto">
+                    <p className="text-xs opacity-70 uppercase mb-2">Klassen</p>
                     <div className="flex gap-2 flex-wrap">
                       {hasPKW && (
-                        <span className="px-2 py-1 bg-white/20 rounded text-[10px] font-bold">B (PKW)</span>
+                        <span className="px-3 py-1.5 bg-white/20 rounded text-xs font-bold">B (PKW)</span>
                       )}
                       {hasMotorrad && (
-                        <span className="px-2 py-1 bg-white/20 rounded text-[10px] font-bold">A (Motorrad)</span>
+                        <span className="px-3 py-1.5 bg-white/20 rounded text-xs font-bold">A (Motorrad)</span>
                       )}
                       {hasLKW && (
-                        <span className="px-2 py-1 bg-white/20 rounded text-[10px] font-bold">C (LKW)</span>
+                        <span className="px-3 py-1.5 bg-white/20 rounded text-xs font-bold">C (LKW)</span>
                       )}
                     </div>
                   </div>
                 </>
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-                  <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-3">
-                    <svg className="w-8 h-8 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center mb-4">
+                    <svg className="w-10 h-10 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </div>
-                  <p className="text-sm font-semibold mb-1">Kein Führerschein</p>
-                  <p className="text-[10px] opacity-60">Nicht im Besitz</p>
+                  <p className="text-base font-semibold mb-2">Kein Führerschein</p>
+                  <p className="text-sm opacity-60">Nicht im Besitz</p>
                 </div>
               )}
 
               {/* Footer */}
-              <div className="flex items-center justify-between pt-2 border-t border-white/20">
-                <div className="text-[10px] opacity-70">
+              <div className="flex items-center justify-between pt-3 border-t border-white/20 mt-auto">
+                <div className="text-xs opacity-70">
                   {hasAnyLicense ? (
                     <><span className="font-semibold">Erstellt am:</span> {issueDate.toLocaleDateString('de-DE')}</>
                   ) : (
                     <span className="opacity-50">Keine Lizenz vorhanden</span>
                   )}
                 </div>
-                <div className="text-[9px] opacity-40">
+                <div className="text-xs opacity-40">
                   Klicken zum Umdrehen
                 </div>
               </div>
@@ -249,29 +250,29 @@ function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
               </span>
             </div>
 
-            <div className="relative h-full p-5 sm:p-6 flex flex-col justify-between text-white">
+            <div className="relative h-full p-6 flex flex-col justify-between text-white">
               {hasAnyLicense ? (
                 <>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div>
-                      <p className="text-[10px] opacity-60 uppercase mb-1.5">Führerschein-Nummer</p>
-                      <p className="text-lg font-mono font-bold tracking-wider">{userId?.slice(0, 12) || 'N/A'}</p>
+                      <p className="text-xs opacity-60 uppercase mb-2">Führerschein-Nummer</p>
+                      <p className="text-xl font-mono font-bold tracking-wider">{userId?.slice(0, 12) || 'N/A'}</p>
                     </div>
 
                     <div>
-                      <p className="text-[9px] opacity-60 uppercase mb-1">Ausgestellt am</p>
-                      <p className="font-semibold text-sm">{issueDate.toLocaleDateString('de-DE')}</p>
+                      <p className="text-xs opacity-60 uppercase mb-2">Ausgestellt am</p>
+                      <p className="font-semibold text-base">{issueDate.toLocaleDateString('de-DE')}</p>
                     </div>
 
                     <div>
-                      <p className="text-[9px] opacity-60 uppercase mb-1">Ausstellende Behörde</p>
-                      <p className="text-xs font-semibold">Hamburg Horizon RP</p>
-                      <p className="text-[10px] opacity-50">Straßenverkehrsamt Hamburg</p>
+                      <p className="text-xs opacity-60 uppercase mb-2">Ausstellende Behörde</p>
+                      <p className="text-sm font-semibold">Hamburg Horizon RP</p>
+                      <p className="text-xs opacity-50">Straßenverkehrsamt Hamburg</p>
                     </div>
 
-                    <div className="pt-2 border-t border-white/20">
-                      <p className="text-xs text-green-400 font-semibold flex items-center gap-1.5">
-                        <Check className="w-3.5 h-3.5" />
+                    <div className="pt-3 border-t border-white/20">
+                      <p className="text-sm text-green-400 font-semibold flex items-center gap-2">
+                        <Check className="w-4 h-4" />
                         Unbegrenzt gültig
                       </p>
                     </div>
@@ -279,20 +280,20 @@ function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
                 </>
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-center">
-                  <p className="text-sm opacity-70 mb-2">Dieses Dokument ist nicht im Besitz</p>
-                  <p className="text-[10px] opacity-50">Besuche den Discord Bot Shop</p>
+                  <p className="text-base opacity-70 mb-2">Dieses Dokument ist nicht im Besitz</p>
+                  <p className="text-sm opacity-50">Besuche den Discord Bot Shop</p>
                 </div>
               )}
 
-              <div className="pt-3 border-t border-white/20">
-                <div className="flex items-center justify-between text-[9px] opacity-60 mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <Building2 className="w-3 h-3" />
+              <div className="pt-4 border-t border-white/20">
+                <div className="flex items-center justify-between text-xs opacity-60 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
                     <span className="font-medium">HHRP Führerschein</span>
                   </div>
                   <span className="opacity-40">Klicken zum Umdrehen</span>
                 </div>
-                <p className="text-[8px] opacity-40 leading-relaxed">
+                <p className="text-xs opacity-40 leading-relaxed">
                   Dieser Führerschein ist Eigentum von Hamburg Horizon RP. Bei Verlust oder Diebstahl unverzüglich melden.
                 </p>
               </div>
@@ -355,81 +356,81 @@ function WeaponsLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-gray-700/20 rounded-full translate-y-24 -translate-x-24"></div>
 
-            <div className="relative h-full p-5 sm:p-6 flex flex-col text-white">
+            <div className="relative h-full p-6 flex flex-col text-white">
               {/* Header */}
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-start justify-between mb-4">
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest opacity-70 mb-0.5">Bundesrepublik HHRP</p>
-                  <h2 className="text-base font-bold">WAFFENSCHEIN</h2>
+                  <p className="text-xs uppercase tracking-widest opacity-70 mb-1">Bundesrepublik HHRP</p>
+                  <h2 className="text-lg font-bold">WAFFENSCHEIN</h2>
                 </div>
-                <img src="/icon-192.png" alt="HHRP" className="w-10 h-10 rounded-lg" />
+                <img src="/icon-192.png" alt="HHRP" className="w-12 h-12 rounded-lg" />
               </div>
 
               {hasAnyLicense ? (
                 <>
                   {/* Foto & Info */}
-                  <div className="flex gap-3 flex-1">
-                    <div className="w-20 h-24 bg-gray-700 rounded overflow-hidden flex-shrink-0 border-2 border-gray-600">
+                  <div className="flex gap-4 flex-1">
+                    <div className="w-24 h-28 bg-gray-700 rounded overflow-hidden flex-shrink-0 border-2 border-gray-600">
                       {avatarUrl ? (
                         <img src={avatarUrl} alt="Photo" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-gray-600 flex items-center justify-center">
-                          <User className="w-10 h-10 text-gray-400" />
+                          <User className="w-12 h-12 text-gray-400" />
                         </div>
                       )}
                     </div>
 
-                    <div className="flex-1 space-y-1.5 text-xs">
+                    <div className="flex-1 space-y-2 text-sm">
                       <div>
-                        <p className="text-[9px] opacity-60 uppercase">Nachname</p>
-                        <p className="font-semibold text-sm">{character?.nachname || 'N/A'}</p>
+                        <p className="text-xs opacity-60 uppercase">Nachname</p>
+                        <p className="font-semibold text-base">{character?.nachname || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-[9px] opacity-60 uppercase">Vorname</p>
+                        <p className="text-xs opacity-60 uppercase">Vorname</p>
                         <p className="font-semibold">{character?.vorname || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-[9px] opacity-60 uppercase">Geburtsdatum</p>
-                        <p className="font-semibold text-[11px]">{birthDate}</p>
+                        <p className="text-xs opacity-60 uppercase">Geburtsdatum</p>
+                        <p className="font-semibold">{birthDate}</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Waffenschein-Typen */}
-                  <div className="pt-2 border-t border-white/20">
-                    <p className="text-[9px] opacity-70 uppercase mb-2">Berechtigungen</p>
+                  <div className="pt-3 border-t border-white/20 mt-auto">
+                    <p className="text-xs opacity-70 uppercase mb-2">Berechtigungen</p>
                     <div className="flex gap-2 flex-wrap">
                       {hasWaffenschein && (
-                        <span className="px-2 py-1 bg-white/20 rounded text-[10px] font-bold">Waffenschein</span>
+                        <span className="px-3 py-1.5 bg-white/20 rounded text-xs font-bold">Waffenschein</span>
                       )}
                       {hasJagdschein && (
-                        <span className="px-2 py-1 bg-white/20 rounded text-[10px] font-bold">Jagdschein</span>
+                        <span className="px-3 py-1.5 bg-white/20 rounded text-xs font-bold">Jagdschein</span>
                       )}
                     </div>
                   </div>
                 </>
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-                  <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-3">
-                    <svg className="w-8 h-8 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center mb-4">
+                    <svg className="w-10 h-10 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </div>
-                  <p className="text-sm font-semibold mb-1">Kein Waffenschein</p>
-                  <p className="text-[10px] opacity-60">Nicht im Besitz</p>
+                  <p className="text-base font-semibold mb-2">Kein Waffenschein</p>
+                  <p className="text-sm opacity-60">Nicht im Besitz</p>
                 </div>
               )}
 
               {/* Footer */}
-              <div className="flex items-center justify-between pt-2 border-t border-white/20">
-                <div className="text-[10px] opacity-70">
+              <div className="flex items-center justify-between pt-3 border-t border-white/20 mt-auto">
+                <div className="text-xs opacity-70">
                   {hasAnyLicense ? (
                     <><span className="font-semibold">Erstellt am:</span> {issueDate.toLocaleDateString('de-DE')}</>
                   ) : (
                     <span className="opacity-50">Keine Lizenz vorhanden</span>
                   )}
                 </div>
-                <div className="text-[9px] opacity-40">
+                <div className="text-xs opacity-40">
                   Klicken zum Umdrehen
                 </div>
               </div>
@@ -450,35 +451,35 @@ function WeaponsLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
               </span>
             </div>
 
-            <div className="relative h-full p-5 sm:p-6 flex flex-col justify-between text-white">
+            <div className="relative h-full p-6 flex flex-col justify-between text-white">
               {hasAnyLicense ? (
                 <>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div>
-                      <p className="text-[10px] opacity-60 uppercase mb-1.5">Waffenschein-Nummer</p>
-                      <p className="text-lg font-mono font-bold tracking-wider">WS-{userId?.slice(0, 10) || 'N/A'}</p>
+                      <p className="text-xs opacity-60 uppercase mb-2">Waffenschein-Nummer</p>
+                      <p className="text-xl font-mono font-bold tracking-wider">WS-{userId?.slice(0, 10) || 'N/A'}</p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <p className="text-[9px] opacity-60 uppercase mb-1">Ausgestellt am</p>
-                        <p className="font-semibold text-xs">{issueDate.toLocaleDateString('de-DE')}</p>
+                        <p className="text-xs opacity-60 uppercase mb-2">Ausgestellt am</p>
+                        <p className="font-semibold text-sm">{issueDate.toLocaleDateString('de-DE')}</p>
                       </div>
                       <div>
-                        <p className="text-[9px] opacity-60 uppercase mb-1">Gültig bis</p>
-                        <p className="font-semibold text-xs">{expiryDate.toLocaleDateString('de-DE')}</p>
+                        <p className="text-xs opacity-60 uppercase mb-2">Gültig bis</p>
+                        <p className="font-semibold text-sm">{expiryDate.toLocaleDateString('de-DE')}</p>
                       </div>
                     </div>
 
                     <div>
-                      <p className="text-[9px] opacity-60 uppercase mb-1">Ausstellende Behörde</p>
-                      <p className="text-xs font-semibold">Hamburg Horizon RP</p>
-                      <p className="text-[10px] opacity-50">Waffenbehörde Hamburg</p>
+                      <p className="text-xs opacity-60 uppercase mb-2">Ausstellende Behörde</p>
+                      <p className="text-sm font-semibold">Hamburg Horizon RP</p>
+                      <p className="text-xs opacity-50">Waffenbehörde Hamburg</p>
                     </div>
 
-                    <div className="pt-2 border-t border-white/20">
-                      <p className="text-[9px] opacity-60 uppercase mb-2">Hinweise</p>
-                      <p className="text-[10px] opacity-70 leading-relaxed">
+                    <div className="pt-3 border-t border-white/20">
+                      <p className="text-xs opacity-60 uppercase mb-2">Hinweise</p>
+                      <p className="text-sm opacity-70 leading-relaxed">
                         • Waffe muss registriert sein<br/>
                         • Nur für Selbstverteidigung<br/>
                         • Bei Verlust sofort melden
@@ -488,20 +489,20 @@ function WeaponsLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
                 </>
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-center">
-                  <p className="text-sm opacity-70 mb-2">Dieses Dokument ist nicht im Besitz</p>
-                  <p className="text-[10px] opacity-50">Besuche den Discord Bot Shop</p>
+                  <p className="text-base opacity-70 mb-2">Dieses Dokument ist nicht im Besitz</p>
+                  <p className="text-sm opacity-50">Besuche den Discord Bot Shop</p>
                 </div>
               )}
 
-              <div className="pt-3 border-t border-white/20">
-                <div className="flex items-center justify-between text-[9px] opacity-60 mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <Building2 className="w-3 h-3" />
+              <div className="pt-4 border-t border-white/20">
+                <div className="flex items-center justify-between text-xs opacity-60 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
                     <span className="font-medium">HHRP Waffenschein</span>
                   </div>
                   <span className="opacity-40">Klicken zum Umdrehen</span>
                 </div>
-                <p className="text-[8px] opacity-40 leading-relaxed">
+                <p className="text-xs opacity-40 leading-relaxed">
                   Dieser Waffenschein ist Eigentum von Hamburg Horizon RP. Verlängerung alle 30 Tage erforderlich.
                 </p>
               </div>
@@ -562,62 +563,62 @@ function IDCard({ character, avatarUrl, userId }) {
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-gray-700/20 rounded-full translate-y-24 -translate-x-24"></div>
 
-            <div className="relative h-full p-5 sm:p-6 flex flex-col text-white">
+            <div className="relative h-full p-6 flex flex-col text-white">
               {/* Header */}
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-start justify-between mb-4">
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest opacity-70 mb-0.5">Bundesrepublik HHRP</p>
-                  <h2 className="text-base font-bold">PERSONALAUSWEIS</h2>
+                  <p className="text-xs uppercase tracking-widest opacity-70 mb-1">Bundesrepublik HHRP</p>
+                  <h2 className="text-lg font-bold">PERSONALAUSWEIS</h2>
                 </div>
-                <img src="/icon-192.png" alt="HHRP" className="w-10 h-10 rounded-lg" />
+                <img src="/icon-192.png" alt="HHRP" className="w-12 h-12 rounded-lg" />
               </div>
 
               {/* Content Grid */}
-              <div className="flex gap-3 flex-1">
+              <div className="flex gap-4 flex-1">
                 {/* Photo */}
-                <div className="w-20 h-24 bg-gray-700 rounded overflow-hidden flex-shrink-0 border-2 border-gray-600">
+                <div className="w-24 h-28 bg-gray-700 rounded overflow-hidden flex-shrink-0 border-2 border-gray-600">
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="Photo" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full bg-gray-600 flex items-center justify-center">
-                      <User className="w-10 h-10 text-gray-400" />
+                      <User className="w-12 h-12 text-gray-400" />
                     </div>
                   )}
                 </div>
 
                 {/* Info */}
-                <div className="flex-1 space-y-1.5 text-xs">
+                <div className="flex-1 space-y-2 text-sm">
                   <div>
-                    <p className="text-[9px] opacity-60 uppercase">Nachname</p>
-                    <p className="font-semibold text-sm">{character?.nachname || 'N/A'}</p>
+                    <p className="text-xs opacity-60 uppercase">Nachname</p>
+                    <p className="font-semibold text-base">{character?.nachname || 'N/A'}</p>
                   </div>
                   <div>
-                    <p className="text-[9px] opacity-60 uppercase">Vorname</p>
+                    <p className="text-xs opacity-60 uppercase">Vorname</p>
                     <p className="font-semibold">{character?.vorname || 'N/A'}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <p className="text-[9px] opacity-60 uppercase">Geburtsdatum</p>
-                      <p className="font-semibold text-[11px]">{birthDate}</p>
+                      <p className="text-xs opacity-60 uppercase">Geburtsdatum</p>
+                      <p className="font-semibold">{birthDate}</p>
                     </div>
                     <div>
-                      <p className="text-[9px] opacity-60 uppercase">Geschlecht</p>
-                      <p className="font-semibold text-[11px]">{character?.geschlecht || 'N/A'}</p>
+                      <p className="text-xs opacity-60 uppercase">Geschlecht</p>
+                      <p className="font-semibold">{character?.geschlecht || 'N/A'}</p>
                     </div>
                   </div>
                   <div>
-                    <p className="text-[9px] opacity-60 uppercase">Wohnort</p>
-                    <p className="font-semibold text-[11px]">{character?.herkunft || 'Hamburg'}</p>
+                    <p className="text-xs opacity-60 uppercase">Wohnort</p>
+                    <p className="font-semibold">{character?.herkunft || 'Hamburg'}</p>
                   </div>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="flex items-center justify-between pt-2 border-t border-white/20">
-                <div className="text-[10px] opacity-70">
+              <div className="flex items-center justify-between pt-3 border-t border-white/20 mt-auto">
+                <div className="text-xs opacity-70">
                   <span className="font-semibold">Erstellt am:</span> {issueDate.toLocaleDateString('de-DE')}
                 </div>
-                <div className="text-[9px] opacity-40">
+                <div className="text-xs opacity-40">
                   Klicken zum Umdrehen
                 </div>
               </div>
@@ -642,17 +643,17 @@ function IDCard({ character, avatarUrl, userId }) {
             {/* Decorative waves */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
 
-            <div className="relative h-full p-5 sm:p-6 flex flex-col justify-between text-white">
+            <div className="relative h-full p-6 flex flex-col justify-between text-white">
               {/* Barcode Area */}
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div>
-                  <p className="text-[10px] opacity-60 uppercase mb-1.5">Ausweis-Nummer</p>
-                  <p className="text-lg font-mono font-bold tracking-wider">{userId?.slice(0, 12) || 'N/A'}</p>
+                  <p className="text-xs opacity-60 uppercase mb-2">Ausweis-Nummer</p>
+                  <p className="text-xl font-mono font-bold tracking-wider">{userId?.slice(0, 12) || 'N/A'}</p>
                 </div>
 
                 {/* Barcode */}
-                <div className="bg-white/95 rounded-lg p-2">
-                  <div className="flex gap-[1px] h-14">
+                <div className="bg-white/95 rounded-lg p-3">
+                  <div className="flex gap-[1px] h-16">
                     {[...Array(30)].map((_, i) => (
                       <div 
                         key={i} 
@@ -661,38 +662,38 @@ function IDCard({ character, avatarUrl, userId }) {
                       ></div>
                     ))}
                   </div>
-                  <p className="text-center text-[8px] text-gray-800 font-mono mt-1">{userId?.slice(0, 16) || 'N/A'}</p>
+                  <p className="text-center text-xs text-gray-800 font-mono mt-2">{userId?.slice(0, 16) || 'N/A'}</p>
                 </div>
 
                 <div>
-                  <p className="text-[9px] opacity-60 uppercase mb-1">Ausgestellt am</p>
-                  <p className="font-semibold text-sm">{issueDate.toLocaleDateString('de-DE')}</p>
+                  <p className="text-xs opacity-60 uppercase mb-2">Ausgestellt am</p>
+                  <p className="font-semibold text-base">{issueDate.toLocaleDateString('de-DE')}</p>
                 </div>
 
                 <div>
-                  <p className="text-[9px] opacity-60 uppercase mb-1">Ausstellende Behörde</p>
-                  <p className="text-xs font-semibold">Hamburg Horizon RP</p>
-                  <p className="text-[10px] opacity-50">Bürgerbüro Hamburg</p>
+                  <p className="text-xs opacity-60 uppercase mb-2">Ausstellende Behörde</p>
+                  <p className="text-sm font-semibold">Hamburg Horizon RP</p>
+                  <p className="text-xs opacity-50">Bürgerbüro Hamburg</p>
                 </div>
 
-                <div className="pt-2 border-t border-white/20">
-                  <p className="text-xs text-green-400 font-semibold flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5" />
+                <div className="pt-3 border-t border-white/20">
+                  <p className="text-sm text-green-400 font-semibold flex items-center gap-2">
+                    <Check className="w-4 h-4" />
                     Unbegrenzt gültig
                   </p>
                 </div>
               </div>
 
               {/* Footer */}
-              <div className="pt-3 border-t border-white/20">
-                <div className="flex items-center justify-between text-[9px] opacity-60 mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <Building2 className="w-3 h-3" />
+              <div className="pt-4 border-t border-white/20">
+                <div className="flex items-center justify-between text-xs opacity-60 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
                     <span className="font-medium">HHRP ID</span>
                   </div>
                   <span className="opacity-40">Klicken zum Umdrehen</span>
                 </div>
-                <p className="text-[8px] opacity-40 leading-relaxed">
+                <p className="text-xs opacity-40 leading-relaxed">
                   Dieser Ausweis ist Eigentum von Hamburg Horizon RP. Bei Verlust oder Diebstahl unverzüglich melden.
                 </p>
               </div>
@@ -973,6 +974,34 @@ export default function ProfilPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [botStatus, setBotStatus] = useState({ isOnline: true, checking: true, error: null });
+  const [showDailyBonus, setShowDailyBonus] = useState(false);
+  const [checkedDaily, setCheckedDaily] = useState(false);
+
+  // Check for daily bonus when user logs in
+  useEffect(() => {
+    if (user && !authLoading && !checkedDaily) {
+      checkDailyBonus();
+    }
+  }, [user, authLoading, checkedDaily]);
+
+  const checkDailyBonus = async () => {
+    try {
+      const res = await fetch('/api/check-daily');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.canClaim) {
+          // Warte 1 Sekunde, dann zeige Modal
+          setTimeout(() => {
+            setShowDailyBonus(true);
+          }, 1000);
+        }
+      }
+    } catch (e) {
+      console.error('Daily bonus check error:', e);
+    } finally {
+      setCheckedDaily(true);
+    }
+  };
 
   useEffect(() => {
     if (!authLoading) {
@@ -1634,6 +1663,11 @@ export default function ProfilPage() {
           </div>
         )}
       </div>
+
+      {/* Daily Bonus Modal */}
+      {showDailyBonus && (
+        <DailyBonusModal onClose={() => setShowDailyBonus(false)} />
+      )}
     </div>
   );
 }
