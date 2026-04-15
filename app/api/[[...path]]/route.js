@@ -1820,6 +1820,15 @@ export async function GET(request) {
     }
   }
 
+  // === User Rewards & Data ===
+  if (p === 'user/rewards') {
+    return handleGetUserRewards(request);
+  }
+  
+  if (p === 'user/data') {
+    return handleGetUserData(request);
+  }
+
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
 
@@ -1863,6 +1872,7 @@ export async function POST(request) {
     case 'admin/check-role': return handleCheckDiscordRole(request);
     case 'admin/settings': return handleAdminUpdateSettings(request);
     case 'admin/system-status': return handleUpdateSystemStatus(request); // Same as PUT
+    case 'user/rewards/claim': return handleClaimReward(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
@@ -1996,4 +2006,115 @@ export async function DELETE(request) {
 
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
+
+
+// ============================================
+// USER REWARDS & DATA HANDLERS
+// ============================================
+
+async function handleGetUserRewards(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('rewards')
+      .select('*')
+      .eq('discord_user_id', user.id)
+      .eq('claimed', false)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Get rewards error:', error);
+      return NextResponse.json({ error: 'Fehler beim Laden der Rewards' }, { status: 500 });
+    }
+
+    return NextResponse.json({ rewards: data || [] });
+  } catch (error) {
+    console.error('Get rewards exception:', error);
+    return NextResponse.json({ error: 'Fehler' }, { status: 500 });
+  }
+}
+
+async function handleGetUserData(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('user_data')
+      .select('*')
+      .eq('discord_user_id', user.id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('Get user data error:', error);
+      return NextResponse.json({ error: 'Fehler beim Laden der Daten' }, { status: 500 });
+    }
+
+    return NextResponse.json({ data: data || null });
+  } catch (error) {
+    console.error('Get user data exception:', error);
+    return NextResponse.json({ error: 'Fehler' }, { status: 500 });
+  }
+}
+
+async function handleClaimReward(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { rewardId } = body;
+
+    if (!rewardId) {
+      return NextResponse.json({ error: 'Reward ID fehlt' }, { status: 400 });
+    }
+
+    // Markiere Reward als claimed
+    const { data: reward, error } = await supabaseAdmin
+      .from('rewards')
+      .update({
+        claimed: true,
+        claimed_at: new Date().toISOString()
+      })
+      .eq('id', rewardId)
+      .eq('discord_user_id', user.id)
+      .eq('claimed', false)
+      .select()
+      .single();
+
+    if (error || !reward) {
+      console.error('Claim reward error:', error);
+      return NextResponse.json({ 
+        error: 'Reward konnte nicht beansprucht werden. Eventuell wurde er bereits beansprucht.' 
+      }, { status: 400 });
+    }
+
+    // Notification erstellen
+    await createNotification({
+      userId: user.id,
+      type: 'reward_claimed',
+      title: 'Reward beansprucht!',
+      message: `Du hast $${reward.amount} erfolgreich beansprucht. Der Bot wird dir das Geld in Kürze gutschreiben.`,
+      relatedData: { rewardId: reward.id, amount: reward.amount }
+    });
+
+    return NextResponse.json({ 
+      success: true, 
+      reward,
+      message: `$${reward.amount} wurden beansprucht! Der Bot wird dir das Geld in Kürze gutschreiben.`
+    });
+  } catch (error) {
+    console.error('Claim reward exception:', error);
+    return NextResponse.json({ error: 'Fehler' }, { status: 500 });
+  }
+}
+
 
