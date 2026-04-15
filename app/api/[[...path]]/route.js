@@ -1829,6 +1829,11 @@ export async function GET(request) {
     return handleGetUserData(request);
   }
 
+  // === Meine Bewerbungen ===
+  if (p === 'bewerbungen/me') {
+    return handleGetMyBewerbungen(request);
+  }
+
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
 
@@ -2103,6 +2108,33 @@ async function handleClaimReward(request) {
       type: 'reward_claimed',
       title: 'Reward beansprucht!',
       message: `Du hast $${reward.amount} erfolgreich beansprucht. Der Bot wird dir das Geld in Kürze gutschreiben.`,
+
+
+async function handleGetMyBewerbungen(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('bewerbungen')
+      .select('*')
+      .eq('discordUserId', user.id)
+      .order('eingereichtAm', { ascending: false });
+
+    if (error) {
+      console.error('Get my bewerbungen error:', error);
+      return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
+    }
+
+    return NextResponse.json({ bewerbungen: data || [] });
+  } catch (error) {
+    console.error('Get my bewerbungen exception:', error);
+    return NextResponse.json({ error: 'Fehler' }, { status: 500 });
+  }
+}
+
       relatedData: { rewardId: reward.id, amount: reward.amount }
     });
 
