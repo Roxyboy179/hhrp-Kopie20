@@ -615,7 +615,8 @@ export default function ProfilPage() {
 
   const loadData = async () => {
     try {
-      setBotStatus({ isOnline: true, checking: true, error: null });
+      // Behalte den vorherigen isOnline Status, setze nur checking auf true
+      setBotStatus(prev => ({ ...prev, checking: true }));
       
       // 1. ZUERST: Prüfe ob Bot online ist
       const botStatusRes = await fetch('/api/bot/status', { cache: 'no-store' });
