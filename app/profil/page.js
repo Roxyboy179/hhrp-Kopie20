@@ -24,15 +24,21 @@ function SkeletonCard({ className = "" }) {
 function IDCard({ character, avatarUrl, userId }) {
   const [isFlipped, setIsFlipped] = useState(false);
   
-  // Berechne Geburtsdatum aus Alter
-  const calculateBirthDate = (age) => {
+  // Berechne Geburtsdatum aus Alter - FEST basierend auf User-ID
+  const calculateBirthDate = (age, userId) => {
     if (!age) return 'N/A';
     const currentYear = new Date().getFullYear();
     const birthYear = currentYear - age;
-    return `${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}.${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}.${birthYear}`;
+    
+    // Verwende User-ID als Seed für konsistente "zufällige" Werte
+    const seed = parseInt(userId?.slice(0, 8) || '12345678', 10);
+    const day = (seed % 28) + 1; // Tag zwischen 1-28
+    const month = (seed % 12) + 1; // Monat zwischen 1-12
+    
+    return `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.${birthYear}`;
   };
 
-  const birthDate = calculateBirthDate(character?.age);
+  const birthDate = calculateBirthDate(character?.age, userId);
   const issueDate = new Date(2020, 3, 15); // Beispiel: 15.04.2020
 
   return (
