@@ -1724,7 +1724,7 @@ export async function GET(request) {
   // === System Status ===
   if (p === 'admin/system-status') {
     try {
-      const admin = await verifyAdminToken(request);
+      const admin = getAdminContext(request);
       if (!admin) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
@@ -1852,7 +1852,7 @@ export async function POST(request) {
   // === System Status ===
   if (p === 'admin/system-status') {
     try {
-      const admin = await verifyAdminToken(request);
+      const admin = getAdminContext(request);
       if (!admin) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
@@ -1958,10 +1958,9 @@ export async function POST(request) {
   }
 }
 
-// Handler for updating system status (used by both POST and PUT)
 async function handleUpdateSystemStatus(request) {
   try {
-    const admin = await verifyAdminToken(request);
+    const admin = getAdminContext(request);
     // Nur Projektinhaber (Level 4) dürfen System-Status ändern
     if (!admin || admin.roleLevel < 4) {
       return NextResponse.json({ error: 'Unauthorized - Nur Projektinhaber' }, { status: 401 });
