@@ -1844,6 +1844,11 @@ export async function GET(request) {
     return handleGetMyBewerbungen(request);
   }
 
+  // === Discord Server Stats ===
+  if (p === 'discord/stats') {
+    return handleGetDiscordStats(request);
+  }
+
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
 
@@ -2307,6 +2312,58 @@ async function handleResetDaily(request) {
   } catch (error) {
     console.error('Reset daily exception:', error);
     return NextResponse.json({ error: 'Fehler' }, { status: 500 });
+  }
+}
+
+// Discord Server Stats - Mitglieder, Online, Teamler
+async function handleGetDiscordStats(request) {
+  try {
+    const response = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD_ID}?with_counts=true`, {
+      headers: {
+        'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Discord API error: ${response.status}`);
+    }
+
+    const guild = await response.json();
+    
+    // Count team members from role IDs
+    const teamRoleIds = Object.keys({ ...ADMIN_ROLES, ...TEAM_ROLES });
+    
+    // Fetch guild members with roles to count team members
+    const membersResponse = await fetch(`https://discord.com/api/v10/guilds/${DISCORD_GUILD_ID}/members?limit=1000`, {
+      headers: {
+        'Authorization': `Bot ${DISCORD_BOT_TOKEN}`,
+      },
+    });
+    
+    let teamCount = 0;
+    if (membersResponse.ok) {
+      const members = await membersResponse.json();
+      teamCount = members.filter(member => 
+        member.roles.some(roleId => teamRoleIds.includes(roleId))
+      ).length;
+    }
+
+    return NextResponse.json({
+      memberCount: guild.approximate_member_count || 0,
+      onlineCount: guild.approximate_presence_count || 0,
+      teamCount: teamCount,
+      name: guild.name,
+      icon: guild.icon ? `https://cdn.discordapp.com/icons/${guild.id}/${guild.icon}.png` : null,
+    });
+  } catch (error) {
+    console.error('Discord stats error:', error);
+    // Return fallback data
+    return NextResponse.json({
+      memberCount: 0,
+      onlineCount: 0,
+      teamCount: 0,
+      error: 'Fehler beim Laden der Discord Statistiken'
+    });
   }
 }
 

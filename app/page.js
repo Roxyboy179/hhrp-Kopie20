@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { GlassCard } from '@/components/shared/GlassCard';
 import { Button } from '@/components/ui/button';
+import { ScrollProgressBar } from '@/components/shared/ScrollProgressBar';
 import { 
   FileText, Users, CheckCircle2, Clock, ArrowRight, 
-  Zap, Target, Loader2, ChevronDown, Sparkles, UserCircle
+  Zap, Target, Loader2, ChevronDown, Sparkles, UserCircle,
+  Gamepad2, Shield, TrendingUp, Heart, Scale, Siren
 } from 'lucide-react';
 
 function AnimatedCounter({ value, suffix = '' }) {
@@ -31,17 +33,39 @@ export default function HomePage() {
   const router = useRouter();
   const { user, loading } = useAuth();
   const [stats, setStats] = useState({ total: 0, angenommen: 0, inBearbeitung: 0 });
+  const [discordStats, setDiscordStats] = useState({ memberCount: 0, onlineCount: 0, teamCount: 0 });
+  const [teamMembers, setTeamMembers] = useState([]);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
     fetchStats();
+    fetchDiscordStats();
+    fetchTeamPreview();
   }, []);
 
   const fetchStats = async () => {
     try {
       const res = await fetch('/api/bewerbungen/stats');
       if (res.ok) setStats(await res.json());
+    } catch (e) { console.error(e); }
+  };
+
+  const fetchDiscordStats = async () => {
+    try {
+      const res = await fetch('/api/discord/stats');
+      if (res.ok) setDiscordStats(await res.json());
+    } catch (e) { console.error(e); }
+  };
+
+  const fetchTeamPreview = async () => {
+    try {
+      const res = await fetch('/api/team/members');
+      if (res.ok) {
+        const data = await res.json();
+        // Get first 6 members for preview
+        setTeamMembers((data.members || []).slice(0, 6));
+      }
     } catch (e) { console.error(e); }
   };
 
@@ -55,6 +79,9 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen relative">
+      {/* Scroll Progress Bar */}
+      <ScrollProgressBar />
+
       {/* Ambient Glow */}
       {!isMobile && (
         <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -241,6 +268,192 @@ export default function HomePage() {
                 <p className="text-sm md:text-base leading-relaxed" style={{ color: 'rgba(var(--theme-accent-rgb), 0.45)' }}>
                   {f.desc}
                 </p>
+              </GlassCard>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* === DISCORD STATS + TEAM PREVIEW (2-spaltig) === */}
+      <section className="px-4 sm:px-6 py-16 md:py-24">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+            
+            {/* Discord Stats (Links) */}
+            <GlassCard className="p-6 md:p-8" hover>
+              <div className="flex items-center gap-3 mb-6">
+                <div 
+                  className="w-12 h-12 rounded-xl flex items-center justify-center"
+                  style={{ 
+                    background: 'rgba(88,101,242,0.1)',
+                    border: '1px solid rgba(88,101,242,0.2)',
+                  }}
+                >
+                  <svg className="w-6 h-6" fill="#5865F2" viewBox="0 0 24 24">
+                    <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-xl md:text-2xl font-bold text-white">Discord Server</h3>
+                  <p className="text-sm" style={{ color: 'rgba(var(--theme-accent-rgb), 0.5)' }}>Live Statistiken</p>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: 'rgba(var(--theme-accent-rgb), 0.05)' }}>
+                  <div className="flex items-center gap-3">
+                    <Users className="w-5 h-5" style={{ color: 'rgba(var(--theme-accent-rgb), 0.7)' }} />
+                    <span className="text-sm md:text-base" style={{ color: 'rgba(var(--theme-accent-rgb), 0.6)' }}>Mitglieder</span>
+                  </div>
+                  <span className="text-xl md:text-2xl font-bold text-white tabular-nums">
+                    <AnimatedCounter value={discordStats.memberCount} />
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: 'rgba(var(--theme-accent-rgb), 0.05)' }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                    <span className="text-sm md:text-base" style={{ color: 'rgba(var(--theme-accent-rgb), 0.6)' }}>Online</span>
+                  </div>
+                  <span className="text-xl md:text-2xl font-bold text-white tabular-nums">
+                    <AnimatedCounter value={discordStats.onlineCount} />
+                  </span>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: 'rgba(var(--theme-accent-rgb), 0.05)' }}>
+                  <div className="flex items-center gap-3">
+                    <Shield className="w-5 h-5" style={{ color: 'rgba(var(--theme-accent-rgb), 0.7)' }} />
+                    <span className="text-sm md:text-base" style={{ color: 'rgba(var(--theme-accent-rgb), 0.6)' }}>Teamler</span>
+                  </div>
+                  <span className="text-xl md:text-2xl font-bold text-white tabular-nums">
+                    <AnimatedCounter value={discordStats.teamCount} />
+                  </span>
+                </div>
+              </div>
+            </GlassCard>
+
+            {/* Team Preview (Rechts) */}
+            <GlassCard className="p-6 md:p-8" hover>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-xl md:text-2xl font-bold text-white">Unser Team</h3>
+                  <p className="text-sm mt-1" style={{ color: 'rgba(var(--theme-accent-rgb), 0.5)' }}>Die Menschen hinter HHRP</p>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => router.push('/team')}
+                  className="text-sm"
+                  style={{ color: 'var(--theme-accent)' }}
+                >
+                  Alle anzeigen →
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4">
+                {teamMembers.length > 0 ? teamMembers.map((member, i) => (
+                  <div key={i} className="text-center">
+                    <div className="relative mb-3">
+                      <div 
+                        className="w-16 h-16 md:w-20 md:h-20 rounded-xl mx-auto overflow-hidden"
+                        style={{ 
+                          background: 'rgba(var(--theme-accent-rgb), 0.1)',
+                          border: '2px solid rgba(var(--theme-accent-rgb), 0.15)'
+                        }}
+                      >
+                        {member.avatarUrl ? (
+                          <img src={member.avatarUrl} alt={member.username} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <UserCircle className="w-8 h-8 md:w-10 md:h-10" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }} />
+                          </div>
+                        )}
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg flex items-center justify-center" style={{ background: 'rgba(var(--theme-accent-rgb), 0.2)', border: '2px solid #080808' }}>
+                        <Shield className="w-3 h-3" style={{ color: 'var(--theme-accent)' }} />
+                      </div>
+                    </div>
+                    <p className="text-xs md:text-sm font-medium text-white truncate">{member.username}</p>
+                    <p className="text-xs truncate" style={{ color: 'rgba(var(--theme-accent-rgb), 0.5)' }}>{member.roleName}</p>
+                  </div>
+                )) : (
+                  <div className="col-span-3 text-center py-8" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                    <p className="text-sm">Lade Team...</p>
+                  </div>
+                )}
+              </div>
+            </GlassCard>
+          </div>
+        </div>
+      </section>
+
+      {/* === WAS MACHT HHRP BESONDERS? (2-spaltig) === */}
+      <section className="px-4 sm:px-6 py-16 md:py-24" style={{ background: 'rgba(var(--theme-accent-rgb), 0.02)' }}>
+        <div className="max-w-6xl mx-auto">
+          {/* Section Header */}
+          <div className="text-center mb-12 md:mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-6">
+              <Sparkles className="w-4 h-4" style={{ color: 'var(--theme-accent)' }} />
+              <span className="text-xs tracking-wider uppercase font-medium" style={{ color: 'rgba(var(--theme-accent-rgb), 0.7)' }}>Hamburg Horizon RP</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 md:mb-4">Was macht uns besonders?</h2>
+            <p className="text-base md:text-lg max-w-2xl mx-auto" style={{ color: 'rgba(var(--theme-accent-rgb), 0.45)' }}>
+              Erlebe Realismus, Spannung und deine eigene Story im besten RP-Erlebnis auf <strong style={{ color: 'var(--theme-accent)' }}>Notruf Hamburg</strong>
+            </p>
+          </div>
+
+          {/* Features Grid (2 Spalten auf Desktop) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
+            {[
+              { 
+                icon: <Gamepad2 className="w-6 h-6" />, 
+                title: 'Realistisches & ernsthaftes Roleplay', 
+                desc: 'Tauche ein in eine glaubwürdige Welt, in der deine Entscheidungen Konsequenzen haben.' 
+              },
+              { 
+                icon: <Shield className="w-6 h-6" />, 
+                title: 'Strukturierte & organisierte Fraktionen', 
+                desc: 'Polizei, Feuerwehr, Rettungsdienst und weitere – mit klaren Abläufen und echtem Teamplay.' 
+              },
+              { 
+                icon: <Heart className="w-6 h-6" />, 
+                title: 'Aktive & hilfsbereite Community', 
+                desc: 'Kein toxisches Umfeld – sondern Spieler, die wirklich RP leben wollen.' 
+              },
+              { 
+                icon: <Siren className="w-6 h-6" />, 
+                title: 'Spannende Einsätze & dynamische Storylines', 
+                desc: 'Jeder Einsatz erzählt eine Geschichte – vielleicht schon bald deine.' 
+              },
+              { 
+                icon: <Scale className="w-6 h-6" />, 
+                title: 'Faire Regeln & erfahrenes Team', 
+                desc: 'Klare Strukturen, transparente Entscheidungen und Support auf Augenhöhe.' 
+              },
+              { 
+                icon: <TrendingUp className="w-6 h-6" />, 
+                title: 'Deine Rolle. Deine Entscheidung.', 
+                desc: 'Werde Polizist, Sanitäter, Feuerwehrkraft oder Zivilist – jede Handlung beeinflusst deine Geschichte.' 
+              },
+            ].map((f, i) => (
+              <GlassCard key={i} className="p-6 md:p-7 flex items-start gap-4 md:gap-5" hover>
+                <div 
+                  className="w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center shrink-0 transition-all duration-300"
+                  style={{ 
+                    background: 'rgba(var(--theme-accent-rgb), 0.08)',
+                    border: '1px solid rgba(var(--theme-accent-rgb), 0.12)',
+                    color: 'rgba(var(--theme-accent-rgb), 0.7)'
+                  }}
+                >
+                  {f.icon}
+                </div>
+                <div>
+                  <h3 className="text-base md:text-lg font-semibold text-white mb-2">{f.title}</h3>
+                  <p className="text-sm md:text-base leading-relaxed" style={{ color: 'rgba(var(--theme-accent-rgb), 0.45)' }}>
+                    {f.desc}
+                  </p>
+                </div>
               </GlassCard>
             ))}
           </div>
