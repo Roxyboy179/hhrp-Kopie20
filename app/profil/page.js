@@ -1643,10 +1643,20 @@ export default function ProfilPage() {
                                             NEU
                                           </span>
                                         )}
+                                        {transaction.category && (
+                                          <span className="px-2 py-1 rounded-lg bg-white/10 text-white/70 text-[10px] font-medium">
+                                            {transaction.category}
+                                          </span>
+                                        )}
                                       </div>
-                                      <p className="text-sm sm:text-base text-white font-medium mb-1 break-words">
+                                      <p className="text-sm sm:text-base text-white font-semibold mb-1 break-words">
                                         {transaction.description || transaction.reason || 'Keine Beschreibung'}
                                       </p>
+                                      {transaction.id && (
+                                        <p className="text-xs text-white/40 mb-2">
+                                          ID: {transaction.id}
+                                        </p>
+                                      )}
                                     </div>
                                   </div>
                                   
@@ -1654,13 +1664,13 @@ export default function ProfilPage() {
                                     {transaction.from && (
                                       <div className="flex items-center gap-1">
                                         <User className="w-3 h-3" />
-                                        <span>{transaction.from}</span>
+                                        <span>Von: {transaction.from}</span>
                                       </div>
                                     )}
                                     {transaction.to && (
                                       <div className="flex items-center gap-1">
                                         <ArrowUpRight className="w-3 h-3" />
-                                        <span>{transaction.to}</span>
+                                        <span>An: {transaction.to}</span>
                                       </div>
                                     )}
                                     {transaction.date && (
@@ -1669,7 +1679,9 @@ export default function ProfilPage() {
                                         <span>{new Date(transaction.date).toLocaleDateString('de-DE', {
                                           day: '2-digit',
                                           month: '2-digit',
-                                          year: 'numeric'
+                                          year: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
                                         })}</span>
                                       </div>
                                     )}
@@ -1761,9 +1773,9 @@ export default function ProfilPage() {
 
                             {/* Content */}
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className="flex items-start justify-between gap-2 mb-3">
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                                  <div className="flex items-center gap-2 flex-wrap mb-2">
                                     <span className="text-sm sm:text-base font-bold text-white">
                                       Rechnung #{invoice.invoice_number || invoice.number || index + 1}
                                     </span>
@@ -1781,15 +1793,38 @@ export default function ProfilPage() {
                                     }`}>
                                       {isPaid ? 'Bezahlt' : isPending ? 'Offen' : invoice.status}
                                     </span>
+                                    {invoice.category && (
+                                      <span className="px-2 py-1 rounded-lg bg-white/10 text-white/60 text-[10px] font-medium">
+                                        {invoice.category}
+                                      </span>
+                                    )}
                                   </div>
-                                  <p className="text-sm sm:text-base text-white/70 mb-2 break-words">
+                                  
+                                  <p className="text-sm sm:text-base text-white font-semibold mb-2 break-words">
                                     {invoice.description || invoice.reason || 'Keine Beschreibung'}
                                   </p>
+                                  
+                                  {(invoice.id || invoice.invoiceId) && (
+                                    <p className="text-xs text-white/40 mb-2">
+                                      ID: {invoice.id || invoice.invoiceId}
+                                    </p>
+                                  )}
+                                  
+                                  {invoice.notes && (
+                                    <p className="text-xs text-white/50 mb-2 italic">
+                                      Notiz: {invoice.notes}
+                                    </p>
+                                  )}
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-lg sm:text-xl font-bold text-white">
+                                  <p className="text-lg sm:text-xl font-bold text-white mb-1">
                                     {invoice.amount?.toLocaleString?.() || invoice.amount}€
                                   </p>
+                                  {invoice.dueDate && (
+                                    <p className="text-xs text-white/40">
+                                      Fällig: {new Date(invoice.dueDate).toLocaleDateString('de-DE')}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                               
@@ -1797,13 +1832,19 @@ export default function ProfilPage() {
                                 {invoice.recipient && (
                                   <div className="flex items-center gap-1">
                                     <User className="w-3 h-3" />
-                                    <span>{invoice.recipient}</span>
+                                    <span>An: {invoice.recipient}</span>
+                                  </div>
+                                )}
+                                {invoice.issuer && (
+                                  <div className="flex items-center gap-1">
+                                    <Building2 className="w-3 h-3" />
+                                    <span>Von: {invoice.issuer}</span>
                                   </div>
                                 )}
                                 {invoice.date && (
                                   <div className="flex items-center gap-1">
                                     <Calendar className="w-3 h-3" />
-                                    <span>{new Date(invoice.date).toLocaleDateString('de-DE', {
+                                    <span>Erstellt: {new Date(invoice.date).toLocaleDateString('de-DE', {
                                       day: '2-digit',
                                       month: '2-digit',
                                       year: 'numeric'
@@ -1973,24 +2014,54 @@ export default function ProfilPage() {
                                         NEU
                                       </span>
                                     )}
+                                    {record.severity && (
+                                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-medium ${
+                                        record.severity === 'high' || record.severity === 'hoch' 
+                                          ? 'bg-red-500/30 text-red-300'
+                                          : record.severity === 'medium' || record.severity === 'mittel'
+                                          ? 'bg-yellow-500/30 text-yellow-300'
+                                          : 'bg-blue-500/30 text-blue-300'
+                                      }`}>
+                                        {record.severity === 'high' || record.severity === 'hoch' ? 'Schwer' :
+                                         record.severity === 'medium' || record.severity === 'mittel' ? 'Mittel' : 'Leicht'}
+                                      </span>
+                                    )}
                                   </div>
-                                  <h3 className="text-sm sm:text-base font-bold text-white mb-1">
+                                  <h3 className="text-sm sm:text-base font-bold text-white mb-2">
                                     {record.title || record.reason || 'Ohne Titel'}
                                   </h3>
+                                  {(record.id || record.aktennummer) && (
+                                    <p className="text-xs text-white/40 mb-2">
+                                      Akten-ID: {record.id || record.aktennummer}
+                                    </p>
+                                  )}
+                                  {record.points && (
+                                    <p className="text-xs text-orange-400 mb-2 font-medium">
+                                      Strafpunkte: {record.points}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                               
                               {record.description && (
-                                <p className="text-sm text-white/70 mb-3 break-words leading-relaxed">
+                                <p className="text-sm text-white/70 mb-3 break-words leading-relaxed bg-white/[0.03] p-3 rounded-lg">
                                   {record.description}
                                 </p>
+                              )}
+                              
+                              {record.duration && (
+                                <div className="mb-3 p-2 bg-orange-500/10 border border-orange-500/30 rounded-lg">
+                                  <p className="text-xs text-orange-300 font-medium">
+                                    Dauer: {record.duration}
+                                  </p>
+                                </div>
                               )}
                               
                               <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-white/50">
                                 {record.admin_name && (
                                   <div className="flex items-center gap-1">
                                     <Shield className="w-3 h-3" />
-                                    <span>{record.admin_name}</span>
+                                    <span>Admin: {record.admin_name}</span>
                                   </div>
                                 )}
                                 {record.date && (
