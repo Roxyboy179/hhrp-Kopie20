@@ -3,12 +3,17 @@
 import { useState, useEffect } from 'react';
 import { Download } from 'lucide-react';
 import { InstallModal } from './InstallModal';
+import { usePathname } from 'next/navigation';
 
 export function InstallButton() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
   const [showButton, setShowButton] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const pathname = usePathname();
+
+  // Nicht auf Admin-Seiten anzeigen - sehr strikte Prüfung
+  if (pathname?.includes('/admin')) return null;
 
   useEffect(() => {
     // Check if already installed

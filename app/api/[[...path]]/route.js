@@ -1764,9 +1764,24 @@ export async function POST(request) {
       const { data, error } = await supabaseAdmin
         .from('system_status')
         .select('*')
-        .single();
+        .limit(1)
+        .maybeSingle();
 
-      if (error && error.code === 'PGRST116') {
+      if (error) {
+        console.error('Get system_status error:', error);
+        // Return default values if table doesn't exist yet
+        return NextResponse.json({ 
+          status: {
+            wartungsmodus: false,
+            geplante_wartung: false,
+            wartung_start: '',
+            wartung_ende: '',
+            wartung_nachricht: 'Wir führen gerade Wartungsarbeiten durch.',
+          }
+        });
+      }
+
+      if (!data) {
         // No entry exists, create default
         const { data: newData, error: createError } = await supabaseAdmin
           .from('system_status')
@@ -1796,21 +1811,18 @@ export async function POST(request) {
         return NextResponse.json({ status: newData });
       }
 
-      if (error) {
-        console.error('Get system_status error:', error);
-        return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
-      }
-
-      return NextResponse.json({ status: data || {
-        wartungsmodus: false,
-        geplante_wartung: false,
-        wartung_start: '',
-        wartung_ende: '',
-        wartung_nachricht: 'Wir führen gerade Wartungsarbeiten durch.',
-      }});
+      return NextResponse.json({ status: data });
     } catch (error) {
       console.error('System status error:', error);
-      return NextResponse.json({ error: 'Fehler' }, { status: 500 });
+      return NextResponse.json({ 
+        status: {
+          wartungsmodus: false,
+          geplante_wartung: false,
+          wartung_start: '',
+          wartung_ende: '',
+          wartung_nachricht: 'Wir führen gerade Wartungsarbeiten durch.',
+        }
+      });
     }
   }
 
@@ -1820,15 +1832,16 @@ export async function POST(request) {
       const { data, error } = await supabaseAdmin
         .from('system_status')
         .select('geplante_wartung, wartung_start, wartung_ende, wartung_nachricht')
-        .single();
+        .limit(1)
+        .maybeSingle();
 
-      if (error) {
+      if (error || !data) {
         return NextResponse.json({ 
           geplante_wartung: false 
         });
       }
 
-      return NextResponse.json(data || { geplante_wartung: false });
+      return NextResponse.json(data);
     } catch (error) {
       return NextResponse.json({ geplante_wartung: false });
     }
