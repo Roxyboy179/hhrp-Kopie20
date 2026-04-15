@@ -245,7 +245,7 @@ function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
           >
             <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
               <span className="text-[160px] font-black tracking-wider rotate-[20deg] select-none">
-                FS
+                HHRP
               </span>
             </div>
 
