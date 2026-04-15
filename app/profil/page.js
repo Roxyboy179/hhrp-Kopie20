@@ -1165,14 +1165,14 @@ export default function ProfilPage() {
 
         {/* Tab Navigation */}
         <div className="glass rounded-2xl p-2 border border-white/[0.08]">
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-3 sm:px-4 rounded-xl transition-all text-sm sm:text-base ${
+                  className={`flex items-center justify-center gap-2 px-3 py-3 sm:px-4 rounded-xl transition-all text-sm sm:text-base ${
                     activeTab === tab.id
                       ? 'bg-white/10 text-white border border-white/20'
                       : 'text-white/50 hover:text-white/70 hover:bg-white/5'
