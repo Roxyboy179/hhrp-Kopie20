@@ -110,8 +110,10 @@ export default function ProfilPage() {
   const avatarUrl = getDiscordAvatarUrl(user, 256);
   const money = userData?.money || {};
   const character = userData?.character || {};
-  const licenses = userData?.licenses || [];
-  const cards = userData?.cards || [];
+  
+  // licenses und cards sind Objects mit Keys als Namen, nicht Arrays
+  const licenses = userData?.licenses ? Object.keys(userData.licenses) : [];
+  const cards = userData?.cards ? Object.keys(userData.cards) : [];
   const stats = userData?.stats || {};
 
   const totalMoney = (money.cash || 0) + (money.bank || 0) + (money.savings || 0);
@@ -388,7 +390,7 @@ export default function ProfilPage() {
                     key={i}
                     className="px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300 text-sm"
                   >
-                    {license}
+                    {license.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </span>
                 ))}
               </div>
@@ -410,7 +412,7 @@ export default function ProfilPage() {
                     key={i}
                     className="px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-300 text-sm"
                   >
-                    {card}
+                    {card.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
                   </span>
                 ))}
               </div>
