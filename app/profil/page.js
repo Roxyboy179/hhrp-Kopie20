@@ -84,9 +84,24 @@ function BotStatusCard({ status, onRetry }) {
           </div>
 
           <div className="space-y-3 w-full max-w-md">
+            {/* Automatischer Retry Hinweis */}
+            <div className="flex items-center justify-center gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+              <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+              <div className="text-left">
+                <p className="text-sm font-medium text-blue-300">Automatische Prüfung läuft</p>
+                <p className="text-xs text-blue-400/60">Versucht alle 15 Sekunden erneut zu verbinden...</p>
+              </div>
+            </div>
+            
+            <p className="text-xs text-white/40">
+              💡 Die Seite wird automatisch aktualisiert, sobald der Bot wieder online ist.
+            </p>
+            
+            {/* Manueller Retry Button (optional) */}
             <Button
               onClick={onRetry}
-              className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600"
+              variant="outline"
+              className="w-full border-white/10 hover:bg-white/5"
             >
               <svg 
                 className="w-5 h-5 mr-2" 
@@ -101,12 +116,8 @@ function BotStatusCard({ status, onRetry }) {
                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
                 />
               </svg>
-              Erneut versuchen
+              Jetzt manuell versuchen
             </Button>
-            
-            <p className="text-xs text-white/40">
-              💡 Der Discord Bot wird regelmäßig geprüft. Bitte habe etwas Geduld.
-            </p>
           </div>
         </div>
       </div>
@@ -586,6 +597,21 @@ export default function ProfilPage() {
       }
     }
   }, [user, authLoading, router]);
+
+  // Auto-Retry: Prüfe alle 15 Sekunden im Hintergrund ob Bot wieder online ist
+  useEffect(() => {
+    if (!user || authLoading) return;
+
+    const retryInterval = setInterval(() => {
+      // Nur neu laden wenn Bot offline ist
+      if (!botStatus.isOnline && !botStatus.checking) {
+        console.log('[Auto-Retry] Bot offline - versuche erneut...');
+        loadData();
+      }
+    }, 15000); // Alle 15 Sekunden
+
+    return () => clearInterval(retryInterval);
+  }, [user, authLoading, botStatus.isOnline, botStatus.checking]);
 
   const loadData = async () => {
     try {
