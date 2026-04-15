@@ -64,29 +64,33 @@ export function WartungsBanner() {
   if (!status?.geplante_wartung || dismissed) return null;
 
   return (
-    <div className="relative w-full bg-gradient-to-r from-yellow-500/10 via-orange-500/10 to-red-500/10 border-b-2 border-yellow-500/30 backdrop-blur-sm z-10">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
-        <div className="flex items-center justify-between gap-3">
+    <div className="fixed top-0 left-0 right-0 w-full bg-gradient-to-r from-yellow-500/10 via-orange-500/10 to-red-500/10 border-b-2 border-yellow-500/30 backdrop-blur-md z-[100]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5">
+        <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <Wrench className="w-4 h-4 text-yellow-300 flex-shrink-0" />
-              <span className="text-sm md:text-base font-bold text-yellow-200">
-                Geplante Wartungsarbeiten
-              </span>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-yellow-400/20 flex items-center justify-center flex-shrink-0">
+                  <Wrench className="w-4 h-4 text-yellow-300" />
+                </div>
+                <span className="text-sm font-bold text-yellow-200">
+                  Geplante Wartungsarbeiten
+                </span>
+              </div>
               {countdown && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-400/20 border border-yellow-400/30 text-xs font-semibold text-yellow-200">
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-400/20 border border-yellow-400/30 text-xs font-semibold text-yellow-200">
                   <Clock className="w-3 h-3" />
                   {countdown}
                 </span>
               )}
             </div>
             
-            <p className="text-xs md:text-sm text-yellow-100/90 leading-relaxed mb-2">
+            <p className="text-xs text-yellow-100/90 leading-relaxed">
               {status.wartung_nachricht || 'Wir führen Wartungsarbeiten durch, um unseren Service zu verbessern.'}
             </p>
 
             {(status.wartung_start || status.wartung_ende) && (
-              <div className="flex flex-wrap items-center gap-3 text-xs text-yellow-200/70">
+              <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-yellow-200/70">
                 {status.wartung_start && (
                   <span className="flex items-center gap-1">
                     <Calendar className="w-3 h-3 flex-shrink-0" />
@@ -104,7 +108,7 @@ export function WartungsBanner() {
                   <span className="flex items-center gap-1">
                     <Flag className="w-3 h-3 flex-shrink-0" />
                     <span className="whitespace-nowrap">
-                      {new Date(status.wartung_ende).toLocaleString('de-DE', {
+                      Ende: {new Date(status.wartung_ende).toLocaleString('de-DE', {
                         day: '2-digit',
                         month: '2-digit',
                         hour: '2-digit',
@@ -119,7 +123,7 @@ export function WartungsBanner() {
 
           <button
             onClick={() => setDismissed(true)}
-            className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-yellow-200/60 hover:text-yellow-200 flex-shrink-0"
+            className="p-1 rounded-lg hover:bg-white/10 transition-colors text-yellow-200/60 hover:text-yellow-200 flex-shrink-0"
             aria-label="Banner schließen"
           >
             <X className="w-4 h-4" />

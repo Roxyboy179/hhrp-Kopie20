@@ -57,6 +57,7 @@ export default function RootClientLayout({ children }) {
       <ThemeProvider>
         {!splashDone && <SplashScreen onComplete={handleSplashComplete} />}
         <div style={{ opacity: splashDone ? 1 : 0, transition: 'opacity 0.5s ease' }}>
+          <WartungsBanner />
           <LayoutContent>{children}</LayoutContent>
           <CookieBanner />
           <InstallPrompt />
@@ -87,6 +88,7 @@ function LayoutContent({ children }) {
   const isAdmin = pathname?.startsWith('/admin');
   const [wartungsmodus, setWartungsmodus] = useState(false);
   const [wartungsLoading, setWartungsLoading] = useState(true);
+  const [showBanner, setShowBanner] = useState(false);
 
   // Wartungsmodus-Status prüfen
   useEffect(() => {
@@ -99,6 +101,7 @@ function LayoutContent({ children }) {
         if (res.ok) {
           const data = await res.json();
           setWartungsmodus(data.wartungsmodus || false);
+          setShowBanner(data.geplante_wartung || false);
         }
       } catch (e) {
         console.error('Fehler beim Prüfen des Wartungsmodus:', e);
@@ -126,8 +129,7 @@ function LayoutContent({ children }) {
   return (
     <>
       <Navbar user={user} loading={loading} />
-      <WartungsBanner />
-      <main className="pt-16 min-h-screen">{children}</main>
+      <main className={showBanner ? "pt-16 min-h-screen" : "pt-16 min-h-screen"}>{children}</main>
       <Footer />
       <ThemeButton />
     </>
