@@ -1718,8 +1718,105 @@ export async function GET(request) {
     case 'admin/accounts': return handleAdminGetAccounts(request);
     case 'admin/settings': return handleAdminGetSettings(request);
     case 'team/members': return handleGetTeamMembers(request);
-    default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    default: break;
   }
+
+  // === System Status ===
+  if (p === 'admin/system-status') {
+    try {
+      const admin = await verifyAdminToken(request);
+      if (!admin) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      // Get or create system_status table entry
+      const { data, error } = await supabaseAdmin
+        .from('system_status')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Get system_status error:', error);
+        // Return default values if table doesn't exist yet
+        return NextResponse.json({ 
+          status: {
+            wartungsmodus: false,
+            geplante_wartung: false,
+            wartung_start: '',
+            wartung_ende: '',
+            wartung_nachricht: 'Wir führen gerade Wartungsarbeiten durch.',
+          }
+        });
+      }
+
+      if (!data) {
+        // No entry exists, create default
+        const { data: newData, error: createError } = await supabaseAdmin
+          .from('system_status')
+          .insert({
+            wartungsmodus: false,
+            geplante_wartung: false,
+            wartung_start: null,
+            wartung_ende: null,
+            wartung_nachricht: 'Wir führen gerade Wartungsarbeiten durch.',
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Create system_status error:', createError);
+          return NextResponse.json({ 
+            status: {
+              wartungsmodus: false,
+              geplante_wartung: false,
+              wartung_start: '',
+              wartung_ende: '',
+              wartung_nachricht: 'Wir führen gerade Wartungsarbeiten durch.',
+            }
+          });
+        }
+
+        return NextResponse.json({ status: newData });
+      }
+
+      return NextResponse.json({ status: data });
+    } catch (error) {
+      console.error('System status error:', error);
+      return NextResponse.json({ 
+        status: {
+          wartungsmodus: false,
+          geplante_wartung: false,
+          wartung_start: '',
+          wartung_ende: '',
+          wartung_nachricht: 'Wir führen gerade Wartungsarbeiten durch.',
+        }
+      });
+    }
+  }
+
+  // === Public System Status (for banner) ===
+  if (p === 'system-status/public') {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('system_status')
+        .select('geplante_wartung, wartung_start, wartung_ende, wartung_nachricht')
+        .limit(1)
+        .maybeSingle();
+
+      if (error || !data) {
+        return NextResponse.json({ 
+          geplante_wartung: false 
+        });
+      }
+
+      return NextResponse.json(data);
+    } catch (error) {
+      return NextResponse.json({ geplante_wartung: false });
+    }
+  }
+
+  return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
 
 export async function POST(request) {
