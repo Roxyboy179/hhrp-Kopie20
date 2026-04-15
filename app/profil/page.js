@@ -174,7 +174,7 @@ export default function ProfilPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-2xl font-bold text-green-400">
-                        ${reward.amount.toLocaleString()}
+                        €{reward.amount.toLocaleString()}
                       </span>
                       <span className="px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 text-xs">
                         {reward.reward_type}
@@ -224,7 +224,7 @@ export default function ProfilPage() {
                 <div>
                   <p className="text-xs text-white/40">Bargeld</p>
                   <p className="text-2xl font-bold text-white">
-                    ${(money.cash || 0).toLocaleString()}
+                    €{(money.cash || 0).toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -238,7 +238,7 @@ export default function ProfilPage() {
                 <div>
                   <p className="text-xs text-white/40">Bank</p>
                   <p className="text-2xl font-bold text-white">
-                    ${(money.bank || 0).toLocaleString()}
+                    €{(money.bank || 0).toLocaleString()}
                   </p>
                 </div>
               </div>
@@ -252,7 +252,7 @@ export default function ProfilPage() {
                 <div>
                   <p className="text-xs text-white/40">Gesamt</p>
                   <p className="text-2xl font-bold text-white">
-                    ${totalMoney.toLocaleString()}
+                    €{totalMoney.toLocaleString()}
                   </p>
                 </div>
               </div>
