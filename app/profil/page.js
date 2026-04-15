@@ -10,7 +10,7 @@ import {
   Wallet, CreditCard, Trophy, Gift, User, Award, Clock, TrendingUp, 
   Check, Loader2, FileText, Calendar, Mail, ExternalLink, LayoutDashboard, IdCard, ClipboardList,
   Building2, Hash, Key, Copy, ArrowUpRight, ArrowDownRight, AlertCircle, 
-  Shield, Star, MessageSquare, Ban, ChevronUp, ShieldCheck, CheckCircle
+  Shield, Star, MessageSquare, Ban, ChevronUp, ShieldCheck, CheckCircle, DollarSign, RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -1902,7 +1902,18 @@ export default function ProfilPage() {
                         const isNew = (record.createdAt || record.date) && 
                           (new Date() - new Date(record.createdAt || record.date)) < 24 * 60 * 60 * 1000;
                         
+                        // Determine type - support both old and new format
+                        const recordType = (record.typ || record.type || '').toLowerCase();
+                        
                         const typeConfig = {
+                          strafzettel: {
+                            icon: AlertCircle,
+                            color: 'red',
+                            label: 'Strafzettel',
+                            bgClass: 'bg-red-500/20',
+                            borderClass: 'border-red-500',
+                            textClass: 'text-red-400'
+                          },
                           warning: { 
                             icon: AlertCircle, 
                             color: 'yellow', 
@@ -1969,16 +1980,21 @@ export default function ProfilPage() {
                           }
                         };
                         
-                        const config = typeConfig[record.type?.toLowerCase()] || { 
+                        const config = typeConfig[recordType] || { 
                           icon: FileText, 
                           color: 'gray', 
-                          label: record.type || 'Eintrag',
+                          label: record.typ || record.type || 'Eintrag',
                           bgClass: 'bg-white/10',
                           borderClass: 'border-white/30',
                           textClass: 'text-white/70'
                         };
                         
                         const IconComponent = config.icon;
+                        
+                        // Extract title from strafen array if available
+                        const title = record.strafen && record.strafen.length > 0
+                          ? record.strafen.map(s => s.name).join(', ')
+                          : (record.title || record.reason || 'Ohne Titel');
                         
                         return (
                           <div key={index} className="relative pl-14 sm:pl-16">
@@ -2004,25 +2020,45 @@ export default function ProfilPage() {
                                         NEU
                                       </span>
                                     )}
-                                    {record.severity && (
+                                    {record.status && (
                                       <span className={`px-2 py-0.5 rounded-lg text-[10px] font-medium ${
-                                        record.severity === 'high' || record.severity === 'hoch' 
+                                        record.status === 'bezahlt' 
+                                          ? 'bg-green-500/30 text-green-300'
+                                          : record.status === 'storniert'
+                                          ? 'bg-gray-500/30 text-gray-300'
+                                          : record.status === 'offen'
+                                          ? 'bg-yellow-500/30 text-yellow-300'
+                                          : 'bg-blue-500/30 text-blue-300'
+                                      }`}>
+                                        {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+                                      </span>
+                                    )}
+                                    {(record.severity || (record.strafen && record.strafen.length > 2)) && (
+                                      <span className={`px-2 py-0.5 rounded-lg text-[10px] font-medium ${
+                                        record.severity === 'high' || record.severity === 'hoch' || (record.strafen && record.strafen.length > 2)
                                           ? 'bg-red-500/30 text-red-300'
                                           : record.severity === 'medium' || record.severity === 'mittel'
                                           ? 'bg-yellow-500/30 text-yellow-300'
                                           : 'bg-blue-500/30 text-blue-300'
                                       }`}>
-                                        {record.severity === 'high' || record.severity === 'hoch' ? 'Schwer' :
+                                        {record.strafen && record.strafen.length > 2 ? 'Schwer' :
+                                         record.severity === 'high' || record.severity === 'hoch' ? 'Schwer' :
                                          record.severity === 'medium' || record.severity === 'mittel' ? 'Mittel' : 'Leicht'}
                                       </span>
                                     )}
                                   </div>
                                   <h3 className="text-sm sm:text-base font-bold text-white mb-2">
-                                    {record.title || record.reason || 'Ohne Titel'}
+                                    {title}
                                   </h3>
-                                  {(record.id || record.aktennummer) && (
+                                  {(record.id || record.aktennummer || record.invoiceId) && (
                                     <p className="text-xs text-white/40 mb-2">
-                                      Akten-ID: {record.id || record.aktennummer}
+                                      ID: {record.id || record.aktennummer || record.invoiceId}
+                                    </p>
+                                  )}
+                                  {record.betrag && (
+                                    <p className="text-xs text-orange-400 mb-2 font-medium flex items-center gap-1">
+                                      <DollarSign className="w-3 h-3" />
+                                      Betrag: {record.betrag.toLocaleString('de-DE')} €
                                     </p>
                                   )}
                                   {record.points && (
@@ -2032,6 +2068,21 @@ export default function ProfilPage() {
                                   )}
                                 </div>
                               </div>
+                              
+                              {/* Strafen Details */}
+                              {record.strafen && record.strafen.length > 0 && (
+                                <div className="mb-3 p-3 bg-white/[0.03] rounded-lg">
+                                  <p className="text-xs font-semibold text-white/60 mb-2">Verstöße:</p>
+                                  <div className="space-y-1">
+                                    {record.strafen.map((strafe, i) => (
+                                      <div key={i} className="flex items-center justify-between text-xs">
+                                        <span className="text-white/70">{strafe.name}</span>
+                                        <span className="text-red-400 font-medium">{strafe.price?.toLocaleString('de-DE')} €</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                               
                               {record.description && (
                                 <p className="text-sm text-white/70 mb-3 break-words leading-relaxed bg-white/[0.03] p-3 rounded-lg">
@@ -2048,21 +2099,30 @@ export default function ProfilPage() {
                               )}
                               
                               <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-white/50">
-                                {record.admin_name && (
+                                {(record.beamter || record.admin_name) && (
                                   <div className="flex items-center gap-1">
                                     <Shield className="w-3 h-3" />
-                                    <span>Admin: {record.admin_name}</span>
+                                    <span>Beamter: {record.beamter || record.admin_name}</span>
                                   </div>
                                 )}
-                                {record.date && (
+                                {(record.createdAt || record.date) && (
                                   <div className="flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
-                                    <span>{new Date(record.date).toLocaleDateString('de-DE', { 
+                                    <span>{new Date(record.createdAt || record.date).toLocaleDateString('de-DE', { 
                                       day: '2-digit', 
                                       month: '2-digit', 
                                       year: 'numeric',
                                       hour: '2-digit',
                                       minute: '2-digit'
+                                    })}</span>
+                                  </div>
+                                )}
+                                {record.updatedAt && record.updatedAt !== record.createdAt && (
+                                  <div className="flex items-center gap-1">
+                                    <RefreshCw className="w-3 h-3" />
+                                    <span>Aktualisiert: {new Date(record.updatedAt).toLocaleDateString('de-DE', { 
+                                      day: '2-digit', 
+                                      month: '2-digit'
                                     })}</span>
                                   </div>
                                 )}
