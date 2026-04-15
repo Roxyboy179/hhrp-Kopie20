@@ -262,6 +262,9 @@ function Footer() {
           <div>
             <h3 className="font-semibold mb-3">Rechtliches</h3>
             <div className="space-y-2">
+              <Link href="/impressum" className="block text-sm transition-colors" style={{ color: 'rgba(var(--theme-accent-rgb), 0.45)' }}>
+                Impressum
+              </Link>
               <Link href="/datenschutz" className="block text-sm transition-colors" style={{ color: 'rgba(var(--theme-accent-rgb), 0.45)' }}>
                 Datenschutzerklärung
               </Link>
