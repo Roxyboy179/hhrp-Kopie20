@@ -723,6 +723,32 @@ export default function ProfilPage() {
         {/* Tab Content */}
         {activeTab === 'overview' && (
           <>
+            {/* Daily Bonus Widget */}
+            <div className="glass rounded-2xl p-6 border border-green-500/20 bg-gradient-to-br from-green-500/5 to-emerald-500/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                    <Gift className="w-8 h-8 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white mb-1">Täglicher Bonus</h3>
+                    <p className="text-sm text-white/60">Hol dir deinen kostenlosen Bonus jeden Tag ab!</p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => {
+                    toast.info('Täglicher Bonus', {
+                      description: 'Um deinen täglichen Bonus zu claimen, nutze den Discord Bot mit dem Befehl: /daily'
+                    });
+                  }}
+                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 px-8 py-6 text-lg"
+                >
+                  <Gift className="w-5 h-5 mr-2" />
+                  Daily Bonus claimen
+                </Button>
+              </div>
+            </div>
+
             {/* Money Overview */}
             {loading ? (
               <div className="grid md:grid-cols-3 gap-4">
