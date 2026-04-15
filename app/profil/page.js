@@ -22,6 +22,8 @@ function SkeletonCard({ className = "" }) {
 }
 
 function BankCard({ card, userName }) {
+  const [isFlipped, setIsFlipped] = useState(false);
+  
   const bankNames = {
     'elite_federal': 'Elite Federal Bank',
     'hamburg_horizon': 'Hamburg Horizon Bank',
@@ -29,24 +31,14 @@ function BankCard({ card, userName }) {
     'sparkasse': 'Sparkasse Hamburg'
   };
 
-  const bankColors = {
-    'elite_federal': 'from-slate-700 via-slate-600 to-slate-800',
-    'hamburg_horizon': 'from-slate-700 via-slate-600 to-slate-800',
-    'deutsche_bank': 'from-slate-700 via-slate-600 to-slate-800',
-    'sparkasse': 'from-slate-700 via-slate-600 to-slate-800'
-  };
-
   const bankName = bankNames[card.bankId] || 'Hamburg Bank';
-  const gradient = bankColors[card.bankId] || 'from-gray-700 via-gray-600 to-gray-800';
 
   const formatCardNumber = (num) => {
     if (!num) return '0000 0000 0000 0000';
     const str = num.toString();
-    // Wenn die Nummer kürzer als 16 Zeichen ist, zeige sie direkt formatiert
     if (str.length <= 12) {
       return str.match(/.{1,4}/g)?.join(' ') || str;
     }
-    // Sonst formatiere als 4x4 Gruppen
     const padded = str.padStart(16, '0');
     return padded.match(/.{1,4}/g)?.join(' ') || str;
   };
@@ -57,117 +49,215 @@ function BankCard({ card, userName }) {
   };
 
   return (
-    <div className="relative w-full aspect-[1.586/1] perspective-1000">
-      <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${gradient} shadow-2xl overflow-hidden`}>
-        {/* Wasserzeichen HHRP */}
-        <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
-          <span className="text-[120px] font-black tracking-wider rotate-[-20deg] select-none">
-            HHRP
-          </span>
-        </div>
+    <div className="w-full max-w-2xl mx-auto perspective-1000">
+      <div 
+        className="relative w-full aspect-[1.586/1] cursor-pointer"
+        onClick={() => setIsFlipped(!isFlipped)}
+      >
+        {/* 3D Container */}
+        <div 
+          className={`relative w-full h-full transition-transform duration-700 transform-style-3d ${
+            isFlipped ? 'rotate-y-180' : ''
+          }`}
+          style={{
+            transformStyle: 'preserve-3d',
+            transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+          }}
+        >
+          {/* VORDERSEITE */}
+          <div 
+            className="absolute inset-0 backface-hidden rounded-2xl bg-gradient-to-br from-slate-700 via-slate-600 to-slate-800 shadow-2xl overflow-hidden"
+            style={{ backfaceVisibility: 'hidden' }}
+          >
+            {/* Wasserzeichen HHRP */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
+              <span className="text-[120px] font-black tracking-wider rotate-[-20deg] select-none">
+                HHRP
+              </span>
+            </div>
 
-        {/* Decorative elements */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full translate-y-24 -translate-x-24"></div>
+            {/* Decorative elements */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full translate-y-24 -translate-x-24"></div>
 
-        {/* Card Content */}
-        <div className="relative h-full p-6 flex flex-col justify-between text-white">
-          {/* Header */}
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Building2 className="w-5 h-5" />
-                <span className="text-sm font-semibold opacity-90">{bankName}</span>
+            {/* Card Content */}
+            <div className="relative h-full p-6 flex flex-col justify-between text-white">
+              {/* Header */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <Building2 className="w-5 h-5" />
+                    <span className="text-sm font-semibold opacity-90">{bankName}</span>
+                  </div>
+                  <p className="text-xs opacity-60">Hamburg Horizon RP</p>
+                </div>
+                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-lg">
+                  <CreditCard className="w-6 h-6 text-yellow-900" />
+                </div>
               </div>
-              <p className="text-xs opacity-60">Hamburg Horizon RP</p>
-            </div>
-            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-lg">
-              <CreditCard className="w-6 h-6 text-yellow-900" />
-            </div>
-          </div>
 
-          {/* Chip */}
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-11 rounded-md bg-gradient-to-br from-yellow-400/90 to-yellow-500/90 shadow-lg relative overflow-hidden">
-              <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 gap-[1px] p-1">
-                {[...Array(9)].map((_, i) => (
-                  <div key={i} className="bg-yellow-600/40 rounded-[1px]"></div>
-                ))}
+              {/* Chip */}
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-11 rounded-md bg-gradient-to-br from-yellow-400/90 to-yellow-500/90 shadow-lg relative overflow-hidden">
+                  <div className="absolute inset-0 grid grid-cols-3 grid-rows-3 gap-[1px] p-1">
+                    {[...Array(9)].map((_, i) => (
+                      <div key={i} className="bg-yellow-600/40 rounded-[1px]"></div>
+                    ))}
+                  </div>
+                </div>
+                <div className="text-xs opacity-70">Kontaktlos</div>
               </div>
-            </div>
-            <div className="text-xs opacity-70">Kontaktlos</div>
-          </div>
 
-          {/* Card Number */}
-          <div className="space-y-1">
-            <p className="text-xs opacity-60">Kartennummer</p>
-            <div className="flex items-center justify-between group">
-              <p className="text-xl font-mono tracking-wider font-semibold">
-                {formatCardNumber(card.accountNumber)}
-              </p>
-              <button
-                onClick={() => copyToClipboard(card.accountNumber, 'Kartennummer')}
-                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
-              >
-                <Copy className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Card Details */}
-          <div className="flex items-end justify-between">
-            <div className="space-y-1">
-              <p className="text-xs opacity-60">Karteninhaber</p>
-              <p className="text-sm font-semibold uppercase tracking-wide">{userName}</p>
-            </div>
-            <div className="space-y-1 text-right">
-              <p className="text-xs opacity-60">PIN</p>
-              <div className="flex items-center gap-2 group">
-                <p className="text-sm font-mono font-semibold">{card.code || '•••'}</p>
-                {card.code && (
+              {/* Card Number */}
+              <div className="space-y-1">
+                <p className="text-xs opacity-60">Kartennummer</p>
+                <div className="flex items-center justify-between group">
+                  <p className="text-xl font-mono tracking-wider font-semibold">
+                    {formatCardNumber(card.accountNumber)}
+                  </p>
                   <button
-                    onClick={() => copyToClipboard(card.code, 'PIN')}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      copyToClipboard(card.accountNumber, 'Kartennummer');
+                    }}
                     className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-white/10 rounded"
                   >
-                    <Copy className="w-3 h-3" />
+                    <Copy className="w-4 h-4" />
                   </button>
-                )}
+                </div>
+              </div>
+
+              {/* Card Details */}
+              <div className="flex items-end justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs opacity-60">Karteninhaber</p>
+                  <p className="text-sm font-semibold uppercase tracking-wide">{userName}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs opacity-40">Klicken zum Umdrehen</p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Additional Info - Back side effect */}
-          {(card.identification || card.transferNumber) && (
-            <div className="mt-2 pt-3 border-t border-white/10 grid grid-cols-2 gap-3 text-xs">
-              {card.identification && (
-                <div className="flex items-center gap-1.5 group">
-                  <Key className="w-3.5 h-3.5 opacity-60" />
-                  <span className="opacity-60">ID:</span>
-                  <span className="font-mono">{card.identification}</span>
-                  <button
-                    onClick={() => copyToClipboard(card.identification, 'ID')}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-white/10 rounded"
-                  >
-                    <Copy className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
-              {card.transferNumber && (
-                <div className="flex items-center gap-1.5 group">
-                  <Hash className="w-3.5 h-3.5 opacity-60" />
-                  <span className="opacity-60">Transfer:</span>
-                  <span className="font-mono">{card.transferNumber}</span>
-                  <button
-                    onClick={() => copyToClipboard(card.transferNumber, 'Transfer-Nr')}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-white/10 rounded"
-                  >
-                    <Copy className="w-3 h-3" />
-                  </button>
-                </div>
-              )}
+          {/* RÜCKSEITE */}
+          <div 
+            className="absolute inset-0 backface-hidden rounded-2xl bg-gradient-to-br from-slate-700 via-slate-600 to-slate-800 shadow-2xl overflow-hidden"
+            style={{ 
+              backfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)'
+            }}
+          >
+            {/* Wasserzeichen HHRP */}
+            <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
+              <span className="text-[120px] font-black tracking-wider rotate-[20deg] select-none">
+                HHRP
+              </span>
             </div>
-          )}
+
+            {/* Card Content Back */}
+            <div className="relative h-full flex flex-col text-white">
+              {/* Magnetic Stripe */}
+              <div className="w-full h-14 bg-black mt-8"></div>
+
+              {/* Signature & CVV Area */}
+              <div className="px-6 py-6 flex-1 flex flex-col justify-between">
+                <div className="space-y-4">
+                  {/* Signature Strip */}
+                  <div className="bg-white h-12 rounded flex items-center px-3">
+                    <div className="w-full h-6 bg-gradient-to-r from-slate-200 to-slate-300 rounded flex items-center justify-end pr-2">
+                      <span className="text-xs text-slate-600 italic font-semibold">{userName?.slice(0, 15)}</span>
+                    </div>
+                  </div>
+
+                  {/* CVV Box */}
+                  <div className="bg-white/90 rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="text-xs text-slate-600 font-medium">Sicherheitscode</p>
+                        <p className="text-2xl font-mono font-bold text-slate-800 tracking-wider">{card.code || '•••'}</p>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (card.code) copyToClipboard(card.code, 'PIN');
+                        }}
+                        className="p-1 hover:bg-slate-200 rounded transition-colors"
+                      >
+                        <Copy className="w-4 h-4 text-slate-600" />
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-500">Gib diesen Code niemals weiter</p>
+                  </div>
+
+                  {/* Card Info */}
+                  {(card.identification || card.transferNumber) && (
+                    <div className="space-y-2 text-xs">
+                      {card.identification && (
+                        <div className="flex items-center justify-between py-2 border-t border-white/10">
+                          <div className="flex items-center gap-2">
+                            <Key className="w-3.5 h-3.5 opacity-60" />
+                            <span className="opacity-60">Identifikation:</span>
+                          </div>
+                          <div className="flex items-center gap-2 group">
+                            <span className="font-mono">{card.identification}</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                copyToClipboard(card.identification, 'ID');
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-white/10 rounded"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {card.transferNumber && (
+                        <div className="flex items-center justify-between py-2 border-t border-white/10">
+                          <div className="flex items-center gap-2">
+                            <Hash className="w-3.5 h-3.5 opacity-60" />
+                            <span className="opacity-60">Transfer-Nr:</span>
+                          </div>
+                          <div className="flex items-center gap-2 group">
+                            <span className="font-mono">{card.transferNumber}</span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                copyToClipboard(card.transferNumber, 'Transfer-Nr');
+                              }}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-white/10 rounded"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <div className="flex items-center justify-between text-xs opacity-60">
+                    <span>{bankName}</span>
+                    <span>Klicken zum Umdrehen</span>
+                  </div>
+                  <p className="text-[10px] opacity-40 mt-2">
+                    Diese Karte ist Eigentum von Hamburg Horizon RP. Bei Verlust bitte sofort melden.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
+
+      {/* Flip Indicator */}
+      <div className="text-center mt-4">
+        <p className="text-sm text-white/40">
+          {isFlipped ? '🔄 Rückseite' : '🔄 Vorderseite'} - Zum Umdrehen klicken
+        </p>
       </div>
     </div>
   );
