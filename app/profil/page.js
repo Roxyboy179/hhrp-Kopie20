@@ -8,7 +8,8 @@ import AnimatedValue from '@/components/AnimatedValue';
 import { 
   Wallet, CreditCard, Trophy, Gift, User, Award, Clock, TrendingUp, 
   Check, Loader2, FileText, Calendar, Mail, ExternalLink, LayoutDashboard, IdCard, ClipboardList,
-  Building2, Hash, Key, Copy
+  Building2, Hash, Key, Copy, ArrowUpRight, ArrowDownRight, AlertCircle, 
+  Shield, Star, MessageSquare, Ban, ChevronUp
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -1124,6 +1125,9 @@ export default function ProfilPage() {
   const tabs = [
     { id: 'overview', label: 'Übersicht', icon: LayoutDashboard },
     { id: 'cards', label: 'Meine Dokumente', icon: IdCard },
+    { id: 'transactions', label: 'Transaktionen', icon: TrendingUp },
+    { id: 'invoices', label: 'Meine Rechnungen', icon: FileText },
+    { id: 'personalakte', label: 'Meine Personalakte', icon: Award },
     { id: 'applications', label: 'Bewerbungen', icon: ClipboardList }
   ];
 
@@ -1565,6 +1569,431 @@ export default function ProfilPage() {
               </div>
             )}
           </>
+        )}
+
+        {/* Transaktionen Tab */}
+        {activeTab === 'transactions' && (
+          <div className="space-y-6">
+            {!botStatus.isOnline ? (
+              <BotStatusCard status={botStatus} onRetry={loadData} />
+            ) : loading ? (
+              <SkeletonCard />
+            ) : (
+              <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
+                <div className="flex items-center gap-3 mb-4 sm:mb-6">
+                  <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-white/60" />
+                  <h2 className="text-lg sm:text-xl font-bold text-white">Transaktionen</h2>
+                  {userData?.transactions?.length > 0 && (
+                    <span className="px-2 py-1 rounded-full bg-white/10 text-white/50 text-xs">
+                      {userData.transactions.length}
+                    </span>
+                  )}
+                </div>
+
+                {userData?.transactions && userData.transactions.length > 0 ? (
+                  <div className="space-y-3">
+                    {userData.transactions.slice(0, 20).map((transaction, index) => {
+                      const isNew = transaction.created_at && 
+                        (new Date() - new Date(transaction.created_at)) < 24 * 60 * 60 * 1000;
+                      const isIncome = transaction.type === 'income' || transaction.amount > 0;
+                      
+                      return (
+                        <div 
+                          key={index}
+                          className={`p-4 sm:p-5 rounded-xl border transition-all ${
+                            isNew 
+                              ? 'bg-blue-500/10 border-blue-500/30 animate-pulse-slow' 
+                              : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.05]'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3 sm:gap-4">
+                            {/* Icon */}
+                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                              isIncome 
+                                ? 'bg-green-500/20' 
+                                : 'bg-red-500/20'
+                            }`}>
+                              {isIncome ? (
+                                <ArrowDownRight className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
+                              ) : (
+                                <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" />
+                              )}
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                    <span className={`text-lg sm:text-xl font-bold ${
+                                      isIncome ? 'text-green-400' : 'text-red-400'
+                                    }`}>
+                                      {transaction.amount > 0 ? '+' : ''}{transaction.amount?.toLocaleString?.() || transaction.amount}€
+                                    </span>
+                                    {isNew && (
+                                      <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-[10px] font-bold animate-bounce">
+                                        NEU
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm sm:text-base text-white font-medium mb-1 break-words">
+                                    {transaction.description || transaction.reason || 'Keine Beschreibung'}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-white/50">
+                                {transaction.from && (
+                                  <div className="flex items-center gap-1">
+                                    <User className="w-3 h-3" />
+                                    <span>{transaction.from}</span>
+                                  </div>
+                                )}
+                                {transaction.to && (
+                                  <div className="flex items-center gap-1">
+                                    <ArrowUpRight className="w-3 h-3" />
+                                    <span>{transaction.to}</span>
+                                  </div>
+                                )}
+                                {transaction.date && (
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    <span>{new Date(transaction.date).toLocaleDateString('de-DE', {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      year: 'numeric'
+                                    })}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 sm:py-12">
+                    <TrendingUp className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-white/20" />
+                    <h3 className="text-base sm:text-lg font-bold text-white mb-2">Keine Transaktionen</h3>
+                    <p className="text-sm text-white/40 max-w-md mx-auto">
+                      Hier werden deine Transaktionen vom Discord Bot angezeigt.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Rechnungen Tab */}
+        {activeTab === 'invoices' && (
+          <div className="space-y-6">
+            {!botStatus.isOnline ? (
+              <BotStatusCard status={botStatus} onRetry={loadData} />
+            ) : loading ? (
+              <SkeletonCard />
+            ) : (
+              <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
+                <div className="flex items-center gap-3 mb-4 sm:mb-6">
+                  <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-white/60" />
+                  <h2 className="text-lg sm:text-xl font-bold text-white">Meine Rechnungen</h2>
+                  {userData?.invoices?.length > 0 && (
+                    <span className="px-2 py-1 rounded-full bg-white/10 text-white/50 text-xs">
+                      {userData.invoices.length}
+                    </span>
+                  )}
+                </div>
+
+                {userData?.invoices && userData.invoices.length > 0 ? (
+                  <div className="space-y-3">
+                    {userData.invoices.slice(0, 20).map((invoice, index) => {
+                      const isNew = invoice.created_at && 
+                        (new Date() - new Date(invoice.created_at)) < 24 * 60 * 60 * 1000;
+                      const isPaid = invoice.status === 'paid' || invoice.status === 'bezahlt';
+                      const isPending = invoice.status === 'pending' || invoice.status === 'offen';
+                      
+                      return (
+                        <div 
+                          key={index}
+                          className={`p-4 sm:p-5 rounded-xl border transition-all ${
+                            isNew 
+                              ? 'bg-blue-500/10 border-blue-500/30 animate-pulse-slow' 
+                              : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.05]'
+                          }`}
+                        >
+                          <div className="flex items-start gap-3 sm:gap-4">
+                            {/* Icon */}
+                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                              isPaid 
+                                ? 'bg-green-500/20' 
+                                : isPending 
+                                ? 'bg-yellow-500/20' 
+                                : 'bg-red-500/20'
+                            }`}>
+                              {isPaid ? (
+                                <Check className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
+                              ) : isPending ? (
+                                <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-400" />
+                              ) : (
+                                <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" />
+                              )}
+                            </div>
+
+                            {/* Content */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                                    <span className="text-sm sm:text-base font-bold text-white">
+                                      Rechnung #{invoice.invoice_number || invoice.number || index + 1}
+                                    </span>
+                                    {isNew && (
+                                      <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-[10px] font-bold animate-bounce">
+                                        NEU
+                                      </span>
+                                    )}
+                                    <span className={`px-2 py-1 rounded-lg text-[10px] font-bold ${
+                                      isPaid 
+                                        ? 'bg-green-500/20 text-green-400'
+                                        : isPending 
+                                        ? 'bg-yellow-500/20 text-yellow-400'
+                                        : 'bg-red-500/20 text-red-400'
+                                    }`}>
+                                      {isPaid ? 'Bezahlt' : isPending ? 'Offen' : invoice.status}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm sm:text-base text-white/70 mb-2 break-words">
+                                    {invoice.description || invoice.reason || 'Keine Beschreibung'}
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-lg sm:text-xl font-bold text-white">
+                                    {invoice.amount?.toLocaleString?.() || invoice.amount}€
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-white/50">
+                                {invoice.recipient && (
+                                  <div className="flex items-center gap-1">
+                                    <User className="w-3 h-3" />
+                                    <span>{invoice.recipient}</span>
+                                  </div>
+                                )}
+                                {invoice.date && (
+                                  <div className="flex items-center gap-1">
+                                    <Calendar className="w-3 h-3" />
+                                    <span>{new Date(invoice.date).toLocaleDateString('de-DE', {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      year: 'numeric'
+                                    })}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 sm:py-12">
+                    <FileText className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-white/20" />
+                    <h3 className="text-base sm:text-lg font-bold text-white mb-2">Keine Rechnungen</h3>
+                    <p className="text-sm text-white/40 max-w-md mx-auto">
+                      Hier werden deine Rechnungen vom Discord Bot angezeigt.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Personalakte Tab */}
+        {activeTab === 'personalakte' && (
+          <div className="space-y-6">
+            {!botStatus.isOnline ? (
+              <BotStatusCard status={botStatus} onRetry={loadData} />
+            ) : loading ? (
+              <SkeletonCard />
+            ) : (
+              <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
+                <div className="flex items-center gap-3 mb-4 sm:mb-6">
+                  <Award className="w-5 h-5 sm:w-6 sm:h-6 text-white/60" />
+                  <h2 className="text-lg sm:text-xl font-bold text-white">Meine Personalakte</h2>
+                  {userData?.personalakte?.length > 0 && (
+                    <span className="px-2 py-1 rounded-full bg-white/10 text-white/50 text-xs">
+                      {userData.personalakte.length}
+                    </span>
+                  )}
+                </div>
+
+                {userData?.personalakte && userData.personalakte.length > 0 ? (
+                  <div className="relative">
+                    {/* Timeline Line */}
+                    <div className="absolute left-5 sm:left-6 top-0 bottom-0 w-0.5 bg-gradient-to-b from-white/20 via-white/10 to-transparent"></div>
+                    
+                    <div className="space-y-4 sm:space-y-6">
+                      {userData.personalakte.slice(0, 20).map((record, index) => {
+                        const isNew = record.created_at && 
+                          (new Date() - new Date(record.created_at)) < 24 * 60 * 60 * 1000;
+                        
+                        const typeConfig = {
+                          warning: { 
+                            icon: AlertCircle, 
+                            color: 'yellow', 
+                            label: 'Verwarnung',
+                            bgClass: 'bg-yellow-500/20',
+                            borderClass: 'border-yellow-500',
+                            textClass: 'text-yellow-400'
+                          },
+                          verwarnung: { 
+                            icon: AlertCircle, 
+                            color: 'yellow', 
+                            label: 'Verwarnung',
+                            bgClass: 'bg-yellow-500/20',
+                            borderClass: 'border-yellow-500',
+                            textClass: 'text-yellow-400'
+                          },
+                          promotion: { 
+                            icon: ChevronUp, 
+                            color: 'green', 
+                            label: 'Beförderung',
+                            bgClass: 'bg-green-500/20',
+                            borderClass: 'border-green-500',
+                            textClass: 'text-green-400'
+                          },
+                          beförderung: { 
+                            icon: ChevronUp, 
+                            color: 'green', 
+                            label: 'Beförderung',
+                            bgClass: 'bg-green-500/20',
+                            borderClass: 'border-green-500',
+                            textClass: 'text-green-400'
+                          },
+                          note: { 
+                            icon: MessageSquare, 
+                            color: 'blue', 
+                            label: 'Notiz',
+                            bgClass: 'bg-blue-500/20',
+                            borderClass: 'border-blue-500',
+                            textClass: 'text-blue-400'
+                          },
+                          notiz: { 
+                            icon: MessageSquare, 
+                            color: 'blue', 
+                            label: 'Notiz',
+                            bgClass: 'bg-blue-500/20',
+                            borderClass: 'border-blue-500',
+                            textClass: 'text-blue-400'
+                          },
+                          suspension: { 
+                            icon: Ban, 
+                            color: 'red', 
+                            label: 'Suspendierung',
+                            bgClass: 'bg-red-500/20',
+                            borderClass: 'border-red-500',
+                            textClass: 'text-red-400'
+                          },
+                          achievement: {
+                            icon: Star,
+                            color: 'purple',
+                            label: 'Auszeichnung',
+                            bgClass: 'bg-purple-500/20',
+                            borderClass: 'border-purple-500',
+                            textClass: 'text-purple-400'
+                          }
+                        };
+                        
+                        const config = typeConfig[record.type?.toLowerCase()] || { 
+                          icon: FileText, 
+                          color: 'gray', 
+                          label: record.type || 'Eintrag',
+                          bgClass: 'bg-white/10',
+                          borderClass: 'border-white/30',
+                          textClass: 'text-white/70'
+                        };
+                        
+                        const IconComponent = config.icon;
+                        
+                        return (
+                          <div key={index} className="relative pl-14 sm:pl-16">
+                            {/* Timeline Dot with Icon */}
+                            <div className={`absolute left-2 sm:left-3 top-1 w-8 h-8 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${config.bgClass} border-2 ${config.borderClass}`}>
+                              <IconComponent className={`w-4 h-4 sm:w-5 sm:h-5 ${config.textClass}`} />
+                            </div>
+                            
+                            {/* Content Card */}
+                            <div className={`p-4 sm:p-5 rounded-xl border transition-all ${
+                              isNew 
+                                ? 'bg-blue-500/10 border-blue-500/30 animate-pulse-slow' 
+                                : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.05]'
+                            }`}>
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                                    <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${config.bgClass} ${config.textClass}`}>
+                                      {config.label}
+                                    </span>
+                                    {isNew && (
+                                      <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-[10px] font-bold animate-bounce">
+                                        NEU
+                                      </span>
+                                    )}
+                                  </div>
+                                  <h3 className="text-sm sm:text-base font-bold text-white mb-1">
+                                    {record.title || record.reason || 'Ohne Titel'}
+                                  </h3>
+                                </div>
+                              </div>
+                              
+                              {record.description && (
+                                <p className="text-sm text-white/70 mb-3 break-words leading-relaxed">
+                                  {record.description}
+                                </p>
+                              )}
+                              
+                              <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-white/50">
+                                {record.admin_name && (
+                                  <div className="flex items-center gap-1">
+                                    <Shield className="w-3 h-3" />
+                                    <span>{record.admin_name}</span>
+                                  </div>
+                                )}
+                                {record.date && (
+                                  <div className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    <span>{new Date(record.date).toLocaleDateString('de-DE', { 
+                                      day: '2-digit', 
+                                      month: '2-digit', 
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 sm:py-12">
+                    <Award className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-white/20" />
+                    <h3 className="text-base sm:text-lg font-bold text-white mb-2">Keine Einträge</h3>
+                    <p className="text-sm text-white/40 max-w-md mx-auto">
+                      Hier werden deine Personalakten-Einträge vom Discord Bot angezeigt.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Bewerbungen Tab */}
