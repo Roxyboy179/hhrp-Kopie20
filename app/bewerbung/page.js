@@ -14,6 +14,12 @@ import {
   User, Gamepad2, Target, MessageSquare, Eye, Edit,
   Shield, Mic, BookOpen, Heart, TrendingUp, Briefcase, Lock, Clock, BarChart3
 } from 'lucide-react';
+import { MultiStepWizard, WizardStep } from '@/components/bewerbung/MultiStepWizard';
+import { 
+  NormalStep1, NormalStep2, NormalStep3, NormalStep4,
+  PraktikumStep1, PraktikumStep2, PraktikumStep3, PraktikumStep4,
+  UprankStep1, UprankStep2, UprankStep3
+} from '@/components/bewerbung/BewerbungSteps';
 
 const inputClass = "bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/20 focus:ring-white/10 rounded-xl transition-all duration-300 focus:bg-white/[0.05] min-h-[44px]";
 
@@ -473,6 +479,7 @@ export default function BewerbungPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0); // NEU: Multi-Step State
   const [error, setError] = useState('');
   const [existingBewerbung, setExistingBewerbung] = useState(null);
   const [checkingExisting, setCheckingExisting] = useState(true);
@@ -543,6 +550,7 @@ export default function BewerbungPage() {
 
   const handleSelect = (type) => {
     setSelectedType(type);
+    setCurrentStep(0); // Reset to first step
     // Prüfe ob ein Entwurf existiert
     const draftKey = `hhrp-draft-${type}`;
     const saved = localStorage.getItem(draftKey);
@@ -559,6 +567,67 @@ export default function BewerbungPage() {
     }
     setError('');
     setShowPreview(false);
+  };
+
+  // Auto-Save: Speichere formData bei jeder Änderung
+  useEffect(() => {
+    if (selectedType && Object.keys(formData).length > 0) {
+      const draftKey = `hhrp-draft-${selectedType}`;
+      localStorage.setItem(draftKey, JSON.stringify(formData));
+    }
+  }, [formData, selectedType]);
+
+  // Step-Validierung
+  const canGoToNextStep = () => {
+    if (selectedType === 'normal') {
+      if (currentStep === 0) {
+        return formData.vorname && formData.alter && formData.robloxName;
+      }
+      if (currentStep === 1) {
+        return formData.spielzeit && formData.fraktion && formData.bannWarn;
+      }
+      if (currentStep === 2) {
+        return formData.warumTeam && formData.geduldig && formData.stundenProWoche && 
+               formData.failRpLoesung && formData.streitLoesung;
+      }
+      if (currentStep === 3) {
+        return formData.hatMikro && formData.kenntRegeln && formData.bleibtNett;
+      }
+    }
+    
+    if (selectedType === 'praktikum') {
+      if (currentStep === 0) {
+        return formData.vorname && formData.alter && formData.robloxName;
+      }
+      if (currentStep === 1) {
+        return formData.fraktion && formData.spielzeit;
+      }
+      if (currentStep === 2) {
+        return formData.warumTeam && formData.stundenProWoche;
+      }
+      if (currentStep === 3) {
+        return formData.hatMikro && formData.kenntRegeln && formData.bleibtNett;
+      }
+    }
+    
+    if (selectedType === 'uprank') {
+      if (currentStep === 0) {
+        return formData.seitWannImTeam && formData.aktuelleAufgaben;
+      }
+      if (currentStep === 1) {
+        return formData.gewuenschterRang && formData.warumUprank;
+      }
+      if (currentStep === 2) {
+        return formData.zusaetzlicheVerantwortung && formData.stundenProWoche;
+      }
+    }
+    
+    return true;
+  };
+
+  const handleStepChange = (newStep) => {
+    setCurrentStep(newStep);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSaveDraft = () => {
@@ -732,9 +801,9 @@ export default function BewerbungPage() {
     );
   }
 
-  // FORMULAR
+  // FORMULAR MIT MULTI-STEP WIZARD
   const typeLabels = { normal: 'Team-Bewerbung', praktikum: 'Praktikum-Bewerbung', uprank: 'Uprank-Bewerbung' };
-  const needsCheckboxes = selectedType === 'normal' || selectedType === 'praktikum';
+  const totalSteps = selectedType === 'uprank' ? 3 : 4;
 
   return (
     <div className="min-h-screen">
@@ -744,7 +813,10 @@ export default function BewerbungPage() {
         <div className="max-w-3xl mx-auto">
           <Button 
             variant="ghost" 
-            onClick={() => setSelectedType(null)} 
+            onClick={() => {
+              setSelectedType(null);
+              setCurrentStep(0);
+            }} 
             className="mb-6 md:mb-8 text-neutral-600 hover:text-neutral-300 min-h-[44px]"
           >
             <ArrowLeft className="w-4 h-4 mr-2" /> Zurück zur Auswahl
@@ -752,70 +824,56 @@ export default function BewerbungPage() {
 
           <div className="text-center mb-8 md:mb-10 animate-fade-in-up" style={{ animationDelay: '0.1s', animationFillMode: 'both' }}>
             <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white mb-2 md:mb-3">{typeLabels[selectedType]}</h1>
-            <p className="text-sm md:text-base" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>Fülle alle Felder sorgfältig aus.</p>
+            <p className="text-sm md:text-base" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
+              Schritt {currentStep + 1} von {totalSteps}
+            </p>
           </div>
 
           <div className="p-5 md:p-8 lg:p-10 rounded-2xl md:rounded-3xl glass animate-fade-in-up" style={{ animationDelay: '0.2s', animationFillMode: 'both' }}>
-            <form onSubmit={handlePreview} className="space-y-8 md:space-y-10">
-              {selectedType === 'normal' && <NormalFormFields formData={formData} setFormData={setFormData} />}
-              {selectedType === 'praktikum' && <PraktikumFormFields formData={formData} setFormData={setFormData} />}
-              {selectedType === 'uprank' && <UprankFormFields formData={formData} setFormData={setFormData} user={user} />}
-
-              {needsCheckboxes && (
-                <FormSection number={selectedType === 'normal' ? 5 : 3} title="Voraussetzungen" icon={Shield}>
-                  <div className="space-y-3">
-                    {[
-                      { key: 'hatMikro', icon: <Mic className="w-4 h-4 text-white/30" />, label: 'Ich habe ein funktionierendes Mikrofon' },
-                      { key: 'kenntRegeln', icon: <BookOpen className="w-4 h-4 text-white/30" />, label: 'Ich habe die Serverregeln gelesen und verstanden' },
-                      { key: 'bleibtNett', icon: <Heart className="w-4 h-4 text-white/30" />, label: 'Ich verpflichte mich, respektvoll und fair zu bleiben' },
-                    ].map(item => (
-                      <div key={item.key} className="flex items-center gap-3 p-3.5 md:p-4 rounded-xl bg-white/[0.015] border border-white/[0.04] hover:bg-white/[0.025] transition-all min-h-[44px]">
-                        <Checkbox 
-                          checked={formData[item.key]} 
-                          onCheckedChange={v => setFormData({ ...formData, [item.key]: v })} 
-                          className="border-white/20 min-w-[20px] min-h-[20px]" 
-                          required 
-                        />
-                        <div className="flex items-center gap-2 flex-1">
-                          {item.icon}
-                          <label className="text-xs md:text-sm text-white/60 cursor-pointer">{item.label}</label>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </FormSection>
+            <MultiStepWizard
+              currentStep={currentStep}
+              totalSteps={totalSteps}
+              onStepChange={handleStepChange}
+              onSubmit={handleSubmit}
+              canGoNext={canGoToNextStep()}
+              submitting={submitting}
+            >
+              {/* Normal Team-Bewerbung - 4 Steps */}
+              {selectedType === 'normal' && (
+                <>
+                  <NormalStep1 formData={formData} setFormData={setFormData} />
+                  <NormalStep2 formData={formData} setFormData={setFormData} />
+                  <NormalStep3 formData={formData} setFormData={setFormData} />
+                  <NormalStep4 formData={formData} setFormData={setFormData} />
+                </>
               )}
 
-              {error && (
-                <div className="bg-red-500/5 border border-red-500/10 rounded-xl p-3.5 md:p-4 flex items-center gap-3">
-                  <AlertTriangle className="w-5 h-5 text-red-400/60 shrink-0" />
-                  <span className="text-red-300/70 text-xs md:text-sm">{error}</span>
-                </div>
+              {/* Praktikum-Bewerbung - 4 Steps */}
+              {selectedType === 'praktikum' && (
+                <>
+                  <PraktikumStep1 formData={formData} setFormData={setFormData} />
+                  <PraktikumStep2 formData={formData} setFormData={setFormData} />
+                  <PraktikumStep3 formData={formData} setFormData={setFormData} />
+                  <PraktikumStep4 formData={formData} setFormData={setFormData} />
+                </>
               )}
 
-              <div className="pt-4 md:pt-6">
-                <div className="h-px mb-5 md:mb-6" style={{ background: 'linear-gradient(to right, transparent, var(--theme-glass-border), transparent)' }} />
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <button
-                    type="button"
-                    onClick={handleSaveDraft}
-                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-medium glass transition-all hover:bg-white/[0.04] min-h-[44px]"
-                    style={{ color: 'rgba(var(--theme-accent-rgb), 0.6)' }}
-                  >
-                    <Clock className="w-4 h-4" />
-                    Als Entwurf speichern
-                  </button>
-                  <Button 
-                    type="submit" 
-                    className="flex-1 rounded-xl h-12 md:h-14 text-sm md:text-base font-semibold transition-all hover:scale-[1.01] active:scale-[0.99] min-h-[44px]"
-                    style={{ background: 'var(--theme-accent)', color: '#000', boxShadow: '0 15px 30px -10px rgba(var(--theme-accent-rgb), 0.15)' }}
-                  >
-                    <Eye className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                    Weiter zur Vorschau
-                  </Button>
-                </div>
+              {/* Uprank-Bewerbung - 3 Steps */}
+              {selectedType === 'uprank' && (
+                <>
+                  <UprankStep1 formData={formData} setFormData={setFormData} user={user} />
+                  <UprankStep2 formData={formData} setFormData={setFormData} />
+                  <UprankStep3 formData={formData} setFormData={setFormData} />
+                </>
+              )}
+            </MultiStepWizard>
+
+            {error && (
+              <div className="mt-6 bg-red-500/5 border border-red-500/10 rounded-xl p-3.5 md:p-4 flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-400/60 shrink-0" />
+                <span className="text-red-300/70 text-xs md:text-sm">{error}</span>
               </div>
-            </form>
+            )}
           </div>
         </div>
       </div>
