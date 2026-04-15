@@ -2187,14 +2187,20 @@ async function handleDailyBonus(request) {
       return NextResponse.json({ error: 'Fehler beim Erstellen des Daily Bonus' }, { status: 500 });
     }
 
-    // Notification erstellen
-    await createNotification({
-      userId: user.id,
-      type: 'daily_bonus',
-      title: '🎁 Daily Bonus erhalten!',
-      message: `Du hast deinen täglichen Bonus von €${dailyAmount} erhalten! Der Bot wird dir das Geld in Kürze gutschreiben.`,
-      relatedData: { rewardId: reward.id, amount: dailyAmount }
-    });
+    // Notification erstellen (optional - wenn Funktion existiert)
+    try {
+      if (typeof createNotification === 'function') {
+        await createNotification({
+          userId: user.id,
+          type: 'daily_bonus',
+          title: '🎁 Daily Bonus erhalten!',
+          message: `Du hast deinen täglichen Bonus von €${dailyAmount} erhalten! Der Bot wird dir das Geld in Kürze gutschreiben.`,
+          relatedData: { rewardId: reward.id, amount: dailyAmount }
+        });
+      }
+    } catch (notifError) {
+      console.error('Notification error (non-critical):', notifError);
+    }
 
     return NextResponse.json({ 
       success: true, 
