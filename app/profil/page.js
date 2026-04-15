@@ -153,21 +153,21 @@ function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-gray-700/20 rounded-full translate-y-24 -translate-x-24"></div>
 
-            <div className="relative h-full p-6 flex flex-col text-white">
+            <div className="relative h-full p-4 sm:p-6 flex flex-col text-white">
               {/* Header */}
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between mb-3 sm:mb-4">
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest opacity-70 mb-1">Bundesrepublik HHRP</p>
-                  <h2 className="text-base font-bold">FÜHRERSCHEIN</h2>
+                  <p className="text-[8px] sm:text-[10px] uppercase tracking-widest opacity-70 mb-1">Bundesrepublik HHRP</p>
+                  <h2 className="text-sm sm:text-base font-bold">FÜHRERSCHEIN</h2>
                 </div>
-                <img src="/icon-192.png" alt="HHRP" className="w-10 h-10 rounded-lg" />
+                <img src="/icon-192.png" alt="HHRP" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg" />
               </div>
 
               {hasAnyLicense ? (
                 <>
                   {/* Foto & Info */}
-                  <div className="flex gap-4 flex-1">
-                    <div className="w-20 h-24 bg-gray-700 rounded overflow-hidden flex-shrink-0 border-2 border-gray-600">
+                  <div className="flex gap-3 sm:gap-4 flex-1">
+                    <div className="w-16 h-20 sm:w-20 sm:h-24 bg-gray-700 rounded overflow-hidden flex-shrink-0 border-2 border-gray-600">
                       {avatarUrl ? (
                         <img src={avatarUrl} alt="Photo" className="w-full h-full object-cover" />
                       ) : (
@@ -251,7 +251,7 @@ function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
               </span>
             </div>
 
-            <div className="relative h-full p-6 flex flex-col justify-between text-white">
+            <div className="relative h-full p-4 sm:p-6 flex flex-col justify-between text-white">
               {hasAnyLicense ? (
                 <>
                   <div className="space-y-4">
@@ -357,21 +357,21 @@ function WeaponsLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-gray-700/20 rounded-full translate-y-24 -translate-x-24"></div>
 
-            <div className="relative h-full p-6 flex flex-col text-white">
+            <div className="relative h-full p-4 sm:p-6 flex flex-col text-white">
               {/* Header */}
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between mb-3 sm:mb-4">
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest opacity-70 mb-1">Bundesrepublik HHRP</p>
-                  <h2 className="text-base font-bold">WAFFENSCHEIN</h2>
+                  <p className="text-[8px] sm:text-[10px] uppercase tracking-widest opacity-70 mb-1">Bundesrepublik HHRP</p>
+                  <h2 className="text-sm sm:text-base font-bold">WAFFENSCHEIN</h2>
                 </div>
-                <img src="/icon-192.png" alt="HHRP" className="w-10 h-10 rounded-lg" />
+                <img src="/icon-192.png" alt="HHRP" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg" />
               </div>
 
               {hasAnyLicense ? (
                 <>
                   {/* Foto & Info */}
-                  <div className="flex gap-4 flex-1">
-                    <div className="w-20 h-24 bg-gray-700 rounded overflow-hidden flex-shrink-0 border-2 border-gray-600">
+                  <div className="flex gap-3 sm:gap-4 flex-1">
+                    <div className="w-16 h-20 sm:w-20 sm:h-24 bg-gray-700 rounded overflow-hidden flex-shrink-0 border-2 border-gray-600">
                       {avatarUrl ? (
                         <img src={avatarUrl} alt="Photo" className="w-full h-full object-cover" />
                       ) : (
@@ -452,7 +452,7 @@ function WeaponsLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
               </span>
             </div>
 
-            <div className="relative h-full p-6 flex flex-col justify-between text-white">
+            <div className="relative h-full p-4 sm:p-6 flex flex-col justify-between text-white">
               {hasAnyLicense ? (
                 <>
                   <div className="space-y-4">
@@ -564,20 +564,20 @@ function IDCard({ character, avatarUrl, userId }) {
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-gray-700/20 rounded-full translate-y-24 -translate-x-24"></div>
 
-            <div className="relative h-full p-6 flex flex-col text-white">
+            <div className="relative h-full p-4 sm:p-6 flex flex-col text-white">
               {/* Header */}
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between mb-3 sm:mb-4">
                 <div>
-                  <p className="text-[10px] uppercase tracking-widest opacity-70 mb-1">Bundesrepublik HHRP</p>
-                  <h2 className="text-base font-bold">PERSONALAUSWEIS</h2>
+                  <p className="text-[8px] sm:text-[10px] uppercase tracking-widest opacity-70 mb-1">Bundesrepublik HHRP</p>
+                  <h2 className="text-sm sm:text-base font-bold">PERSONALAUSWEIS</h2>
                 </div>
-                <img src="/icon-192.png" alt="HHRP" className="w-10 h-10 rounded-lg" />
+                <img src="/icon-192.png" alt="HHRP" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg" />
               </div>
 
               {/* Content Grid */}
-              <div className="flex gap-4 flex-1">
+              <div className="flex gap-3 sm:gap-4 flex-1">
                 {/* Photo */}
-                <div className="w-20 h-24 bg-gray-700 rounded overflow-hidden flex-shrink-0 border-2 border-gray-600">
+                <div className="w-16 h-20 sm:w-20 sm:h-24 bg-gray-700 rounded overflow-hidden flex-shrink-0 border-2 border-gray-600">
                   {avatarUrl ? (
                     <img src={avatarUrl} alt="Photo" className="w-full h-full object-cover" />
                   ) : (
@@ -644,7 +644,7 @@ function IDCard({ character, avatarUrl, userId }) {
             {/* Decorative waves */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
 
-            <div className="relative h-full p-6 flex flex-col justify-between text-white">
+            <div className="relative h-full p-4 sm:p-6 flex flex-col justify-between text-white">
               {/* Barcode Area */}
               <div className="space-y-4">
                 <div>
