@@ -1,142 +1,280 @@
 'use client';
 
-import { ArrowLeft } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
+import { FileText, AlertTriangle, Shield, Users, Ban, Check, Scale } from 'lucide-react';
 
 export default function NutzungsbedingungenPage() {
-  const router = useRouter();
-
   return (
-    <div className="min-h-screen px-4 py-8">
+    <div className="min-h-screen px-4 py-8 pt-24">
       <div className="max-w-4xl mx-auto">
-        <Button variant="ghost" onClick={() => router.push('/')} className="mb-8 text-neutral-600 hover:text-neutral-300">
-          <ArrowLeft className="w-4 h-4 mr-2" /> Zurück
-        </Button>
+        {/* Header */}
+        <div className="glass rounded-2xl p-8 border border-white/[0.08] mb-6">
+          <div className="flex items-center gap-4 mb-4">
+            <img src="/icon-192.png" alt="Hamburg Horizon RP" className="w-16 h-16 rounded-2xl" />
+            <div>
+              <h1 className="text-4xl font-bold text-white">Nutzungsbedingungen</h1>
+              <p className="text-white/60">Allgemeine Geschäftsbedingungen (AGB)</p>
+            </div>
+          </div>
+        </div>
 
-        <div className="prose prose-invert prose-neutral max-w-none">
-          <h1 className="text-4xl font-bold text-white mb-8">Nutzungsbedingungen</h1>
+        {/* Einleitung */}
+        <div className="glass rounded-2xl p-8 border border-white/[0.08] mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <FileText className="w-6 h-6 text-blue-400" />
+            <h2 className="text-2xl font-bold text-white">Allgemeines</h2>
+          </div>
           
-          <p className="mb-8" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
-            Zuletzt aktualisiert: {new Date().toLocaleDateString('de-DE')}
+          <div className="space-y-4">
+            <p className="text-white/70 leading-relaxed">
+              Willkommen bei Hamburg Horizon RP! Durch die Nutzung dieser Website und unseres Discord-Servers 
+              erklären Sie sich mit den folgenden Nutzungsbedingungen einverstanden. Bitte lesen Sie diese 
+              sorgfältig durch.
+            </p>
+            <p className="text-white/70 leading-relaxed">
+              Hamburg Horizon RP ist ein privates Roleplay-Projekt und dient ausschließlich Unterhaltungszwecken. 
+              Alle Inhalte sind fiktiv und stehen in keiner Verbindung zu realen Institutionen oder Personen.
+            </p>
+          </div>
+        </div>
+
+        {/* Geltungsbereich */}
+        <div className="glass rounded-2xl p-8 border border-white/[0.08] mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <Shield className="w-6 h-6 text-green-400" />
+            <h2 className="text-2xl font-bold text-white">Geltungsbereich</h2>
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-white/70 leading-relaxed">
+              Diese Nutzungsbedingungen gelten für:
+            </p>
+            <ul className="list-disc list-inside space-y-2 text-white/70 ml-4">
+              <li>Die Nutzung dieser Website (Hamburg Horizon RP Portal)</li>
+              <li>Die Nutzung des Hamburg Horizon RP Discord-Servers</li>
+              <li>Alle damit verbundenen Dienste und Features</li>
+              <li>Die Team-Bewerbungsportale und Profile</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Registrierung & Account */}
+        <div className="glass rounded-2xl p-8 border border-white/[0.08] mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <Users className="w-6 h-6 text-blue-400" />
+            <h2 className="text-2xl font-bold text-white">Registrierung & Account</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-2">Discord-Authentifizierung</h3>
+              <p className="text-white/70 leading-relaxed">
+                Um diese Website nutzen zu können, ist eine Anmeldung über Discord erforderlich. Sie sind 
+                verpflichtet, wahrheitsgemäße Angaben zu machen und Ihren Account sicher aufzubewahren.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-2">Mindestalter</h3>
+              <p className="text-white/70 leading-relaxed">
+                Die Nutzung unserer Dienste ist erst ab 16 Jahren gestattet. Durch die Registrierung bestätigen 
+                Sie, dass Sie mindestens 16 Jahre alt sind.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-2">Account-Sicherheit</h3>
+              <p className="text-white/70 leading-relaxed">
+                Sie sind für alle Aktivitäten verantwortlich, die über Ihren Account erfolgen. Bei Verdacht auf 
+                unbefugte Nutzung informieren Sie uns bitte umgehend.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Verhaltensregeln */}
+        <div className="glass rounded-2xl p-8 border border-white/[0.08] mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <AlertTriangle className="w-6 h-6 text-yellow-400" />
+            <h2 className="text-2xl font-bold text-white">Verhaltensregeln</h2>
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-white/70 leading-relaxed mb-4">
+              Bei der Nutzung unserer Dienste ist Folgendes untersagt:
+            </p>
+            
+            <div className="space-y-3">
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                <Ban className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-red-300 mb-1">Verbotene Inhalte</p>
+                  <p className="text-xs text-white/60">
+                    Keine rassistischen, diskriminierenden, beleidigenden oder gewaltverherrlichenden Inhalte
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                <Ban className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-red-300 mb-1">Spam & Werbung</p>
+                  <p className="text-xs text-white/60">
+                    Keine unerwünschte Werbung, Spam oder Phishing-Versuche
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                <Ban className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-red-300 mb-1">Betrug & Manipulation</p>
+                  <p className="text-xs text-white/60">
+                    Keine Manipulation von Daten, Cheating oder unerlaubte Zugriffe
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                <Ban className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold text-red-300 mb-1">Rechtsverletzungen</p>
+                  <p className="text-xs text-white/60">
+                    Keine Urheberrechtsverletzungen oder Verstöße gegen geltendes Recht
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Inhalte & Urheberrecht */}
+        <div className="glass rounded-2xl p-8 border border-white/[0.08] mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <FileText className="w-6 h-6 text-purple-400" />
+            <h2 className="text-2xl font-bold text-white">Inhalte & Urheberrecht</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-2">Unsere Inhalte</h3>
+              <p className="text-white/70 leading-relaxed">
+                Alle auf dieser Website bereitgestellten Inhalte (Texte, Bilder, Logos, Designs) sind urheberrechtlich 
+                geschützt und Eigentum von Hamburg Horizon RP oder werden mit Erlaubnis verwendet.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-2">Nutzergenerierte Inhalte</h3>
+              <p className="text-white/70 leading-relaxed">
+                Durch das Hochladen von Inhalten (z.B. Bewerbungen, Profilbilder) räumen Sie uns das Recht ein, 
+                diese Inhalte im Rahmen unserer Dienste zu verwenden, anzuzeigen und zu speichern.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Haftungsausschluss */}
+        <div className="glass rounded-2xl p-8 border border-white/[0.08] mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <Shield className="w-6 h-6 text-yellow-400" />
+            <h2 className="text-2xl font-bold text-white">Haftungsausschluss</h2>
+          </div>
+
+          <div className="space-y-4">
+            <p className="text-white/70 leading-relaxed">
+              Hamburg Horizon RP wird "wie besehen" bereitgestellt. Wir übernehmen keine Gewährleistung für:
+            </p>
+            <ul className="list-disc list-inside space-y-2 text-white/70 ml-4">
+              <li>Die ständige Verfügbarkeit der Dienste</li>
+              <li>Die Fehlerfreiheit der Website und Dienste</li>
+              <li>Die Richtigkeit und Vollständigkeit der Inhalte</li>
+              <li>Die Kompatibilität mit allen Geräten und Browsern</li>
+            </ul>
+            <p className="text-white/70 leading-relaxed mt-4">
+              Wir haften nicht für Schäden, die durch die Nutzung oder Nicht-Nutzung unserer Dienste entstehen, 
+              es sei denn, diese beruhen auf Vorsatz oder grober Fahrlässigkeit.
+            </p>
+          </div>
+        </div>
+
+        {/* Änderungen & Kündigung */}
+        <div className="glass rounded-2xl p-8 border border-white/[0.08] mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <FileText className="w-6 h-6 text-green-400" />
+            <h2 className="text-2xl font-bold text-white">Änderungen & Kündigung</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-2">Änderung der Bedingungen</h3>
+              <p className="text-white/70 leading-relaxed">
+                Wir behalten uns das Recht vor, diese Nutzungsbedingungen jederzeit zu ändern. Über wesentliche 
+                Änderungen werden Sie per E-Mail oder durch einen Hinweis auf der Website informiert.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-2">Account-Sperrung</h3>
+              <p className="text-white/70 leading-relaxed">
+                Wir behalten uns das Recht vor, Accounts bei Verstößen gegen diese Nutzungsbedingungen zu sperren 
+                oder zu löschen. Ein Anspruch auf Wiederherstellung besteht nicht.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-2">Beendigung der Nutzung</h3>
+              <p className="text-white/70 leading-relaxed">
+                Sie können Ihren Account jederzeit durch Kontaktaufnahme mit uns löschen lassen. Ihre Daten werden 
+                dann gemäß unserer Datenschutzerklärung behandelt.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Schlussbestimmungen */}
+        <div className="glass rounded-2xl p-8 border border-white/[0.08] mb-6">
+          <div className="flex items-center gap-3 mb-6">
+            <Scale className="w-6 h-6 text-blue-400" />
+            <h2 className="text-2xl font-bold text-white">Schlussbestimmungen</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-2">Anwendbares Recht</h3>
+              <p className="text-white/70 leading-relaxed">
+                Es gilt das Recht der Bundesrepublik Deutschland unter Ausschluss des UN-Kaufrechts.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-2">Salvatorische Klausel</h3>
+              <p className="text-white/70 leading-relaxed">
+                Sollten einzelne Bestimmungen dieser Nutzungsbedingungen unwirksam sein, bleibt die Wirksamkeit 
+                der übrigen Bestimmungen unberührt.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Hinweis */}
+        <div className="glass rounded-2xl p-6 border border-green-500/20 bg-green-500/5 mb-6">
+          <div className="flex items-start gap-3">
+            <Check className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-white/60 leading-relaxed">
+                <span className="font-semibold text-white">Wichtig:</span> Durch die Nutzung unserer Dienste 
+                erklären Sie sich mit diesen Nutzungsbedingungen einverstanden. Bei Fragen oder Unklarheiten 
+                kontaktieren Sie uns bitte.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center mt-8 mb-4">
+          <p className="text-white/40 text-sm">
+             © 2026 Hamburg Horizon RP - Alle Rechte vorbehalten
           </p>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">1. Geltungsbereich</h2>
-            <p className="text-neutral-400" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
-              Diese Nutzungsbedingungen gelten für das Bewerbungsportal von Hamburg Horizon RP. 
-              Mit der Nutzung des Portals akzeptieren Sie diese Bedingungen.
-            </p>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">2. Nutzung des Bewerbungsportals</h2>
-            <h3 className="text-xl font-semibold text-white mb-3">2.1 Voraussetzungen</h3>
-            <p className="text-neutral-400 mb-4">
-              Für die Nutzung des Bewerbungsportals benötigen Sie:
-            </p>
-            <ul className="list-disc list-inside text-neutral-400 mb-4 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
-              <li>Einen Discord-Account</li>
-              <li>Mitgliedschaft im Hamburg Horizon RP Discord-Server</li>
-              <li>Mindestalter von 13 Jahren</li>
-            </ul>
-
-            <h3 className="text-xl font-semibold text-white mb-3">2.2 Bewerbungsrichtlinien</h3>
-            <p className="text-neutral-400 mb-4">
-              Bei der Einreichung einer Bewerbung verpflichten Sie sich:
-            </p>
-            <ul className="list-disc list-inside text-neutral-400 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
-              <li>Wahrheitsgemäße und vollständige Angaben zu machen</li>
-              <li>Nur EINE aktive Bewerbung gleichzeitig einzureichen</li>
-              <li>Respektvoll und professionell zu kommunizieren</li>
-              <li>Keine beleidigenden oder unangemessenen Inhalte zu verwenden</li>
-            </ul>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">3. Bewerbungsprozess</h2>
-            <h3 className="text-xl font-semibold text-white mb-3">3.1 Bewerbungstypen</h3>
-            <p className="text-neutral-400 mb-4">
-              Folgende Bewerbungstypen stehen zur Verfügung:
-            </p>
-            <ul className="list-disc list-inside text-neutral-400 mb-4 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
-              <li><strong className="text-white">Team-Bewerbung:</strong> Für neue Bewerber ohne Team-Zugehörigkeit</li>
-              <li><strong className="text-white">Praktikum:</strong> Für Bewerber, die das Team kennenlernen möchten</li>
-              <li><strong className="text-white">Uprank:</strong> Nur für bestehende Teammitglieder (Beförderung)</li>
-            </ul>
-
-            <h3 className="text-xl font-semibold text-white mb-3">3.2 Bearbeitungszeit</h3>
-            <p className="text-neutral-400" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
-              Bewerbungen werden in der Regel innerhalb von 7-14 Tagen bearbeitet. 
-              Eine Garantie auf Annahme besteht nicht.
-            </p>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">4. Pflichten des Bewerbers</h2>
-            <p className="text-neutral-400 mb-4">
-              Als Bewerber verpflichten Sie sich:
-            </p>
-            <ul className="list-disc list-inside text-neutral-400 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
-              <li>Keine Mehrfachbewerbungen unter verschiedenen Namen einzureichen</li>
-              <li>Auf Rückfragen zeitnah zu antworten</li>
-              <li>Bei Rückzug der Bewerbung uns umgehend zu informieren</li>
-              <li>Die Server-Regeln von Hamburg Horizon RP zu kennen und einzuhalten</li>
-            </ul>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">5. Ablehnung von Bewerbungen</h2>
-            <p className="text-neutral-400 mb-4">
-              Bewerbungen können abgelehnt werden bei:
-            </p>
-            <ul className="list-disc list-inside text-neutral-400 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
-              <li>Unvollständigen oder falschen Angaben</li>
-              <li>Verstoß gegen die Server-Regeln</li>
-              <li>Beleidigendem oder unangemessenem Verhalten</li>
-              <li>Mehrfachbewerbungen</li>
-              <li>Mangelnder Motivation oder Eignung</li>
-            </ul>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">6. Haftungsausschluss</h2>
-            <p className="text-neutral-400 mb-4">
-              Hamburg Horizon RP haftet nicht für:
-            </p>
-            <ul className="list-disc list-inside text-neutral-400 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
-              <li>Technische Störungen oder Ausfälle des Bewerbungsportals</li>
-              <li>Verlust von Bewerbungsdaten durch höhere Gewalt</li>
-              <li>Verzögerungen in der Bearbeitung</li>
-            </ul>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">7. Ausschluss von der Nutzung</h2>
-            <p className="text-neutral-400 mb-4">
-              Wir behalten uns das Recht vor, Nutzer von der Nutzung des Portals auszuschließen bei:
-            </p>
-            <ul className="list-disc list-inside text-neutral-400 space-y-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
-              <li>Missbrauch des Bewerbungssystems</li>
-              <li>Belästigung von Teammitgliedern</li>
-              <li>Verstößen gegen diese Nutzungsbedingungen</li>
-            </ul>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">8. Änderungen der Nutzungsbedingungen</h2>
-            <p className="text-neutral-400" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
-              Wir behalten uns vor, diese Nutzungsbedingungen jederzeit zu ändern. 
-              Änderungen werden auf dieser Seite veröffentlicht und gelten ab dem Zeitpunkt der Veröffentlichung.
-            </p>
-          </section>
-
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">9. Kontakt</h2>
-            <p className="text-neutral-400" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>
-              Bei Fragen zu diesen Nutzungsbedingungen kontaktieren Sie uns bitte über unseren Discord-Server.
-            </p>
-          </section>
         </div>
       </div>
     </div>

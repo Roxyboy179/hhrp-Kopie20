@@ -9,9 +9,7 @@ export default function ImpressumPage() {
         {/* Header */}
         <div className="glass rounded-2xl p-8 border border-white/[0.08] mb-6">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-              <Scale className="w-8 h-8 text-white" />
-            </div>
+            <img src="/icon-192.png" alt="Hamburg Horizon RP" className="w-16 h-16 rounded-2xl" />
             <div>
               <h1 className="text-4xl font-bold text-white">Impressum</h1>
               <p className="text-white/60">Angaben gemäß § 5 TMG</p>
@@ -167,7 +165,7 @@ export default function ImpressumPage() {
         {/* Footer */}
         <div className="text-center mt-8 mb-4">
           <p className="text-white/40 text-sm">
-            © 2024 Hamburg Horizon RP - Alle Rechte vorbehalten
+            © 2026 Hamburg Horizon RP - Alle Rechte vorbehalten
           </p>
         </div>
       </div>

@@ -54,6 +54,8 @@ export default function RootClientLayout({ children }) {
     }
   }, []);
 
+  const isLegalPage = ['/impressum', '/datenschutz', '/nutzungsbedingungen'].includes(pathname);
+
   return (
     <AuthProvider>
       <ThemeProvider>
@@ -62,8 +64,8 @@ export default function RootClientLayout({ children }) {
           <WartungsBanner />
           <LayoutContent>{children}</LayoutContent>
           <CookieBanner />
-          {!isProfilePage && <InstallPrompt />}
-          {!isProfilePage && <InstallButton />}
+          {!isProfilePage && !isLegalPage && <InstallPrompt />}
+          {!isProfilePage && !isLegalPage && <InstallButton />}
           <Toaster 
             position="bottom-right" 
             theme="dark"
@@ -89,6 +91,7 @@ function LayoutContent({ children }) {
   const { user, loading } = useAuth();
   const isAdmin = pathname?.startsWith('/admin');
   const isProfilePage = pathname === '/profil';
+  const isLegalPage = ['/impressum', '/datenschutz', '/nutzungsbedingungen'].includes(pathname);
   const [wartungsmodus, setWartungsmodus] = useState(false);
   const [wartungsLoading, setWartungsLoading] = useState(true);
   const [showBanner, setShowBanner] = useState(false);
@@ -134,7 +137,7 @@ function LayoutContent({ children }) {
       <Navbar user={user} loading={loading} />
       <main className={showBanner ? "pt-16 min-h-screen" : "pt-16 min-h-screen"}>{children}</main>
       <Footer />
-      {!isProfilePage && <ThemeButton />}
+      {!isProfilePage && !isLegalPage && <ThemeButton />}
     </>
   );
 }
@@ -276,7 +279,7 @@ function Footer() {
         </div>
 
         <div className="mt-8 pt-6 text-center text-xs" style={{ borderTop: '1px solid var(--theme-glass-border)', color: 'rgba(var(--theme-accent-rgb), 0.2)' }}>
-          © {new Date().getFullYear()} Hamburg Horizon RP. Alle Rechte vorbehalten.
+          © 2026 Hamburg Horizon RP. Alle Rechte vorbehalten.
         </div>
       </div>
     </footer>
