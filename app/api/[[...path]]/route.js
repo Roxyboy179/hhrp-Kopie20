@@ -2129,20 +2129,12 @@ async function handleGetMyBewerbungen(request) {
       return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('bewerbungen')
-      .select('*')
-      .eq('discordUserId', user.id)
-      .order('eingereichtAm', { ascending: false });
-
-    if (error) {
-      console.error('Get my bewerbungen error:', error);
-      return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
-    }
-
-    return NextResponse.json({ bewerbungen: data || [] });
+    // Nutze die existierende Funktion
+    const bewerbungen = await getUserBewerbungen(user.id);
+    
+    return NextResponse.json({ bewerbungen: bewerbungen || [] });
   } catch (error) {
     console.error('Get my bewerbungen exception:', error);
-    return NextResponse.json({ error: 'Fehler' }, { status: 500 });
+    return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
   }
 }
