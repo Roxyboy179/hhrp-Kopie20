@@ -1968,36 +1968,48 @@ async function handleUpdateSystemStatus(request) {
 
     const body = await request.json();
     
-    console.log('📥 Received system status update:', body);
+    console.log('📥 Received system status update:', JSON.stringify(body, null, 2));
+    console.log('📥 wartungsmodus type:', typeof body.wartungsmodus, 'value:', body.wartungsmodus);
+    console.log('📥 geplante_wartung type:', typeof body.geplante_wartung, 'value:', body.geplante_wartung);
     
-    // Update or insert system_status
-    const { data: existing } = await supabaseAdmin
+    // Update or insert system_status - immer nur EINE Zeile in dieser Tabelle
+    const { data: existingRows, error: selectError } = await supabaseAdmin
       .from('system_status')
-      .select('id')
-      .single();
+      .select('*')
+      .limit(1);
+
+    if (selectError) {
+      console.error('❌ Select error:', selectError);
+      return NextResponse.json({ error: 'Fehler beim Abrufen: ' + selectError.message }, { status: 500 });
+    }
+
+    const existing = existingRows && existingRows.length > 0 ? existingRows[0] : null;
+    console.log('📊 Existing record:', existing ? `ID: ${existing.id}` : 'None');
 
     const updateData = {
-      wartungsmodus: typeof body.wartungsmodus === 'boolean' ? body.wartungsmodus : false,
-      geplante_wartung: typeof body.geplante_wartung === 'boolean' ? body.geplante_wartung : false,
+      wartungsmodus: body.wartungsmodus === true || body.wartungsmodus === 'true',
+      geplante_wartung: body.geplante_wartung === true || body.geplante_wartung === 'true',
       wartung_start: body.wartung_start || null,
       wartung_ende: body.wartung_ende || null,
       wartung_nachricht: body.wartung_nachricht || '',
       updated_at: new Date().toISOString(),
     };
 
-    console.log('💾 Saving to database:', updateData);
+    console.log('💾 Data to save:', JSON.stringify(updateData, null, 2));
 
     let result;
     if (existing) {
+      console.log('🔄 Updating existing record ID:', existing.id);
       result = await supabaseAdmin
         .from('system_status')
         .update(updateData)
         .eq('id', existing.id)
-        .select();
+        .select('*');
     } else {
+      console.log('➕ Creating new record');
       const insertData = {
-        wartungsmodus: typeof body.wartungsmodus === 'boolean' ? body.wartungsmodus : false,
-        geplante_wartung: typeof body.geplante_wartung === 'boolean' ? body.geplante_wartung : false,
+        wartungsmodus: body.wartungsmodus === true || body.wartungsmodus === 'true',
+        geplante_wartung: body.geplante_wartung === true || body.geplante_wartung === 'true',
         wartung_start: body.wartung_start || null,
         wartung_ende: body.wartung_ende || null,
         wartung_nachricht: body.wartung_nachricht || '',
@@ -2005,15 +2017,15 @@ async function handleUpdateSystemStatus(request) {
       result = await supabaseAdmin
         .from('system_status')
         .insert(insertData)
-        .select();
+        .select('*');
     }
 
     if (result.error) {
-      console.error('❌ Database error:', result.error);
+      console.error('❌ Database error:', JSON.stringify(result.error, null, 2));
       return NextResponse.json({ error: 'Fehler beim Speichern: ' + result.error.message }, { status: 500 });
     }
 
-    console.log('✅ Saved successfully:', result.data);
+    console.log('✅ Saved successfully:', JSON.stringify(result.data, null, 2));
 
     // Log activity
     await logActivity({
@@ -2027,7 +2039,7 @@ async function handleUpdateSystemStatus(request) {
       ipAddress: getIpAddress(request),
     });
 
-    return NextResponse.json({ success: true, status: result.data?.[0] });
+    return NextResponse.json({ success: true, status: result.data?.[0] || result.data });
   } catch (error) {
     console.error('System status update error:', error);
     return NextResponse.json({ error: 'Fehler' }, { status: 500 });
