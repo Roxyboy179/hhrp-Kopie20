@@ -898,7 +898,7 @@ export default function ProfilPage() {
             </div>
 
             {/* Money Overview */}
-            {loading ? (
+            {!botStatus.isOnline ? null : loading ? (
               <div className="grid md:grid-cols-3 gap-4">
                 <SkeletonCard />
                 <SkeletonCard />
@@ -952,7 +952,7 @@ export default function ProfilPage() {
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* Character Info */}
-              {loading ? (
+              {!botStatus.isOnline ? null : loading ? (
                 <SkeletonCard />
               ) : character && Object.keys(character).length > 0 ? (
                 <div className="glass rounded-2xl p-6 border border-white/[0.08]">
@@ -1014,7 +1014,7 @@ export default function ProfilPage() {
               ) : null}
 
               {/* Stats */}
-              {loading ? (
+              {!botStatus.isOnline ? null : loading ? (
                 <SkeletonCard />
               ) : stats && Object.keys(stats).length > 0 ? (
                 <div className="glass rounded-2xl p-6 border border-white/[0.08]">
@@ -1092,7 +1092,7 @@ export default function ProfilPage() {
               <BotStatusCard status={botStatus} onRetry={loadData} />
             ) : (
               <div className="space-y-6">
-                {loading ? (
+                {!botStatus.isOnline ? null : loading ? (
                   <SkeletonCard />
                 ) : cards.length > 0 ? (
                   <>
@@ -1150,7 +1150,7 @@ export default function ProfilPage() {
         {/* Bewerbungen Tab */}
         {activeTab === 'applications' && (
           <div className="space-y-6">
-            {loading ? (
+            {!botStatus.isOnline ? null : loading ? (
               <SkeletonCard />
             ) : bewerbungen.length > 0 ? (
               <div className="glass rounded-2xl p-6 border border-white/[0.08]">
