@@ -2107,8 +2107,20 @@ async function handleClaimReward(request) {
       userId: user.id,
       type: 'reward_claimed',
       title: 'Reward beansprucht!',
-      message: `Du hast $${reward.amount} erfolgreich beansprucht. Der Bot wird dir das Geld in Kürze gutschreiben.`,
+      message: `Du hast €${reward.amount} erfolgreich beansprucht. Der Bot wird dir das Geld in Kürze gutschreiben.`,
+      relatedData: { rewardId: reward.id, amount: reward.amount }
+    });
 
+    return NextResponse.json({ 
+      success: true, 
+      reward,
+      message: `€${reward.amount} wurden beansprucht! Der Bot wird dir das Geld in Kürze gutschreiben.`
+    });
+  } catch (error) {
+    console.error('Claim reward exception:', error);
+    return NextResponse.json({ error: 'Fehler' }, { status: 500 });
+  }
+}
 
 async function handleGetMyBewerbungen(request) {
   try {
@@ -2134,19 +2146,3 @@ async function handleGetMyBewerbungen(request) {
     return NextResponse.json({ error: 'Fehler' }, { status: 500 });
   }
 }
-
-      relatedData: { rewardId: reward.id, amount: reward.amount }
-    });
-
-    return NextResponse.json({ 
-      success: true, 
-      reward,
-      message: `$${reward.amount} wurden beansprucht! Der Bot wird dir das Geld in Kürze gutschreiben.`
-    });
-  } catch (error) {
-    console.error('Claim reward exception:', error);
-    return NextResponse.json({ error: 'Fehler' }, { status: 500 });
-  }
-}
-
-
