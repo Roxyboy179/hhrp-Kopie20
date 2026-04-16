@@ -478,6 +478,7 @@ async function handleAuthMe(request) {
     // Aktualisierte User-Daten
     const updatedUser = {
       ...user,
+      roles: member.roles || [], // Discord Rollen-IDs
       adminLevel: adminRole?.level || 0,
       adminRole: adminRole?.name || null,
       canCreateAccounts: adminRole?.canCreateAccounts || false,
@@ -485,6 +486,24 @@ async function handleAuthMe(request) {
       isTeamMember: !!(adminRole || teamRole),
       teamRole: teamRole?.name || null,
     };
+    
+    // Lade Lizenzen aus Supabase
+    try {
+      const { data: userProfile } = await supabaseAdmin
+        .from('user_data')
+        .select('licenses')
+        .eq('discord_user_id', user.id)
+        .single();
+      
+      if (userProfile?.licenses) {
+        updatedUser.licenses = userProfile.licenses;
+      } else {
+        updatedUser.licenses = [];
+      }
+    } catch (licenseError) {
+      console.error('[AUTH ME] Error loading licenses:', licenseError);
+      updatedUser.licenses = [];
+    }
     
     // Token aktualisieren
     const newToken = createToken(updatedUser);

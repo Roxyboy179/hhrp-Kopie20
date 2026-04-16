@@ -9,7 +9,7 @@ import {
   Loader2, FileText, RefreshCw, ChevronRight, ArrowLeft, 
   AlertTriangle, Clock, CheckCircle2, XCircle, Plus,
   User, Gamepad2, Users, Target, MessageSquare, Shield, Mic, BookOpen, Heart,
-  TrendingUp, Briefcase
+  TrendingUp, Briefcase, Sparkles
 } from 'lucide-react';
 
 function formatDateTime(dateStr) {
@@ -229,6 +229,12 @@ export default function MeineBewerbungenPage() {
                               <span className="text-white/40 text-xs">Uprank-Bewerbung</span>
                             </>
                           )}
+                          {fd.bewerbungType === 'beta_tester' && (
+                            <>
+                              <Sparkles className="w-3 h-3" style={{ color: 'var(--theme-accent)' }} />
+                              <span className="text-white/40 text-xs">Beta Tester Bewerbung</span>
+                            </>
+                          )}
                         </div>
                       )}
                       
@@ -320,6 +326,44 @@ export default function MeineBewerbungenPage() {
                             { icon: <Target className="w-3 h-3" />, label: 'Warum Uprank?', value: fd.warumUprank },
                             { icon: <MessageSquare className="w-3 h-3" />, label: 'Aktuelle Aufgaben', value: fd.aktuelleAufgaben },
                             { icon: <Shield className="w-3 h-3" />, label: 'Zusätzliche Verantwortung', value: fd.zusaetzlicheVerantwortung },
+                          ].map((item, j) => item.value ? (
+                            <div key={j} className="mt-4">
+                              <p className="text-white/25 text-xs mb-1.5 flex items-center gap-1.5">{item.icon} {item.label}</p>
+                              <p className="text-white/60 text-sm whitespace-pre-wrap leading-relaxed">{item.value}</p>
+                            </div>
+                          ) : null)}
+                        </>
+                      )}
+                      
+                      {/* BETA TESTER BEWERBUNG */}
+                      {fd.bewerbungType === 'beta_tester' && (
+                        <>
+                          <div className="grid md:grid-cols-2 gap-5">
+                            {[
+                              { icon: <User className="w-3 h-3" />, label: 'Name', value: fd.name },
+                              { icon: <User className="w-3 h-3" />, label: 'Discord Name', value: fd.discordName },
+                              { icon: <User className="w-3 h-3" />, label: 'Alter', value: fd.alter },
+                              { icon: <Clock className="w-3 h-3" />, label: 'Verfügbarkeit', value: fd.verfuegbarkeit },
+                            ].map((item, j) => item.value ? (
+                              <div key={j}>
+                                <p className="text-white/25 text-xs mb-1 flex items-center gap-1.5">{item.icon} {item.label}</p>
+                                <p className="text-white/70 text-sm whitespace-pre-wrap">{item.value}</p>
+                              </div>
+                            ) : null)}
+                          </div>
+
+                          {/* Long text fields */}
+                          {[
+                            { icon: <Sparkles className="w-3 h-3" />, label: 'Motivation', value: fd.warum },
+                            { icon: <Shield className="w-3 h-3" />, label: 'Testing-Erfahrung', value: fd.erfahrung },
+                            { icon: <Target className="w-3 h-3" />, label: 'Features testen', value: fd.features },
+                            { icon: <AlertTriangle className="w-3 h-3" />, label: 'Bug-Handling', value: fd.bugs },
+                            { icon: <MessageSquare className="w-3 h-3" />, label: 'Feedback geben', value: fd.feedback },
+                            { icon: <Users className="w-3 h-3" />, label: 'Kommunikation', value: fd.kommunikation },
+                            { icon: <Target className="w-3 h-3" />, label: 'Erwartungen', value: fd.erwartungen },
+                            { icon: <CheckCircle2 className="w-3 h-3" />, label: 'Stärken', value: fd.staerken },
+                            { icon: <XCircle className="w-3 h-3" />, label: 'Schwächen', value: fd.schwaechen },
+                            { icon: <MessageSquare className="w-3 h-3" />, label: 'Zusätzliches', value: fd.zusaetzlich },
                           ].map((item, j) => item.value ? (
                             <div key={j} className="mt-4">
                               <p className="text-white/25 text-xs mb-1.5 flex items-center gap-1.5">{item.icon} {item.label}</p>

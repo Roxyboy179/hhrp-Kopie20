@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { 
   Loader2, RefreshCw, ArrowLeft, User, AlertTriangle,
   Clock, CheckCircle2, XCircle, Filter, Search, Eye, Shield,
-  FileText, Briefcase, TrendingUp
+  FileText, Briefcase, TrendingUp, Sparkles
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -296,6 +296,12 @@ export default function AdminBewerbungenPage() {
                       <span>Uprank</span>
                     </>
                   )}
+                  {fd.bewerbungType === 'beta_tester' && (
+                    <>
+                      <Sparkles className="w-3 h-3" style={{ color: 'var(--theme-accent)' }} />
+                      <span>Beta Tester</span>
+                    </>
+                  )}
                 </span>
               )}
             </h4>
@@ -346,6 +352,26 @@ export default function AdminBewerbungenPage() {
                   <DetailRow label="Warum Uprank?" value={fd.warumUprank} />
                   <DetailRow label="Zusätzliche Verantwortung" value={fd.zusaetzlicheVerantwortung} />
                   <DetailRow label="Stunden/Woche" value={fd.stundenProWoche} />
+                </>
+              )}
+              
+              {/* BETA TESTER BEWERBUNG */}
+              {fd.bewerbungType === 'beta_tester' && (
+                <>
+                  <DetailRow label="Name" value={fd.name} />
+                  <DetailRow label="Discord Name" value={fd.discordName} />
+                  <DetailRow label="Alter" value={fd.alter} />
+                  <DetailRow label="Motivation" value={fd.warum} />
+                  <DetailRow label="Testing-Erfahrung" value={fd.erfahrung} />
+                  <DetailRow label="Verfügbarkeit" value={fd.verfuegbarkeit} />
+                  <DetailRow label="Features testen" value={fd.features} />
+                  <DetailRow label="Bug-Handling" value={fd.bugs} />
+                  <DetailRow label="Feedback geben" value={fd.feedback} />
+                  <DetailRow label="Kommunikation" value={fd.kommunikation} />
+                  <DetailRow label="Erwartungen" value={fd.erwartungen} />
+                  <DetailRow label="Stärken" value={fd.staerken} />
+                  <DetailRow label="Schwächen" value={fd.schwaechen} />
+                  <DetailRow label="Zusätzliches" value={fd.zusaetzlich} />
                 </>
               )}
             </div>
