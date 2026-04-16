@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===== DARK MODE FOR FORM CONTROLS ===== */
+html {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #1a1a2e;
+  color: #ffffff;
+}
+
+select option:checked,
+select option:hover {
+  background-color: #3b82f6;
+  color: #ffffff;
+}
+
 /* ===== NEW ENTRY ANIMATIONS ===== */
 @keyframes pulse-slow {
   0%, 100% {
