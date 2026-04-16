@@ -14,8 +14,13 @@ export function MultiStepWizard({
   canGoNext,
   submitting = false 
 }) {
-  const steps = Array.isArray(children) ? children : [children];
-  const CurrentStepComponent = steps[currentStep];
+  // children ist jetzt nur der aktuelle Step (da wir in bewerbung/page.js currentStep prüfen)
+  // Wir filtern false/null/undefined raus
+  const validChildren = Array.isArray(children) 
+    ? children.filter(child => child != null && child !== false && child !== true) 
+    : (children ? [children] : []);
+  
+  const CurrentStepComponent = validChildren.length > 0 ? validChildren[0] : null;
 
   const stepIcons = [
     { icon: User, label: 'Persönliches' },

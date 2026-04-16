@@ -839,33 +839,21 @@ export default function BewerbungPage() {
               submitting={submitting}
             >
               {/* Normal Team-Bewerbung - 4 Steps */}
-              {selectedType === 'normal' && (
-                <>
-                  <NormalStep1 formData={formData} setFormData={setFormData} />
-                  <NormalStep2 formData={formData} setFormData={setFormData} />
-                  <NormalStep3 formData={formData} setFormData={setFormData} />
-                  <NormalStep4 formData={formData} setFormData={setFormData} />
-                </>
-              )}
+              {selectedType === 'normal' && currentStep === 0 && <NormalStep1 formData={formData} setFormData={setFormData} />}
+              {selectedType === 'normal' && currentStep === 1 && <NormalStep2 formData={formData} setFormData={setFormData} />}
+              {selectedType === 'normal' && currentStep === 2 && <NormalStep3 formData={formData} setFormData={setFormData} />}
+              {selectedType === 'normal' && currentStep === 3 && <NormalStep4 formData={formData} setFormData={setFormData} />}
 
               {/* Praktikum-Bewerbung - 4 Steps */}
-              {selectedType === 'praktikum' && (
-                <>
-                  <PraktikumStep1 formData={formData} setFormData={setFormData} />
-                  <PraktikumStep2 formData={formData} setFormData={setFormData} />
-                  <PraktikumStep3 formData={formData} setFormData={setFormData} />
-                  <PraktikumStep4 formData={formData} setFormData={setFormData} />
-                </>
-              )}
+              {selectedType === 'praktikum' && currentStep === 0 && <PraktikumStep1 formData={formData} setFormData={setFormData} />}
+              {selectedType === 'praktikum' && currentStep === 1 && <PraktikumStep2 formData={formData} setFormData={setFormData} />}
+              {selectedType === 'praktikum' && currentStep === 2 && <PraktikumStep3 formData={formData} setFormData={setFormData} />}
+              {selectedType === 'praktikum' && currentStep === 3 && <PraktikumStep4 formData={formData} setFormData={setFormData} />}
 
               {/* Uprank-Bewerbung - 3 Steps */}
-              {selectedType === 'uprank' && (
-                <>
-                  <UprankStep1 formData={formData} setFormData={setFormData} user={user} />
-                  <UprankStep2 formData={formData} setFormData={setFormData} />
-                  <UprankStep3 formData={formData} setFormData={setFormData} />
-                </>
-              )}
+              {selectedType === 'uprank' && currentStep === 0 && <UprankStep1 formData={formData} setFormData={setFormData} user={user} />}
+              {selectedType === 'uprank' && currentStep === 1 && <UprankStep2 formData={formData} setFormData={setFormData} />}
+              {selectedType === 'uprank' && currentStep === 2 && <UprankStep3 formData={formData} setFormData={setFormData} />}
             </MultiStepWizard>
 
             {error && (
