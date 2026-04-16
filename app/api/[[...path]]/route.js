@@ -1791,22 +1791,31 @@ export async function GET(request) {
             work: '💼 Arbeiten'
           };
 
+          // Benachrichtigungs-Text je nach Cooldown-Typ
+          const cooldownMessages = {
+            collect: 'Dein Gehalt ist bereit! Hol es dir mit /collect ab! 💵',
+            ueberfall: 'Du kannst wieder jemanden ausrauben! Nutze /rob! 🔫',
+            elitePlusDaily: 'Dein Elite+ Daily Bonus ist verfügbar! ⭐',
+            work: 'Du kannst wieder arbeiten! Nutze /work! 💼'
+          };
+
           const notificationKey = `${userId}_${cooldownKey}_${startTime}`;
           
-          if (timeLeft <= 120000 && timeLeft > -60000) {
+          // Zeitfenster: 5 Minuten vor bis 5 Minuten nach Ablauf
+          if (timeLeft <= 300000 && timeLeft > -300000) {
             try {
               const { data: existing } = await supabaseAdmin
                 .from('sent_notifications')
                 .select('id')
                 .eq('notification_key', notificationKey)
-                .single();
+                .maybeSingle();
 
               if (!existing) {
                 await webpush.sendNotification(
                   userSub.subscription,
                   JSON.stringify({
                     title: `✅ ${cooldownNames[cooldownKey] || cooldownKey} verfügbar!`,
-                    body: 'Du kannst jetzt wieder den Command ausführen!',
+                    body: cooldownMessages[cooldownKey] || 'Du kannst jetzt wieder den Command ausführen!',
                     icon: '/icon-512.png',
                     badge: '/icon-192.png',
                     tag: `cooldown_${cooldownKey}`,
@@ -1825,10 +1834,10 @@ export async function GET(request) {
                   });
 
                 notificationsSent++;
-                console.log(`[Cron] Sent notification to ${userId} for ${cooldownKey}`);
+                console.log(`[Cron] ✅ Sent notification to ${userId} for ${cooldownKey}`);
               }
             } catch (pushError) {
-              console.error(`[Cron] Error sending notification to ${userId}:`, pushError);
+              console.error(`[Cron] Error sending notification to ${userId}:`, pushError.message);
               
               if (pushError.statusCode === 410) {
                 await supabaseAdmin
@@ -1841,6 +1850,88 @@ export async function GET(request) {
               errors++;
             }
           }
+        }
+      }
+
+      // === Daily Bonus Benachrichtigungen ===
+      console.log('[Cron] Checking daily bonus availability...');
+      
+      // Prüfe für jeden User mit Push-Subscription ob Daily Bonus verfügbar ist
+      for (const sub of subscriptions) {
+        try {
+          const userId = sub.user_id;
+          const today = new Date().toISOString().split('T')[0];
+          const notificationKey = `daily_bonus_${userId}_${today}`;
+
+          // Prüfe ob heute schon eine Daily-Bonus-Notification gesendet wurde
+          const { data: alreadySent } = await supabaseAdmin
+            .from('sent_notifications')
+            .select('id')
+            .eq('notification_key', notificationKey)
+            .maybeSingle();
+
+          if (alreadySent) continue; // Schon benachrichtigt heute
+
+          // Prüfe ob der User heute schon den Daily Bonus abgeholt hat
+          const { data: todayReward } = await supabaseAdmin
+            .from('rewards')
+            .select('id')
+            .eq('discord_user_id', userId)
+            .eq('reward_type', 'daily_bonus')
+            .gte('created_at', `${today}T00:00:00`)
+            .limit(1);
+
+          // Wenn KEIN Reward für heute → Daily Bonus ist verfügbar → Notification senden
+          if (!todayReward || todayReward.length === 0) {
+            // Prüfe ob der User gestern einen Daily Bonus hatte (nur benachrichtigen wenn er aktiv ist)
+            const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            const { data: yesterdayReward } = await supabaseAdmin
+              .from('rewards')
+              .select('id')
+              .eq('discord_user_id', userId)
+              .eq('reward_type', 'daily_bonus')
+              .gte('created_at', `${yesterday}T00:00:00`)
+              .lt('created_at', `${today}T00:00:00`)
+              .limit(1);
+
+            // Nur benachrichtigen wenn der User gestern aktiv war (Daily Bonus abgeholt hat)
+            if (yesterdayReward && yesterdayReward.length > 0) {
+              // Nur ab 8 Uhr morgens benachrichtigen
+              const currentHour = new Date().getHours();
+              if (currentHour >= 8) {
+                await webpush.sendNotification(
+                  sub.subscription,
+                  JSON.stringify({
+                    title: '🎁 Dein Daily Bonus wartet!',
+                    body: 'Hol dir deinen täglichen Bonus ab! Komm in die App und claim ihn! 💰',
+                    icon: '/icon-512.png',
+                    badge: '/icon-192.png',
+                    tag: 'daily_bonus',
+                    url: '/profil',
+                    requireInteraction: false
+                  })
+                );
+
+                await supabaseAdmin
+                  .from('sent_notifications')
+                  .insert({
+                    notification_key: notificationKey,
+                    user_id: userId,
+                    type: 'daily_bonus_available',
+                    sent_at: new Date().toISOString()
+                  });
+
+                notificationsSent++;
+                console.log(`[Cron] ✅ Sent daily bonus notification to ${userId}`);
+              }
+            }
+          }
+        } catch (dailyErr) {
+          console.error('[Cron] Error checking daily bonus:', dailyErr.message);
+          if (dailyErr.statusCode === 410) {
+            await supabaseAdmin.from('push_subscriptions').delete().eq('user_id', sub.user_id);
+          }
+          errors++;
         }
       }
 
