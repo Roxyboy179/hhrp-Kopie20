@@ -68,31 +68,14 @@ export function InstallButton() {
     <>
       <button
         onClick={handleInstall}
-        className="fixed bottom-6 right-24 w-14 h-14 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 shadow-2xl z-[9997] group"
+        className="fixed bottom-6 right-24 z-40 w-12 h-12 rounded-2xl flex items-center justify-center shadow-2xl shadow-black/50 transition-all hover:scale-110 active:scale-95"
         style={{ 
-          background: 'var(--theme-accent)',
-          boxShadow: '0 8px 32px rgba(var(--theme-accent-rgb), 0.4)',
+          background: 'var(--theme-accent, #ffffff)',
+          color: '#000' 
         }}
         title="App installieren"
       >
-        <Download className="w-6 h-6" style={{ color: '#000' }} />
-        
-        {/* Tooltip */}
-        <div 
-          className="absolute bottom-full mb-2 right-0 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-          style={{ 
-            background: 'rgba(0,0,0,0.9)',
-            color: '#fff',
-          }}
-        >
-          App installieren
-        </div>
-
-        {/* Pulse Animation */}
-        <div 
-          className="absolute inset-0 rounded-full animate-ping opacity-20"
-          style={{ background: 'var(--theme-accent)' }}
-        />
+        <Download className="w-5 h-5" />
       </button>
 
       {showModal && <InstallModal onClose={() => setShowModal(false)} />}
