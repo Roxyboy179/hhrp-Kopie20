@@ -3,13 +3,19 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Shield, LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2, Bell, Users
 } from 'lucide-react';
 import { NotificationBell } from '@/components/shared/NotificationBell';
 import { LoginModal } from '@/components/LoginModal';
 import { useAuth } from '@/components/providers/AuthProvider';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const DiscordIcon = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 127.14 96.36" fill="currentColor">
@@ -22,6 +28,7 @@ export function Navbar({ user, loading }) {
   const [scrolled, setScrolled] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const { refreshUser } = useAuth();
 
   useEffect(() => {
@@ -33,6 +40,7 @@ export function Navbar({ user, loading }) {
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     refreshUser();
+    router.push('/'); // Zur Startseite nach Logout
   };
 
   const navItems = [
@@ -118,51 +126,71 @@ export function Navbar({ user, loading }) {
             ) : user ? (
               <div className="flex items-center gap-2">
                 <NotificationBell />
-                <Link href="/profil" className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06] transition-all">
-                  {user.avatar ? (
-                    <img 
-                      src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=32`} 
-                      alt={user.globalName || user.username} 
-                      className="w-7 h-7 rounded-full" 
-                      style={{ boxShadow: '0 0 0 2px rgba(var(--theme-accent-rgb), 0.2)' }} 
-                    />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: 'rgba(var(--theme-accent-rgb), 0.3)' }}>
-                      <User className="w-3.5 h-3.5" style={{ color: 'var(--theme-accent)' }} />
-                    </div>
-                  )}
-                  <div className="flex flex-col">
-                    <span className="text-sm text-white/70 max-w-[120px] truncate">{user.globalName || user.username}</span>
-                    {(() => {
-                      const licenses = user?.licenses || [];
-                      const hasVipElitePlus = licenses.includes('vip_elite_plus');
-                      const hasVipUltimate = licenses.includes('vip_ultimate');
-                      const hasVipPlatinum = licenses.includes('vip_platinum');
-                      const hasVipPremium = licenses.includes('vip_premium');
-                      const hasBetaTester = user.roles?.includes('1494434149623136276');
-                      
-                      let vipStatus = '';
-                      if (hasVipElitePlus) vipStatus = 'VIP Elite Plus';
-                      else if (hasVipUltimate) vipStatus = 'VIP Ultimate';
-                      else if (hasVipPlatinum) vipStatus = 'VIP Platinum';
-                      else if (hasVipPremium) vipStatus = 'VIP Premium';
-                      else vipStatus = 'Standard Plan "Free"';
-                      
-                      const statusText = hasBetaTester 
-                        ? `${vipStatus} · Beta Tester`
-                        : vipStatus;
-                      
-                      return (
-                        <span className="text-[10px] font-medium leading-tight" style={{ color: 'var(--theme-accent)' }}>
-                          {statusText}
-                        </span>
-                      );
-                    })()}
-                  </div>
-                </Link>
-                <Button variant="ghost" size="icon" onClick={handleLogout} className="text-white/30 hover:text-white hover:bg-white/[0.06] rounded-xl h-9 w-9">
-                  <LogOut className="w-4 h-4" />
-                </Button>
+                
+                {/* Profil Dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06] transition-all cursor-pointer">
+                      {user.avatar ? (
+                        <img 
+                          src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=32`} 
+                          alt={user.globalName || user.username} 
+                          className="w-7 h-7 rounded-full" 
+                          style={{ boxShadow: '0 0 0 2px rgba(var(--theme-accent-rgb), 0.2)' }} 
+                        />
+                      ) : (
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: 'rgba(var(--theme-accent-rgb), 0.3)' }}>
+                          <User className="w-3.5 h-3.5" style={{ color: 'var(--theme-accent)' }} />
+                        </div>
+                      )}
+                      <div className="flex flex-col">
+                        <span className="text-sm text-white/70 max-w-[120px] truncate">{user.globalName || user.username}</span>
+                        {(() => {
+                          const licenses = user?.licenses || [];
+                          const hasVipElitePlus = licenses.includes('vip_elite_plus');
+                          const hasVipUltimate = licenses.includes('vip_ultimate');
+                          const hasVipPlatinum = licenses.includes('vip_platinum');
+                          const hasVipPremium = licenses.includes('vip_premium');
+                          const hasBetaTester = user.roles?.includes('1494434149623136276');
+                          
+                          let vipStatus = '';
+                          if (hasVipElitePlus) vipStatus = 'VIP Elite Plus';
+                          else if (hasVipUltimate) vipStatus = 'VIP Ultimate';
+                          else if (hasVipPlatinum) vipStatus = 'VIP Platinum';
+                          else if (hasVipPremium) vipStatus = 'VIP Premium';
+                          else vipStatus = 'Standard Plan "Free"';
+                          
+                          const statusText = hasBetaTester 
+                            ? `${vipStatus} · Beta Tester`
+                            : vipStatus;
+                          
+                          return (
+                            <span className="text-[10px] font-medium leading-tight" style={{ color: 'var(--theme-accent)' }}>
+                              {statusText}
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    </button>
+                  </DropdownMenuTrigger>
+                  
+                  <DropdownMenuContent align="end" className="w-48 bg-[#0a0a0a]/95 backdrop-blur-xl border border-white/[0.06]">
+                    <DropdownMenuItem 
+                      onClick={() => router.push('/profil')}
+                      className="cursor-pointer flex items-center gap-2 text-white/70 hover:text-white hover:bg-white/[0.06] focus:bg-white/[0.06] focus:text-white"
+                    >
+                      <User className="w-4 h-4" />
+                      <span>Profil</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={handleLogout}
+                      className="cursor-pointer flex items-center gap-2 text-red-400/70 hover:text-red-400 hover:bg-white/[0.06] focus:bg-white/[0.06] focus:text-red-400"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Abmelden</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ) : (
               <button
