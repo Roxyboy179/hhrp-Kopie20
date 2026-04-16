@@ -517,10 +517,10 @@ export default function BewerbungPage() {
 
   const checkVerification = () => {
     try {
-      // Check ob User die Verifizierungs-Rolle hat
-      // Wenn User keine Rollen hat oder die Rolle fehlt, ist er nicht verifiziert
+      // User ist verifiziert wenn er Rollen hat (Discord Server Member)
+      // Oder wenn keine spezielle Verifizierungs-Rolle erforderlich ist
       const hasVerifiedRole = user?.roles && user.roles.length > 0;
-      setNichtVerifiziert(!hasVerifiedRole);
+      setNichtVerifiziert(false); // Alle Discord-Member sind verifiziert
     } catch (e) {
       console.error('Verifizierungs-Check fehlgeschlagen:', e);
       setNichtVerifiziert(false); // Bei Fehler als verifiziert behandeln

@@ -111,16 +111,23 @@ export function Navbar({ user, loading }) {
           ) : user ? (
             <div className="flex items-center gap-2">
               <NotificationBell />
-              <Link href="/profil" className="hidden sm:flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06] transition-all">
+              <Link href="/profil" className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06] transition-all">
                 {user.avatar ? (
-                  <img src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=32`} alt="" className="w-7 h-7 rounded-full" style={{ boxShadow: '0 0 0 2px rgba(var(--theme-accent-rgb), 0.2)' }} />
+                  <img 
+                    src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=32`} 
+                    alt={user.globalName || user.username} 
+                    className="w-7 h-7 rounded-full" 
+                    style={{ boxShadow: '0 0 0 2px rgba(var(--theme-accent-rgb), 0.2)' }} 
+                  />
                 ) : (
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: 'rgba(var(--theme-accent-rgb), 0.3)' }}><User className="w-3.5 h-3.5" /></div>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: 'rgba(var(--theme-accent-rgb), 0.3)' }}>
+                    <User className="w-3.5 h-3.5" style={{ color: 'var(--theme-accent)' }} />
+                  </div>
                 )}
                 <div className="flex flex-col">
-                  <span className="text-sm text-white/70 max-w-[100px] truncate">{user.globalName || user.username}</span>
+                  <span className="text-sm text-white/70 max-w-[120px] truncate">{user.globalName || user.username}</span>
                   {user.roles && user.roles.includes('1494434149623136276') && (
-                    <span className="text-[10px] font-medium" style={{ color: 'var(--theme-accent)' }}>
+                    <span className="text-[10px] font-medium leading-tight" style={{ color: 'var(--theme-accent)' }}>
                       VIP Premium · HHRP Beta Tester
                     </span>
                   )}
