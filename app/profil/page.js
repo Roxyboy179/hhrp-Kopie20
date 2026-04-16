@@ -1830,35 +1830,21 @@ export default function ProfilPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Vorteil 1: Bonus Geld */}
+                {/* Vorteil 1: 20k Daily */}
                 <div className={`p-4 rounded-xl border transition-all ${isPWA ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02] border-white/5'}`}>
                   <div className="flex items-start gap-3">
                     <div className={`w-10 h-10 rounded-lg ${isPWA ? 'bg-green-500/20' : 'bg-purple-500/20'} flex items-center justify-center flex-shrink-0`}>
                       <DollarSign className={`w-5 h-5 ${isPWA ? 'text-green-400' : 'text-purple-400'}`} />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-white mb-1">+500€ Daily Bonus</h3>
-                      <p className="text-sm text-white/60">Erhalte täglich 500€ extra beim Daily Bonus</p>
+                      <h3 className="font-semibold text-white mb-1">20.000€ Täglich</h3>
+                      <p className="text-sm text-white/60">Hole dir jeden Tag 20.000€ exklusiv für PWA-Nutzer ab!</p>
                       {isPWA && <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Aktiv</p>}
                     </div>
                   </div>
                 </div>
 
-                {/* Vorteil 2: Cooldown Reduktion */}
-                <div className={`p-4 rounded-xl border transition-all ${isPWA ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02] border-white/5'}`}>
-                  <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-lg ${isPWA ? 'bg-green-500/20' : 'bg-blue-500/20'} flex items-center justify-center flex-shrink-0`}>
-                      <Zap className={`w-5 h-5 ${isPWA ? 'text-green-400' : 'text-blue-400'}`} />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-white mb-1">-10% Cooldown-Zeit</h3>
-                      <p className="text-sm text-white/60">Alle Cooldowns (Collect, Rob, etc.) sind 10% kürzer</p>
-                      {isPWA && <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Aktiv</p>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Vorteil 3: Push Benachrichtigungen */}
+                {/* Vorteil 2: Push Benachrichtigungen */}
                 <div className={`p-4 rounded-xl border transition-all ${isPWA ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02] border-white/5'}`}>
                   <div className="flex items-start gap-3">
                     <div className={`w-10 h-10 rounded-lg ${isPWA ? 'bg-green-500/20' : 'bg-orange-500/20'} flex items-center justify-center flex-shrink-0`}>
@@ -1866,9 +1852,9 @@ export default function ProfilPage() {
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-white mb-1">Push-Benachrichtigungen</h3>
-                      <p className="text-sm text-white/60">Werde benachrichtigt wenn Cooldowns fertig sind</p>
+                      <p className="text-sm text-white/60">Werde benachrichtigt wenn Cooldowns fertig sind - auch bei geschlossener App!</p>
                       {isPWA ? (
-                        <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Verfügbar</p>
+                        <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Automatisch aktiv</p>
                       ) : (
                         <p className="text-xs text-white/40 mt-2">Nur mit PWA</p>
                       )}
@@ -1876,7 +1862,7 @@ export default function ProfilPage() {
                   </div>
                 </div>
 
-                {/* Vorteil 4: Offline Modus */}
+                {/* Vorteil 3: Offline Modus */}
                 <div className={`p-4 rounded-xl border transition-all ${isPWA ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02] border-white/5'}`}>
                   <div className="flex items-start gap-3">
                     <div className={`w-10 h-10 rounded-lg ${isPWA ? 'bg-green-500/20' : 'bg-indigo-500/20'} flex items-center justify-center flex-shrink-0`}>
@@ -1884,7 +1870,21 @@ export default function ProfilPage() {
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-white mb-1">Offline-Modus</h3>
-                      <p className="text-sm text-white/60">Dein Profil auch ohne Internet verfügbar</p>
+                      <p className="text-sm text-white/60">Dein Profil und alle Daten auch ohne Internet verfügbar</p>
+                      {isPWA && <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Aktiv</p>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vorteil 4: Schneller Zugriff */}
+                <div className={`p-4 rounded-xl border transition-all ${isPWA ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02] border-white/5'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-lg ${isPWA ? 'bg-green-500/20' : 'bg-blue-500/20'} flex items-center justify-center flex-shrink-0`}>
+                      <Zap className={`w-5 h-5 ${isPWA ? 'text-green-400' : 'text-blue-400'}`} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-white mb-1">Schneller App-Zugriff</h3>
+                      <p className="text-sm text-white/60">App-Icon direkt auf deinem Homescreen - wie eine echte App!</p>
                       {isPWA && <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Aktiv</p>}
                     </div>
                   </div>
