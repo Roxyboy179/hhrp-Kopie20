@@ -5,11 +5,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export function LoginModal({ open, onOpenChange, onLoginStart }) {
+export function LoginModal({ open, onOpenChange }) {
   const [status, setStatus] = useState('loading'); // 'loading', 'success', 'error'
   const [errorMessage, setErrorMessage] = useState('');
   const [countdown, setCountdown] = useState(30);
   const popupRef = useRef(null);
+  const checkClosedIntervalRef = useRef(null);
 
   useEffect(() => {
     if (!open) {
@@ -22,6 +23,12 @@ export function LoginModal({ open, onOpenChange, onLoginStart }) {
       if (popupRef.current && !popupRef.current.closed) {
         popupRef.current.close();
       }
+      
+      // Interval cleanup
+      if (checkClosedIntervalRef.current) {
+        clearInterval(checkClosedIntervalRef.current);
+      }
+      
       return;
     }
 
@@ -30,7 +37,7 @@ export function LoginModal({ open, onOpenChange, onLoginStart }) {
       // Sicherheit: Nur Nachrichten von unserer Domain akzeptieren
       if (event.origin !== window.location.origin) return;
       
-      const { type, success, error } = event.data;
+      const { type, success, error } = event.data || {};
       
       if (type === 'discord-auth') {
         if (success) {
@@ -100,9 +107,9 @@ export function LoginModal({ open, onOpenChange, onLoginStart }) {
     popupRef.current = popup;
     
     // Prüfe ob Popup geschlossen wurde (von User abgebrochen)
-    const checkClosed = setInterval(() => {
+    checkClosedIntervalRef.current = setInterval(() => {
       if (popup && popup.closed) {
-        clearInterval(checkClosed);
+        clearInterval(checkClosedIntervalRef.current);
         if (status === 'loading') {
           setStatus('error');
           setErrorMessage('Anmeldung wurde abgebrochen.');
@@ -116,7 +123,13 @@ export function LoginModal({ open, onOpenChange, onLoginStart }) {
     if (open && status === 'loading') {
       openDiscordPopup();
     }
-  }, [open]);
+    
+    return () => {
+      if (checkClosedIntervalRef.current) {
+        clearInterval(checkClosedIntervalRef.current);
+      }
+    };
+  }, [open, status]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
