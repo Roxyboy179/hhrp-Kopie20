@@ -13,7 +13,8 @@ import {
   Check, Loader2, FileText, Calendar, Mail, ExternalLink, LayoutDashboard, IdCard, ClipboardList,
   Building2, Hash, Key, Copy, ArrowUpRight, ArrowDownRight, AlertCircle, 
   Shield, Star, MessageSquare, Ban, ChevronUp, ShieldCheck, CheckCircle, DollarSign, RefreshCw,
-  ShoppingCart, PiggyBank, Receipt, Heart, Smartphone, Bell, Zap, Download, Crown, Sparkles
+  ShoppingCart, PiggyBank, Receipt, Heart, Smartphone, Bell, Zap, Download, Crown, Sparkles,
+  Rocket, Wifi, WifiOff, Globe, Timer, Lock, Gem, PartyPopper, Handshake, Monitor, BadgeCheck, CircleDollarSign, BellRing, AppWindow
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -1792,13 +1793,20 @@ export default function ProfilPage() {
             <div className={`glass rounded-2xl p-6 border ${isPWA ? 'border-green-500/30 bg-gradient-to-br from-green-500/10 to-emerald-500/10' : 'border-orange-500/30 bg-gradient-to-br from-orange-500/10 to-yellow-500/10'}`}>
               <div className="flex items-start gap-4">
                 <div className={`w-16 h-16 rounded-2xl ${isPWA ? 'bg-green-500/20' : 'bg-orange-500/20'} flex items-center justify-center flex-shrink-0`}>
-                  <Smartphone className={`w-8 h-8 ${isPWA ? 'text-green-400' : 'text-orange-400'}`} />
+                  {isPWA ? (
+                    <CheckCircle className="w-8 h-8 text-green-400" />
+                  ) : (
+                    <Smartphone className="w-8 h-8 text-orange-400" />
+                  )}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className={`text-xl font-bold ${isPWA ? 'text-green-400' : 'text-orange-400'}`}>
-                      {isPWA ? '✅ PWA Aktiv' : '📱 PWA Nicht Installiert'}
+                      {isPWA ? 'PWA Aktiv' : 'PWA Nicht Installiert'}
                     </h3>
+                    {isPWA && (
+                      <span className="px-2 py-0.5 rounded-full bg-green-500/20 border border-green-500/30 text-[10px] font-bold text-green-300 uppercase tracking-wider">Aktiv</span>
+                    )}
                   </div>
                   <p className="text-white/60 mb-4">
                     {isPWA 
@@ -1827,70 +1835,114 @@ export default function ProfilPage() {
               <div className="flex items-center gap-3 mb-6">
                 <Sparkles className="w-6 h-6 text-purple-400" />
                 <h2 className="text-xl font-bold text-white">Exklusive PWA-Vorteile</h2>
+                {isPWA && (
+                  <span className="ml-auto px-2.5 py-1 rounded-full bg-green-500/15 border border-green-500/25 text-xs font-semibold text-green-400">
+                    Alle freigeschaltet
+                  </span>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Vorteil 1: 20k Daily */}
-                <div className={`p-4 rounded-xl border transition-all ${isPWA ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02] border-white/5'}`}>
+                <div className={`group p-4 rounded-xl border transition-all hover:scale-[1.01] ${isPWA ? 'bg-green-500/5 border-green-500/20 hover:bg-green-500/10' : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.04]'}`}>
                   <div className="flex items-start gap-3">
                     <div className={`w-10 h-10 rounded-lg ${isPWA ? 'bg-green-500/20' : 'bg-purple-500/20'} flex items-center justify-center flex-shrink-0`}>
-                      <DollarSign className={`w-5 h-5 ${isPWA ? 'text-green-400' : 'text-purple-400'}`} />
+                      <CircleDollarSign className={`w-5 h-5 ${isPWA ? 'text-green-400' : 'text-purple-400'}`} />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-white mb-1">20.000€ Täglich</h3>
-                      <p className="text-sm text-white/60">Hole dir jeden Tag 20.000€ exklusiv für PWA-Nutzer ab!</p>
-                      {isPWA && <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Aktiv</p>}
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-semibold text-white">20.000 Taeglich</h3>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isPWA ? 'bg-green-500/20 text-green-300' : 'bg-purple-500/20 text-purple-300'}`}>4x BONUS</span>
+                      </div>
+                      <p className="text-sm text-white/60">Statt 5.000 bekommst du als PWA-Nutzer den vierfachen Daily Bonus</p>
+                      {isPWA ? (
+                        <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><BadgeCheck className="w-3.5 h-3.5" /> Freigeschaltet</p>
+                      ) : (
+                        <p className="text-xs text-white/30 mt-2 flex items-center gap-1"><Lock className="w-3 h-3" /> Nur mit PWA</p>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Vorteil 2: Push Benachrichtigungen */}
-                <div className={`p-4 rounded-xl border transition-all ${isPWA ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02] border-white/5'}`}>
+                <div className={`group p-4 rounded-xl border transition-all hover:scale-[1.01] ${isPWA ? 'bg-green-500/5 border-green-500/20 hover:bg-green-500/10' : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.04]'}`}>
                   <div className="flex items-start gap-3">
                     <div className={`w-10 h-10 rounded-lg ${isPWA ? 'bg-green-500/20' : 'bg-orange-500/20'} flex items-center justify-center flex-shrink-0`}>
-                      <Bell className={`w-5 h-5 ${isPWA ? 'text-green-400' : 'text-orange-400'}`} />
+                      <BellRing className={`w-5 h-5 ${isPWA ? 'text-green-400' : 'text-orange-400'}`} />
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-white mb-1">Push-Benachrichtigungen</h3>
-                      <p className="text-sm text-white/60">Werde benachrichtigt wenn Cooldowns fertig sind - auch bei geschlossener App!</p>
+                      <p className="text-sm text-white/60">Werde benachrichtigt wenn Cooldowns fertig sind, Daily Bonus bereit ist oder Wartungen anstehen</p>
                       {isPWA ? (
-                        <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Automatisch aktiv</p>
+                        <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><BadgeCheck className="w-3.5 h-3.5" /> Automatisch aktiv</p>
                       ) : (
-                        <p className="text-xs text-white/40 mt-2">Nur mit PWA</p>
+                        <p className="text-xs text-white/30 mt-2 flex items-center gap-1"><Lock className="w-3 h-3" /> Nur mit PWA</p>
                       )}
                     </div>
                   </div>
                 </div>
 
                 {/* Vorteil 3: Offline Modus */}
-                <div className={`p-4 rounded-xl border transition-all ${isPWA ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02] border-white/5'}`}>
+                <div className={`group p-4 rounded-xl border transition-all hover:scale-[1.01] ${isPWA ? 'bg-green-500/5 border-green-500/20 hover:bg-green-500/10' : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.04]'}`}>
                   <div className="flex items-start gap-3">
                     <div className={`w-10 h-10 rounded-lg ${isPWA ? 'bg-green-500/20' : 'bg-indigo-500/20'} flex items-center justify-center flex-shrink-0`}>
-                      <Smartphone className={`w-5 h-5 ${isPWA ? 'text-green-400' : 'text-indigo-400'}`} />
+                      <Wifi className={`w-5 h-5 ${isPWA ? 'text-green-400' : 'text-indigo-400'}`} />
                     </div>
                     <div className="flex-1">
                       <h3 className="font-semibold text-white mb-1">Offline-Modus</h3>
-                      <p className="text-sm text-white/60">Dein Profil und alle Daten auch ohne Internet verfügbar</p>
-                      {isPWA && <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Aktiv</p>}
+                      <p className="text-sm text-white/60">Profil und Daten sind auch ohne Internetverbindung abrufbar</p>
+                      {isPWA ? (
+                        <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><BadgeCheck className="w-3.5 h-3.5" /> Freigeschaltet</p>
+                      ) : (
+                        <p className="text-xs text-white/30 mt-2 flex items-center gap-1"><Lock className="w-3 h-3" /> Nur mit PWA</p>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 {/* Vorteil 4: Schneller Zugriff */}
-                <div className={`p-4 rounded-xl border transition-all ${isPWA ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02] border-white/5'}`}>
+                <div className={`group p-4 rounded-xl border transition-all hover:scale-[1.01] ${isPWA ? 'bg-green-500/5 border-green-500/20 hover:bg-green-500/10' : 'bg-white/[0.02] border-white/5 hover:bg-white/[0.04]'}`}>
                   <div className="flex items-start gap-3">
                     <div className={`w-10 h-10 rounded-lg ${isPWA ? 'bg-green-500/20' : 'bg-blue-500/20'} flex items-center justify-center flex-shrink-0`}>
-                      <Zap className={`w-5 h-5 ${isPWA ? 'text-green-400' : 'text-blue-400'}`} />
+                      <AppWindow className={`w-5 h-5 ${isPWA ? 'text-green-400' : 'text-blue-400'}`} />
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-white mb-1">Schneller App-Zugriff</h3>
-                      <p className="text-sm text-white/60">App-Icon direkt auf deinem Homescreen - wie eine echte App!</p>
-                      {isPWA && <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Aktiv</p>}
+                      <h3 className="font-semibold text-white mb-1">Nativer App-Zugriff</h3>
+                      <p className="text-sm text-white/60">App-Icon direkt auf deinem Homescreen, startet im Fullscreen ohne Browser-Leiste</p>
+                      {isPWA ? (
+                        <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><BadgeCheck className="w-3.5 h-3.5" /> Freigeschaltet</p>
+                      ) : (
+                        <p className="text-xs text-white/30 mt-2 flex items-center gap-1"><Lock className="w-3 h-3" /> Nur mit PWA</p>
+                      )}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Installations-Anleitung für Nicht-PWA User */}
+            {!isPWA && (
+              <div className="glass rounded-2xl p-6 border border-blue-500/15 bg-gradient-to-br from-blue-500/5 to-indigo-500/5">
+                <div className="flex items-center gap-3 mb-5">
+                  <Monitor className="w-6 h-6 text-blue-400" />
+                  <h2 className="text-lg font-bold text-white">So installierst du die App</h2>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03]">
+                    <div className="w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-xs font-bold text-blue-400">1</div>
+                    <p className="text-sm text-white/70">Oeffne die Seite in Chrome oder Safari auf deinem Handy</p>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03]">
+                    <div className="w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-xs font-bold text-blue-400">2</div>
+                    <p className="text-sm text-white/70">Tippe auf das Teilen-Symbol und waehle &quot;Zum Homescreen hinzufuegen&quot;</p>
+                  </div>
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03]">
+                    <div className="w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-xs font-bold text-blue-400">3</div>
+                    <p className="text-sm text-white/70">Oeffne die App ueber das neue Icon und alle Vorteile werden automatisch aktiviert</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -1918,35 +1970,43 @@ export default function ProfilPage() {
                     const hasVipUltimate = licenses.includes('vip_ultimate');
                     const hasVipPlatinum = licenses.includes('vip_platinum');
                     const hasVipPremium = licenses.includes('vip_premium');
-                    const hasBooster = licenses.includes('server_booster');
 
                     let vipStatus = null;
                     if (hasVipElitePlus) {
-                      vipStatus = { name: 'VIP ELITE PLUS', color: 'purple', cooldown: '45 Min', bonus: '2.000€' };
+                      vipStatus = { name: 'VIP ELITE PLUS', color: 'purple', cooldown: '45 Min', bonus: '2.000', icon: Gem };
                     } else if (hasVipUltimate) {
-                      vipStatus = { name: 'VIP Ultimate', color: 'blue', cooldown: '45 Min', bonus: 'N/A' };
+                      vipStatus = { name: 'VIP Ultimate', color: 'blue', cooldown: '45 Min', bonus: null, icon: Star };
                     } else if (hasVipPlatinum) {
-                      vipStatus = { name: 'VIP Platinum', color: 'cyan', cooldown: '1 Std', bonus: 'N/A' };
+                      vipStatus = { name: 'VIP Platinum', color: 'cyan', cooldown: '1 Std', bonus: null, icon: Shield };
                     } else if (hasVipPremium) {
-                      vipStatus = { name: 'VIP Premium', color: 'yellow', cooldown: '2 Std', bonus: 'N/A' };
+                      vipStatus = { name: 'VIP Premium', color: 'yellow', cooldown: '2 Std', bonus: null, icon: Award };
                     }
 
                     return vipStatus ? (
                       <div className={`p-6 rounded-xl bg-gradient-to-br from-${vipStatus.color}-500/10 to-${vipStatus.color}-600/10 border border-${vipStatus.color}-500/20`}>
                         <div className="flex items-start gap-4">
                           <div className={`w-16 h-16 rounded-2xl bg-${vipStatus.color}-500/20 flex items-center justify-center flex-shrink-0`}>
-                            <Crown className={`w-8 h-8 text-${vipStatus.color}-400`} />
+                            <vipStatus.icon className={`w-8 h-8 text-${vipStatus.color}-400`} />
                           </div>
                           <div className="flex-1">
-                            <h3 className={`text-2xl font-bold text-${vipStatus.color}-400 mb-2`}>{vipStatus.name}</h3>
+                            <div className="flex items-center gap-3 mb-3">
+                              <h3 className={`text-2xl font-bold text-${vipStatus.color}-400`}>{vipStatus.name}</h3>
+                              <BadgeCheck className={`w-5 h-5 text-${vipStatus.color}-400`} />
+                            </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                              <div>
-                                <p className="text-sm text-white/40 mb-1">Collect Cooldown</p>
+                              <div className="p-3 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Timer className="w-3.5 h-3.5 text-white/40" />
+                                  <p className="text-sm text-white/40">Collect Cooldown</p>
+                                </div>
                                 <p className="text-lg font-semibold text-white">{vipStatus.cooldown}</p>
                               </div>
-                              {vipStatus.bonus !== 'N/A' && (
-                                <div>
-                                  <p className="text-sm text-white/40 mb-1">Elite+ Daily Bonus</p>
+                              {vipStatus.bonus && (
+                                <div className="p-3 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <CircleDollarSign className="w-3.5 h-3.5 text-white/40" />
+                                    <p className="text-sm text-white/40">Elite+ Daily Bonus</p>
+                                  </div>
                                   <p className="text-lg font-semibold text-white">{vipStatus.bonus}</p>
                                 </div>
                               )}
@@ -1956,8 +2016,15 @@ export default function ProfilPage() {
                       </div>
                     ) : (
                       <div className="p-6 rounded-xl bg-white/[0.02] border border-white/5">
-                        <p className="text-white/60 text-center">Du hast aktuell keinen VIP-Status</p>
-                        <p className="text-sm text-white/40 text-center mt-2">Besuche den Shop um VIP zu werden!</p>
+                        <div className="flex flex-col items-center text-center gap-3">
+                          <div className="w-14 h-14 rounded-2xl bg-white/[0.04] flex items-center justify-center">
+                            <Crown className="w-7 h-7 text-white/20" />
+                          </div>
+                          <div>
+                            <p className="text-white/60 font-medium">Du hast aktuell keinen VIP-Status</p>
+                            <p className="text-sm text-white/35 mt-1">Besuche den Shop auf Discord um VIP zu werden</p>
+                          </div>
+                        </div>
                       </div>
                     );
                   })()}
@@ -1968,20 +2035,94 @@ export default function ProfilPage() {
                   <div className="glass rounded-2xl p-6 border border-pink-500/20 bg-gradient-to-br from-pink-500/10 to-purple-500/10">
                     <div className="flex items-start gap-4">
                       <div className="w-16 h-16 rounded-2xl bg-pink-500/20 flex items-center justify-center flex-shrink-0">
-                        <Zap className="w-8 h-8 text-pink-400" />
+                        <Rocket className="w-8 h-8 text-pink-400" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-xl font-bold text-pink-400 mb-2">🚀 Server Booster</h3>
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="text-xl font-bold text-pink-400">Server Booster</h3>
+                          <BadgeCheck className="w-5 h-5 text-pink-400" />
+                        </div>
                         <p className="text-white/60 mb-3">Danke, dass du unseren Server boostest!</p>
-                        <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                        <div className="p-3 rounded-lg bg-white/5 border border-white/10 flex items-center gap-2">
+                          <CircleDollarSign className="w-4 h-4 text-pink-400 flex-shrink-0" />
                           <p className="text-sm text-white/80">
-                            <span className="font-semibold text-pink-400">+5.000€</span> Bonus beim /collect Command
+                            <span className="font-semibold text-pink-400">+5.000</span> Bonus beim /collect Command
                           </p>
                         </div>
                       </div>
                     </div>
                   </div>
                 )}
+
+                {/* Alle Discord-Vorteile Uebersicht */}
+                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                  <div className="flex items-center gap-3 mb-6">
+                    <Gift className="w-6 h-6 text-blue-400" />
+                    <h2 className="text-xl font-bold text-white">Discord Vorteile</h2>
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Vorteil: Server Booster */}
+                    <div className={`p-4 rounded-xl border transition-all ${userData?.licenses?.includes('server_booster') ? 'bg-pink-500/5 border-pink-500/20' : 'bg-white/[0.02] border-white/5'}`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg ${userData?.licenses?.includes('server_booster') ? 'bg-pink-500/20' : 'bg-white/[0.06]'} flex items-center justify-center flex-shrink-0`}>
+                          <Rocket className={`w-5 h-5 ${userData?.licenses?.includes('server_booster') ? 'text-pink-400' : 'text-white/30'}`} />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white text-sm">Server Booster Bonus</h3>
+                          <p className="text-xs text-white/50">+5.000 bei jedem /collect</p>
+                        </div>
+                        {userData?.licenses?.includes('server_booster') ? (
+                          <BadgeCheck className="w-5 h-5 text-pink-400 flex-shrink-0" />
+                        ) : (
+                          <Lock className="w-4 h-4 text-white/20 flex-shrink-0" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Vorteil: Reduzierter Cooldown */}
+                    {(() => {
+                      const licenses = userData?.licenses || [];
+                      const hasVip = licenses.some(l => l.startsWith('vip_'));
+                      return (
+                        <div className={`p-4 rounded-xl border transition-all ${hasVip ? 'bg-yellow-500/5 border-yellow-500/20' : 'bg-white/[0.02] border-white/5'}`}>
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-lg ${hasVip ? 'bg-yellow-500/20' : 'bg-white/[0.06]'} flex items-center justify-center flex-shrink-0`}>
+                              <Timer className={`w-5 h-5 ${hasVip ? 'text-yellow-400' : 'text-white/30'}`} />
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-white text-sm">Reduzierter Cooldown</h3>
+                              <p className="text-xs text-white/50">Kuerzere Wartezeit bei /collect (VIP)</p>
+                            </div>
+                            {hasVip ? (
+                              <BadgeCheck className="w-5 h-5 text-yellow-400 flex-shrink-0" />
+                            ) : (
+                              <Lock className="w-4 h-4 text-white/20 flex-shrink-0" />
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Vorteil: Elite+ Daily */}
+                    <div className={`p-4 rounded-xl border transition-all ${userData?.licenses?.includes('vip_elite_plus') ? 'bg-purple-500/5 border-purple-500/20' : 'bg-white/[0.02] border-white/5'}`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg ${userData?.licenses?.includes('vip_elite_plus') ? 'bg-purple-500/20' : 'bg-white/[0.06]'} flex items-center justify-center flex-shrink-0`}>
+                          <Gem className={`w-5 h-5 ${userData?.licenses?.includes('vip_elite_plus') ? 'text-purple-400' : 'text-white/30'}`} />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white text-sm">Elite+ Daily Bonus</h3>
+                          <p className="text-xs text-white/50">+2.000 taeglich als VIP Elite+ Mitglied</p>
+                        </div>
+                        {userData?.licenses?.includes('vip_elite_plus') ? (
+                          <BadgeCheck className="w-5 h-5 text-purple-400 flex-shrink-0" />
+                        ) : (
+                          <Lock className="w-4 h-4 text-white/20 flex-shrink-0" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Aktive Events Card */}
                 <div className="glass rounded-2xl p-6 border border-white/[0.08]">
@@ -1990,15 +2131,17 @@ export default function ProfilPage() {
                     <h2 className="text-xl font-bold text-white">Aktive Events</h2>
                   </div>
 
-                  {/* Placeholder für Events */}
                   <div className="p-6 rounded-xl bg-gradient-to-br from-orange-500/10 to-yellow-500/10 border border-orange-500/20">
                     <div className="flex items-start gap-4">
                       <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center flex-shrink-0">
-                        <Gift className="w-6 h-6 text-orange-400" />
+                        <Handshake className="w-6 h-6 text-orange-400" />
                       </div>
-                      <div>
-                        <h3 className="text-lg font-bold text-orange-400 mb-1">🤝 Sozialwoche</h3>
-                        <p className="text-sm text-white/60">Arbeitslosengeld VERDOPPELT für alle ohne Job!</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-lg font-bold text-orange-400">Sozialwoche</h3>
+                          <span className="px-2 py-0.5 rounded-full bg-orange-500/20 border border-orange-500/30 text-[10px] font-bold text-orange-300 uppercase tracking-wider">Aktiv</span>
+                        </div>
+                        <p className="text-sm text-white/60">Arbeitslosengeld VERDOPPELT fuer alle ohne Job!</p>
                       </div>
                     </div>
                   </div>
