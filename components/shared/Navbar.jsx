@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Shield, LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2, Bell, Users
+  Shield, LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2, Bell, Users, ChevronDown
 } from 'lucide-react';
 import { NotificationBell } from '@/components/shared/NotificationBell';
 import { LoginModal } from '@/components/LoginModal';
@@ -27,6 +27,7 @@ export function Navbar({ user, loading }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { refreshUser } = useAuth();
@@ -128,23 +129,23 @@ export function Navbar({ user, loading }) {
                 <NotificationBell />
                 
                 {/* Profil Dropdown */}
-                <DropdownMenu>
+                <DropdownMenu onOpenChange={setProfileDropdownOpen}>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06] transition-all cursor-pointer">
+                    <button className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.08] hover:border-white/[0.12] hover:scale-[1.02] transition-all duration-200 cursor-pointer group">
                       {user.avatar ? (
                         <img 
                           src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=32`} 
                           alt={user.globalName || user.username} 
-                          className="w-7 h-7 rounded-full" 
+                          className="w-7 h-7 rounded-full transition-transform group-hover:scale-110" 
                           style={{ boxShadow: '0 0 0 2px rgba(var(--theme-accent-rgb), 0.2)' }} 
                         />
                       ) : (
-                        <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: 'rgba(var(--theme-accent-rgb), 0.3)' }}>
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center transition-transform group-hover:scale-110" style={{ background: 'rgba(var(--theme-accent-rgb), 0.3)' }}>
                           <User className="w-3.5 h-3.5" style={{ color: 'var(--theme-accent)' }} />
                         </div>
                       )}
                       <div className="flex flex-col">
-                        <span className="text-sm text-white/70 max-w-[120px] truncate">{user.globalName || user.username}</span>
+                        <span className="text-sm text-white/70 group-hover:text-white/90 transition-colors max-w-[120px] truncate">{user.globalName || user.username}</span>
                         {(() => {
                           const licenses = user?.licenses || [];
                           const hasVipElitePlus = licenses.includes('vip_elite_plus');
@@ -171,10 +172,16 @@ export function Navbar({ user, loading }) {
                           );
                         })()}
                       </div>
+                      <ChevronDown 
+                        className={`w-4 h-4 text-white/40 transition-transform duration-300 ${profileDropdownOpen ? 'rotate-180' : 'rotate-0'}`} 
+                      />
                     </button>
                   </DropdownMenuTrigger>
                   
-                  <DropdownMenuContent align="end" className="w-48 bg-[#0a0a0a]/95 backdrop-blur-xl border border-white/[0.06]">
+                  <DropdownMenuContent 
+                    align="end" 
+                    className="w-48 bg-[#0a0a0a]/95 backdrop-blur-xl border border-white/[0.06] animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200"
+                  >
                     <DropdownMenuItem 
                       onClick={() => router.push('/profil')}
                       className="cursor-pointer flex items-center gap-2 text-white/70 hover:text-white hover:bg-white/[0.06] focus:bg-white/[0.06] focus:text-white"
