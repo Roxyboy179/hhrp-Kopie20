@@ -63,6 +63,50 @@ select option:hover {
   scroll-behavior: auto !important;
 }
 
+/* ===== TEXT-GRÖSSE EINSTELLUNGEN ===== */
+.hhrp-text-klein {
+  font-size: 87.5% !important;
+}
+.hhrp-text-klein .text-xs { font-size: 0.65rem !important; }
+.hhrp-text-klein .text-sm { font-size: 0.75rem !important; }
+.hhrp-text-klein .text-base { font-size: 0.8rem !important; }
+.hhrp-text-klein .text-lg { font-size: 0.95rem !important; }
+.hhrp-text-klein .text-xl { font-size: 1rem !important; }
+.hhrp-text-klein .text-2xl { font-size: 1.25rem !important; }
+.hhrp-text-klein .text-3xl { font-size: 1.5rem !important; }
+
+.hhrp-text-normal {
+  /* Standard-Größe */
+}
+
+.hhrp-text-gross {
+  font-size: 112.5% !important;
+}
+.hhrp-text-gross .text-xs { font-size: 0.875rem !important; }
+.hhrp-text-gross .text-sm { font-size: 1rem !important; }
+.hhrp-text-gross .text-base { font-size: 1.125rem !important; }
+.hhrp-text-gross .text-lg { font-size: 1.25rem !important; }
+.hhrp-text-gross .text-xl { font-size: 1.5rem !important; }
+.hhrp-text-gross .text-2xl { font-size: 1.75rem !important; }
+.hhrp-text-gross .text-3xl { font-size: 2.25rem !important; }
+
+/* ===== DATENSPARMODUS ===== */
+.hhrp-datenspar *,
+.hhrp-datenspar *::before,
+.hhrp-datenspar *::after {
+  animation: none !important;
+  transition: none !important;
+}
+.hhrp-datenspar .glass {
+  backdrop-filter: none !important;
+  background: rgba(15, 23, 42, 0.8) !important;
+}
+.hhrp-datenspar img {
+  image-rendering: auto;
+}
+/* Hintergrundbilder in Datensparmodus deaktiviert (siehe RootClientLayout) */
+
+
 /* ===== NEW ENTRY ANIMATIONS ===== */
 @keyframes pulse-slow {
   0%, 100% {

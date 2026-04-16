@@ -17,12 +17,23 @@ import Link from 'next/link';
 
 export default function RootClientLayout({ children }) {
   const [splashDone, setSplashDone] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [customBg, setCustomBg] = useState(null);
   const [kompaktModus, setKompaktModus] = useState(false);
   const [animationen, setAnimationen] = useState(true);
+  const [textGroesse, setTextGroesse] = useState('normal');
+  const [datensparmodus, setDatensparmodus] = useState(false);
+  const [schnellstart, setSchnellstart] = useState(false);
+  const [autoSync, setAutoSync] = useState(true);
+  const [offlineModus, setOfflineModus] = useState(false);
   const pathname = usePathname();
   const isProfilePage = pathname === '/profil';
-  const handleSplashComplete = useCallback(() => setSplashDone(true), []);
+  const handleSplashComplete = useCallback(() => {
+    setSplashDone(true);
+    // Bei Schnellstart sofort laden, sonst kurze Verzögerung für mobile Nutzer
+    const loadDelay = localStorage.getItem('hhrp-schnellstart') === 'true' ? 300 : 1200;
+    setTimeout(() => setPageLoading(false), loadDelay);
+  }, []);
 
   // Hilfsfunktion: Konvertiert preset IDs in echte Dateipfade
   const getBgUrl = (bgValue) => {
@@ -48,6 +59,21 @@ export default function RootClientLayout({ children }) {
     const savedAnim = localStorage.getItem('hhrp-animationen');
     if (savedAnim === 'false') setAnimationen(false);
 
+    const savedTextGroesse = localStorage.getItem('hhrp-textgroesse');
+    if (savedTextGroesse) setTextGroesse(savedTextGroesse);
+
+    const savedDatensparmodus = localStorage.getItem('hhrp-datensparmodus');
+    if (savedDatensparmodus === 'true') setDatensparmodus(true);
+
+    const savedSchnellstart = localStorage.getItem('hhrp-schnellstart');
+    if (savedSchnellstart === 'true') setSchnellstart(true);
+
+    const savedAutoSync = localStorage.getItem('hhrp-autosync');
+    if (savedAutoSync === 'false') setAutoSync(false);
+
+    const savedOfflineModus = localStorage.getItem('hhrp-offline');
+    if (savedOfflineModus === 'true') setOfflineModus(true);
+
     // Auf Änderungen vom Profil-Einstellungen hören
     const handleBgChange = (e) => {
       setCustomBg(e.detail?.bg || null);
@@ -55,6 +81,11 @@ export default function RootClientLayout({ children }) {
     const handleSettingsChange = (e) => {
       if (e.detail?.kompakt !== undefined) setKompaktModus(e.detail.kompakt);
       if (e.detail?.animationen !== undefined) setAnimationen(e.detail.animationen);
+      if (e.detail?.textgroesse !== undefined) setTextGroesse(e.detail.textgroesse);
+      if (e.detail?.datensparmodus !== undefined) setDatensparmodus(e.detail.datensparmodus);
+      if (e.detail?.schnellstart !== undefined) setSchnellstart(e.detail.schnellstart);
+      if (e.detail?.autosync !== undefined) setAutoSync(e.detail.autosync);
+      if (e.detail?.offline !== undefined) setOfflineModus(e.detail.offline);
     };
     window.addEventListener('hhrp-bg-change', handleBgChange);
     window.addEventListener('hhrp-settings-change', handleSettingsChange);
@@ -104,14 +135,31 @@ export default function RootClientLayout({ children }) {
     <AuthProvider>
       <ThemeProvider>
         {!splashDone && <SplashScreen onComplete={handleSplashComplete} />}
+        
+        {/* Loading Spinner nach Splash Screen */}
+        {splashDone && pageLoading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(10, 10, 26, 0.95)' }}>
+            <div className="text-center">
+              <div className="relative w-24 h-24 mx-auto mb-6">
+                <div className="absolute inset-0 rounded-full border-4 border-white/10"></div>
+                <div className="absolute inset-0 rounded-full border-4 border-t-purple-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
+                <div className="absolute inset-3 rounded-full border-4 border-white/5"></div>
+                <div className="absolute inset-3 rounded-full border-4 border-t-transparent border-r-blue-500 border-b-transparent border-l-transparent animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }}></div>
+              </div>
+              <h3 className="text-xl font-bold text-white mb-2">Lädt...</h3>
+              <p className="text-sm text-white/40">Daten werden geladen</p>
+            </div>
+          </div>
+        )}
+
         <div 
-          className={`${kompaktModus ? 'hhrp-compact' : ''} ${!animationen ? 'hhrp-no-anim' : ''}`}
+          className={`${kompaktModus ? 'hhrp-compact' : ''} ${!animationen || datensparmodus ? 'hhrp-no-anim' : ''} hhrp-text-${textGroesse} ${datensparmodus ? 'hhrp-datenspar' : ''}`}
           style={{ 
-            opacity: splashDone ? 1 : 0, 
-            transition: animationen ? 'opacity 0.5s ease' : 'none',
+            opacity: splashDone && !pageLoading ? 1 : 0, 
+            transition: (animationen && !datensparmodus) ? 'opacity 0.5s ease' : 'none',
             ...(customBg ? { position: 'relative' } : {})
           }}>
-          {customBg && (
+          {customBg && !datensparmodus && (
             <div 
               style={{
                 position: 'fixed',

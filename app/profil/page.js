@@ -985,6 +985,11 @@ export default function ProfilPage() {
   const [kompaktModus, setKompaktModus] = useState(false);
   const [akzentFarbe, setAkzentFarbe] = useState('blue');
   const [animationen, setAnimationen] = useState(true);
+  const [textGroesse, setTextGroesse] = useState('normal');
+  const [datensparmodus, setDatensparmodus] = useState(false);
+  const [schnellstart, setSchnellstart] = useState(false);
+  const [autoSync, setAutoSync] = useState(true);
+  const [offlineModus, setOfflineModus] = useState(false);
   const [bewerbungen, setBewerbungen] = useState([]);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(null);
@@ -1091,6 +1096,26 @@ export default function ProfilPage() {
     // Animationen
     const savedAnim = localStorage.getItem('hhrp-animationen');
     if (savedAnim === 'false') setAnimationen(false);
+
+    // Text-Größe
+    const savedTextGroesse = localStorage.getItem('hhrp-textgroesse');
+    if (savedTextGroesse) setTextGroesse(savedTextGroesse);
+
+    // Datensparmodus
+    const savedDatensparmodus = localStorage.getItem('hhrp-datensparmodus');
+    if (savedDatensparmodus === 'true') setDatensparmodus(true);
+
+    // Schnellstart (PWA)
+    const savedSchnellstart = localStorage.getItem('hhrp-schnellstart');
+    if (savedSchnellstart === 'true') setSchnellstart(true);
+
+    // Auto-Sync (PWA)
+    const savedAutoSync = localStorage.getItem('hhrp-autosync');
+    if (savedAutoSync === 'false') setAutoSync(false);
+
+    // Offline-Modus (PWA)
+    const savedOfflineModus = localStorage.getItem('hhrp-offline');
+    if (savedOfflineModus === 'true') setOfflineModus(true);
 
     // Push Notification Status
     if ('Notification' in window && 'serviceWorker' in navigator) {
@@ -3544,6 +3569,67 @@ export default function ProfilPage() {
                   </button>
                 </div>
 
+                {/* Datensparmodus */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg ${datensparmodus ? 'bg-green-500/15' : 'bg-white/[0.06]'} flex items-center justify-center`}>
+                      <Zap className={`w-5 h-5 ${datensparmodus ? 'text-green-400' : 'text-white/30'}`} />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white text-sm">Datensparmodus</p>
+                      <p className="text-xs text-white/40">Reduziert Animationen & Hintergrundbilder</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newVal = !datensparmodus;
+                      setDatensparmodus(newVal);
+                      localStorage.setItem('hhrp-datensparmodus', newVal.toString());
+                      window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { datensparmodus: newVal } }));
+                      toast.success(newVal ? 'Datensparmodus aktiviert' : 'Datensparmodus deaktiviert');
+                    }}
+                    className={`relative w-14 h-7 rounded-full transition-all duration-300 ${datensparmodus ? 'bg-green-500' : 'bg-white/10'} cursor-pointer`}
+                  >
+                    <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 ${datensparmodus ? 'left-7' : 'left-0.5'}`} />
+                  </button>
+                </div>
+
+                {/* Text-Größe */}
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center">
+                      <Monitor className="w-5 h-5 text-white/40" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white text-sm">Text-Größe</p>
+                      <p className="text-xs text-white/40">Passe die Schriftgröße an</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    {[
+                      { id: 'klein', label: 'Klein', icon: '🔍' },
+                      { id: 'normal', label: 'Normal', icon: '📄' },
+                      { id: 'gross', label: 'Groß', icon: '🔎' }
+                    ].map((size) => (
+                      <button
+                        key={size.id}
+                        onClick={() => {
+                          setTextGroesse(size.id);
+                          localStorage.setItem('hhrp-textgroesse', size.id);
+                          window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { textgroesse: size.id } }));
+                          toast.success(`Text-Größe: ${size.label}`);
+                        }}
+                        className={`flex-1 p-3 rounded-lg border transition-all ${textGroesse === size.id ? 'border-blue-500/50 bg-blue-500/10 text-white' : 'border-white/10 bg-white/[0.02] text-white/60 hover:bg-white/[0.05]'}`}
+                      >
+                        <div className="text-center">
+                          <div className="text-2xl mb-1">{size.icon}</div>
+                          <p className="text-xs font-medium">{size.label}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Akzentfarbe */}
                 <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                   <div className="flex items-center gap-3 mb-4">
@@ -3799,6 +3885,102 @@ export default function ProfilPage() {
               );
             })()}
 
+            {/* === PWA EINSTELLUNGEN === */}
+            {isPWA && (
+              <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                <div className="flex items-center gap-3 mb-5">
+                  <AppWindow className="w-6 h-6 text-blue-400" />
+                  <div>
+                    <h2 className="text-xl font-bold text-white">PWA Einstellungen</h2>
+                    <p className="text-xs text-white/35">Optimierungen für App-Nutzung</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Schnellstart */}
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg ${schnellstart ? 'bg-orange-500/15' : 'bg-white/[0.06]'} flex items-center justify-center`}>
+                        <Rocket className={`w-5 h-5 ${schnellstart ? 'text-orange-400' : 'text-white/30'}`} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-white text-sm">Schnellstart</p>
+                        <p className="text-xs text-white/40">Reduziert Ladezeiten beim Start</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const newVal = !schnellstart;
+                        setSchnellstart(newVal);
+                        localStorage.setItem('hhrp-schnellstart', newVal.toString());
+                        window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { schnellstart: newVal } }));
+                        toast.success(newVal ? 'Schnellstart aktiviert' : 'Schnellstart deaktiviert');
+                      }}
+                      className={`relative w-14 h-7 rounded-full transition-all duration-300 ${schnellstart ? 'bg-orange-500' : 'bg-white/10'} cursor-pointer`}
+                    >
+                      <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 ${schnellstart ? 'left-7' : 'left-0.5'}`} />
+                    </button>
+                  </div>
+
+                  {/* Auto-Sync */}
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg ${autoSync ? 'bg-blue-500/15' : 'bg-white/[0.06]'} flex items-center justify-center`}>
+                        <RefreshCw className={`w-5 h-5 ${autoSync ? 'text-blue-400' : 'text-white/30'}`} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-white text-sm">Auto-Sync</p>
+                        <p className="text-xs text-white/40">Daten automatisch im Hintergrund synchronisieren</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const newVal = !autoSync;
+                        setAutoSync(newVal);
+                        localStorage.setItem('hhrp-autosync', newVal.toString());
+                        window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { autosync: newVal } }));
+                        toast.success(newVal ? 'Auto-Sync aktiviert' : 'Auto-Sync deaktiviert');
+                      }}
+                      className={`relative w-14 h-7 rounded-full transition-all duration-300 ${autoSync ? 'bg-blue-500' : 'bg-white/10'} cursor-pointer`}
+                    >
+                      <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 ${autoSync ? 'left-7' : 'left-0.5'}`} />
+                    </button>
+                  </div>
+
+                  {/* Offline-Modus bevorzugen */}
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg ${offlineModus ? 'bg-indigo-500/15' : 'bg-white/[0.06]'} flex items-center justify-center`}>
+                        <WifiOff className={`w-5 h-5 ${offlineModus ? 'text-indigo-400' : 'text-white/30'}`} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-white text-sm">Offline-Modus bevorzugen</p>
+                        <p className="text-xs text-white/40">Nutze gecachte Daten wenn möglich</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const newVal = !offlineModus;
+                        setOfflineModus(newVal);
+                        localStorage.setItem('hhrp-offline', newVal.toString());
+                        window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { offline: newVal } }));
+                        toast.success(newVal ? 'Offline-Modus aktiviert' : 'Offline-Modus deaktiviert');
+                      }}
+                      className={`relative w-14 h-7 rounded-full transition-all duration-300 ${offlineModus ? 'bg-indigo-500' : 'bg-white/10'} cursor-pointer`}
+                    >
+                      <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 ${offlineModus ? 'left-7' : 'left-0.5'}`} />
+                    </button>
+                  </div>
+
+                  <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                    <p className="text-xs text-blue-300/60 leading-relaxed">
+                      💡 Diese Einstellungen sind nur in der PWA-Version (App) verfügbar und helfen bei langsameren Verbindungen.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* === ÜBER === */}
             <div className="glass rounded-2xl p-6 border border-white/[0.08]">
               <div className="flex items-center gap-3 mb-4">
@@ -3822,12 +4004,32 @@ export default function ProfilPage() {
                       localStorage.removeItem('hhrp-kompakt');
                       localStorage.removeItem('hhrp-akzent');
                       localStorage.removeItem('hhrp-animationen');
+                      localStorage.removeItem('hhrp-textgroesse');
+                      localStorage.removeItem('hhrp-datensparmodus');
+                      localStorage.removeItem('hhrp-schnellstart');
+                      localStorage.removeItem('hhrp-autosync');
+                      localStorage.removeItem('hhrp-offline');
                       setCustomBg(null);
                       setKompaktModus(false);
                       setAkzentFarbe('blue');
                       setAnimationen(true);
+                      setTextGroesse('normal');
+                      setDatensparmodus(false);
+                      setSchnellstart(false);
+                      setAutoSync(true);
+                      setOfflineModus(false);
                       window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
-                      window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { kompakt: false, akzent: 'blue', animationen: true } }));
+                      window.dispatchEvent(new CustomEvent('hhrp-settings-change', { 
+                        detail: { 
+                          kompakt: false, 
+                          animationen: true, 
+                          textgroesse: 'normal',
+                          datensparmodus: false,
+                          schnellstart: false,
+                          autosync: true,
+                          offline: false
+                        } 
+                      }));
                       toast.success('Alle Einstellungen zurückgesetzt');
                     }}
                     className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs rounded-lg border border-red-500/20 transition-all"
