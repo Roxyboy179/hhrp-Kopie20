@@ -11,7 +11,7 @@ import {
   Check, Loader2, FileText, Calendar, Mail, ExternalLink, LayoutDashboard, IdCard, ClipboardList,
   Building2, Hash, Key, Copy, ArrowUpRight, ArrowDownRight, AlertCircle, 
   Shield, Star, MessageSquare, Ban, ChevronUp, ShieldCheck, CheckCircle, DollarSign, RefreshCw,
-  ShoppingCart, PiggyBank, Receipt
+  ShoppingCart, PiggyBank, Receipt, Heart
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -1379,17 +1379,13 @@ export default function ProfilPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="glass rounded-xl p-6 border border-white/[0.08]">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
-                      <Wallet className="w-6 h-6 text-green-400" />
+                    <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                      <TrendingUp className="w-6 h-6 text-purple-400" />
                     </div>
                     <div>
-                      <p className="text-xs text-white/40">Bargeld</p>
+                      <p className="text-xs text-white/40">Bank Limit</p>
                       <p className="text-2xl font-bold text-white">
-                        <AnimatedValue 
-                          value={money.cash || 0}
-                          prefix="€"
-                          storageKey={`cash_${user?.id}`}
-                        />
+                        {(userData?.bankLimit || 1000000).toLocaleString('de-DE')} €
                       </p>
                     </div>
                   </div>
@@ -2338,41 +2334,59 @@ export default function ProfilPage() {
                     <PiggyBank className="w-6 h-6 text-white/60" />
                     <h2 className="text-xl font-bold text-white">Mein Sparkonto</h2>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div className="p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20">
                       <p className="text-sm text-white/60 mb-1">Guthaben</p>
                       <p className="text-2xl font-bold text-white">
                         {userData.savingsAccount.balance?.toLocaleString('de-DE')} €
                       </p>
                     </div>
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20">
-                      <p className="text-sm text-white/60 mb-1">Zinssatz</p>
-                      <p className="text-2xl font-bold text-white">
-                        {userData.savingsAccount.interestRate || 0}%
-                      </p>
-                    </div>
                     <div className="p-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20">
-                      <p className="text-sm text-white/60 mb-1">Verdiente Zinsen</p>
+                      <p className="text-sm text-white/60 mb-1">Verdiente Zinsen (Gesamt)</p>
                       <p className="text-2xl font-bold text-white">
-                        {userData.savingsAccount.earnedInterest?.toLocaleString('de-DE') || 0} €
+                        {userData.savingsAccount.gesamtZinsen?.toLocaleString('de-DE') || 0} €
                       </p>
                     </div>
                   </div>
-                  {userData.savingsAccount.transactions && userData.savingsAccount.transactions.length > 0 && (
-                    <div>
-                      <h3 className="text-base font-bold text-white mb-4">Letzte Transaktionen</h3>
-                      <div className="space-y-2">
-                        {userData.savingsAccount.transactions.slice(0, 10).map((tx, i) => (
-                          <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03]">
-                            <div>
-                              <p className="text-sm font-medium text-white">{tx.type === 'deposit' ? 'Einzahlung' : 'Auszahlung'}</p>
-                              <p className="text-xs text-white/50">{new Date(tx.date || tx.createdAt).toLocaleDateString('de-DE')}</p>
-                            </div>
-                            <p className={`text-base font-bold ${tx.type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
-                              {tx.type === 'deposit' ? '+' : '-'}{tx.amount?.toLocaleString('de-DE')} €
-                            </p>
-                          </div>
-                        ))}
+                  
+                  {/* Info-Karten */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
+                    {userData.savingsAccount.erstelltAm && (
+                      <div className="p-3 rounded-lg bg-white/[0.03]">
+                        <p className="text-xs text-white/50 mb-1">Erstellt am</p>
+                        <p className="text-sm font-medium text-white">
+                          {new Date(userData.savingsAccount.erstelltAm).toLocaleDateString('de-DE')}
+                        </p>
+                      </div>
+                    )}
+                    {userData.savingsAccount.letzteEinzahlung && (
+                      <div className="p-3 rounded-lg bg-white/[0.03]">
+                        <p className="text-xs text-white/50 mb-1">Letzte Einzahlung</p>
+                        <p className="text-sm font-medium text-white">
+                          {new Date(userData.savingsAccount.letzteEinzahlung).toLocaleDateString('de-DE')}
+                        </p>
+                      </div>
+                    )}
+                    {userData.savingsAccount.letzteZinsen && (
+                      <div className="p-3 rounded-lg bg-white/[0.03]">
+                        <p className="text-xs text-white/50 mb-1">Letzte Zinsen</p>
+                        <p className="text-sm font-medium text-white">
+                          {new Date(userData.savingsAccount.letzteZinsen).toLocaleDateString('de-DE')}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {userData.savingsAccount.gesamtGespendet > 0 && (
+                    <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                      <div className="flex items-center gap-2">
+                        <Heart className="w-5 h-5 text-blue-400" />
+                        <div>
+                          <p className="text-sm font-medium text-white">Gesamt gespendet</p>
+                          <p className="text-lg font-bold text-blue-400">
+                            {userData.savingsAccount.gesamtGespendet?.toLocaleString('de-DE')} €
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -2405,38 +2419,69 @@ export default function ProfilPage() {
                 <div className="space-y-3">
                   {userData.taxRecords
                     .slice((taxPage - 1) * itemsPerPage, taxPage * itemsPerPage)
-                    .map((record, index) => (
-                    <div key={index} className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h3 className="text-base font-bold text-white mb-1">
-                            {record.taxType || 'Steuer'} {record.period ? `- ${record.period}` : ''}
-                          </h3>
-                          {record.description && (
-                            <p className="text-sm text-white/60">{record.description}</p>
-                          )}
-                        </div>
-                        <span className="text-lg font-bold text-red-400 ml-2">
-                          -{record.amount?.toLocaleString('de-DE')} €
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-white/50">
-                        {record.date && (
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            <span>{new Date(record.date).toLocaleDateString('de-DE')}</span>
+                    .map((record, index) => {
+                      // Type-Mapping für Icons und Farben
+                      const typeConfig = {
+                        collect_steuer: {
+                          icon: TrendingUp,
+                          color: 'orange',
+                          label: 'Steuer auf /collect'
+                        },
+                        bank_gebuehr: {
+                          icon: CreditCard,
+                          color: 'blue',
+                          label: 'Bankgebühr'
+                        },
+                        shop_gebuehr: {
+                          icon: ShoppingCart,
+                          color: 'purple',
+                          label: 'Shop-Gebühr'
+                        }
+                      };
+                      
+                      const config = typeConfig[record.type] || {
+                        icon: Receipt,
+                        color: 'gray',
+                        label: record.type || 'Gebühr'
+                      };
+                      
+                      const IconComponent = config.icon;
+                      
+                      return (
+                        <div key={index} className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex items-start gap-3 flex-1">
+                              <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 bg-${config.color}-500/20`}>
+                                <IconComponent className={`w-5 h-5 text-${config.color}-400`} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-base font-bold text-white mb-1">
+                                  {record.description || config.label}
+                                </h3>
+                                <p className="text-xs text-white/50">
+                                  {config.label}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="text-lg font-bold text-red-400 ml-2 shrink-0">
+                              -{record.amount?.toLocaleString('de-DE')} €
+                            </span>
                           </div>
-                        )}
-                        {record.status && (
-                          <span className={`px-2 py-0.5 rounded-full ${
-                            record.status === 'paid' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300'
-                          }`}>
-                            {record.status === 'paid' ? 'Bezahlt' : 'Offen'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                          <div className="flex items-center gap-3 text-xs text-white/50 mt-2">
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              <span>{new Date(record.timestamp || record.date).toLocaleDateString('de-DE', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
                 <Pagination 
                   currentPage={taxPage}
