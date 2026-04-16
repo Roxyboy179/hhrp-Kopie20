@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/components/providers/AuthProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { Navbar } from '@/components/shared/Navbar';
@@ -20,6 +20,7 @@ export default function RootClientLayout({ children }) {
   const [splashDone, setSplashDone] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [isPWA, setIsPWA] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const [customBg, setCustomBg] = useState(null);
   const [kompaktModus, setKompaktModus] = useState(false);
   const [animationen, setAnimationen] = useState(true);
@@ -29,6 +30,7 @@ export default function RootClientLayout({ children }) {
   const [autoSync, setAutoSync] = useState(true);
   const [offlineModus, setOfflineModus] = useState(false);
   const [notificationStyle, setNotificationStyle] = useState('normal');
+  const router = useRouter();
   const pathname = usePathname();
   const isProfilePage = pathname === '/profil';
   const handleSplashComplete = useCallback(() => {
@@ -48,6 +50,53 @@ export default function RootClientLayout({ children }) {
     };
     checkPWA();
   }, []);
+
+  // Offline Detection & Auto-Redirect
+  useEffect(() => {
+    // Initiale Prüfung
+    setIsOnline(navigator.onLine);
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      // Zurück zur Startseite wenn man wieder online ist (nur wenn man auf /offline war)
+      if (pathname === '/offline') {
+        router.push('/');
+      }
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      
+      // Prüfe ob Offline-Modus bevorzugen aktiviert ist
+      const offlineModusAktiv = localStorage.getItem('hhrp-offline') === 'true';
+      
+      if (offlineModusAktiv) {
+        // Nur Toast-Benachrichtigung, keine Weiterleitung
+        if (pathname !== '/offline') {
+          // Dynamischer Toast-Import
+          import('sonner').then(({ toast }) => {
+            toast.info('Du bist offline', {
+              description: 'Offline-Modus ist aktiviert. Gecachte Daten werden verwendet.',
+              duration: 5000
+            });
+          });
+        }
+      } else {
+        // Weiterleitung zur Offline-Seite (außer man ist schon dort)
+        if (pathname !== '/offline') {
+          router.push('/offline');
+        }
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [pathname, router]);
 
   // Hilfsfunktion: Konvertiert preset IDs in echte Dateipfade
   const getBgUrl = (bgValue) => {
