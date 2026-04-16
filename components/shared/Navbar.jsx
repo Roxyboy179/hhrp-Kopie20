@@ -47,23 +47,22 @@ export function Navbar({ user, loading }) {
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-[#0a0a0a]/90 backdrop-blur-2xl border-b border-white/[0.04] shadow-2xl shadow-black/40' : 'bg-transparent'}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16">
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center h-full gap-4">
-          {/* Logo - Links */}
-          <div className="flex items-center">
-            <Link href="/" className="flex items-center gap-3 cursor-pointer select-none group">
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg shadow-black/30 group-hover:shadow-black/50 transition-all group-hover:scale-105 overflow-hidden">
-                <img src="/logo.webp" alt="HHRP" className="w-full h-full object-cover" />
-              </div>
-              <div className="hidden sm:block">
-                <span className="font-bold text-lg tracking-tight">HHRP</span>
-                <span className="text-[10px] text-white/30 block -mt-1">Hamburg Horizon RP</span>
-              </div>
-            </Link>
-          </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between relative">
+        {/* Logo - Links */}
+        <div className="flex items-center flex-shrink-0">
+          <Link href="/" className="flex items-center gap-3 cursor-pointer select-none group">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg shadow-black/30 group-hover:shadow-black/50 transition-all group-hover:scale-105 overflow-hidden">
+              <img src="/logo.webp" alt="HHRP" className="w-full h-full object-cover" />
+            </div>
+            <div className="hidden sm:block">
+              <span className="font-bold text-lg tracking-tight">HHRP</span>
+              <span className="text-[10px] text-white/30 block -mt-1">Hamburg Horizon RP</span>
+            </div>
+          </Link>
+        </div>
 
-          {/* Navigation Tabs - Perfekt zentriert */}
-          <div className="hidden md:flex items-center justify-center">
+        {/* Navigation Tabs - Absolut in Bildschirmmitte */}
+        <div className="hidden md:flex items-center absolute left-1/2 -translate-x-1/2">
             <div className="flex items-center gap-1 bg-white/[0.03] backdrop-blur-xl rounded-2xl p-1 border border-white/[0.06]">
               {navItems.filter(n => n.show).map(n => {
                 const requiresDiscordAuth = n.requireAuth && !user;
@@ -111,85 +110,84 @@ export function Navbar({ user, loading }) {
           </div>
             
           {/* Notification Bell + Profile - Rechts */}
-          <div className="flex items-center justify-end gap-3">
-          {loading ? (
-            <div className="w-9 h-9 rounded-xl bg-white/[0.04] flex items-center justify-center">
-              <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
-            </div>
-          ) : user ? (
-            <div className="flex items-center gap-2">
-              <NotificationBell />
-              <Link href="/profil" className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06] transition-all">
-                {user.avatar ? (
-                  <img 
-                    src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=32`} 
-                    alt={user.globalName || user.username} 
-                    className="w-7 h-7 rounded-full" 
-                    style={{ boxShadow: '0 0 0 2px rgba(var(--theme-accent-rgb), 0.2)' }} 
-                  />
-                ) : (
-                  <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: 'rgba(var(--theme-accent-rgb), 0.3)' }}>
-                    <User className="w-3.5 h-3.5" style={{ color: 'var(--theme-accent)' }} />
+          <div className="flex items-center gap-3 flex-shrink-0">
+            {loading ? (
+              <div className="w-9 h-9 rounded-xl bg-white/[0.04] flex items-center justify-center">
+                <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+              </div>
+            ) : user ? (
+              <div className="flex items-center gap-2">
+                <NotificationBell />
+                <Link href="/profil" className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/[0.06] hover:bg-white/[0.06] transition-all">
+                  {user.avatar ? (
+                    <img 
+                      src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=32`} 
+                      alt={user.globalName || user.username} 
+                      className="w-7 h-7 rounded-full" 
+                      style={{ boxShadow: '0 0 0 2px rgba(var(--theme-accent-rgb), 0.2)' }} 
+                    />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: 'rgba(var(--theme-accent-rgb), 0.3)' }}>
+                      <User className="w-3.5 h-3.5" style={{ color: 'var(--theme-accent)' }} />
+                    </div>
+                  )}
+                  <div className="flex flex-col">
+                    <span className="text-sm text-white/70 max-w-[120px] truncate">{user.globalName || user.username}</span>
+                    {(() => {
+                      // VIP Status aus Lizenzen prüfen
+                      const licenses = user?.licenses || [];
+                      const hasVipElitePlus = licenses.includes('vip_elite_plus');
+                      const hasVipUltimate = licenses.includes('vip_ultimate');
+                      const hasVipPlatinum = licenses.includes('vip_platinum');
+                      const hasVipPremium = licenses.includes('vip_premium');
+                      const hasBetaTester = user.roles?.includes('1494434149623136276');
+                      
+                      // Bestimme VIP Level (höchstes zuerst)
+                      let vipStatus = '';
+                      if (hasVipElitePlus) vipStatus = 'VIP Elite Plus';
+                      else if (hasVipUltimate) vipStatus = 'VIP Ultimate';
+                      else if (hasVipPlatinum) vipStatus = 'VIP Platinum';
+                      else if (hasVipPremium) vipStatus = 'VIP Premium';
+                      else vipStatus = 'Standard Plan "Free"'; // Fallback wenn keine VIP Lizenz
+                      
+                      // Kombiniere mit Beta Tester
+                      const statusText = hasBetaTester 
+                        ? `${vipStatus} · Beta Tester`
+                        : vipStatus;
+                      
+                      return (
+                        <span className="text-[10px] font-medium leading-tight" style={{ color: 'var(--theme-accent)' }}>
+                          {statusText}
+                        </span>
+                      );
+                    })()}
                   </div>
-                )}
-                <div className="flex flex-col">
-                  <span className="text-sm text-white/70 max-w-[120px] truncate">{user.globalName || user.username}</span>
-                  {(() => {
-                    // VIP Status aus Lizenzen prüfen
-                    const licenses = user?.licenses || [];
-                    const hasVipElitePlus = licenses.includes('vip_elite_plus');
-                    const hasVipUltimate = licenses.includes('vip_ultimate');
-                    const hasVipPlatinum = licenses.includes('vip_platinum');
-                    const hasVipPremium = licenses.includes('vip_premium');
-                    const hasBetaTester = user.roles?.includes('1494434149623136276');
-                    
-                    // Bestimme VIP Level (höchstes zuerst)
-                    let vipStatus = '';
-                    if (hasVipElitePlus) vipStatus = 'VIP Elite Plus';
-                    else if (hasVipUltimate) vipStatus = 'VIP Ultimate';
-                    else if (hasVipPlatinum) vipStatus = 'VIP Platinum';
-                    else if (hasVipPremium) vipStatus = 'VIP Premium';
-                    else vipStatus = 'Standard Plan "Free"'; // Fallback wenn keine VIP Lizenz
-                    
-                    // Kombiniere mit Beta Tester
-                    const statusText = hasBetaTester 
-                      ? `${vipStatus} · Beta Tester`
-                      : vipStatus;
-                    
-                    return (
-                      <span className="text-[10px] font-medium leading-tight" style={{ color: 'var(--theme-accent)' }}>
-                        {statusText}
-                      </span>
-                    );
-                  })()}
-                </div>
-              </Link>
-              <Button variant="ghost" size="icon" onClick={handleLogout} className="text-white/30 hover:text-white hover:bg-white/[0.06] rounded-xl h-9 w-9">
-                <LogOut className="w-4 h-4" />
-              </Button>
-            </div>
-          ) : (
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                setLoginModalOpen(true);
-              }}
-              className="flex items-center gap-2 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all hover:scale-105 active:scale-95"
-              style={{
-                background: 'var(--theme-accent)',
-                color: '#000',
-                boxShadow: '0 10px 25px -5px rgba(var(--theme-accent-rgb), 0.25)'
-              }}
-            >
-              <DiscordIcon size={14} />
-              <span className="hidden sm:inline">Anmelden</span>
+                </Link>
+                <Button variant="ghost" size="icon" onClick={handleLogout} className="text-white/30 hover:text-white hover:bg-white/[0.06] rounded-xl h-9 w-9">
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  setLoginModalOpen(true);
+                }}
+                className="flex items-center gap-2 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all hover:scale-105 active:scale-95"
+                style={{
+                  background: 'var(--theme-accent)',
+                  color: '#000',
+                  boxShadow: '0 10px 25px -5px rgba(var(--theme-accent-rgb), 0.25)'
+                }}
+              >
+                <DiscordIcon size={14} />
+                <span className="hidden sm:inline">Anmelden</span>
+              </button>
+            )}
+            <button className="md:hidden text-white/50 hover:text-white p-2 rounded-xl hover:bg-white/[0.04] transition-all" onClick={() => setMobileOpen(!mobileOpen)}>
+              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
-          )}
-          <button className="md:hidden text-white/50 hover:text-white p-2 rounded-xl hover:bg-white/[0.04] transition-all" onClick={() => setMobileOpen(!mobileOpen)}>
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
           </div>
-        </div>
       </div>
 
       {mobileOpen && (
