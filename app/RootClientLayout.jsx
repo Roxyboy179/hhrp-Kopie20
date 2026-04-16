@@ -174,93 +174,87 @@ export default function RootClientLayout({ children }) {
           }
         `}</style>
         
-        {/* Loading Spinner nach Splash Screen - Nur für PWA, im HHRP-Stil */}
+        {/* Loading Spinner nach Splash Screen - Nur für PWA, im Splash-Screen-Stil */}
         {splashDone && pageLoading && isPWA && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ 
-            background: 'linear-gradient(135deg, rgba(10, 10, 26, 0.98) 0%, rgba(20, 20, 40, 0.98) 100%)'
-          }}>
-            <div className="text-center">
-              {/* HHRP Logo Container mit Glow */}
-              <div className="relative w-32 h-32 mx-auto mb-8">
-                {/* Pulsierender äußerer Glow */}
-                <div 
-                  className="absolute inset-0 rounded-2xl blur-3xl opacity-30 animate-pulse"
-                  style={{ 
-                    background: `radial-gradient(circle, ${akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6'} 0%, transparent 70%)`,
-                    animationDuration: '2s'
-                  }}
-                ></div>
-                
-                {/* Rotierender Rahmen - HHRP Style */}
-                <div className="absolute inset-0 rounded-2xl animate-spin" style={{ animationDuration: '4s' }}>
-                  <div 
-                    className="absolute inset-0 rounded-2xl"
-                    style={{
-                      background: `linear-gradient(135deg, transparent 0%, ${akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6'} 50%, transparent 100%)`,
-                      opacity: 0.4
-                    }}
-                  ></div>
-                </div>
-                
-                {/* Glas-Container im HHRP-Stil */}
-                <div 
-                  className="absolute inset-2 rounded-2xl flex items-center justify-center backdrop-blur-xl"
-                  style={{ 
-                    background: 'rgba(15, 23, 42, 0.6)',
-                    border: `1px solid rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.3)`,
-                    boxShadow: `0 8px 32px rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.15), inset 0 1px 0 rgba(255,255,255,0.1)`
-                  }}
-                >
-                  {/* HHRP Logo / Icon */}
-                  <div className="relative">
-                    <div 
-                      className="text-4xl font-bold bg-clip-text text-transparent"
-                      style={{
-                        backgroundImage: `linear-gradient(135deg, white 0%, ${akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6'} 100%)`
-                      }}
-                    >
-                      H
-                    </div>
-                    <Loader2 
-                      className="absolute -bottom-1 -right-1 w-4 h-4 animate-spin"
-                      style={{ color: akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6' }}
-                    />
-                  </div>
-                </div>
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%)' }}
+          >
+            {/* Ambient glow */}
+            <div 
+              className="absolute w-[400px] h-[400px] rounded-full blur-[200px]"
+              style={{ 
+                background: `rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.12)`
+              }}
+            />
 
-                {/* Orbit-Effekt mit kleineren Icons */}
-                <div className="absolute inset-0 animate-spin" style={{ animationDuration: '6s' }}>
-                  <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full" style={{ backgroundColor: akzentFarbWerte[akzentFarbe]?.hex, opacity: 0.6 }}></div>
-                </div>
-                <div className="absolute inset-0 animate-spin" style={{ animationDuration: '6s', animationDirection: 'reverse' }}>
-                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full" style={{ backgroundColor: akzentFarbWerte[akzentFarbe]?.hex, opacity: 0.6 }}></div>
-                </div>
+            <div className="text-center relative">
+              {/* Server Logo */}
+              <div className="relative w-24 h-24 mx-auto mb-6">
+                <img 
+                  src="/icon-192.png" 
+                  alt="Hamburg Horizon RP" 
+                  className="w-full h-full rounded-2xl shadow-2xl"
+                  style={{
+                    boxShadow: `0 20px 60px rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.4)`
+                  }}
+                />
+                
+                {/* Rotating ring */}
+                <div 
+                  className="absolute inset-[-4px] rounded-2xl border-2 border-dashed animate-spin"
+                  style={{ 
+                    borderColor: `rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.3)`,
+                    animationDuration: '12s'
+                  }} 
+                />
+                
+                {/* Pulse ring */}
+                <div 
+                  className="absolute inset-[-8px] rounded-2xl border animate-pulse"
+                  style={{ 
+                    borderColor: `rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.2)`,
+                    animationDuration: '3s'
+                  }} 
+                />
               </div>
 
-              {/* Text im HHRP-Stil */}
-              <div className="space-y-3">
-                <h3 
-                  className="text-2xl font-bold bg-clip-text text-transparent"
-                  style={{ 
-                    backgroundImage: `linear-gradient(135deg, white 0%, ${akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6'} 100%)`
-                  }}
-                >
+              {/* Text */}
+              <h3 className="text-2xl font-bold text-white mb-2">Lädt...</h3>
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <div className="w-8 h-px" style={{ background: `linear-gradient(to right, transparent, rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.5))` }} />
+                <p className="text-xs font-light tracking-[0.2em] uppercase text-white/40">
                   Hamburg Horizon RP
-                </h3>
-                
-                {/* Fortschrittsbalken */}
-                <div className="w-48 h-1 mx-auto rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
-                  <div 
-                    className="h-full rounded-full animate-pulse"
-                    style={{ 
-                      background: `linear-gradient(90deg, ${akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6'} 0%, rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.3) 100%)`,
-                      width: '70%',
-                      animationDuration: '1.5s'
-                    }}
-                  ></div>
-                </div>
-                
-                <p className="text-sm text-white/40">Lädt...</p>
+                </p>
+                <div className="w-8 h-px" style={{ background: `linear-gradient(to left, transparent, rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.5))` }} />
+              </div>
+
+              {/* Progress indicator */}
+              <div className="flex gap-1.5 justify-center">
+                <div 
+                  className="w-1.5 h-1.5 rounded-full animate-bounce"
+                  style={{ 
+                    backgroundColor: akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6',
+                    animationDelay: '0ms',
+                    animationDuration: '1s'
+                  }}
+                />
+                <div 
+                  className="w-1.5 h-1.5 rounded-full animate-bounce"
+                  style={{ 
+                    backgroundColor: akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6',
+                    animationDelay: '200ms',
+                    animationDuration: '1s'
+                  }}
+                />
+                <div 
+                  className="w-1.5 h-1.5 rounded-full animate-bounce"
+                  style={{ 
+                    backgroundColor: akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6',
+                    animationDelay: '400ms',
+                    animationDuration: '1s'
+                  }}
+                />
               </div>
             </div>
           </div>
