@@ -6,6 +6,7 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { GlassCard } from '@/components/shared/GlassCard';
 import { Button } from '@/components/ui/button';
 import { ScrollProgressBar } from '@/components/shared/ScrollProgressBar';
+import { LoginModal } from '@/components/LoginModal';
 import { 
   FileText, Users, CheckCircle2, Clock, ArrowRight, 
   Zap, Target, Loader2, ChevronDown, Sparkles, UserCircle,
@@ -36,12 +37,19 @@ export default function HomePage() {
   const [discordStats, setDiscordStats] = useState({ memberCount: 0, onlineCount: 0, teamCount: 0 });
   const [teamMembers, setTeamMembers] = useState([]);
   const [isMobile, setIsMobile] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
     fetchStats();
     fetchDiscordStats();
     fetchTeamPreview();
+    
+    // Prüfe URL-Parameter für Auth-Status
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('auth') || params.has('error')) {
+      setLoginModalOpen(true);
+    }
   }, []);
 
   const fetchStats = async () => {
@@ -173,7 +181,10 @@ export default function HomePage() {
               </div>
             ) : (
               <button
-                onClick={() => { window.location.href = '/api/auth/discord'; }}
+                onClick={() => {
+                  setLoginModalOpen(true);
+                  window.location.href = '/api/auth/discord';
+                }}
                 className="inline-flex items-center justify-center gap-3 px-10 py-4 lg:px-12 lg:py-5 rounded-2xl text-base lg:text-lg font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
                 style={{ 
                   background: 'var(--theme-accent)',
@@ -530,7 +541,10 @@ export default function HomePage() {
               </Button>
             ) : (
               <button
-                onClick={() => { window.location.href = '/api/auth/discord'; }}
+                onClick={() => {
+                  setLoginModalOpen(true);
+                  window.location.href = '/api/auth/discord';
+                }}
                 className="inline-flex items-center justify-center gap-3 px-10 md:px-12 py-4 md:py-5 rounded-2xl text-base md:text-lg font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
                 style={{ 
                   background: 'var(--theme-accent)',
@@ -544,6 +558,9 @@ export default function HomePage() {
           </GlassCard>
         </div>
       </section>
+      
+      {/* Login Modal */}
+      <LoginModal open={loginModalOpen} onOpenChange={setLoginModalOpen} />
     </div>
   );
 }
