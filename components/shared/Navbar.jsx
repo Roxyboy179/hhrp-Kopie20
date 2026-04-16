@@ -8,6 +8,7 @@ import {
   Shield, LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2, Bell, Users
 } from 'lucide-react';
 import { NotificationBell } from '@/components/shared/NotificationBell';
+import { LoginModal } from '@/components/LoginModal';
 
 const DiscordIcon = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 127.14 96.36" fill="currentColor">
@@ -18,6 +19,7 @@ const DiscordIcon = ({ size = 16 }) => (
 export function Navbar({ user, loading }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -64,7 +66,7 @@ export function Navbar({ user, loading }) {
                   key={n.id}
                   onClick={(e) => {
                     e.preventDefault();
-                    window.location.href = '/api/auth/discord';
+                    setLoginModalOpen(true);
                   }}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
                     isActive
@@ -122,7 +124,7 @@ export function Navbar({ user, loading }) {
             <button
               onClick={(e) => {
                 e.preventDefault();
-                window.location.href = '/api/auth/discord';
+                setLoginModalOpen(true);
               }}
               className="flex items-center gap-2 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all hover:scale-105 active:scale-95"
               style={{
@@ -152,7 +154,8 @@ export function Navbar({ user, loading }) {
                   key={n.id}
                   onClick={(e) => {
                     e.preventDefault();
-                    window.location.href = '/api/auth/discord';
+                    setLoginModalOpen(true);
+                    setMobileOpen(false);
                   }}
                   className="w-full text-left px-4 py-3 rounded-xl text-sm text-white/70 hover:bg-white/[0.06] transition-all flex items-center gap-3"
                 >
@@ -174,6 +177,9 @@ export function Navbar({ user, loading }) {
           })}
         </div>
       )}
+      
+      {/* Login Modal */}
+      <LoginModal open={loginModalOpen} onOpenChange={setLoginModalOpen} />
     </nav>
   );
 }

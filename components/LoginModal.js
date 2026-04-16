@@ -24,6 +24,10 @@ export function LoginModal({ open, onOpenChange }) {
     }
   }, [status, onOpenChange]);
 
+  const handleManualClose = useCallback(() => {
+    handleClose();
+  }, [handleClose]);
+
   const openDiscordPopup = useCallback(() => {
     const width = 600;
     const height = 700;
