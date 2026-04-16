@@ -1446,9 +1446,26 @@ export default function ProfilPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {Object.entries(userData.cooldowns).map(([key, timestamp]) => {
+                    // VIP-Status prüfen für dynamische Cooldown-Zeiten
+                    const licenses = userData?.licenses || [];
+                    const hasVipElitePlus = licenses.includes('vip_elite_plus');
+                    const hasVipUltimate = licenses.includes('vip_ultimate');
+                    const hasVipPlatinum = licenses.includes('vip_platinum');
+                    const hasVipPremium = licenses.includes('vip_premium');
+                    
+                    // Collect Cooldown basierend auf VIP-Status
+                    let collectCooldown = 4 * 60 * 60 * 1000; // 4h Standard
+                    if (hasVipElitePlus || hasVipUltimate) {
+                      collectCooldown = 45 * 60 * 1000; // 45 Minuten für Elite+ / Ultimate
+                    } else if (hasVipPlatinum) {
+                      collectCooldown = 1 * 60 * 60 * 1000; // 1 Stunde für Platinum
+                    } else if (hasVipPremium) {
+                      collectCooldown = 2 * 60 * 60 * 1000; // 2 Stunden für Premium
+                    }
+                    
                     // Cooldown-Namen, Icons und Dauer mapping
                     const cooldownConfig = {
-                      collect: { label: 'Gehalt abholen', icon: Gift, color: 'green', duration: 4 * 60 * 60 * 1000 }, // 4h Standard
+                      collect: { label: 'Gehalt abholen', icon: Gift, color: 'green', duration: collectCooldown },
                       daily: { label: 'Daily Bonus', icon: Trophy, color: 'blue', duration: 24 * 60 * 60 * 1000 },
                       ueberfall: { label: 'Überfall', icon: AlertCircle, color: 'red', duration: 24 * 60 * 60 * 1000 },
                       rob: { label: 'Rob', icon: AlertCircle, color: 'red', duration: 24 * 60 * 60 * 1000 },
