@@ -16,7 +16,7 @@ import {
 function AnimatedCounter({ value, suffix = '' }) {
   const [count, setCount] = useState(0);
   useEffect(() => {
-    const end = parseInt(value) || 0;a
+    const end = parseInt(value) || 0;
     if (end === 0) { setCount(0); return; }
     let start = 0;
     const increment = end / 40;

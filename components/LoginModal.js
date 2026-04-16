@@ -1,98 +1,30 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export function LoginModal({ open, onOpenChange }) {
-  const [status, setStatus] = useState('loading'); // 'loading', 'success', 'error'
+  const [status, setStatus] = useState('loading');
   const [errorMessage, setErrorMessage] = useState('');
   const [countdown, setCountdown] = useState(30);
   const popupRef = useRef(null);
   const checkClosedIntervalRef = useRef(null);
+  const countdownTimerRef = useRef(null);
 
-  useEffect(() => {
-    if (!open) {
-      // Reset beim Schließen
-      setStatus('loading');
-      setErrorMessage('');
-      setCountdown(30);
-      
-      // Popup schließen falls noch offen
-      if (popupRef.current && !popupRef.current.closed) {
-        popupRef.current.close();
-      }
-      
-      // Interval cleanup
-      if (checkClosedIntervalRef.current) {
-        clearInterval(checkClosedIntervalRef.current);
-      }
-      
-      return;
-    }
-
-    // Nachricht vom Popup-Fenster empfangen
-    const handleMessage = (event) => {
-      // Sicherheit: Nur Nachrichten von unserer Domain akzeptieren
-      if (event.origin !== window.location.origin) return;
-      
-      const { type, success, error } = event.data || {};
-      
-      if (type === 'discord-auth') {
-        if (success) {
-          setStatus('success');
-        } else if (error) {
-          setStatus('error');
-          const errorMessages = {
-            'discord_denied': 'Du hast die Anmeldung abgebrochen.',
-            'no_code': 'Kein Autorisierungscode erhalten.',
-            'token_failed': 'Token-Austausch fehlgeschlagen.',
-            'user_failed': 'Benutzer-Daten konnten nicht abgerufen werden.',
-            'not_member': 'Du bist nicht Mitglied des Hamburg Horizon Discord-Servers.',
-            'auth_failed': 'Anmeldung fehlgeschlagen. Bitte versuche es erneut.',
-          };
-          setErrorMessage(errorMessages[error] || 'Ein unbekannter Fehler ist aufgetreten.');
-        }
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [open]);
-
-  // Auto-Close Timer
-  useEffect(() => {
-    if (!open || status === 'loading') return;
-
-    const timer = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          handleClose();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [open, status]);
-
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     onOpenChange(false);
     
-    // Bei Erfolg Seite neu laden um den neuen Auth-Status zu holen
+    // Bei Erfolg Seite neu laden
     if (status === 'success') {
-      window.location.reload();
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     }
-  };
+  }, [status, onOpenChange]);
 
-  const handleManualClose = () => {
-    handleClose();
-  };
-
-  const openDiscordPopup = () => {
-    // Popup-Fenster öffnen für Discord OAuth2
+  const openDiscordPopup = useCallback(() => {
     const width = 600;
     const height = 700;
     const left = window.screen.width / 2 - width / 2;
@@ -104,32 +36,127 @@ export function LoginModal({ open, onOpenChange }) {
       `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
     );
     
-    popupRef.current = popup;
-    
-    // Prüfe ob Popup geschlossen wurde (von User abgebrochen)
-    checkClosedIntervalRef.current = setInterval(() => {
-      if (popup && popup.closed) {
-        clearInterval(checkClosedIntervalRef.current);
-        if (status === 'loading') {
-          setStatus('error');
-          setErrorMessage('Anmeldung wurde abgebrochen.');
-        }
-      }
-    }, 500);
-  };
-
-  // Popup öffnen wenn Modal geöffnet wird
-  useEffect(() => {
-    if (open && status === 'loading') {
-      openDiscordPopup();
-    }
-    
-    return () => {
+    if (popup) {
+      popupRef.current = popup;
+      
+      // Prüfe ob Popup geschlossen wurde
       if (checkClosedIntervalRef.current) {
         clearInterval(checkClosedIntervalRef.current);
       }
+      
+      checkClosedIntervalRef.current = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(checkClosedIntervalRef.current);
+          setStatus(prevStatus => {
+            if (prevStatus === 'loading') {
+              setErrorMessage('Anmeldung wurde abgebrochen.');
+              return 'error';
+            }
+            return prevStatus;
+          });
+        }
+      }, 500);
+    }
+  }, []);
+
+  // Cleanup on unmount or when modal closes
+  useEffect(() => {
+    if (!open) {
+      // Reset state
+      setStatus('loading');
+      setErrorMessage('');
+      setCountdown(30);
+      
+      // Close popup if still open
+      if (popupRef.current && !popupRef.current.closed) {
+        popupRef.current.close();
+        popupRef.current = null;
+      }
+      
+      // Clear intervals
+      if (checkClosedIntervalRef.current) {
+        clearInterval(checkClosedIntervalRef.current);
+        checkClosedIntervalRef.current = null;
+      }
+      
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+    }
+  }, [open]);
+
+  // Listen for messages from popup
+  useEffect(() => {
+    if (!open) return;
+
+    const handleMessage = (event) => {
+      if (event.origin !== window.location.origin) return;
+      
+      const data = event.data || {};
+      
+      if (data.type === 'discord-auth') {
+        if (data.success) {
+          setStatus('success');
+        } else if (data.error) {
+          setStatus('error');
+          const errorMessages = {
+            'discord_denied': 'Du hast die Anmeldung abgebrochen.',
+            'no_code': 'Kein Autorisierungscode erhalten.',
+            'token_failed': 'Token-Austausch fehlgeschlagen.',
+            'user_failed': 'Benutzer-Daten konnten nicht abgerufen werden.',
+            'not_member': 'Du bist nicht Mitglied des Hamburg Horizon Discord-Servers.',
+            'auth_failed': 'Anmeldung fehlgeschlagen. Bitte versuche es erneut.',
+          };
+          setErrorMessage(errorMessages[data.error] || 'Ein unbekannter Fehler ist aufgetreten.');
+        }
+      }
     };
-  }, [open, status]);
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [open]);
+
+  // Auto-close countdown
+  useEffect(() => {
+    if (!open || status === 'loading') {
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+      return;
+    }
+
+    setCountdown(30);
+    
+    countdownTimerRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          handleClose();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      if (countdownTimerRef.current) {
+        clearInterval(countdownTimerRef.current);
+        countdownTimerRef.current = null;
+      }
+    };
+  }, [open, status, handleClose]);
+
+  // Open popup when modal opens
+  useEffect(() => {
+    if (open && status === 'loading') {
+      const timer = setTimeout(() => {
+        openDiscordPopup();
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [open, status, openDiscordPopup]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
