@@ -202,3 +202,70 @@ self.addEventListener('message', (event) => {
     );
   }
 });
+
+// ═══════════════════════════════════════════════════════════════
+// PUSH NOTIFICATIONS für PWA
+// ═══════════════════════════════════════════════════════════════
+
+// Push Event - Empfange Push-Benachrichtigungen
+self.addEventListener('push', (event) => {
+  console.log('[SW] Push notification received');
+  
+  let data = {
+    title: '🎮 Hamburg Horizon RP',
+    body: 'Neue Benachrichtigung',
+    icon: '/icon-512.png',
+    badge: '/icon-192.png',
+    tag: 'default'
+  };
+
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      console.error('[SW] Error parsing push data:', e);
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: data.icon || '/icon-512.png',
+    badge: data.badge || '/icon-192.png',
+    vibrate: [200, 100, 200],
+    tag: data.tag || 'default',
+    requireInteraction: data.requireInteraction || false,
+    data: {
+      url: data.url || '/profil',
+      timestamp: Date.now(),
+      type: data.type
+    },
+    actions: data.actions || []
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// Notification Click Event
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification clicked:', event.notification.tag);
+  event.notification.close();
+
+  const urlToOpen = event.notification.data.url || '/profil';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Prüfe ob bereits ein Fenster offen ist
+      for (const client of clientList) {
+        if (client.url.includes(urlToOpen) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Öffne neues Fenster
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});

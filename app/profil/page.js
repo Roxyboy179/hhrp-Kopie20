@@ -7,12 +7,13 @@ import DailyBonusCard from '@/components/DailyBonusCard';
 import AnimatedValue from '@/components/AnimatedValue';
 import Pagination from '@/components/Pagination';
 import { Countdown } from '@/components/Countdown';
+import { PWANotifications } from '@/components/PWANotifications';
 import { 
   Wallet, CreditCard, Trophy, Gift, User, Award, Clock, TrendingUp, 
   Check, Loader2, FileText, Calendar, Mail, ExternalLink, LayoutDashboard, IdCard, ClipboardList,
   Building2, Hash, Key, Copy, ArrowUpRight, ArrowDownRight, AlertCircle, 
   Shield, Star, MessageSquare, Ban, ChevronUp, ShieldCheck, CheckCircle, DollarSign, RefreshCw,
-  ShoppingCart, PiggyBank, Receipt, Heart
+  ShoppingCart, PiggyBank, Receipt, Heart, Smartphone, Bell, Zap, Download, Crown, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -993,9 +994,30 @@ export default function ProfilPage() {
   const [invoiceFraktionFilter, setInvoiceFraktionFilter] = useState('all');
   const [strafakteStatusFilter, setStrafakteStatusFilter] = useState('all');
 
+  // PWA Detection
+  const [isPWA, setIsPWA] = useState(false);
+  
+  useEffect(() => {
+    // Check if app is installed as PWA
+    const checkPWA = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches 
+        || window.navigator.standalone 
+        || document.referrer.includes('android-app://');
+      setIsPWA(isStandalone);
+    };
+    
+    checkPWA();
+    window.matchMedia('(display-mode: standalone)').addEventListener('change', checkPWA);
+    
+    return () => {
+      window.matchMedia('(display-mode: standalone)').removeEventListener('change', checkPWA);
+    };
+  }, []);
+
   // Tab-Konfiguration mit Kategorien
   const mainTabs = [
     { id: 'overview', label: 'Übersicht', icon: LayoutDashboard },
+    { id: 'benefits', label: 'Meine Vorteile', icon: Gift, hasSubTabs: true },
     { id: 'finance', label: 'Finanzen', icon: Wallet, hasSubTabs: true },
     { id: 'documents', label: 'Dokumente', icon: IdCard, hasSubTabs: true },
     { id: 'marketplace', label: 'Marktplatz', icon: ShoppingCart },
@@ -1003,6 +1025,10 @@ export default function ProfilPage() {
   ];
 
   const subTabs = {
+    benefits: [
+      { id: 'pwa', label: 'PWA Vorteile', icon: Smartphone },
+      { id: 'discord', label: 'Discord Vorteile', icon: Crown }
+    ],
     finance: [
       { id: 'transactions', label: 'Transaktionen', icon: TrendingUp },
       { id: 'invoices', label: 'Rechnungen', icon: FileText },
@@ -1752,6 +1778,234 @@ export default function ProfilPage() {
               </div>
             )}
           </>
+        )}
+
+        {/* ========================================= */}
+        {/* BENEFITS TAB - PWA Vorteile */}
+        {/* ========================================= */}
+        {activeTab === 'benefits' && activeSubTab === 'pwa' && (
+          <div className="space-y-6">
+            {/* PWA Notifications Component */}
+            <PWANotifications userData={userData} isPWA={isPWA} />
+            
+            {/* PWA Status Card */}
+            <div className={`glass rounded-2xl p-6 border ${isPWA ? 'border-green-500/30 bg-gradient-to-br from-green-500/10 to-emerald-500/10' : 'border-orange-500/30 bg-gradient-to-br from-orange-500/10 to-yellow-500/10'}`}>
+              <div className="flex items-start gap-4">
+                <div className={`w-16 h-16 rounded-2xl ${isPWA ? 'bg-green-500/20' : 'bg-orange-500/20'} flex items-center justify-center flex-shrink-0`}>
+                  <Smartphone className={`w-8 h-8 ${isPWA ? 'text-green-400' : 'text-orange-400'}`} />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className={`text-xl font-bold ${isPWA ? 'text-green-400' : 'text-orange-400'}`}>
+                      {isPWA ? '✅ PWA Aktiv' : '📱 PWA Nicht Installiert'}
+                    </h3>
+                  </div>
+                  <p className="text-white/60 mb-4">
+                    {isPWA 
+                      ? 'Du nutzt Hamburg Horizon als App! Alle PWA-Vorteile sind aktiv.' 
+                      : 'Installiere Hamburg Horizon als App auf deinem Gerät und erhalte exklusive Vorteile!'}
+                  </p>
+                  
+                  {!isPWA && (
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <button className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white rounded-lg font-medium transition-all">
+                        <Download className="w-4 h-4" />
+                        <span>App installieren</span>
+                      </button>
+                      <button className="flex items-center justify-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white/80 rounded-lg font-medium transition-all border border-white/10">
+                        <ExternalLink className="w-4 h-4" />
+                        <span>Anleitung ansehen</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* PWA Vorteile Liste */}
+            <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+              <div className="flex items-center gap-3 mb-6">
+                <Sparkles className="w-6 h-6 text-purple-400" />
+                <h2 className="text-xl font-bold text-white">Exklusive PWA-Vorteile</h2>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Vorteil 1: Bonus Geld */}
+                <div className={`p-4 rounded-xl border transition-all ${isPWA ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02] border-white/5'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-lg ${isPWA ? 'bg-green-500/20' : 'bg-purple-500/20'} flex items-center justify-center flex-shrink-0`}>
+                      <DollarSign className={`w-5 h-5 ${isPWA ? 'text-green-400' : 'text-purple-400'}`} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-white mb-1">+500€ Daily Bonus</h3>
+                      <p className="text-sm text-white/60">Erhalte täglich 500€ extra beim Daily Bonus</p>
+                      {isPWA && <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Aktiv</p>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vorteil 2: Cooldown Reduktion */}
+                <div className={`p-4 rounded-xl border transition-all ${isPWA ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02] border-white/5'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-lg ${isPWA ? 'bg-green-500/20' : 'bg-blue-500/20'} flex items-center justify-center flex-shrink-0`}>
+                      <Zap className={`w-5 h-5 ${isPWA ? 'text-green-400' : 'text-blue-400'}`} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-white mb-1">-10% Cooldown-Zeit</h3>
+                      <p className="text-sm text-white/60">Alle Cooldowns (Collect, Rob, etc.) sind 10% kürzer</p>
+                      {isPWA && <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Aktiv</p>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vorteil 3: Push Benachrichtigungen */}
+                <div className={`p-4 rounded-xl border transition-all ${isPWA ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02] border-white/5'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-lg ${isPWA ? 'bg-green-500/20' : 'bg-orange-500/20'} flex items-center justify-center flex-shrink-0`}>
+                      <Bell className={`w-5 h-5 ${isPWA ? 'text-green-400' : 'text-orange-400'}`} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-white mb-1">Push-Benachrichtigungen</h3>
+                      <p className="text-sm text-white/60">Werde benachrichtigt wenn Cooldowns fertig sind</p>
+                      {isPWA ? (
+                        <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Verfügbar</p>
+                      ) : (
+                        <p className="text-xs text-white/40 mt-2">Nur mit PWA</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Vorteil 4: Offline Modus */}
+                <div className={`p-4 rounded-xl border transition-all ${isPWA ? 'bg-green-500/5 border-green-500/20' : 'bg-white/[0.02] border-white/5'}`}>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 rounded-lg ${isPWA ? 'bg-green-500/20' : 'bg-indigo-500/20'} flex items-center justify-center flex-shrink-0`}>
+                      <Smartphone className={`w-5 h-5 ${isPWA ? 'text-green-400' : 'text-indigo-400'}`} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-white mb-1">Offline-Modus</h3>
+                      <p className="text-sm text-white/60">Dein Profil auch ohne Internet verfügbar</p>
+                      {isPWA && <p className="text-xs text-green-400 mt-2 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Aktiv</p>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================= */}
+        {/* BENEFITS TAB - Discord Vorteile */}
+        {/* ========================================= */}
+        {activeTab === 'benefits' && activeSubTab === 'discord' && (
+          <div className="space-y-6">
+            {!botStatus.isOnline ? (
+              <BotStatusCard status={botStatus} onRetry={loadData} />
+            ) : loading ? (
+              <SkeletonCard />
+            ) : (
+              <>
+                {/* VIP Status Card */}
+                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                  <div className="flex items-center gap-3 mb-6">
+                    <Crown className="w-6 h-6 text-yellow-400" />
+                    <h2 className="text-xl font-bold text-white">Dein VIP-Status</h2>
+                  </div>
+
+                  {(() => {
+                    const licenses = userData?.licenses || [];
+                    const hasVipElitePlus = licenses.includes('vip_elite_plus');
+                    const hasVipUltimate = licenses.includes('vip_ultimate');
+                    const hasVipPlatinum = licenses.includes('vip_platinum');
+                    const hasVipPremium = licenses.includes('vip_premium');
+                    const hasBooster = licenses.includes('server_booster');
+
+                    let vipStatus = null;
+                    if (hasVipElitePlus) {
+                      vipStatus = { name: 'VIP ELITE PLUS', color: 'purple', cooldown: '45 Min', bonus: '2.000€' };
+                    } else if (hasVipUltimate) {
+                      vipStatus = { name: 'VIP Ultimate', color: 'blue', cooldown: '45 Min', bonus: 'N/A' };
+                    } else if (hasVipPlatinum) {
+                      vipStatus = { name: 'VIP Platinum', color: 'cyan', cooldown: '1 Std', bonus: 'N/A' };
+                    } else if (hasVipPremium) {
+                      vipStatus = { name: 'VIP Premium', color: 'yellow', cooldown: '2 Std', bonus: 'N/A' };
+                    }
+
+                    return vipStatus ? (
+                      <div className={`p-6 rounded-xl bg-gradient-to-br from-${vipStatus.color}-500/10 to-${vipStatus.color}-600/10 border border-${vipStatus.color}-500/20`}>
+                        <div className="flex items-start gap-4">
+                          <div className={`w-16 h-16 rounded-2xl bg-${vipStatus.color}-500/20 flex items-center justify-center flex-shrink-0`}>
+                            <Crown className={`w-8 h-8 text-${vipStatus.color}-400`} />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className={`text-2xl font-bold text-${vipStatus.color}-400 mb-2`}>{vipStatus.name}</h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                              <div>
+                                <p className="text-sm text-white/40 mb-1">Collect Cooldown</p>
+                                <p className="text-lg font-semibold text-white">{vipStatus.cooldown}</p>
+                              </div>
+                              {vipStatus.bonus !== 'N/A' && (
+                                <div>
+                                  <p className="text-sm text-white/40 mb-1">Elite+ Daily Bonus</p>
+                                  <p className="text-lg font-semibold text-white">{vipStatus.bonus}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-6 rounded-xl bg-white/[0.02] border border-white/5">
+                        <p className="text-white/60 text-center">Du hast aktuell keinen VIP-Status</p>
+                        <p className="text-sm text-white/40 text-center mt-2">Besuche den Shop um VIP zu werden!</p>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Server Booster Card */}
+                {userData?.licenses?.includes('server_booster') && (
+                  <div className="glass rounded-2xl p-6 border border-pink-500/20 bg-gradient-to-br from-pink-500/10 to-purple-500/10">
+                    <div className="flex items-start gap-4">
+                      <div className="w-16 h-16 rounded-2xl bg-pink-500/20 flex items-center justify-center flex-shrink-0">
+                        <Zap className="w-8 h-8 text-pink-400" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-pink-400 mb-2">🚀 Server Booster</h3>
+                        <p className="text-white/60 mb-3">Danke, dass du unseren Server boostest!</p>
+                        <div className="p-3 rounded-lg bg-white/5 border border-white/10">
+                          <p className="text-sm text-white/80">
+                            <span className="font-semibold text-pink-400">+5.000€</span> Bonus beim /collect Command
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Aktive Events Card */}
+                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                  <div className="flex items-center gap-3 mb-6">
+                    <Sparkles className="w-6 h-6 text-orange-400" />
+                    <h2 className="text-xl font-bold text-white">Aktive Events</h2>
+                  </div>
+
+                  {/* Placeholder für Events */}
+                  <div className="p-6 rounded-xl bg-gradient-to-br from-orange-500/10 to-yellow-500/10 border border-orange-500/20">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                        <Gift className="w-6 h-6 text-orange-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-orange-400 mb-1">🤝 Sozialwoche</h3>
+                        <p className="text-sm text-white/60">Arbeitslosengeld VERDOPPELT für alle ohne Job!</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
         )}
 
         {/* Transaktionen Tab */}
