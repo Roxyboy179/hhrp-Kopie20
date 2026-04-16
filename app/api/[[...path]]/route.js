@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import webpush from 'web-push';
 import { supabaseAdmin } from '@/lib/supabase';
 import { 
   createBewerbung, 
@@ -20,6 +21,18 @@ import {
 import { sendNewBewerbungNotification, sendStatusUpdateNotification, sendAccountStatusChangeNotification, sendPasswordChangeNotification } from '@/lib/discord-bot';
 import { logActivity, cleanupOldLogs, getLogs, getIpAddress, LOG_ACTIONS } from '@/lib/activity-logger';
 import { createNotification, getUserNotifications, getUnreadCount, markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/notifications';
+
+// Web Push Configuration
+const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+
+if (vapidPublicKey && vapidPrivateKey) {
+  webpush.setVapidDetails(
+    'mailto:admin@hhrp.de',
+    vapidPublicKey,
+    vapidPrivateKey
+  );
+}
 
 // ===== CONFIGURATION =====
 const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
@@ -1704,6 +1717,157 @@ export async function GET(request) {
     }
   }
 
+  // === Cron: Check Cooldowns ===
+  if (p === 'cron/check-cooldowns') {
+    // Security: Check Cron Secret
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET || 'default-secret-change-me';
+    
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    try {
+      console.log('[Cron] Starting cooldown check...');
+      
+      // Get all users with cooldowns
+      const { data: users, error: usersError } = await supabaseAdmin
+        .from('user_data')
+        .select('discord_user_id, data');
+
+      if (usersError) {
+        console.error('[Cron] Error fetching users:', usersError);
+        return NextResponse.json({ error: 'Database error' }, { status: 500 });
+      }
+
+      // Get all push subscriptions
+      const { data: subscriptions, error: subError } = await supabaseAdmin
+        .from('push_subscriptions')
+        .select('*');
+
+      if (subError) {
+        console.error('[Cron] Error fetching subscriptions:', subError);
+        return NextResponse.json({ error: 'Database error' }, { status: 500 });
+      }
+
+      const now = Date.now();
+      let notificationsSent = 0;
+      let errors = 0;
+
+      // Check each user
+      for (const user of users) {
+        const userId = user.discord_user_id;
+        const userData = user.data;
+        const cooldowns = userData.cooldowns || {};
+        const licenses = userData.licenses || [];
+
+        const userSub = subscriptions.find(sub => sub.user_id === userId);
+        if (!userSub) continue;
+
+        for (const [cooldownKey, startTime] of Object.entries(cooldowns)) {
+          let duration = 4 * 60 * 60 * 1000;
+          
+          if (cooldownKey === 'collect') {
+            if (licenses.includes('vip_elite_plus') || licenses.includes('vip_ultimate')) {
+              duration = 45 * 60 * 1000;
+            } else if (licenses.includes('vip_platinum')) {
+              duration = 1 * 60 * 60 * 1000;
+            } else if (licenses.includes('vip_premium')) {
+              duration = 2 * 60 * 60 * 1000;
+            }
+          } else if (cooldownKey === 'ueberfall') {
+            duration = 24 * 60 * 60 * 1000;
+          } else if (cooldownKey === 'elitePlusDaily') {
+            duration = 24 * 60 * 60 * 1000;
+          }
+
+          const endTime = startTime + duration;
+          const timeLeft = endTime - now;
+
+          const cooldownNames = {
+            collect: '💰 Gehalt abholen',
+            ueberfall: '🔫 Überfall',
+            elitePlusDaily: '⭐ Elite+ Daily',
+            work: '💼 Arbeiten'
+          };
+
+          const notificationKey = `${userId}_${cooldownKey}_${startTime}`;
+          
+          if (timeLeft <= 120000 && timeLeft > -60000) {
+            try {
+              const { data: existing } = await supabaseAdmin
+                .from('sent_notifications')
+                .select('id')
+                .eq('notification_key', notificationKey)
+                .single();
+
+              if (!existing) {
+                await webpush.sendNotification(
+                  userSub.subscription,
+                  JSON.stringify({
+                    title: `✅ ${cooldownNames[cooldownKey] || cooldownKey} verfügbar!`,
+                    body: 'Du kannst jetzt wieder den Command ausführen!',
+                    icon: '/icon-512.png',
+                    badge: '/icon-192.png',
+                    tag: `cooldown_${cooldownKey}`,
+                    url: '/profil',
+                    requireInteraction: true
+                  })
+                );
+
+                await supabaseAdmin
+                  .from('sent_notifications')
+                  .insert({
+                    notification_key: notificationKey,
+                    user_id: userId,
+                    type: 'cooldown_ready',
+                    sent_at: new Date().toISOString()
+                  });
+
+                notificationsSent++;
+                console.log(`[Cron] Sent notification to ${userId} for ${cooldownKey}`);
+              }
+            } catch (pushError) {
+              console.error(`[Cron] Error sending notification to ${userId}:`, pushError);
+              
+              if (pushError.statusCode === 410) {
+                await supabaseAdmin
+                  .from('push_subscriptions')
+                  .delete()
+                  .eq('user_id', userId);
+                console.log(`[Cron] Removed invalid subscription for ${userId}`);
+              }
+              
+              errors++;
+            }
+          }
+        }
+      }
+
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      await supabaseAdmin
+        .from('sent_notifications')
+        .delete()
+        .lt('sent_at', sevenDaysAgo);
+
+      console.log(`[Cron] Completed: ${notificationsSent} notifications sent, ${errors} errors`);
+
+      return NextResponse.json({
+        success: true,
+        notificationsSent,
+        errors,
+        usersChecked: users.length
+      });
+
+    } catch (error) {
+      console.error('[Cron] Error:', error);
+      return NextResponse.json(
+        { error: 'Internal server error', message: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
   switch (p) {
     case 'auth/discord': return handleDiscordAuth();
     case 'auth/callback': return handleDiscordCallback(request);
@@ -1879,6 +2043,64 @@ export async function POST(request) {
     } catch (error) {
       console.error('Mark read error:', error);
       return NextResponse.json({ error: 'Fehler' }, { status: 500 });
+    }
+  }
+
+  // === Push Notifications: Subscribe ===
+  if (p === 'push/subscribe') {
+    try {
+      const { subscription, userId } = await request.json();
+
+      if (!subscription || !userId) {
+        return NextResponse.json(
+          { error: 'Subscription und userId erforderlich' },
+          { status: 400 }
+        );
+      }
+
+      // Save subscription to Supabase
+      const { error } = await supabaseAdmin
+        .from('push_subscriptions')
+        .upsert({
+          user_id: userId,
+          subscription: subscription,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) {
+        console.error('[Push API] Error saving subscription:', error);
+        return NextResponse.json(
+          { error: 'Fehler beim Speichern der Subscription' },
+          { status: 500 }
+        );
+      }
+
+      // Send test notification
+      try {
+        await webpush.sendNotification(
+          subscription,
+          JSON.stringify({
+            title: '🔔 Benachrichtigungen aktiviert!',
+            body: 'Du erhältst jetzt Push-Benachrichtigungen, auch wenn die App geschlossen ist!',
+            icon: '/icon-512.png',
+            badge: '/icon-192.png',
+            tag: 'test',
+            url: '/profil'
+          })
+        );
+      } catch (pushError) {
+        console.error('[Push API] Error sending test notification:', pushError);
+      }
+
+      return NextResponse.json({ success: true });
+    } catch (error) {
+      console.error('[Push API] Error:', error);
+      return NextResponse.json(
+        { error: 'Interner Serverfehler' },
+        { status: 500 }
+      );
     }
   }
 
