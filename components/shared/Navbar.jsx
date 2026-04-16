@@ -47,63 +47,70 @@ export function Navbar({ user, loading }) {
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-[#0a0a0a]/90 backdrop-blur-2xl border-b border-white/[0.04] shadow-2xl shadow-black/40' : 'bg-transparent'}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3 cursor-pointer select-none group">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg shadow-black/30 group-hover:shadow-black/50 transition-all group-hover:scale-105 overflow-hidden">
-            <img src="/logo.webp" alt="HHRP" className="w-full h-full object-cover" />
-          </div>
-          <div className="hidden sm:block">
-            <span className="font-bold text-lg tracking-tight">HHRP</span>
-            <span className="text-[10px] text-white/30 block -mt-1">Hamburg Horizon RP</span>
-          </div>
-        </Link>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 grid grid-cols-3 items-center gap-4">
+        {/* Logo - Ganz links */}
+        <div className="flex items-center justify-start">
+          <Link href="/" className="flex items-center gap-3 cursor-pointer select-none group">
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg shadow-black/30 group-hover:shadow-black/50 transition-all group-hover:scale-105 overflow-hidden">
+              <img src="/logo.webp" alt="HHRP" className="w-full h-full object-cover" />
+            </div>
+            <div className="hidden sm:block">
+              <span className="font-bold text-lg tracking-tight">HHRP</span>
+              <span className="text-[10px] text-white/30 block -mt-1">Hamburg Horizon RP</span>
+            </div>
+          </Link>
+        </div>
 
-        <div className="hidden md:flex items-center gap-1 bg-white/[0.03] backdrop-blur-xl rounded-2xl p-1 border border-white/[0.06]">
-          {navItems.filter(n => n.show).map(n => {
-            const requiresDiscordAuth = n.requireAuth && !user;
-            const isActive = pathname === n.id;
-            
-            if (requiresDiscordAuth) {
+        {/* Navigation Tabs - Zentriert */}
+        <div className="hidden md:flex items-center justify-center">
+          <div className="flex items-center gap-1 bg-white/[0.03] backdrop-blur-xl rounded-2xl p-1 border border-white/[0.06]">
+            {navItems.filter(n => n.show).map(n => {
+              const requiresDiscordAuth = n.requireAuth && !user;
+              const isActive = pathname === n.id;
+              
+              if (requiresDiscordAuth) {
+                return (
+                  <button
+                    key={n.id}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setLoginModalOpen(true);
+                    }}
+                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                      isActive
+                        ? 'bg-white/[0.06] text-white/90 shadow-inner shadow-white/5'
+                        : 'text-white/30 hover:text-white/60 hover:bg-white/[0.03]'
+                    }`}
+                  >
+                    {n.icon}<span className="hidden lg:inline">{n.label}</span>
+                  </button>
+                );
+              }
+              
               return (
-                <button
+                <Link
                   key={n.id}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setLoginModalOpen(true);
-                  }}
+                  href={n.id}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
                     isActive
-                      ? 'bg-white/[0.06] text-white/90 shadow-inner shadow-white/5'
-                      : 'text-white/30 hover:text-white/60 hover:bg-white/[0.03]'
+                      ? '' 
+                      : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04]'
                   }`}
+                  style={isActive ? {
+                    background: 'rgba(var(--theme-accent-rgb), 0.15)',
+                    color: 'var(--theme-accent)',
+                    boxShadow: 'inset 0 1px 2px rgba(var(--theme-accent-rgb), 0.1)'
+                  } : {}}
                 >
                   {n.icon}<span className="hidden lg:inline">{n.label}</span>
-                </button>
+                </Link>
               );
-            }
-            
-            return (
-              <Link
-                key={n.id}
-                href={n.id}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
-                  isActive
-                    ? '' 
-                    : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04]'
-                }`}
-                style={isActive ? {
-                  background: 'rgba(var(--theme-accent-rgb), 0.15)',
-                  color: 'var(--theme-accent)',
-                  boxShadow: 'inset 0 1px 2px rgba(var(--theme-accent-rgb), 0.1)'
-                } : {}}
-              >
-                {n.icon}<span className="hidden lg:inline">{n.label}</span>
-              </Link>
-            );
-          })}
+            })}
           </div>
+        </div>
           
-        <div className="flex items-center gap-3">
+        {/* Notification Bell + Profile - Ganz rechts */}
+        <div className="flex items-center justify-end gap-3">
           {loading ? (
             <div className="w-9 h-9 rounded-xl bg-white/[0.04] flex items-center justify-center">
               <Loader2 className="w-4 h-4 animate-spin text-blue-400" />

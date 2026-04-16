@@ -487,16 +487,21 @@ async function handleAuthMe(request) {
       teamRole: teamRole?.name || null,
     };
     
-    // Lade Lizenzen aus Supabase
+    // Lade Lizenzen aus Supabase (data ist ein JSON-Feld)
     try {
       const { data: userProfile } = await supabaseAdmin
         .from('user_data')
-        .select('licenses')
+        .select('data')
         .eq('discord_user_id', user.id)
         .single();
       
-      if (userProfile?.licenses) {
-        updatedUser.licenses = userProfile.licenses;
+      if (userProfile?.data) {
+        // Parse JSON wenn es ein String ist, sonst direkt verwenden
+        const userData = typeof userProfile.data === 'string' 
+          ? JSON.parse(userProfile.data) 
+          : userProfile.data;
+        
+        updatedUser.licenses = userData?.licenses || [];
       } else {
         updatedUser.licenses = [];
       }
