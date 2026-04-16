@@ -53,10 +53,30 @@ export default function RootClientLayout({ children }) {
 
   // Offline Detection & Auto-Redirect
   useEffect(() => {
-    // Initiale Prüfung
-    setIsOnline(navigator.onLine);
+    // Initiale Prüfung beim Laden
+    const checkInitialOffline = () => {
+      const isCurrentlyOnline = navigator.onLine;
+      setIsOnline(isCurrentlyOnline);
+      
+      // Wenn initial offline, handle es
+      if (!isCurrentlyOnline && pathname !== '/offline') {
+        const offlineModusAktiv = localStorage.getItem('hhrp-offline') === 'true';
+        
+        if (offlineModusAktiv) {
+          import('sonner').then(({ toast }) => {
+            toast.info('Du bist offline', {
+              description: 'Offline-Modus ist aktiviert. Gecachte Daten werden verwendet.',
+              duration: 5000
+            });
+          });
+        } else {
+          router.push('/offline');
+        }
+      }
+    };
 
     const handleOnline = () => {
+      console.log('✅ Online-Event erkannt');
       setIsOnline(true);
       // Zurück zur Startseite wenn man wieder online ist (nur wenn man auf /offline war)
       if (pathname === '/offline') {
@@ -65,15 +85,16 @@ export default function RootClientLayout({ children }) {
     };
 
     const handleOffline = () => {
+      console.log('❌ Offline-Event erkannt');
       setIsOnline(false);
       
       // Prüfe ob Offline-Modus bevorzugen aktiviert ist
       const offlineModusAktiv = localStorage.getItem('hhrp-offline') === 'true';
+      console.log('Offline-Modus aktiviert:', offlineModusAktiv);
       
       if (offlineModusAktiv) {
         // Nur Toast-Benachrichtigung, keine Weiterleitung
         if (pathname !== '/offline') {
-          // Dynamischer Toast-Import
           import('sonner').then(({ toast }) => {
             toast.info('Du bist offline', {
               description: 'Offline-Modus ist aktiviert. Gecachte Daten werden verwendet.',
@@ -84,11 +105,16 @@ export default function RootClientLayout({ children }) {
       } else {
         // Weiterleitung zur Offline-Seite (außer man ist schon dort)
         if (pathname !== '/offline') {
+          console.log('→ Weiterleitung zu /offline');
           router.push('/offline');
         }
       }
     };
 
+    // Initiale Prüfung
+    checkInitialOffline();
+
+    // Event Listeners
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
