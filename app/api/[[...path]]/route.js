@@ -1430,12 +1430,13 @@ async function handleUpdateBewerbungSettings(request) {
 
   try {
     const body = await request.json();
-    const { normalOpen, praktikumOpen, uprankOpen } = body;
+    const { normalOpen, praktikumOpen, uprankOpen, betaTesterOpen } = body;
     
     const settings = await updateBewerbungSettings({
       normal_open: normalOpen,
       praktikum_open: praktikumOpen,
-      uprank_open: uprankOpen
+      uprank_open: uprankOpen,
+      beta_tester_open: betaTesterOpen
     });
     
     // LOG: Bewerbungs-Settings geändert
@@ -1447,6 +1448,7 @@ async function handleUpdateBewerbungSettings(request) {
         normalOpen,
         praktikumOpen,
         uprankOpen,
+        betaTesterOpen,
         roleName: admin.roleName,
       },
       ipAddress: getIpAddress(request),

@@ -66,7 +66,8 @@ export default function BewerbungVerwaltungPage() {
         body: JSON.stringify({
           normalOpen: settings.normal_open,
           praktikumOpen: settings.praktikum_open,
-          uprankOpen: settings.uprank_open
+          uprankOpen: settings.uprank_open,
+          betaTesterOpen: settings.beta_tester_open
         })
       });
 
