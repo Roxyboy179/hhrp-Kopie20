@@ -31,7 +31,7 @@ export default function RootClientLayout({ children }) {
     if (bgValue.startsWith('preset:')) {
       // preset:city-1 → /bg-city-1.webp
       const presetName = bgValue.replace('preset:', '');
-      return `/${presetName}.webp`;
+      return `/bg-${presetName}.webp`;
     }
     // Custom Upload (Base64 oder URL)
     return bgValue;
