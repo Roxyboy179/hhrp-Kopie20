@@ -1851,7 +1851,7 @@ export default function ProfilPage() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-white">20.000 Taeglich</h3>
+                        <h3 className="font-semibold text-white">20.000 Täglich</h3>
                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isPWA ? 'bg-green-500/20 text-green-300' : 'bg-purple-500/20 text-purple-300'}`}>4x BONUS</span>
                       </div>
                       <p className="text-sm text-white/60">Statt 5.000 bekommst du als PWA-Nutzer den vierfachen Daily Bonus</p>
@@ -1930,15 +1930,15 @@ export default function ProfilPage() {
                 <div className="space-y-3">
                   <div className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03]">
                     <div className="w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-xs font-bold text-blue-400">1</div>
-                    <p className="text-sm text-white/70">Oeffne die Seite in Chrome oder Safari auf deinem Handy</p>
+                    <p className="text-sm text-white/70">Öffne die Seite in Chrome oder Safari auf deinem Handy</p>
                   </div>
                   <div className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03]">
                     <div className="w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-xs font-bold text-blue-400">2</div>
-                    <p className="text-sm text-white/70">Tippe auf das Teilen-Symbol und waehle &quot;Zum Homescreen hinzufuegen&quot;</p>
+                    <p className="text-sm text-white/70">Tippe auf das Teilen-Symbol und wähle &quot;Zum Homescreen hinzufügen&quot;</p>
                   </div>
                   <div className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.03]">
                     <div className="w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 text-xs font-bold text-blue-400">3</div>
-                    <p className="text-sm text-white/70">Oeffne die App ueber das neue Icon und alle Vorteile werden automatisch aktiviert</p>
+                    <p className="text-sm text-white/70">Öffne die App über das neue Icon und alle Vorteile werden automatisch aktiviert</p>
                   </div>
                 </div>
               </div>
@@ -2030,95 +2030,300 @@ export default function ProfilPage() {
                   })()}
                 </div>
 
-                {/* Server Booster Card */}
-                {userData?.licenses?.includes('server_booster') && (
-                  <div className="glass rounded-2xl p-6 border border-pink-500/20 bg-gradient-to-br from-pink-500/10 to-purple-500/10">
-                    <div className="flex items-start gap-4">
-                      <div className="w-16 h-16 rounded-2xl bg-pink-500/20 flex items-center justify-center flex-shrink-0">
-                        <Rocket className="w-8 h-8 text-pink-400" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-xl font-bold text-pink-400">Server Booster</h3>
-                          <BadgeCheck className="w-5 h-5 text-pink-400" />
-                        </div>
-                        <p className="text-white/60 mb-3">Danke, dass du unseren Server boostest!</p>
-                        <div className="p-3 rounded-lg bg-white/5 border border-white/10 flex items-center gap-2">
-                          <CircleDollarSign className="w-4 h-4 text-pink-400 flex-shrink-0" />
-                          <p className="text-sm text-white/80">
-                            <span className="font-semibold text-pink-400">+5.000</span> Bonus beim /collect Command
-                          </p>
-                        </div>
-                      </div>
+                {/* Server Booster Status - vom Bot geprüft */}
+                <div className={`glass rounded-2xl p-6 border ${userData?.licenses?.includes('server_booster') ? 'border-pink-500/20 bg-gradient-to-br from-pink-500/10 to-purple-500/10' : 'border-white/[0.08]'}`}>
+                  <div className="flex items-start gap-4">
+                    <div className={`w-16 h-16 rounded-2xl ${userData?.licenses?.includes('server_booster') ? 'bg-pink-500/20' : 'bg-white/[0.04]'} flex items-center justify-center flex-shrink-0`}>
+                      <Rocket className={`w-8 h-8 ${userData?.licenses?.includes('server_booster') ? 'text-pink-400' : 'text-white/20'}`} />
                     </div>
-                  </div>
-                )}
-
-                {/* Alle Discord-Vorteile Uebersicht */}
-                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
-                  <div className="flex items-center gap-3 mb-6">
-                    <Gift className="w-6 h-6 text-blue-400" />
-                    <h2 className="text-xl font-bold text-white">Discord Vorteile</h2>
-                  </div>
-
-                  <div className="space-y-3">
-                    {/* Vorteil: Server Booster */}
-                    <div className={`p-4 rounded-xl border transition-all ${userData?.licenses?.includes('server_booster') ? 'bg-pink-500/5 border-pink-500/20' : 'bg-white/[0.02] border-white/5'}`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg ${userData?.licenses?.includes('server_booster') ? 'bg-pink-500/20' : 'bg-white/[0.06]'} flex items-center justify-center flex-shrink-0`}>
-                          <Rocket className={`w-5 h-5 ${userData?.licenses?.includes('server_booster') ? 'text-pink-400' : 'text-white/30'}`} />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-white text-sm">Server Booster Bonus</h3>
-                          <p className="text-xs text-white/50">+5.000 bei jedem /collect</p>
-                        </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className={`text-xl font-bold ${userData?.licenses?.includes('server_booster') ? 'text-pink-400' : 'text-white/40'}`}>Server Booster</h3>
                         {userData?.licenses?.includes('server_booster') ? (
-                          <BadgeCheck className="w-5 h-5 text-pink-400 flex-shrink-0" />
+                          <BadgeCheck className="w-5 h-5 text-pink-400" />
                         ) : (
-                          <Lock className="w-4 h-4 text-white/20 flex-shrink-0" />
+                          <span className="px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.08] text-[10px] font-bold text-white/30 uppercase tracking-wider">Inaktiv</span>
                         )}
                       </div>
+                      {userData?.licenses?.includes('server_booster') ? (
+                        <>
+                          <p className="text-white/60 mb-3">Danke, dass du unseren Server boostest! Deine Vorteile sind aktiv.</p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="p-3 rounded-lg bg-white/5 border border-white/10 flex items-center gap-2">
+                              <CircleDollarSign className="w-4 h-4 text-pink-400 flex-shrink-0" />
+                              <p className="text-sm text-white/80">
+                                <span className="font-semibold text-pink-400">+5.000</span> beim /collect
+                              </p>
+                            </div>
+                            <div className="p-3 rounded-lg bg-white/5 border border-white/10 flex items-center gap-2">
+                              <Star className="w-4 h-4 text-pink-400 flex-shrink-0" />
+                              <p className="text-sm text-white/80">
+                                <span className="font-semibold text-pink-400">Exklusive</span> Booster-Rolle
+                              </p>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-white/40 text-sm">Booste den Discord Server und erhalte +5.000 bei jedem /collect und eine exklusive Rolle!</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ========= DISCORD SERVER VORTEILE ========= */}
+                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                  <div className="flex items-center gap-3 mb-2">
+                    <MessageSquare className="w-6 h-6 text-indigo-400" />
+                    <h2 className="text-xl font-bold text-white">Discord Server Vorteile</h2>
+                  </div>
+                  <p className="text-sm text-white/40 mb-5 ml-9">Vorteile die du auf unserem Discord Server erhältst</p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* /collect Command */}
+                    <div className="group p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-green-500/15 flex items-center justify-center flex-shrink-0">
+                          <CircleDollarSign className="w-5 h-5 text-green-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white text-sm">/collect Gehalt</h3>
+                          <p className="text-xs text-white/50 mt-0.5">Sammle regelmäßig dein Gehalt ein. VIP = kürzerer Cooldown</p>
+                          <div className="flex items-center gap-1 mt-2">
+                            <BadgeCheck className="w-3.5 h-3.5 text-green-400" />
+                            <span className="text-[11px] text-green-400 font-medium">Verfügbar</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Vorteil: Reduzierter Cooldown */}
+                    {/* /rob Überfall */}
+                    <div className="group p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-red-500/15 flex items-center justify-center flex-shrink-0">
+                          <AlertCircle className="w-5 h-5 text-red-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white text-sm">/rob Überfall</h3>
+                          <p className="text-xs text-white/50 mt-0.5">Raube andere Nutzer aus und stiehl ihr Geld</p>
+                          <div className="flex items-center gap-1 mt-2">
+                            <BadgeCheck className="w-3.5 h-3.5 text-green-400" />
+                            <span className="text-[11px] text-green-400 font-medium">Verfügbar</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* /work Arbeiten */}
+                    <div className="group p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-blue-500/15 flex items-center justify-center flex-shrink-0">
+                          <Building2 className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white text-sm">/work Arbeiten</h3>
+                          <p className="text-xs text-white/50 mt-0.5">Arbeite und verdiene Geld für dein Konto</p>
+                          <div className="flex items-center gap-1 mt-2">
+                            <BadgeCheck className="w-3.5 h-3.5 text-green-400" />
+                            <span className="text-[11px] text-green-400 font-medium">Verfügbar</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* VIP Vorteile */}
                     {(() => {
                       const licenses = userData?.licenses || [];
                       const hasVip = licenses.some(l => l.startsWith('vip_'));
                       return (
-                        <div className={`p-4 rounded-xl border transition-all ${hasVip ? 'bg-yellow-500/5 border-yellow-500/20' : 'bg-white/[0.02] border-white/5'}`}>
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-lg ${hasVip ? 'bg-yellow-500/20' : 'bg-white/[0.06]'} flex items-center justify-center flex-shrink-0`}>
+                        <div className={`group p-4 rounded-xl border transition-all ${hasVip ? 'border-yellow-500/20 bg-yellow-500/5 hover:bg-yellow-500/8' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}>
+                          <div className="flex items-start gap-3">
+                            <div className={`w-10 h-10 rounded-lg ${hasVip ? 'bg-yellow-500/15' : 'bg-white/[0.06]'} flex items-center justify-center flex-shrink-0`}>
                               <Timer className={`w-5 h-5 ${hasVip ? 'text-yellow-400' : 'text-white/30'}`} />
                             </div>
                             <div className="flex-1">
                               <h3 className="font-semibold text-white text-sm">Reduzierter Cooldown</h3>
-                              <p className="text-xs text-white/50">Kuerzere Wartezeit bei /collect (VIP)</p>
+                              <p className="text-xs text-white/50 mt-0.5">Kürzere Wartezeit bei /collect als VIP-Mitglied</p>
+                              <div className="flex items-center gap-1 mt-2">
+                                {hasVip ? (
+                                  <>
+                                    <BadgeCheck className="w-3.5 h-3.5 text-yellow-400" />
+                                    <span className="text-[11px] text-yellow-400 font-medium">Aktiv</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Lock className="w-3 h-3 text-white/25" />
+                                    <span className="text-[11px] text-white/30 font-medium">VIP benötigt</span>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                            {hasVip ? (
-                              <BadgeCheck className="w-5 h-5 text-yellow-400 flex-shrink-0" />
-                            ) : (
-                              <Lock className="w-4 h-4 text-white/20 flex-shrink-0" />
-                            )}
                           </div>
                         </div>
                       );
                     })()}
 
-                    {/* Vorteil: Elite+ Daily */}
-                    <div className={`p-4 rounded-xl border transition-all ${userData?.licenses?.includes('vip_elite_plus') ? 'bg-purple-500/5 border-purple-500/20' : 'bg-white/[0.02] border-white/5'}`}>
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg ${userData?.licenses?.includes('vip_elite_plus') ? 'bg-purple-500/20' : 'bg-white/[0.06]'} flex items-center justify-center flex-shrink-0`}>
+                    {/* Server Booster Bonus */}
+                    <div className={`group p-4 rounded-xl border transition-all ${userData?.licenses?.includes('server_booster') ? 'border-pink-500/20 bg-pink-500/5 hover:bg-pink-500/8' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}>
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 rounded-lg ${userData?.licenses?.includes('server_booster') ? 'bg-pink-500/15' : 'bg-white/[0.06]'} flex items-center justify-center flex-shrink-0`}>
+                          <Rocket className={`w-5 h-5 ${userData?.licenses?.includes('server_booster') ? 'text-pink-400' : 'text-white/30'}`} />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white text-sm">Booster Bonus</h3>
+                          <p className="text-xs text-white/50 mt-0.5">+5.000 bei jedem /collect als Server Booster</p>
+                          <div className="flex items-center gap-1 mt-2">
+                            {userData?.licenses?.includes('server_booster') ? (
+                              <>
+                                <BadgeCheck className="w-3.5 h-3.5 text-pink-400" />
+                                <span className="text-[11px] text-pink-400 font-medium">Aktiv</span>
+                              </>
+                            ) : (
+                              <>
+                                <Lock className="w-3 h-3 text-white/25" />
+                                <span className="text-[11px] text-white/30 font-medium">Boost benötigt</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Elite+ Daily */}
+                    <div className={`group p-4 rounded-xl border transition-all ${userData?.licenses?.includes('vip_elite_plus') ? 'border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/8' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}>
+                      <div className="flex items-start gap-3">
+                        <div className={`w-10 h-10 rounded-lg ${userData?.licenses?.includes('vip_elite_plus') ? 'bg-purple-500/15' : 'bg-white/[0.06]'} flex items-center justify-center flex-shrink-0`}>
                           <Gem className={`w-5 h-5 ${userData?.licenses?.includes('vip_elite_plus') ? 'text-purple-400' : 'text-white/30'}`} />
                         </div>
                         <div className="flex-1">
                           <h3 className="font-semibold text-white text-sm">Elite+ Daily Bonus</h3>
-                          <p className="text-xs text-white/50">+2.000 taeglich als VIP Elite+ Mitglied</p>
+                          <p className="text-xs text-white/50 mt-0.5">+2.000 täglich als VIP Elite+ Mitglied</p>
+                          <div className="flex items-center gap-1 mt-2">
+                            {userData?.licenses?.includes('vip_elite_plus') ? (
+                              <>
+                                <BadgeCheck className="w-3.5 h-3.5 text-purple-400" />
+                                <span className="text-[11px] text-purple-400 font-medium">Aktiv</span>
+                              </>
+                            ) : (
+                              <>
+                                <Lock className="w-3 h-3 text-white/25" />
+                                <span className="text-[11px] text-white/30 font-medium">Elite+ benötigt</span>
+                              </>
+                            )}
+                          </div>
                         </div>
-                        {userData?.licenses?.includes('vip_elite_plus') ? (
-                          <BadgeCheck className="w-5 h-5 text-purple-400 flex-shrink-0" />
-                        ) : (
-                          <Lock className="w-4 h-4 text-white/20 flex-shrink-0" />
-                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ========= WEBSEITE VORTEILE ========= */}
+                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Globe className="w-6 h-6 text-cyan-400" />
+                    <h2 className="text-xl font-bold text-white">Webseite Vorteile</h2>
+                  </div>
+                  <p className="text-sm text-white/40 mb-5 ml-9">Vorteile die du auf unserer Webseite erhältst</p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Profil Dashboard */}
+                    <div className="group p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-cyan-500/15 flex items-center justify-center flex-shrink-0">
+                          <LayoutDashboard className="w-5 h-5 text-cyan-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white text-sm">Profil Dashboard</h3>
+                          <p className="text-xs text-white/50 mt-0.5">Übersicht über dein Konto, Kontostand und Statistiken</p>
+                          <div className="flex items-center gap-1 mt-2">
+                            <BadgeCheck className="w-3.5 h-3.5 text-cyan-400" />
+                            <span className="text-[11px] text-cyan-400 font-medium">Verfügbar</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Transaktions-Verlauf */}
+                    <div className="group p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                          <TrendingUp className="w-5 h-5 text-emerald-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white text-sm">Transaktions-Verlauf</h3>
+                          <p className="text-xs text-white/50 mt-0.5">Alle Ein- und Ausgänge im Detail einsehen</p>
+                          <div className="flex items-center gap-1 mt-2">
+                            <BadgeCheck className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="text-[11px] text-emerald-400 font-medium">Verfügbar</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sparkonto */}
+                    <div className="group p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+                          <PiggyBank className="w-5 h-5 text-amber-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white text-sm">Sparkonto Übersicht</h3>
+                          <p className="text-xs text-white/50 mt-0.5">Dein Sparkonto verwalten und Zinsen verfolgen</p>
+                          <div className="flex items-center gap-1 mt-2">
+                            <BadgeCheck className="w-3.5 h-3.5 text-amber-400" />
+                            <span className="text-[11px] text-amber-400 font-medium">Verfügbar</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Daily Bonus */}
+                    <div className="group p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-violet-500/15 flex items-center justify-center flex-shrink-0">
+                          <Gift className="w-5 h-5 text-violet-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white text-sm">Täglicher Bonus</h3>
+                          <p className="text-xs text-white/50 mt-0.5">Jeden Tag einen Bonus abholen, direkt auf der Webseite</p>
+                          <div className="flex items-center gap-1 mt-2">
+                            <BadgeCheck className="w-3.5 h-3.5 text-violet-400" />
+                            <span className="text-[11px] text-violet-400 font-medium">Verfügbar</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bewerbungssystem */}
+                    <div className="group p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-blue-500/15 flex items-center justify-center flex-shrink-0">
+                          <ClipboardList className="w-5 h-5 text-blue-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white text-sm">Team Bewerbungen</h3>
+                          <p className="text-xs text-white/50 mt-0.5">Bewirb dich direkt auf der Webseite für das Team</p>
+                          <div className="flex items-center gap-1 mt-2">
+                            <BadgeCheck className="w-3.5 h-3.5 text-blue-400" />
+                            <span className="text-[11px] text-blue-400 font-medium">Verfügbar</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Steuer-Records */}
+                    <div className="group p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-all">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-rose-500/15 flex items-center justify-center flex-shrink-0">
+                          <Receipt className="w-5 h-5 text-rose-400" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-white text-sm">Steuer-Records</h3>
+                          <p className="text-xs text-white/50 mt-0.5">Steuerbescheide und Abzüge im Überblick</p>
+                          <div className="flex items-center gap-1 mt-2">
+                            <BadgeCheck className="w-3.5 h-3.5 text-rose-400" />
+                            <span className="text-[11px] text-rose-400 font-medium">Verfügbar</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2141,7 +2346,7 @@ export default function ProfilPage() {
                           <h3 className="text-lg font-bold text-orange-400">Sozialwoche</h3>
                           <span className="px-2 py-0.5 rounded-full bg-orange-500/20 border border-orange-500/30 text-[10px] font-bold text-orange-300 uppercase tracking-wider">Aktiv</span>
                         </div>
-                        <p className="text-sm text-white/60">Arbeitslosengeld VERDOPPELT fuer alle ohne Job!</p>
+                        <p className="text-sm text-white/60">Arbeitslosengeld VERDOPPELT für alle ohne Job!</p>
                       </div>
                     </div>
                   </div>
