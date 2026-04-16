@@ -515,15 +515,15 @@ export default function BewerbungPage() {
     }
   }, [user, authLoading]);
 
-  const checkVerification = async () => {
+  const checkVerification = () => {
     try {
-      const res = await fetch('/api/user-data', { credentials: 'include' });
-      if (res.ok) {
-        const json = await res.json();
-        setNichtVerifiziert(json.nichtVerifiziert === true);
-      }
+      // Check ob User die Verifizierungs-Rolle hat
+      // Wenn User keine Rollen hat oder die Rolle fehlt, ist er nicht verifiziert
+      const hasVerifiedRole = user?.roles && user.roles.length > 0;
+      setNichtVerifiziert(!hasVerifiedRole);
     } catch (e) {
       console.error('Verifizierungs-Check fehlgeschlagen:', e);
+      setNichtVerifiziert(false); // Bei Fehler als verifiziert behandeln
     } finally {
       setCheckingVerification(false);
     }
