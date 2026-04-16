@@ -974,6 +974,7 @@ export default function ProfilPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [userData, setUserData] = useState(null);
+  const [nichtVerifiziert, setNichtVerifiziert] = useState(false);
   const [rewards, setRewards] = useState([]);
   const [bewerbungen, setBewerbungen] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -1111,10 +1112,13 @@ export default function ProfilPage() {
         const json = await userRes.json();
         const actualData = json.data?.data || json.data || null;
         
+        // Nicht Verifiziert Status vom Bot
+        setNichtVerifiziert(json.nichtVerifiziert === true);
+        
         // Bot ist online, Daten sind da
         setBotStatus({ isOnline: true, checking: false, error: null });
         setUserData(actualData);
-        console.log('User data loaded:', actualData);
+        console.log('User data loaded:', actualData, 'nichtVerifiziert:', json.nichtVerifiziert);
       } else {
         // Bot ist online, aber API-Fehler
         setBotStatus({ 
@@ -1242,6 +1246,44 @@ export default function ProfilPage() {
           </div>
         </div>
 
+        {/* NICHT VERIFIZIERT BLOCKADE */}
+        {nichtVerifiziert && (
+          <div className="glass rounded-2xl border border-red-500/20 bg-gradient-to-br from-red-500/10 to-orange-500/10 overflow-hidden">
+            <div className="p-8 sm:p-12 flex flex-col items-center text-center">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-red-500/15 border border-red-500/25 flex items-center justify-center mb-6">
+                <Shield className="w-10 h-10 sm:w-12 sm:h-12 text-red-400" />
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-red-400 mb-3">Nicht Verifiziert</h2>
+              <p className="text-white/60 max-w-md mb-6 leading-relaxed">
+                Dein Account ist noch nicht verifiziert. Du musst dich zuerst auf dem Discord Server verifizieren, um auf dein Profil zugreifen zu können.
+              </p>
+              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] max-w-sm w-full mb-6">
+                <div className="flex items-center gap-3 text-left">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center flex-shrink-0">
+                    <MessageSquare className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-white">So verifizierst du dich:</p>
+                    <p className="text-xs text-white/40 mt-0.5">Gehe auf den Discord Server und folge den Anweisungen im Verifizierungs-Kanal</p>
+                  </div>
+                </div>
+              </div>
+              <a 
+                href="https://discord.gg/hamburg-horizon-rp" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-6 py-3 bg-[#5865F2] hover:bg-[#4752C4] text-white rounded-xl font-medium transition-all"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Zum Discord Server
+              </a>
+            </div>
+          </div>
+        )}
+
+        {/* Profil-Inhalte NUR wenn verifiziert */}
+        {!nichtVerifiziert && (
+        <>
         {/* Tab Navigation - Haupt-Tabs */}
         <div className="glass rounded-2xl p-2 border border-white/[0.08]">
           {/* Mobile: Horizontal Scrollable */}
@@ -3401,6 +3443,8 @@ export default function ProfilPage() {
               </div>
             )}
           </div>
+        )}
+        </>
         )}
       </div>
     </div>

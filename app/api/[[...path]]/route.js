@@ -2747,19 +2747,29 @@ async function handleGetUserData(request) {
       return NextResponse.json({ error: 'Fehler beim Laden der Daten' }, { status: 500 });
     }
 
-    // Server Booster Check via Discord API (Role ID: 1274419855227093147)
+    // Discord Role Checks:
+    // Server Booster Role: 1274419855227093147
+    // Nicht Verifiziert Role: 1273340696916394079
     const BOOSTER_ROLE_ID = '1274419855227093147';
+    const NICHT_VERIFIZIERT_ROLE_ID = '1273340696916394079';
     let userData = data || null;
+    let nichtVerifiziert = false;
 
-    if (userData && userData.data) {
-      try {
-        const member = await getGuildMember(user.id);
-        if (member && member.roles) {
+    try {
+      const member = await getGuildMember(user.id);
+      if (member && member.roles) {
+        // Nicht Verifiziert Check
+        if (member.roles.includes(NICHT_VERIFIZIERT_ROLE_ID)) {
+          nichtVerifiziert = true;
+          console.log(`[UserData] User ${user.id} ist NICHT VERIFIZIERT (hat Rolle ${NICHT_VERIFIZIERT_ROLE_ID})`);
+        }
+
+        // Server Booster Check
+        if (userData && userData.data) {
           const isBooster = member.roles.includes(BOOSTER_ROLE_ID);
           const licenses = userData.data.licenses || [];
 
           if (isBooster && !licenses.includes('server_booster')) {
-            // User hat die Booster-Rolle auf Discord, aber nicht in den Lizenzen
             userData = {
               ...userData,
               data: {
@@ -2767,9 +2777,8 @@ async function handleGetUserData(request) {
                 licenses: [...licenses, 'server_booster']
               }
             };
-            console.log(`[UserData] Added server_booster license for user ${user.id} (has Discord role ${BOOSTER_ROLE_ID})`);
+            console.log(`[UserData] Added server_booster for user ${user.id}`);
           } else if (!isBooster && licenses.includes('server_booster')) {
-            // User hat die Booster-Rolle NICHT mehr, aber noch in Lizenzen
             userData = {
               ...userData,
               data: {
@@ -2777,34 +2786,23 @@ async function handleGetUserData(request) {
                 licenses: licenses.filter(l => l !== 'server_booster')
               }
             };
-            console.log(`[UserData] Removed server_booster license for user ${user.id} (no longer has Discord role ${BOOSTER_ROLE_ID})`);
+            console.log(`[UserData] Removed server_booster for user ${user.id}`);
+          }
+        } else if (!userData || !userData.data) {
+          const isBooster = member.roles.includes(BOOSTER_ROLE_ID);
+          if (isBooster) {
+            userData = {
+              discord_user_id: user.id,
+              data: { licenses: ['server_booster'], cooldowns: {}, balance: 0 }
+            };
           }
         }
-      } catch (roleCheckErr) {
-        console.error('[UserData] Error checking Discord booster role:', roleCheckErr.message);
-        // Fehler beim Rollen-Check soll die Daten nicht blockieren
       }
-    } else if (!userData || !userData.data) {
-      // Kein user_data vorhanden, trotzdem Booster-Check
-      try {
-        const member = await getGuildMember(user.id);
-        if (member && member.roles && member.roles.includes(BOOSTER_ROLE_ID)) {
-          userData = {
-            discord_user_id: user.id,
-            data: {
-              licenses: ['server_booster'],
-              cooldowns: {},
-              balance: 0
-            }
-          };
-          console.log(`[UserData] Created minimal user data with server_booster for user ${user.id}`);
-        }
-      } catch (roleCheckErr) {
-        console.error('[UserData] Error checking Discord booster role (no data):', roleCheckErr.message);
-      }
+    } catch (roleCheckErr) {
+      console.error('[UserData] Error checking Discord roles:', roleCheckErr.message);
     }
 
-    return NextResponse.json({ data: userData });
+    return NextResponse.json({ data: userData, nichtVerifiziert });
   } catch (error) {
     console.error('Get user data exception:', error);
     return NextResponse.json({ error: 'Fehler' }, { status: 500 });
