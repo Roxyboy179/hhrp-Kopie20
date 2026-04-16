@@ -2404,16 +2404,72 @@ export default function ProfilPage() {
 
         {/* Steuer-Records Tab */}
         {activeTab === 'finance' && activeSubTab === 'tax' && (
-          <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
-            <div className="flex items-center gap-3 mb-6">
-              <Receipt className="w-6 h-6 text-white/60" />
-              <h2 className="text-lg sm:text-xl font-bold text-white">Steuer-Records</h2>
-              {userData?.taxRecords?.length > 0 && (
-                <span className="px-2 py-1 rounded-full bg-orange-500/20 text-orange-300 text-xs font-bold">
-                  {userData.taxRecords.length}
-                </span>
-              )}
-            </div>
+          <div className="space-y-6">
+            {/* Steuer-Übersicht Card */}
+            {userData?.taxSummary && userData.taxSummary.gesamtGezahlt > 0 && (
+              <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                <div className="flex items-center gap-3 mb-6">
+                  <Receipt className="w-6 h-6 text-white/60" />
+                  <h2 className="text-xl font-bold text-white">Steuer-Übersicht</h2>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Gesamt gezahlt */}
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-red-500/10 to-orange-500/10 border border-red-500/20">
+                    <p className="text-sm text-white/60 mb-1">Gesamt gezahlt</p>
+                    <p className="text-2xl font-bold text-red-400">
+                      {userData.taxSummary.gesamtGezahlt.toLocaleString('de-DE')} €
+                    </p>
+                  </div>
+                  
+                  {/* Mögliche Rückerstattung (15% von gesamt) */}
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20">
+                    <p className="text-sm text-white/60 mb-1">Mögliche Rückerstattung</p>
+                    <p className="text-2xl font-bold text-green-400">
+                      {Math.floor(userData.taxSummary.gesamtGezahlt * 0.15).toLocaleString('de-DE')} €
+                    </p>
+                    <p className="text-xs text-green-400/60 mt-1">~15% zurück</p>
+                  </div>
+                  
+                  {/* Letzte Erklärung */}
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20">
+                    <p className="text-sm text-white/60 mb-1">Letzte Erklärung</p>
+                    {userData.taxSummary.letzteErklaerung ? (
+                      <p className="text-lg font-bold text-white">
+                        {new Date(userData.taxSummary.letzteErklaerung).toLocaleDateString('de-DE')}
+                      </p>
+                    ) : (
+                      <p className="text-lg font-bold text-blue-400">Noch keine</p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Info-Box */}
+                <div className="mt-4 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                  <div className="flex items-start gap-3">
+                    <TrendingUp className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-white mb-1">Steuererklärung einreichen</p>
+                      <p className="text-xs text-white/60 leading-relaxed">
+                        Reiche deine Steuererklärung beim Bot ein (<code className="px-1 py-0.5 rounded bg-white/10">/steuererklaerung</code>) um bis zu 15% deiner gezahlten Steuern zurückzuerhalten!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Steuer-Records Liste */}
+            <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
+              <div className="flex items-center gap-3 mb-6">
+                <FileText className="w-6 h-6 text-white/60" />
+                <h2 className="text-lg sm:text-xl font-bold text-white">Alle Steuereinträge</h2>
+                {userData?.taxRecords?.length > 0 && (
+                  <span className="px-2 py-1 rounded-full bg-orange-500/20 text-orange-300 text-xs font-bold">
+                    {userData.taxRecords.length}
+                  </span>
+                )}
+              </div>
             {userData?.taxRecords && userData.taxRecords.length > 0 ? (
               <>
                 <div className="space-y-3">
@@ -2497,6 +2553,7 @@ export default function ProfilPage() {
                 <p className="text-sm text-white/40">Du hast noch keine Steueraufzeichnungen.</p>
               </div>
             )}
+            </div>
           </div>
         )}
 
