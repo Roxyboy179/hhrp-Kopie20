@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Bell, BellOff, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
-export function PWANotifications({ userData, isPWA }) {
+export function PWANotifications({ userData, isPWA, discordUserId }) {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [permission, setPermission] = useState('default');
   const [isLoading, setIsLoading] = useState(false);
@@ -31,6 +31,11 @@ export function PWANotifications({ userData, isPWA }) {
 
     if (!('serviceWorker' in navigator)) {
       toast.error('Service Worker wird nicht unterstützt');
+      return;
+    }
+
+    if (!discordUserId) {
+      toast.error('Discord User ID nicht gefunden. Bitte einloggen.');
       return;
     }
 
@@ -72,8 +77,9 @@ export function PWANotifications({ userData, isPWA }) {
       
       console.log('[PWA Notifications] Subscription created:', subscription);
 
-      // 6. Send to Backend
-      console.log('[PWA Notifications] Sending to backend...');
+      // 6. Send to Backend with Discord User ID
+      console.log('[PWA Notifications] Sending to backend with User ID:', discordUserId);
+      
       const response = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: {
@@ -81,7 +87,7 @@ export function PWANotifications({ userData, isPWA }) {
         },
         body: JSON.stringify({
           subscription: subscription.toJSON(),
-          userId: userData?.character?.name || userData?.user_id || 'unknown'
+          userId: discordUserId
         })
       });
 

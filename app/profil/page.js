@@ -1786,7 +1786,7 @@ export default function ProfilPage() {
         {activeTab === 'benefits' && activeSubTab === 'pwa' && (
           <div className="space-y-6">
             {/* PWA Notifications Component */}
-            <PWANotifications userData={userData} isPWA={isPWA} />
+            <PWANotifications userData={userData} isPWA={isPWA} discordUserId={user?.id} />
             
             {/* PWA Status Card */}
             <div className={`glass rounded-2xl p-6 border ${isPWA ? 'border-green-500/30 bg-gradient-to-br from-green-500/10 to-emerald-500/10' : 'border-orange-500/30 bg-gradient-to-br from-orange-500/10 to-yellow-500/10'}`}>
