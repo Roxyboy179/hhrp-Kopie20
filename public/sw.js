@@ -1,6 +1,6 @@
 // Service Worker für HHRP PWA - Optimiert für Supabase
-const CACHE_NAME = 'hhrp-v3';
-const OFFLINE_CACHE = 'hhrp-offline-v3';
+const CACHE_NAME = 'hhrp-v4';
+const OFFLINE_CACHE = 'hhrp-offline-v4';
 
 // Statische Assets die gecacht werden sollen
 const STATIC_ASSETS = [
@@ -8,32 +8,21 @@ const STATIC_ASSETS = [
   '/icon-512.png',
   '/logo.webp',
   '/favicon.png',
+  '/offline.html',
 ];
 
 // Install Event - Cache nur statische Assets und Offline-Seite
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing...');
   event.waitUntil(
-    Promise.all([
-      // Cache statische Assets
-      caches.open(CACHE_NAME).then((cache) => {
-        console.log('[SW] Caching static assets');
-        return cache.addAll(STATIC_ASSETS).catch((error) => {
-          console.log('[SW] Cache static assets error:', error);
-        });
-      }),
-      // Cache Offline-Seite separat
-      caches.open(OFFLINE_CACHE).then((cache) => {
-        console.log('[SW] Caching offline page');
-        return fetch('/offline').then((response) => {
-          return cache.put('/offline', response);
-        }).catch((error) => {
-          console.log('[SW] Cache offline page error:', error);
-        });
-      })
-    ])
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('[SW] Caching static assets + offline.html');
+      return cache.addAll(STATIC_ASSETS).catch((error) => {
+        console.log('[SW] Cache assets error:', error);
+      });
+    })
   );
-  self.skipWaiting();
+  self.skipWait();
 });
 
 // Fetch Event - Intelligentes Caching
@@ -117,13 +106,26 @@ self.addEventListener('fetch', (event) => {
           // Wenn es eine Navigation ist und keine gecachte Version existiert → Offline-Seite
           if (event.request.mode === 'navigate') {
             console.log('[SW] Serving offline page');
-            return caches.match('/offline').then((offlinePage) => {
+            return caches.match('/offline.html').then((offlinePage) => {
               if (offlinePage) {
                 return offlinePage;
               }
-              // Fallback: Inline Offline-Seite
+              // Fallback: Einfache Offline-Nachricht
               return new Response(`
                 <!DOCTYPE html>
+                <html>
+                <head><title>Offline</title></head>
+                <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+                  <h1>Du bist offline</h1>
+                  <p>Keine Internetverbindung verfügbar.</p>
+                  <button onclick="window.location.reload()">Erneut versuchen</button>
+                </body>
+                </html>
+              `, {
+                headers: { 'Content-Type': 'text/html' }
+              });
+            });
+          }
                 <html lang="de">
                 <head>
                   <meta charset="UTF-8">

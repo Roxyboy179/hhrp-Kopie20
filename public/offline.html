@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - Hamburg Horizon RP</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 100%);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    /* Ambient Background Glow */
+    body::before {
+      content: '';
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+      border-radius: 50%;
+      filter: blur(100px);
+      animation: pulse 4s ease-in-out infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.2); opacity: 0.5; }
+    }
+    
+    .container {
+      text-align: center;
+      max-width: 600px;
+      position: relative;
+      z-index: 1;
+    }
+    
+    /* Glass Card */
+    .card {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 60px 40px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+    }
+    
+    /* Logo */
+    .logo-container {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 40px;
+    }
+    
+    .logo {
+      width: 100%;
+      height: 100%;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(59, 130, 246, 0.5);
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    /* Rotating Rings */
+    .ring {
+      position: absolute;
+      inset: -8px;
+      border: 2px dashed rgba(59, 130, 246, 0.3);
+      border-radius: 24px;
+      animation: rotate 12s linear infinite;
+    }
+    
+    .ring-2 {
+      inset: -16px;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      animation: rotate 8s linear infinite reverse;
+    }
+    
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    /* WiFi Icon */
+    .wifi-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 30px;
+      opacity: 0.8;
+      animation: fadeInOut 2s ease-in-out infinite;
+    }
+    
+    @keyframes fadeInOut {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+    
+    /* Title */
+    h1 {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, #ffffff 0%, #3b82f6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+    }
+    
+    /* Description */
+    .description {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.6);
+      line-height: 1.6;
+      margin-bottom: 32px;
+      max-width: 400px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 32px 0;
+    }
+    
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), transparent);
+    }
+    
+    .divider-text {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: rgba(255, 255, 255, 0.4);
+    }
+    
+    /* Button */
+    .button {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 32px;
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      text-decoration: none;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 15px;
+      transition: all 0.3s;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+    }
+    
+    .button:hover {
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.5);
+    }
+    
+    .button:active {
+      transform: translateY(0px);
+    }
+    
+    /* Status Badge */
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 32px;
+      padding: 12px 24px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 500;
+      color: rgba(239, 68, 68, 0.9);
+      transition: all 0.3s;
+    }
+    
+    .status.online {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: rgba(16, 185, 129, 0.3);
+      color: rgba(16, 185, 129, 0.9);
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: blink 2s ease-in-out infinite;
+    }
+    
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    
+    /* Footer */
+    .footer {
+      margin-top: 48px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.3);
+    }
+    
+    /* Mobile Responsive */
+    @media (max-width: 640px) {
+      .card {
+        padding: 40px 24px;
+      }
+      
+      h1 {
+        font-size: 28px;
+      }
+      
+      .logo-container {
+        width: 96px;
+        height: 96px;
+      }
+      
+      .wifi-icon {
+        width: 48px;
+        height: 48px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <!-- Logo -->
+      <div class="logo-container">
+        <div class="ring"></div>
+        <div class="ring ring-2"></div>
+        <img src="/icon-192.png" alt="Hamburg Horizon RP" class="logo">
+      </div>
+      
+      <!-- WiFi Off Icon (SVG) -->
+      <svg class="wifi-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 20H12.01M2.20001 8.77997C3.91001 7.15997 6.12001 6.15997 8.55001 5.99997M21.8 8.77997C19.74 6.94997 17 5.99997 14 5.99997M8.50001 13C9.91001 11.59 11.87 10.84 14 11M15.5 13C16.04 13.54 16.37 14.21 16.5 15M1 1L23 23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: rgba(239, 68, 68, 0.7);"/>
+      </svg>
+      
+      <!-- Title -->
+      <h1>Du bist offline</h1>
+      
+      <!-- Description -->
+      <p class="description">
+        Keine Internetverbindung verfügbar. Bitte überprüfe deine Netzwerkeinstellungen und versuche es erneut.
+      </p>
+      
+      <!-- Divider -->
+      <div class="divider">
+        <div class="divider-line"></div>
+        <span class="divider-text">Hamburg Horizon RP</span>
+        <div class="divider-line"></div>
+      </div>
+      
+      <!-- Button -->
+      <button class="button" id="retryBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M21.5 2V8M21.5 8H15.5M21.5 8L18 4.5C16.5 3 14.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22C17 22 21 18.5 21.5 13.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Erneut versuchen
+      </button>
+      
+      <!-- Status -->
+      <div class="status" id="status">
+        <span class="status-dot"></span>
+        <span id="statusText">Offline</span>
+      </div>
+      
+      <!-- Footer -->
+      <div class="footer">
+        Service Worker aktiv • PWA Mode
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Online-Status überwachen
+    function updateStatus() {
+      const status = document.getElementById('status');
+      const statusText = document.getElementById('statusText');
+      const retryBtn = document.getElementById('retryBtn');
+      
+      if (navigator.onLine) {
+        statusText.textContent = 'Online - Verbindung wiederhergestellt';
+        status.classList.add('online');
+        
+        // Automatisch zur Startseite nach 2 Sekunden
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
+      } else {
+        statusText.textContent = 'Offline';
+        status.classList.remove('online');
+      }
+    }
+    
+    // Initial check
+    updateStatus();
+    
+    // Event Listeners
+    window.addEventListener('online', updateStatus);
+    window.addEventListener('offline', updateStatus);
+    
+    // Retry Button
+    document.getElementById('retryBtn').addEventListener('click', (e) => {
+      if (!navigator.onLine) {
+        e.preventDefault();
+        
+        // Animation für Feedback
+        const btn = e.currentTarget;
+        btn.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+          btn.style.transform = '';
+        }, 200);
+        
+        // Prüfe Verbindung erneut
+        setTimeout(() => {
+          updateStatus();
+          if (!navigator.onLine) {
+            alert('⚠️ Keine Internetverbindung verfügbar.\nBitte überprüfe deine Netzwerkeinstellungen.');
+          }
+        }, 300);
+      } else {
+        window.location.href = '/';
+      }
+    });
+    
+    // Periodische Verbindungsprüfung alle 3 Sekunden
+    setInterval(() => {
+      updateStatus();
+    }, 3000);
+  </script>
+</body>
+</html>

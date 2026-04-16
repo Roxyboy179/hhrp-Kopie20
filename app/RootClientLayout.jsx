@@ -59,7 +59,7 @@ export default function RootClientLayout({ children }) {
       setIsOnline(isCurrentlyOnline);
       
       // Wenn initial offline, handle es
-      if (!isCurrentlyOnline && pathname !== '/offline') {
+      if (!isCurrentlyOnline && pathname !== '/offline.html' && pathname !== '/offline') {
         const offlineModusAktiv = localStorage.getItem('hhrp-offline') === 'true';
         
         if (offlineModusAktiv) {
@@ -70,7 +70,7 @@ export default function RootClientLayout({ children }) {
             });
           });
         } else {
-          router.push('/offline');
+          window.location.href = '/offline.html';
         }
       }
     };
@@ -78,8 +78,8 @@ export default function RootClientLayout({ children }) {
     const handleOnline = () => {
       console.log('✅ Online-Event erkannt');
       setIsOnline(true);
-      // Zurück zur Startseite wenn man wieder online ist (nur wenn man auf /offline war)
-      if (pathname === '/offline') {
+      // Zurück zur Startseite wenn man wieder online ist (nur wenn man auf /offline.html war)
+      if (pathname === '/offline.html' || pathname === '/offline') {
         router.push('/');
       }
     };
@@ -94,7 +94,7 @@ export default function RootClientLayout({ children }) {
       
       if (offlineModusAktiv) {
         // Nur Toast-Benachrichtigung, keine Weiterleitung
-        if (pathname !== '/offline') {
+        if (pathname !== '/offline.html' && pathname !== '/offline') {
           import('sonner').then(({ toast }) => {
             toast.info('Du bist offline', {
               description: 'Offline-Modus ist aktiviert. Gecachte Daten werden verwendet.',
@@ -103,10 +103,10 @@ export default function RootClientLayout({ children }) {
           });
         }
       } else {
-        // Weiterleitung zur Offline-Seite (außer man ist schon dort)
-        if (pathname !== '/offline') {
-          console.log('→ Weiterleitung zu /offline');
-          router.push('/offline');
+        // Weiterleitung zur statischen Offline-HTML (außer man ist schon dort)
+        if (pathname !== '/offline.html' && pathname !== '/offline') {
+          console.log('→ Weiterleitung zu /offline.html');
+          window.location.href = '/offline.html';
         }
       }
     };
