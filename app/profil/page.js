@@ -982,6 +982,9 @@ export default function ProfilPage() {
   const [pushLoading, setPushLoading] = useState(false);
   const [customBg, setCustomBg] = useState(null);
   const [bgUploading, setBgUploading] = useState(false);
+  const [kompaktModus, setKompaktModus] = useState(false);
+  const [akzentFarbe, setAkzentFarbe] = useState('blue');
+  const [animationen, setAnimationen] = useState(true);
   const [bewerbungen, setBewerbungen] = useState([]);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(null);
@@ -1076,6 +1079,18 @@ export default function ProfilPage() {
     // Custom Background
     const savedBg = localStorage.getItem('hhrp-custom-bg');
     if (savedBg) setCustomBg(savedBg);
+
+    // Kompaktmodus
+    const savedKompakt = localStorage.getItem('hhrp-kompakt');
+    if (savedKompakt === 'true') setKompaktModus(true);
+
+    // Akzentfarbe
+    const savedAkzent = localStorage.getItem('hhrp-akzent');
+    if (savedAkzent) setAkzentFarbe(savedAkzent);
+
+    // Animationen
+    const savedAnim = localStorage.getItem('hhrp-animationen');
+    if (savedAnim === 'false') setAnimationen(false);
 
     // Push Notification Status
     if ('Notification' in window && 'serviceWorker' in navigator) {
@@ -1288,7 +1303,7 @@ export default function ProfilPage() {
                 </div>
               </div>
               <a 
-                href="https://discord.gg/hamburg-horizon-rp" 
+                href="https://discord.gg/E5sPAyGC86" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 px-6 py-3 bg-[#5865F2] hover:bg-[#4752C4] text-white rounded-xl font-medium transition-all"
@@ -3467,129 +3482,121 @@ export default function ProfilPage() {
         {/* EINSTELLUNGEN TAB */}
         {activeTab === 'settings' && (
           <div className="space-y-6">
-            {/* Push-Benachrichtigungen */}
+
+            {/* === DARSTELLUNG === */}
             <div className="glass rounded-2xl p-6 border border-white/[0.08]">
               <div className="flex items-center gap-3 mb-6">
-                <BellRing className="w-6 h-6 text-blue-400" />
-                <h2 className="text-xl font-bold text-white">Push-Benachrichtigungen</h2>
+                <Monitor className="w-6 h-6 text-cyan-400" />
+                <div>
+                  <h2 className="text-xl font-bold text-white">Darstellung</h2>
+                  <p className="text-xs text-white/35">Passe das Aussehen der Seite an</p>
+                </div>
               </div>
 
-              {isPWA ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg ${pushEnabled ? 'bg-green-500/15' : 'bg-white/[0.06]'} flex items-center justify-center`}>
-                        {pushEnabled ? (
-                          <BellRing className="w-5 h-5 text-green-400" />
-                        ) : (
-                          <BellOff className="w-5 h-5 text-white/30" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-medium text-white">Benachrichtigungen</p>
-                        <p className="text-xs text-white/40">
-                          {pushEnabled ? 'Du erhältst Push-Benachrichtigungen' : 'Push-Benachrichtigungen sind deaktiviert'}
-                        </p>
-                      </div>
+              <div className="space-y-4">
+                {/* Kompaktmodus */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg ${kompaktModus ? 'bg-cyan-500/15' : 'bg-white/[0.06]'} flex items-center justify-center`}>
+                      <LayoutDashboard className={`w-5 h-5 ${kompaktModus ? 'text-cyan-400' : 'text-white/30'}`} />
                     </div>
-                    <button
-                      onClick={async () => {
-                        setPushLoading(true);
-                        try {
-                          if (pushEnabled) {
-                            // Deaktivieren: Subscription auf dem Server löschen
-                            const registration = await navigator.serviceWorker.ready;
-                            const subscription = await registration.pushManager.getSubscription();
-                            if (subscription) {
-                              // Unsubscribe lokal
-                              await subscription.unsubscribe();
-                              // Subscription auf dem Server löschen
-                              await fetch('/api/push/unsubscribe', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ userId: user?.id })
-                              });
-                            }
-                            setPushEnabled(false);
-                            toast.success('Benachrichtigungen deaktiviert');
-                          } else {
-                            // Aktivieren: Permission anfordern
-                            const permission = await Notification.requestPermission();
-                            if (permission === 'granted') {
-                              // Re-subscribe
-                              const registration = await navigator.serviceWorker.ready;
-                              const vapidRes = await fetch('/api/push/vapid-key');
-                              const { publicKey } = await vapidRes.json();
-                              const subscription = await registration.pushManager.subscribe({
-                                userVisibleOnly: true,
-                                applicationServerKey: publicKey
-                              });
-                              await fetch('/api/push/subscribe', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  subscription: subscription.toJSON(),
-                                  userId: user?.id,
-                                  username: user?.username
-                                })
-                              });
-                              setPushEnabled(true);
-                              toast.success('Benachrichtigungen aktiviert!');
-                            } else {
-                              toast.error('Berechtigung verweigert', { description: 'Bitte erlaube Benachrichtigungen in deinen Browser-Einstellungen.' });
-                            }
-                          }
-                        } catch (err) {
-                          console.error('Push toggle error:', err);
-                          toast.error('Fehler beim Umschalten');
-                        } finally {
-                          setPushLoading(false);
-                        }
-                      }}
-                      disabled={pushLoading}
-                      className={`relative w-14 h-7 rounded-full transition-all duration-300 ${pushEnabled ? 'bg-green-500' : 'bg-white/10'} ${pushLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                    >
-                      <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 ${pushEnabled ? 'left-7' : 'left-0.5'}`} />
-                    </button>
+                    <div>
+                      <p className="font-medium text-white text-sm">Kompaktmodus</p>
+                      <p className="text-xs text-white/40">Weniger Abstände und kleinere Elemente</p>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => {
+                      const newVal = !kompaktModus;
+                      setKompaktModus(newVal);
+                      localStorage.setItem('hhrp-kompakt', newVal.toString());
+                      window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { kompakt: newVal } }));
+                      toast.success(newVal ? 'Kompaktmodus aktiviert' : 'Kompaktmodus deaktiviert');
+                    }}
+                    className={`relative w-14 h-7 rounded-full transition-all duration-300 ${kompaktModus ? 'bg-cyan-500' : 'bg-white/10'} cursor-pointer`}
+                  >
+                    <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 ${kompaktModus ? 'left-7' : 'left-0.5'}`} />
+                  </button>
+                </div>
 
-                  {pushEnabled && (
-                    <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/15">
-                      <p className="text-sm text-white/60">Du wirst benachrichtigt bei:</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
-                        {[
-                          { icon: CircleDollarSign, text: 'Cooldown fertig (/collect, /rob)' },
-                          { icon: Gift, text: 'Daily Bonus verfügbar' },
-                          { icon: Shield, text: 'Wartungsarbeiten' },
-                          { icon: Sparkles, text: 'Neue Events' }
-                        ].map((item, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <item.icon className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
-                            <span className="text-xs text-white/50">{item.text}</span>
-                          </div>
-                        ))}
-                      </div>
+                {/* Animationen */}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg ${animationen ? 'bg-purple-500/15' : 'bg-white/[0.06]'} flex items-center justify-center`}>
+                      <Sparkles className={`w-5 h-5 ${animationen ? 'text-purple-400' : 'text-white/30'}`} />
                     </div>
-                  )}
+                    <div>
+                      <p className="font-medium text-white text-sm">Animationen</p>
+                      <p className="text-xs text-white/40">Übergänge und Hover-Effekte</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const newVal = !animationen;
+                      setAnimationen(newVal);
+                      localStorage.setItem('hhrp-animationen', newVal.toString());
+                      window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { animationen: newVal } }));
+                      toast.success(newVal ? 'Animationen aktiviert' : 'Animationen deaktiviert');
+                    }}
+                    className={`relative w-14 h-7 rounded-full transition-all duration-300 ${animationen ? 'bg-purple-500' : 'bg-white/10'} cursor-pointer`}
+                  >
+                    <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 ${animationen ? 'left-7' : 'left-0.5'}`} />
+                  </button>
                 </div>
-              ) : (
-                <div className="p-6 rounded-xl bg-white/[0.02] border border-white/5 text-center">
-                  <Smartphone className="w-10 h-10 text-white/15 mx-auto mb-3" />
-                  <p className="text-white/40 text-sm">Push-Benachrichtigungen sind nur als PWA (installierte App) verfügbar.</p>
-                  <p className="text-white/25 text-xs mt-1">Installiere Hamburg Horizon als App um diese Funktion zu nutzen.</p>
+
+                {/* Akzentfarbe */}
+                <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center">
+                      <Gem className="w-5 h-5 text-white/40" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-white text-sm">Akzentfarbe</p>
+                      <p className="text-xs text-white/40">Wähle deine bevorzugte Farbe</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    {[
+                      { id: 'blue', color: 'bg-blue-500', ring: 'ring-blue-400' },
+                      { id: 'purple', color: 'bg-purple-500', ring: 'ring-purple-400' },
+                      { id: 'cyan', color: 'bg-cyan-500', ring: 'ring-cyan-400' },
+                      { id: 'green', color: 'bg-green-500', ring: 'ring-green-400' },
+                      { id: 'pink', color: 'bg-pink-500', ring: 'ring-pink-400' },
+                      { id: 'orange', color: 'bg-orange-500', ring: 'ring-orange-400' },
+                      { id: 'red', color: 'bg-red-500', ring: 'ring-red-400' },
+                      { id: 'yellow', color: 'bg-yellow-500', ring: 'ring-yellow-400' }
+                    ].map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => {
+                          setAkzentFarbe(c.id);
+                          localStorage.setItem('hhrp-akzent', c.id);
+                          window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { akzent: c.id } }));
+                          toast.success(`Akzentfarbe: ${c.id.charAt(0).toUpperCase() + c.id.slice(1)}`);
+                        }}
+                        className={`w-9 h-9 rounded-full ${c.color} transition-all ${akzentFarbe === c.id ? `ring-2 ${c.ring} ring-offset-2 ring-offset-[#0a0a1a] scale-110` : 'opacity-60 hover:opacity-100 hover:scale-105'}`}
+                      />
+                    ))}
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
 
-            {/* Hintergrundbild */}
+            {/* === HINTERGRUNDBILD (PWA) === */}
             <div className="glass rounded-2xl p-6 border border-white/[0.08]">
-              <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center gap-3 mb-2">
                 <ImagePlus className="w-6 h-6 text-purple-400" />
-                <h2 className="text-xl font-bold text-white">Eigenes Hintergrundbild</h2>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Eigenes Hintergrundbild</h2>
+                  <p className="text-xs text-white/35">{isPWA ? 'Lade ein Bild hoch, das als Hintergrund angezeigt wird' : 'Nur als installierte App verfügbar'}</p>
+                </div>
+                {!isPWA && (
+                  <span className="ml-auto px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.08] text-[10px] font-bold text-white/30 uppercase tracking-wider">Nur PWA</span>
+                )}
               </div>
 
               {isPWA ? (
-                <div className="space-y-4">
+                <div className="space-y-4 mt-4">
                   {/* Vorschau */}
                   {customBg && (
                     <div className="relative rounded-xl overflow-hidden border border-white/[0.08]">
@@ -3600,12 +3607,13 @@ export default function ProfilPage() {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                       <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                        <span className="text-xs text-white/60 bg-black/40 px-2 py-1 rounded-lg">Aktives Hintergrundbild</span>
+                        <span className="text-xs text-white/60 bg-black/40 px-2 py-1 rounded-lg flex items-center gap-1.5">
+                          <BadgeCheck className="w-3 h-3 text-green-400" /> Aktiv
+                        </span>
                         <button
                           onClick={() => {
                             localStorage.removeItem('hhrp-custom-bg');
                             setCustomBg(null);
-                            // Event für RootClientLayout
                             window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
                             toast.success('Hintergrundbild entfernt');
                           }}
@@ -3627,19 +3635,14 @@ export default function ProfilPage() {
                       onChange={async (e) => {
                         const file = e.target.files?.[0];
                         if (!file) return;
-
-                        // Größen-Check: Max 10MB
                         if (file.size > 10 * 1024 * 1024) {
                           toast.error('Datei zu groß', { description: 'Maximale Größe: 10 MB' });
                           return;
                         }
-
-                        // Typ-Check
                         if (!file.type.startsWith('image/')) {
                           toast.error('Ungültiges Format', { description: 'Nur Bilder (PNG, JPG, WebP, GIF) erlaubt.' });
                           return;
                         }
-
                         setBgUploading(true);
                         try {
                           const reader = new FileReader();
@@ -3648,7 +3651,6 @@ export default function ProfilPage() {
                             try {
                               localStorage.setItem('hhrp-custom-bg', base64);
                               setCustomBg(base64);
-                              // Event für RootClientLayout
                               window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: base64 } }));
                               toast.success('Hintergrundbild gespeichert!');
                             } catch (storageErr) {
@@ -3656,16 +3658,12 @@ export default function ProfilPage() {
                             }
                             setBgUploading(false);
                           };
-                          reader.onerror = () => {
-                            toast.error('Fehler beim Lesen der Datei');
-                            setBgUploading(false);
-                          };
+                          reader.onerror = () => { toast.error('Fehler beim Lesen'); setBgUploading(false); };
                           reader.readAsDataURL(file);
                         } catch (err) {
                           toast.error('Fehler beim Hochladen');
                           setBgUploading(false);
                         }
-                        // Reset input
                         e.target.value = '';
                       }}
                     />
@@ -3679,17 +3677,56 @@ export default function ProfilPage() {
                   </label>
 
                   <p className="text-xs text-white/25 text-center">
-                    Das Hintergrundbild wird lokal auf deinem Gerät gespeichert und ist nur für dich sichtbar.
+                    Wird lokal auf deinem Gerät gespeichert und ist nur für dich sichtbar.
                   </p>
                 </div>
               ) : (
-                <div className="p-6 rounded-xl bg-white/[0.02] border border-white/5 text-center">
-                  <ImagePlus className="w-10 h-10 text-white/15 mx-auto mb-3" />
-                  <p className="text-white/40 text-sm">Eigene Hintergrundbilder sind nur als PWA (installierte App) verfügbar.</p>
-                  <p className="text-white/25 text-xs mt-1">Installiere Hamburg Horizon als App um diese Funktion zu nutzen.</p>
+                <div className="p-6 rounded-xl bg-white/[0.02] border border-white/5 text-center mt-4">
+                  <Smartphone className="w-10 h-10 text-white/15 mx-auto mb-3" />
+                  <p className="text-white/40 text-sm">Installiere Hamburg Horizon als App, um ein eigenes Hintergrundbild festzulegen.</p>
                 </div>
               )}
             </div>
+
+            {/* === ÜBER === */}
+            <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+              <div className="flex items-center gap-3 mb-4">
+                <Globe className="w-6 h-6 text-white/40" />
+                <h2 className="text-xl font-bold text-white">Über</h2>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02]">
+                  <span className="text-sm text-white/50">Version</span>
+                  <span className="text-sm text-white/70 font-mono">2.0.0</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02]">
+                  <span className="text-sm text-white/50">Modus</span>
+                  <span className={`text-sm font-medium ${isPWA ? 'text-green-400' : 'text-white/70'}`}>{isPWA ? 'PWA (App)' : 'Browser'}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02]">
+                  <span className="text-sm text-white/50">Einstellungen zurücksetzen</span>
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem('hhrp-custom-bg');
+                      localStorage.removeItem('hhrp-kompakt');
+                      localStorage.removeItem('hhrp-akzent');
+                      localStorage.removeItem('hhrp-animationen');
+                      setCustomBg(null);
+                      setKompaktModus(false);
+                      setAkzentFarbe('blue');
+                      setAnimationen(true);
+                      window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
+                      window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { kompakt: false, akzent: 'blue', animationen: true } }));
+                      toast.success('Alle Einstellungen zurückgesetzt');
+                    }}
+                    className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs rounded-lg border border-red-500/20 transition-all"
+                  >
+                    Zurücksetzen
+                  </button>
+                </div>
+              </div>
+            </div>
+
           </div>
         )}
         </>

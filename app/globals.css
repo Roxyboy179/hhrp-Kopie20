@@ -18,6 +18,51 @@ select option:hover {
   color: #ffffff;
 }
 
+/* ===== KOMPAKTMODUS ===== */
+.hhrp-compact .glass {
+  padding: 0.75rem !important;
+}
+.hhrp-compact .space-y-6 > * + * {
+  margin-top: 1rem !important;
+}
+.hhrp-compact .space-y-4 > * + * {
+  margin-top: 0.5rem !important;
+}
+.hhrp-compact .rounded-2xl {
+  border-radius: 0.75rem !important;
+}
+.hhrp-compact .p-6 {
+  padding: 0.75rem !important;
+}
+.hhrp-compact .p-8 {
+  padding: 1rem !important;
+}
+.hhrp-compact .text-xl {
+  font-size: 1rem !important;
+}
+.hhrp-compact .text-2xl {
+  font-size: 1.125rem !important;
+}
+.hhrp-compact .gap-6 {
+  gap: 0.75rem !important;
+}
+.hhrp-compact .gap-4 {
+  gap: 0.5rem !important;
+}
+.hhrp-compact .mb-6 {
+  margin-bottom: 0.75rem !important;
+}
+
+/* ===== ANIMATIONEN DEAKTIVIERT ===== */
+.hhrp-no-anim *,
+.hhrp-no-anim *::before,
+.hhrp-no-anim *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
 /* ===== NEW ENTRY ANIMATIONS ===== */
 @keyframes pulse-slow {
   0%, 100% {

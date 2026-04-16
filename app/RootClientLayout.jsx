@@ -18,21 +18,37 @@ import Link from 'next/link';
 export default function RootClientLayout({ children }) {
   const [splashDone, setSplashDone] = useState(false);
   const [customBg, setCustomBg] = useState(null);
+  const [kompaktModus, setKompaktModus] = useState(false);
+  const [animationen, setAnimationen] = useState(true);
   const pathname = usePathname();
   const isProfilePage = pathname === '/profil';
   const handleSplashComplete = useCallback(() => setSplashDone(true), []);
 
-  // Custom Background aus localStorage laden
+  // Custom Background und Einstellungen aus localStorage laden
   useEffect(() => {
     const savedBg = localStorage.getItem('hhrp-custom-bg');
     if (savedBg) setCustomBg(savedBg);
+
+    const savedKompakt = localStorage.getItem('hhrp-kompakt');
+    if (savedKompakt === 'true') setKompaktModus(true);
+
+    const savedAnim = localStorage.getItem('hhrp-animationen');
+    if (savedAnim === 'false') setAnimationen(false);
 
     // Auf Änderungen vom Profil-Einstellungen hören
     const handleBgChange = (e) => {
       setCustomBg(e.detail?.bg || null);
     };
+    const handleSettingsChange = (e) => {
+      if (e.detail?.kompakt !== undefined) setKompaktModus(e.detail.kompakt);
+      if (e.detail?.animationen !== undefined) setAnimationen(e.detail.animationen);
+    };
     window.addEventListener('hhrp-bg-change', handleBgChange);
-    return () => window.removeEventListener('hhrp-bg-change', handleBgChange);
+    window.addEventListener('hhrp-settings-change', handleSettingsChange);
+    return () => {
+      window.removeEventListener('hhrp-bg-change', handleBgChange);
+      window.removeEventListener('hhrp-settings-change', handleSettingsChange);
+    };
   }, []);
 
   // Register Service Worker
@@ -75,13 +91,13 @@ export default function RootClientLayout({ children }) {
     <AuthProvider>
       <ThemeProvider>
         {!splashDone && <SplashScreen onComplete={handleSplashComplete} />}
-        <div style={{ 
-          opacity: splashDone ? 1 : 0, 
-          transition: 'opacity 0.5s ease',
-          ...(customBg ? {
-            position: 'relative',
-          } : {})
-        }}>
+        <div 
+          className={`${kompaktModus ? 'hhrp-compact' : ''} ${!animationen ? 'hhrp-no-anim' : ''}`}
+          style={{ 
+            opacity: splashDone ? 1 : 0, 
+            transition: animationen ? 'opacity 0.5s ease' : 'none',
+            ...(customBg ? { position: 'relative' } : {})
+          }}>
           {customBg && (
             <div 
               style={{
