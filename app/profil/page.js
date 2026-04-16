@@ -3586,18 +3586,25 @@ export default function ProfilPage() {
             {(() => {
               const licenses = userData?.licenses || [];
               const hasVipForCustomBg = licenses.includes('vip_platinum') || licenses.includes('vip_ultimate') || licenses.includes('vip_elite_plus');
-              const standardBgUrl = '/hhrp-standard-bg.webp';
               const isStandardBgActive = customBg === 'standard';
-              const isCustomBgActive = customBg && customBg !== 'standard';
+              const isPresetBg = customBg && customBg.startsWith('preset:');
+              const isCustomBgActive = customBg && customBg !== 'standard' && !isPresetBg;
 
-              // Auto-Entfernung: Wenn kein VIP Platinum+ aber custom BG vorhanden
-              if (!hasVipForCustomBg && isCustomBgActive) {
-                // Automatisch entfernen
+              const presetBackgrounds = [
+                { id: 'preset:city-1', src: '/bg-city-1.webp', name: 'City Skyline' },
+                { id: 'preset:city-2', src: '/bg-city-2.webp', name: 'Aerial Night' },
+                { id: 'preset:city-3', src: '/bg-city-3.webp', name: 'Dark Metropole' },
+                { id: 'preset:neon-1', src: '/bg-neon-1.webp', name: 'Neon Streets' },
+                { id: 'preset:neon-2', src: '/bg-neon-2.webp', name: 'Green Neon' }
+              ];
+
+              // Auto-Entfernung: Wenn kein VIP Platinum+ aber custom/preset BG vorhanden
+              if (!hasVipForCustomBg && (isCustomBgActive || isPresetBg)) {
                 setTimeout(() => {
                   localStorage.removeItem('hhrp-custom-bg');
                   setCustomBg(null);
                   window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
-                  toast.info('Eigenes Hintergrundbild entfernt', { description: 'Du benötigst VIP Platinum oder höher für ein eigenes Bild.' });
+                  toast.info('Hintergrundbild entfernt', { description: 'Du benötigst VIP Platinum oder höher.' });
                 }, 100);
               }
 
@@ -3611,75 +3618,100 @@ export default function ProfilPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     {/* Standard Hintergrundbild - für ALLE Nutzer */}
-                    <div className={`p-4 rounded-xl border transition-all ${isStandardBgActive ? 'border-green-500/30 bg-green-500/5' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}>
-                      <div className="flex items-start gap-4">
-                        <div className="w-20 h-14 rounded-lg overflow-hidden border border-white/10 flex-shrink-0">
-                          <img src={standardBgUrl} alt="Standard" className="w-full h-full object-cover" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-white text-sm">Hamburg Horizon RP</h3>
-                            {isStandardBgActive && (
-                              <BadgeCheck className="w-4 h-4 text-green-400 flex-shrink-0" />
-                            )}
+                    <div>
+                      <p className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3">Für alle Nutzer</p>
+                      <div 
+                        onClick={() => {
+                          if (isStandardBgActive) {
+                            localStorage.removeItem('hhrp-custom-bg');
+                            setCustomBg(null);
+                            window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
+                            toast.success('Hintergrundbild deaktiviert');
+                          } else {
+                            localStorage.setItem('hhrp-custom-bg', 'standard');
+                            setCustomBg('standard');
+                            window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: 'standard' } }));
+                            toast.success('Standard-Hintergrund aktiviert!');
+                          }
+                        }}
+                        className={`p-3 rounded-xl border cursor-pointer transition-all ${isStandardBgActive ? 'border-green-500/30 bg-green-500/5 ring-1 ring-green-500/20' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-20 h-14 rounded-lg overflow-hidden border border-white/10 flex-shrink-0">
+                            <img src="/hhrp-standard-bg.webp" alt="Standard" className="w-full h-full object-cover" />
                           </div>
-                          <p className="text-xs text-white/40">Standard Hintergrundbild für alle Nutzer</p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-white text-sm">Hamburg Horizon RP</h3>
+                              {isStandardBgActive && <BadgeCheck className="w-4 h-4 text-green-400" />}
+                            </div>
+                            <p className="text-xs text-white/40">Standard Hintergrundbild</p>
+                          </div>
                         </div>
-                        <button
-                          onClick={() => {
-                            if (isStandardBgActive) {
-                              localStorage.removeItem('hhrp-custom-bg');
-                              setCustomBg(null);
-                              window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
-                              toast.success('Hintergrundbild deaktiviert');
-                            } else {
-                              localStorage.setItem('hhrp-custom-bg', 'standard');
-                              setCustomBg('standard');
-                              window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: 'standard' } }));
-                              toast.success('Standard-Hintergrund aktiviert!');
-                            }
-                          }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0 ${isStandardBgActive ? 'bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20' : 'bg-green-500/15 text-green-400 hover:bg-green-500/25 border border-green-500/20'}`}
-                        >
-                          {isStandardBgActive ? 'Deaktivieren' : 'Aktivieren'}
-                        </button>
                       </div>
                     </div>
 
-                    {/* Eigenes Bild - nur PWA + VIP Platinum+ */}
-                    <div className={`p-4 rounded-xl border transition-all ${isCustomBgActive ? 'border-purple-500/30 bg-purple-500/5' : 'border-white/[0.06] bg-white/[0.02]'}`}>
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className={`w-10 h-10 rounded-lg ${hasVipForCustomBg && isPWA ? 'bg-purple-500/15' : 'bg-white/[0.04]'} flex items-center justify-center flex-shrink-0`}>
-                          <Crown className={`w-5 h-5 ${hasVipForCustomBg && isPWA ? 'text-purple-400' : 'text-white/20'}`} />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-white text-sm">Eigenes Logo / GIF</h3>
-                            {isCustomBgActive && <BadgeCheck className="w-4 h-4 text-purple-400" />}
-                          </div>
-                          <p className="text-xs text-white/40">
-                            {hasVipForCustomBg && isPWA 
-                              ? 'Lade dein eigenes Bild oder GIF als Hintergrund hoch'
-                              : 'Erfordert PWA + VIP Platinum oder höher'}
-                          </p>
-                        </div>
-                        {!(hasVipForCustomBg && isPWA) && (
-                          <span className="px-2 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-[10px] font-bold text-yellow-400 uppercase tracking-wider flex-shrink-0">
-                            VIP Platinum+
+                    {/* VIP Platinum+ Hintergrundbilder */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <p className="text-xs font-medium text-white/50 uppercase tracking-wider">VIP Platinum+ Exklusiv</p>
+                        {!hasVipForCustomBg && (
+                          <span className="px-2 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-[10px] font-bold text-yellow-400 uppercase tracking-wider">
+                            Gesperrt
                           </span>
                         )}
                       </div>
 
-                      {hasVipForCustomBg && isPWA ? (
-                        <div className="space-y-3 mt-3">
-                          {/* Custom BG Vorschau */}
-                          {isCustomBgActive && (
-                            <div className="relative rounded-xl overflow-hidden border border-white/[0.08]">
-                              <img src={customBg} alt="Eigenes Hintergrundbild" className="w-full h-36 object-cover" />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                              <div className="absolute bottom-3 right-3">
+                      {hasVipForCustomBg ? (
+                        <div className="space-y-4">
+                          {/* Vorinstallierte Bilder Grid */}
+                          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                            {presetBackgrounds.map((bg) => (
+                              <div
+                                key={bg.id}
+                                onClick={() => {
+                                  if (customBg === bg.id) {
+                                    localStorage.removeItem('hhrp-custom-bg');
+                                    setCustomBg(null);
+                                    window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
+                                    toast.success('Hintergrundbild deaktiviert');
+                                  } else {
+                                    localStorage.setItem('hhrp-custom-bg', bg.id);
+                                    setCustomBg(bg.id);
+                                    window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: bg.id } }));
+                                    toast.success(`${bg.name} aktiviert!`);
+                                  }
+                                }}
+                                className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition-all aspect-[4/3] ${customBg === bg.id ? 'border-purple-500 ring-2 ring-purple-500/30 scale-[1.02]' : 'border-white/10 hover:border-white/25 hover:scale-[1.02]'}`}
+                              >
+                                <img src={bg.src} alt={bg.name} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                                <p className="absolute bottom-1.5 left-2 text-[10px] text-white/70 font-medium">{bg.name}</p>
+                                {customBg === bg.id && (
+                                  <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
+                                    <Check className="w-3 h-3 text-white" />
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Eigenes Bild Upload */}
+                          <div className={`p-4 rounded-xl border ${isCustomBgActive ? 'border-purple-500/30 bg-purple-500/5' : 'border-white/[0.06] bg-white/[0.02]'}`}>
+                            <div className="flex items-center gap-3 mb-3">
+                              <Upload className="w-5 h-5 text-purple-400" />
+                              <div>
+                                <h3 className="font-semibold text-white text-sm">Eigenes Logo / GIF hochladen</h3>
+                                <p className="text-xs text-white/40">PNG, JPG, WebP, GIF (max. 10 MB)</p>
+                              </div>
+                              {isCustomBgActive && <BadgeCheck className="w-4 h-4 text-purple-400 ml-auto" />}
+                            </div>
+
+                            {isCustomBgActive && (
+                              <div className="relative rounded-lg overflow-hidden border border-white/[0.08] mb-3">
+                                <img src={customBg} alt="Eigenes Bild" className="w-full h-28 object-cover" />
                                 <button
                                   onClick={() => {
                                     localStorage.removeItem('hhrp-custom-bg');
@@ -3687,74 +3719,77 @@ export default function ProfilPage() {
                                     window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
                                     toast.success('Eigenes Hintergrundbild entfernt');
                                   }}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/80 hover:bg-red-500 text-white text-xs rounded-lg transition-all"
+                                  className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 bg-red-500/80 hover:bg-red-500 text-white text-[10px] rounded-md transition-all"
                                 >
-                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <Trash2 className="w-3 h-3" />
                                   Entfernen
                                 </button>
                               </div>
-                            </div>
-                          )}
+                            )}
 
-                          {/* Upload */}
-                          <label className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed transition-all cursor-pointer ${isCustomBgActive ? 'border-white/10 hover:border-white/20 bg-white/[0.01]' : 'border-purple-500/30 hover:border-purple-500/50 bg-purple-500/5'}`}>
-                            <input
-                              type="file"
-                              accept="image/png,image/jpeg,image/webp,image/gif"
-                              className="hidden"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                if (file.size > 10 * 1024 * 1024) {
-                                  toast.error('Datei zu groß', { description: 'Maximale Größe: 10 MB' });
-                                  return;
-                                }
-                                if (!file.type.startsWith('image/')) {
-                                  toast.error('Ungültiges Format', { description: 'Nur Bilder erlaubt.' });
-                                  return;
-                                }
-                                setBgUploading(true);
-                                try {
+                            <label className="flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed border-purple-500/30 hover:border-purple-500/50 bg-purple-500/5 cursor-pointer transition-all">
+                              <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp,image/gif"
+                                className="hidden"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  if (file.size > 10 * 1024 * 1024) {
+                                    toast.error('Datei zu groß', { description: 'Maximale Größe: 10 MB' });
+                                    return;
+                                  }
+                                  if (!file.type.startsWith('image/')) {
+                                    toast.error('Ungültiges Format', { description: 'Nur Bilder erlaubt.' });
+                                    return;
+                                  }
+                                  setBgUploading(true);
                                   const reader = new FileReader();
                                   reader.onload = (event) => {
-                                    const base64 = event.target.result;
                                     try {
-                                      localStorage.setItem('hhrp-custom-bg', base64);
-                                      setCustomBg(base64);
-                                      window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: base64 } }));
+                                      localStorage.setItem('hhrp-custom-bg', event.target.result);
+                                      setCustomBg(event.target.result);
+                                      window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: event.target.result } }));
                                       toast.success('Eigenes Hintergrundbild gespeichert!');
-                                    } catch (storageErr) {
-                                      toast.error('Speicherfehler', { description: 'Das Bild ist zu groß für den Speicher. Versuche ein kleineres Bild.' });
+                                    } catch (err) {
+                                      toast.error('Speicherfehler', { description: 'Bild zu groß. Versuche ein kleineres.' });
                                     }
                                     setBgUploading(false);
                                   };
-                                  reader.onerror = () => { toast.error('Fehler beim Lesen'); setBgUploading(false); };
+                                  reader.onerror = () => { toast.error('Fehler'); setBgUploading(false); };
                                   reader.readAsDataURL(file);
-                                } catch (err) {
-                                  toast.error('Fehler beim Hochladen');
-                                  setBgUploading(false);
-                                }
-                                e.target.value = '';
-                              }}
-                            />
-                            {bgUploading ? (
-                              <Loader2 className="w-6 h-6 text-purple-400 animate-spin mb-1" />
-                            ) : (
-                              <Upload className="w-6 h-6 text-purple-400 mb-1" />
-                            )}
-                            <p className="text-sm font-medium text-white">{isCustomBgActive ? 'Bild ändern' : 'Bild oder GIF hochladen'}</p>
-                            <p className="text-xs text-white/35 mt-0.5">PNG, JPG, WebP, GIF (max. 10 MB)</p>
-                          </label>
+                                  e.target.value = '';
+                                }}
+                              />
+                              {bgUploading ? (
+                                <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
+                              ) : (
+                                <Upload className="w-4 h-4 text-purple-400" />
+                              )}
+                              <span className="text-sm text-purple-400 font-medium">{isCustomBgActive ? 'Anderes Bild wählen' : 'Bild hochladen'}</span>
+                            </label>
+                          </div>
                         </div>
                       ) : (
-                        <div className="p-4 rounded-lg bg-white/[0.02] border border-white/5 mt-3">
-                          <div className="flex items-center gap-2">
-                            <Lock className="w-4 h-4 text-white/20 flex-shrink-0" />
-                            <p className="text-xs text-white/35">
-                              {!isPWA 
-                                ? 'Installiere zuerst die App und hol dir VIP Platinum oder höher.'
-                                : 'Du benötigst VIP Platinum, VIP Ultimate oder VIP Elite Plus für ein eigenes Hintergrundbild.'}
-                            </p>
+                        <div className="space-y-3">
+                          {/* Gesperrte Vorschau */}
+                          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 opacity-40 pointer-events-none">
+                            {presetBackgrounds.map((bg) => (
+                              <div key={bg.id} className="relative rounded-xl overflow-hidden border border-white/10 aspect-[4/3]">
+                                <img src={bg.src} alt={bg.name} className="w-full h-full object-cover blur-[2px]" />
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                  <Lock className="w-4 h-4 text-white/40" />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="p-4 rounded-lg bg-white/[0.02] border border-white/5">
+                            <div className="flex items-center gap-2">
+                              <Lock className="w-4 h-4 text-white/20 flex-shrink-0" />
+                              <p className="text-xs text-white/35">
+                                Du benötigst VIP Platinum, VIP Ultimate oder VIP Elite Plus um zusätzliche Hintergrundbilder und eigene Uploads zu nutzen.
+                              </p>
+                            </div>
                           </div>
                         </div>
                       )}
