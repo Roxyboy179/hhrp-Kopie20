@@ -32,7 +32,6 @@ export function Navbar({ user, loading }) {
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-    // User-Daten im Hintergrund aktualisieren statt Full-Page-Reload
     refreshUser();
   };
 
@@ -47,10 +46,10 @@ export function Navbar({ user, loading }) {
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-[#0a0a0a]/90 backdrop-blur-2xl border-b border-white/[0.04] shadow-2xl shadow-black/40' : 'bg-transparent'}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16">
+      <div className="w-full h-16">
         <div className="flex items-center h-full">
-          {/* Logo - Links (1/3) */}
-          <div className="flex items-center w-1/3">
+          {/* Logo - Ganz links am Rand */}
+          <div className="flex items-center pl-4 sm:pl-6 flex-shrink-0">
             <Link href="/" className="flex items-center gap-3 cursor-pointer select-none group">
               <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg shadow-black/30 group-hover:shadow-black/50 transition-all group-hover:scale-105 overflow-hidden">
                 <img src="/logo.webp" alt="HHRP" className="w-full h-full object-cover" />
@@ -62,8 +61,8 @@ export function Navbar({ user, loading }) {
             </Link>
           </div>
 
-          {/* Navigation Tabs - Zentriert (1/3) */}
-          <div className="hidden md:flex items-center justify-center w-1/3">
+          {/* Navigation Tabs - Absolut in Bildschirmmitte */}
+          <div className="hidden md:flex items-center absolute left-1/2 -translate-x-1/2">
             <div className="flex items-center gap-1 bg-white/[0.03] backdrop-blur-xl rounded-2xl p-1 border border-white/[0.06]">
               {navItems.filter(n => n.show).map(n => {
                 const requiresDiscordAuth = n.requireAuth && !user;
@@ -77,7 +76,7 @@ export function Navbar({ user, loading }) {
                         e.preventDefault();
                         setLoginModalOpen(true);
                       }}
-                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                      className={`px-3 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
                         isActive
                           ? 'bg-white/[0.06] text-white/90 shadow-inner shadow-white/5'
                           : 'text-white/30 hover:text-white/60 hover:bg-white/[0.03]'
@@ -92,7 +91,7 @@ export function Navbar({ user, loading }) {
                   <Link
                     key={n.id}
                     href={n.id}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                    className={`px-3 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
                       isActive
                         ? '' 
                         : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04]'
@@ -110,8 +109,8 @@ export function Navbar({ user, loading }) {
             </div>
           </div>
             
-          {/* Notification Bell + Profile - Rechts (1/3) */}
-          <div className="flex items-center justify-end gap-3 w-1/3">
+          {/* Profile + Bell - Ganz rechts am Rand */}
+          <div className="flex items-center justify-end gap-3 pr-4 sm:pr-6 flex-1">
             {loading ? (
               <div className="w-9 h-9 rounded-xl bg-white/[0.04] flex items-center justify-center">
                 <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
@@ -135,7 +134,6 @@ export function Navbar({ user, loading }) {
                   <div className="flex flex-col">
                     <span className="text-sm text-white/70 max-w-[120px] truncate">{user.globalName || user.username}</span>
                     {(() => {
-                      // VIP Status aus Lizenzen prüfen
                       const licenses = user?.licenses || [];
                       const hasVipElitePlus = licenses.includes('vip_elite_plus');
                       const hasVipUltimate = licenses.includes('vip_ultimate');
@@ -143,15 +141,13 @@ export function Navbar({ user, loading }) {
                       const hasVipPremium = licenses.includes('vip_premium');
                       const hasBetaTester = user.roles?.includes('1494434149623136276');
                       
-                      // Bestimme VIP Level (höchstes zuerst)
                       let vipStatus = '';
                       if (hasVipElitePlus) vipStatus = 'VIP Elite Plus';
                       else if (hasVipUltimate) vipStatus = 'VIP Ultimate';
                       else if (hasVipPlatinum) vipStatus = 'VIP Platinum';
                       else if (hasVipPremium) vipStatus = 'VIP Premium';
-                      else vipStatus = 'Standard Plan "Free"'; // Fallback wenn keine VIP Lizenz
+                      else vipStatus = 'Standard Plan "Free"';
                       
-                      // Kombiniere mit Beta Tester
                       const statusText = hasBetaTester 
                         ? `${vipStatus} · Beta Tester`
                         : vipStatus;
@@ -227,7 +223,6 @@ export function Navbar({ user, loading }) {
         </div>
       )}
       
-      {/* Login Modal */}
       <LoginModal open={loginModalOpen} onOpenChange={setLoginModalOpen} />
     </nav>
   );
