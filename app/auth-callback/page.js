@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
-export default function AuthCallbackPage() {
+function AuthCallbackContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -41,5 +41,23 @@ export default function AuthCallbackPage() {
         <p className="text-white/40 text-sm mt-2">Dieses Fenster schließt sich automatisch.</p>
       </div>
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-[#080808]">
+        <div className="text-center">
+          <Loader2 
+            className="w-12 h-12 animate-spin mx-auto mb-4" 
+            style={{ color: 'var(--theme-accent)' }} 
+          />
+          <p className="text-white text-lg">Lädt...</p>
+        </div>
+      </div>
+    }>
+      <AuthCallbackContent />
+    </Suspense>
   );
 }
