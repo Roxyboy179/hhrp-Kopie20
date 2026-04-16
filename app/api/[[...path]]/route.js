@@ -338,12 +338,12 @@ async function handleDiscordCallback(request) {
   // Discord sends error param if user denied
   if (errorParam) {
     console.log('[OAUTH] Discord returned error:', errorParam);
-    return NextResponse.redirect(new URL(`/?error=discord_denied`, BASE_URL));
+    return NextResponse.redirect(new URL(`/auth-callback?error=discord_denied`, BASE_URL));
   }
   
   if (!code) {
     console.log('[OAUTH] No code in callback');
-    return NextResponse.redirect(new URL(`/?error=no_code`, BASE_URL));
+    return NextResponse.redirect(new URL(`/auth-callback?error=no_code`, BASE_URL));
   }
 
   try {
@@ -364,7 +364,7 @@ async function handleDiscordCallback(request) {
     if (!tokenRes.ok) {
       const errText = await tokenRes.text();
       console.error('[OAUTH] Token exchange failed:', tokenRes.status, errText);
-      return NextResponse.redirect(new URL(`/?error=token_failed`, BASE_URL));
+      return NextResponse.redirect(new URL(`/auth-callback?error=token_failed`, BASE_URL));
     }
     const tokenData = await tokenRes.json();
     const { access_token } = tokenData;
@@ -379,7 +379,7 @@ async function handleDiscordCallback(request) {
     if (!userRes.ok) {
       const errText = await userRes.text();
       console.error('[OAUTH] User fetch failed:', userRes.status, errText);
-      return NextResponse.redirect(new URL(`/?error=user_failed`, BASE_URL));
+      return NextResponse.redirect(new URL(`/auth-callback?error=user_failed`, BASE_URL));
     }
     const discordUser = await userRes.json();
     console.log('[OAUTH] Step 2 OK - User:', discordUser.username, '(', discordUser.id, ')');
@@ -389,7 +389,7 @@ async function handleDiscordCallback(request) {
     const member = await getGuildMember(discordUser.id);
     if (!member) {
       console.error('[OAUTH] User is NOT a member of guild', DISCORD_GUILD_ID);
-      return NextResponse.redirect(new URL(`/?error=not_member`, BASE_URL));
+      return NextResponse.redirect(new URL(`/auth-callback?error=not_member`, BASE_URL));
     }
     console.log('[OAUTH] Step 3 OK - Member found, roles:', member.roles?.length);
 
@@ -434,7 +434,7 @@ async function handleDiscordCallback(request) {
       ipAddress: getIpAddress(request),
     });
     
-    const redirectUrl = new URL('/', BASE_URL);
+    const redirectUrl = new URL('/auth-callback', BASE_URL);
     redirectUrl.searchParams.set('auth', 'success');
     
     const response = NextResponse.redirect(redirectUrl);
@@ -452,7 +452,7 @@ async function handleDiscordCallback(request) {
     console.error('[OAUTH] ========== CALLBACK ERROR ==========');
     console.error('[OAUTH] Error:', error.message);
     console.error('[OAUTH] Stack:', error.stack);
-    return NextResponse.redirect(new URL(`/?error=auth_failed`, BASE_URL));
+    return NextResponse.redirect(new URL(`/auth-callback?error=auth_failed`, BASE_URL));
   }
 }
 

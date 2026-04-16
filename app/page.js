@@ -16,7 +16,7 @@ import {
 function AnimatedCounter({ value, suffix = '' }) {
   const [count, setCount] = useState(0);
   useEffect(() => {
-    const end = parseInt(value) || 0;
+    const end = parseInt(value) || 0;a
     if (end === 0) { setCount(0); return; }
     let start = 0;
     const increment = end / 40;
@@ -44,12 +44,6 @@ export default function HomePage() {
     fetchStats();
     fetchDiscordStats();
     fetchTeamPreview();
-    
-    // Prüfe URL-Parameter für Auth-Status
-    const params = new URLSearchParams(window.location.search);
-    if (params.has('auth') || params.has('error')) {
-      setLoginModalOpen(true);
-    }
   }, []);
 
   const fetchStats = async () => {
@@ -181,10 +175,7 @@ export default function HomePage() {
               </div>
             ) : (
               <button
-                onClick={() => {
-                  setLoginModalOpen(true);
-                  window.location.href = '/api/auth/discord';
-                }}
+                onClick={() => setLoginModalOpen(true)}
                 className="inline-flex items-center justify-center gap-3 px-10 py-4 lg:px-12 lg:py-5 rounded-2xl text-base lg:text-lg font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
                 style={{ 
                   background: 'var(--theme-accent)',
@@ -541,10 +532,7 @@ export default function HomePage() {
               </Button>
             ) : (
               <button
-                onClick={() => {
-                  setLoginModalOpen(true);
-                  window.location.href = '/api/auth/discord';
-                }}
+                onClick={() => setLoginModalOpen(true)}
                 className="inline-flex items-center justify-center gap-3 px-10 md:px-12 py-4 md:py-5 rounded-2xl text-base md:text-lg font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
                 style={{ 
                   background: 'var(--theme-accent)',
