@@ -1844,6 +1844,211 @@ export async function GET(request) {
         }
       }
 
+      // === Wartungs-Benachrichtigungen ===
+      console.log('[Cron] Checking maintenance status...');
+      
+      // Get maintenance status
+      const { data: systemStatus } = await supabaseAdmin
+        .from('system_status')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (systemStatus && systemStatus.geplante_wartung) {
+        const wartungStart = new Date(systemStatus.wartung_start).getTime();
+        const wartungEnde = new Date(systemStatus.wartung_ende).getTime();
+        const timeUntilStart = wartungStart - now;
+        const isActive = systemStatus.wartungsmodus;
+
+        // Benachrichtigung: 24h vorher
+        if (timeUntilStart <= 24 * 60 * 60 * 1000 && timeUntilStart > 23 * 60 * 60 * 1000) {
+          const notificationKey = `maintenance_24h_${wartungStart}`;
+          const { data: existing } = await supabaseAdmin
+            .from('sent_notifications')
+            .select('id')
+            .eq('notification_key', notificationKey)
+            .single();
+
+          if (!existing) {
+            console.log('[Cron] Sending 24h maintenance warning to all users...');
+            
+            for (const sub of subscriptions) {
+              try {
+                await webpush.sendNotification(
+                  sub.subscription,
+                  JSON.stringify({
+                    title: '⚠️ Geplante Wartung in 24 Stunden',
+                    body: `Hamburg Horizon RP wird morgen gewartet. ${systemStatus.wartung_nachricht || 'Bitte plane entsprechend.'}`,
+                    icon: '/icon-512.png',
+                    badge: '/icon-192.png',
+                    tag: 'maintenance_24h',
+                    url: '/',
+                    requireInteraction: false
+                  })
+                );
+                notificationsSent++;
+              } catch (pushError) {
+                console.error('[Cron] Error sending maintenance notification:', pushError);
+                if (pushError.statusCode === 410) {
+                  await supabaseAdmin.from('push_subscriptions').delete().eq('user_id', sub.user_id);
+                }
+                errors++;
+              }
+            }
+
+            await supabaseAdmin
+              .from('sent_notifications')
+              .insert({
+                notification_key: notificationKey,
+                user_id: 'all',
+                type: 'maintenance_24h',
+                sent_at: new Date().toISOString()
+              });
+          }
+        }
+
+        // Benachrichtigung: 1h vorher
+        if (timeUntilStart <= 60 * 60 * 1000 && timeUntilStart > 55 * 60 * 1000) {
+          const notificationKey = `maintenance_1h_${wartungStart}`;
+          const { data: existing } = await supabaseAdmin
+            .from('sent_notifications')
+            .select('id')
+            .eq('notification_key', notificationKey)
+            .single();
+
+          if (!existing) {
+            console.log('[Cron] Sending 1h maintenance warning to all users...');
+            
+            for (const sub of subscriptions) {
+              try {
+                await webpush.sendNotification(
+                  sub.subscription,
+                  JSON.stringify({
+                    title: '⏰ Wartung startet in 1 Stunde!',
+                    body: 'Hamburg Horizon RP wird in Kürze gewartet. Beende deine Aktivitäten rechtzeitig!',
+                    icon: '/icon-512.png',
+                    badge: '/icon-192.png',
+                    tag: 'maintenance_1h',
+                    url: '/',
+                    requireInteraction: true
+                  })
+                );
+                notificationsSent++;
+              } catch (pushError) {
+                console.error('[Cron] Error sending maintenance notification:', pushError);
+                if (pushError.statusCode === 410) {
+                  await supabaseAdmin.from('push_subscriptions').delete().eq('user_id', sub.user_id);
+                }
+                errors++;
+              }
+            }
+
+            await supabaseAdmin
+              .from('sent_notifications')
+              .insert({
+                notification_key: notificationKey,
+                user_id: 'all',
+                type: 'maintenance_1h',
+                sent_at: new Date().toISOString()
+              });
+          }
+        }
+
+        // Benachrichtigung: Wartung aktiv
+        if (isActive) {
+          const notificationKey = `maintenance_active_${wartungStart}`;
+          const { data: existing } = await supabaseAdmin
+            .from('sent_notifications')
+            .select('id')
+            .eq('notification_key', notificationKey)
+            .single();
+
+          if (!existing) {
+            console.log('[Cron] Sending maintenance active notification to all users...');
+            
+            for (const sub of subscriptions) {
+              try {
+                await webpush.sendNotification(
+                  sub.subscription,
+                  JSON.stringify({
+                    title: '🔧 Wartung läuft',
+                    body: 'Hamburg Horizon RP befindet sich im Wartungsmodus. Wir sind bald zurück!',
+                    icon: '/icon-512.png',
+                    badge: '/icon-192.png',
+                    tag: 'maintenance_active',
+                    url: '/',
+                    requireInteraction: false
+                  })
+                );
+                notificationsSent++;
+              } catch (pushError) {
+                console.error('[Cron] Error sending maintenance notification:', pushError);
+                if (pushError.statusCode === 410) {
+                  await supabaseAdmin.from('push_subscriptions').delete().eq('user_id', sub.user_id);
+                }
+                errors++;
+              }
+            }
+
+            await supabaseAdmin
+              .from('sent_notifications')
+              .insert({
+                notification_key: notificationKey,
+                user_id: 'all',
+                type: 'maintenance_active',
+                sent_at: new Date().toISOString()
+              });
+          }
+        }
+
+        // Benachrichtigung: Wartung beendet
+        if (!isActive && now > wartungEnde && now < wartungEnde + 10 * 60 * 1000) {
+          const notificationKey = `maintenance_ended_${wartungStart}`;
+          const { data: existing } = await supabaseAdmin
+            .from('sent_notifications')
+            .select('id')
+            .eq('notification_key', notificationKey)
+            .single();
+
+          if (!existing) {
+            console.log('[Cron] Sending maintenance ended notification to all users...');
+            
+            for (const sub of subscriptions) {
+              try {
+                await webpush.sendNotification(
+                  sub.subscription,
+                  JSON.stringify({
+                    title: '✅ Wartung abgeschlossen!',
+                    body: 'Hamburg Horizon RP ist wieder online! Viel Spaß beim Spielen! 🎉',
+                    icon: '/icon-512.png',
+                    badge: '/icon-192.png',
+                    tag: 'maintenance_ended',
+                    url: '/',
+                    requireInteraction: false
+                  })
+                );
+                notificationsSent++;
+              } catch (pushError) {
+                console.error('[Cron] Error sending maintenance notification:', pushError);
+                if (pushError.statusCode === 410) {
+                  await supabaseAdmin.from('push_subscriptions').delete().eq('user_id', sub.user_id);
+                }
+                errors++;
+              }
+            }
+
+            await supabaseAdmin
+              .from('sent_notifications')
+              .insert({
+                notification_key: notificationKey,
+                user_id: 'all',
+                type: 'maintenance_ended',
+                sent_at: new Date().toISOString()
+              });
+          }
+        }
+      }
+
       const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       await supabaseAdmin
         .from('sent_notifications')
