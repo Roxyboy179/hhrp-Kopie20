@@ -3582,111 +3582,187 @@ export default function ProfilPage() {
               </div>
             </div>
 
-            {/* === HINTERGRUNDBILD (PWA) === */}
-            <div className="glass rounded-2xl p-6 border border-white/[0.08]">
-              <div className="flex items-center gap-3 mb-2">
-                <ImagePlus className="w-6 h-6 text-purple-400" />
-                <div>
-                  <h2 className="text-xl font-bold text-white">Eigenes Hintergrundbild</h2>
-                  <p className="text-xs text-white/35">{isPWA ? 'Lade ein Bild hoch, das als Hintergrund angezeigt wird' : 'Nur als installierte App verfügbar'}</p>
-                </div>
-                {!isPWA && (
-                  <span className="ml-auto px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.08] text-[10px] font-bold text-white/30 uppercase tracking-wider">Nur PWA</span>
-                )}
-              </div>
+            {/* === HINTERGRUNDBILD === */}
+            {(() => {
+              const licenses = userData?.licenses || [];
+              const hasVipForCustomBg = licenses.includes('vip_platinum') || licenses.includes('vip_ultimate') || licenses.includes('vip_elite_plus');
+              const standardBgUrl = '/hhrp-standard-bg.webp';
+              const isStandardBgActive = customBg === 'standard';
+              const isCustomBgActive = customBg && customBg !== 'standard';
 
-              {isPWA ? (
-                <div className="space-y-4 mt-4">
-                  {/* Vorschau */}
-                  {customBg && (
-                    <div className="relative rounded-xl overflow-hidden border border-white/[0.08]">
-                      <img 
-                        src={customBg} 
-                        alt="Hintergrundbild Vorschau" 
-                        className="w-full h-48 object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
-                        <span className="text-xs text-white/60 bg-black/40 px-2 py-1 rounded-lg flex items-center gap-1.5">
-                          <BadgeCheck className="w-3 h-3 text-green-400" /> Aktiv
-                        </span>
+              // Auto-Entfernung: Wenn kein VIP Platinum+ aber custom BG vorhanden
+              if (!hasVipForCustomBg && isCustomBgActive) {
+                // Automatisch entfernen
+                setTimeout(() => {
+                  localStorage.removeItem('hhrp-custom-bg');
+                  setCustomBg(null);
+                  window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
+                  toast.info('Eigenes Hintergrundbild entfernt', { description: 'Du benötigst VIP Platinum oder höher für ein eigenes Bild.' });
+                }, 100);
+              }
+
+              return (
+                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                  <div className="flex items-center gap-3 mb-5">
+                    <ImagePlus className="w-6 h-6 text-purple-400" />
+                    <div>
+                      <h2 className="text-xl font-bold text-white">Hintergrundbild</h2>
+                      <p className="text-xs text-white/35">Wähle dein Hintergrundbild für die Seite</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Standard Hintergrundbild - für ALLE Nutzer */}
+                    <div className={`p-4 rounded-xl border transition-all ${isStandardBgActive ? 'border-green-500/30 bg-green-500/5' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}>
+                      <div className="flex items-start gap-4">
+                        <div className="w-20 h-14 rounded-lg overflow-hidden border border-white/10 flex-shrink-0">
+                          <img src={standardBgUrl} alt="Standard" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold text-white text-sm">Hamburg Horizon RP</h3>
+                            {isStandardBgActive && (
+                              <BadgeCheck className="w-4 h-4 text-green-400 flex-shrink-0" />
+                            )}
+                          </div>
+                          <p className="text-xs text-white/40">Standard Hintergrundbild für alle Nutzer</p>
+                        </div>
                         <button
                           onClick={() => {
-                            localStorage.removeItem('hhrp-custom-bg');
-                            setCustomBg(null);
-                            window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
-                            toast.success('Hintergrundbild entfernt');
+                            if (isStandardBgActive) {
+                              localStorage.removeItem('hhrp-custom-bg');
+                              setCustomBg(null);
+                              window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
+                              toast.success('Hintergrundbild deaktiviert');
+                            } else {
+                              localStorage.setItem('hhrp-custom-bg', 'standard');
+                              setCustomBg('standard');
+                              window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: 'standard' } }));
+                              toast.success('Standard-Hintergrund aktiviert!');
+                            }
                           }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/80 hover:bg-red-500 text-white text-xs rounded-lg transition-all"
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0 ${isStandardBgActive ? 'bg-red-500/15 text-red-400 hover:bg-red-500/25 border border-red-500/20' : 'bg-green-500/15 text-green-400 hover:bg-green-500/25 border border-green-500/20'}`}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Entfernen
+                          {isStandardBgActive ? 'Deaktivieren' : 'Aktivieren'}
                         </button>
                       </div>
                     </div>
-                  )}
 
-                  {/* Upload */}
-                  <label className={`flex flex-col items-center justify-center p-8 rounded-xl border-2 border-dashed transition-all cursor-pointer ${customBg ? 'border-white/10 hover:border-white/20 bg-white/[0.01]' : 'border-purple-500/30 hover:border-purple-500/50 bg-purple-500/5'}`}>
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp,image/gif"
-                      className="hidden"
-                      onChange={async (e) => {
-                        const file = e.target.files?.[0];
-                        if (!file) return;
-                        if (file.size > 10 * 1024 * 1024) {
-                          toast.error('Datei zu groß', { description: 'Maximale Größe: 10 MB' });
-                          return;
-                        }
-                        if (!file.type.startsWith('image/')) {
-                          toast.error('Ungültiges Format', { description: 'Nur Bilder (PNG, JPG, WebP, GIF) erlaubt.' });
-                          return;
-                        }
-                        setBgUploading(true);
-                        try {
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            const base64 = event.target.result;
-                            try {
-                              localStorage.setItem('hhrp-custom-bg', base64);
-                              setCustomBg(base64);
-                              window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: base64 } }));
-                              toast.success('Hintergrundbild gespeichert!');
-                            } catch (storageErr) {
-                              toast.error('Speicherfehler', { description: 'Das Bild ist zu groß für den lokalen Speicher. Versuche ein kleineres Bild.' });
-                            }
-                            setBgUploading(false);
-                          };
-                          reader.onerror = () => { toast.error('Fehler beim Lesen'); setBgUploading(false); };
-                          reader.readAsDataURL(file);
-                        } catch (err) {
-                          toast.error('Fehler beim Hochladen');
-                          setBgUploading(false);
-                        }
-                        e.target.value = '';
-                      }}
-                    />
-                    {bgUploading ? (
-                      <Loader2 className="w-8 h-8 text-purple-400 animate-spin mb-2" />
-                    ) : (
-                      <Upload className="w-8 h-8 text-purple-400 mb-2" />
-                    )}
-                    <p className="text-sm font-medium text-white">{customBg ? 'Bild ändern' : 'Bild hochladen'}</p>
-                    <p className="text-xs text-white/35 mt-1">PNG, JPG, WebP oder GIF (max. 10 MB)</p>
-                  </label>
+                    {/* Eigenes Bild - nur PWA + VIP Platinum+ */}
+                    <div className={`p-4 rounded-xl border transition-all ${isCustomBgActive ? 'border-purple-500/30 bg-purple-500/5' : 'border-white/[0.06] bg-white/[0.02]'}`}>
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className={`w-10 h-10 rounded-lg ${hasVipForCustomBg && isPWA ? 'bg-purple-500/15' : 'bg-white/[0.04]'} flex items-center justify-center flex-shrink-0`}>
+                          <Crown className={`w-5 h-5 ${hasVipForCustomBg && isPWA ? 'text-purple-400' : 'text-white/20'}`} />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-white text-sm">Eigenes Logo / GIF</h3>
+                            {isCustomBgActive && <BadgeCheck className="w-4 h-4 text-purple-400" />}
+                          </div>
+                          <p className="text-xs text-white/40">
+                            {hasVipForCustomBg && isPWA 
+                              ? 'Lade dein eigenes Bild oder GIF als Hintergrund hoch'
+                              : 'Erfordert PWA + VIP Platinum oder höher'}
+                          </p>
+                        </div>
+                        {!(hasVipForCustomBg && isPWA) && (
+                          <span className="px-2 py-0.5 rounded-full bg-yellow-500/10 border border-yellow-500/20 text-[10px] font-bold text-yellow-400 uppercase tracking-wider flex-shrink-0">
+                            VIP Platinum+
+                          </span>
+                        )}
+                      </div>
 
-                  <p className="text-xs text-white/25 text-center">
-                    Wird lokal auf deinem Gerät gespeichert und ist nur für dich sichtbar.
-                  </p>
+                      {hasVipForCustomBg && isPWA ? (
+                        <div className="space-y-3 mt-3">
+                          {/* Custom BG Vorschau */}
+                          {isCustomBgActive && (
+                            <div className="relative rounded-xl overflow-hidden border border-white/[0.08]">
+                              <img src={customBg} alt="Eigenes Hintergrundbild" className="w-full h-36 object-cover" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                              <div className="absolute bottom-3 right-3">
+                                <button
+                                  onClick={() => {
+                                    localStorage.removeItem('hhrp-custom-bg');
+                                    setCustomBg(null);
+                                    window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
+                                    toast.success('Eigenes Hintergrundbild entfernt');
+                                  }}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/80 hover:bg-red-500 text-white text-xs rounded-lg transition-all"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  Entfernen
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Upload */}
+                          <label className={`flex flex-col items-center justify-center p-6 rounded-xl border-2 border-dashed transition-all cursor-pointer ${isCustomBgActive ? 'border-white/10 hover:border-white/20 bg-white/[0.01]' : 'border-purple-500/30 hover:border-purple-500/50 bg-purple-500/5'}`}>
+                            <input
+                              type="file"
+                              accept="image/png,image/jpeg,image/webp,image/gif"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                if (file.size > 10 * 1024 * 1024) {
+                                  toast.error('Datei zu groß', { description: 'Maximale Größe: 10 MB' });
+                                  return;
+                                }
+                                if (!file.type.startsWith('image/')) {
+                                  toast.error('Ungültiges Format', { description: 'Nur Bilder erlaubt.' });
+                                  return;
+                                }
+                                setBgUploading(true);
+                                try {
+                                  const reader = new FileReader();
+                                  reader.onload = (event) => {
+                                    const base64 = event.target.result;
+                                    try {
+                                      localStorage.setItem('hhrp-custom-bg', base64);
+                                      setCustomBg(base64);
+                                      window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: base64 } }));
+                                      toast.success('Eigenes Hintergrundbild gespeichert!');
+                                    } catch (storageErr) {
+                                      toast.error('Speicherfehler', { description: 'Das Bild ist zu groß für den Speicher. Versuche ein kleineres Bild.' });
+                                    }
+                                    setBgUploading(false);
+                                  };
+                                  reader.onerror = () => { toast.error('Fehler beim Lesen'); setBgUploading(false); };
+                                  reader.readAsDataURL(file);
+                                } catch (err) {
+                                  toast.error('Fehler beim Hochladen');
+                                  setBgUploading(false);
+                                }
+                                e.target.value = '';
+                              }}
+                            />
+                            {bgUploading ? (
+                              <Loader2 className="w-6 h-6 text-purple-400 animate-spin mb-1" />
+                            ) : (
+                              <Upload className="w-6 h-6 text-purple-400 mb-1" />
+                            )}
+                            <p className="text-sm font-medium text-white">{isCustomBgActive ? 'Bild ändern' : 'Bild oder GIF hochladen'}</p>
+                            <p className="text-xs text-white/35 mt-0.5">PNG, JPG, WebP, GIF (max. 10 MB)</p>
+                          </label>
+                        </div>
+                      ) : (
+                        <div className="p-4 rounded-lg bg-white/[0.02] border border-white/5 mt-3">
+                          <div className="flex items-center gap-2">
+                            <Lock className="w-4 h-4 text-white/20 flex-shrink-0" />
+                            <p className="text-xs text-white/35">
+                              {!isPWA 
+                                ? 'Installiere zuerst die App und hol dir VIP Platinum oder höher.'
+                                : 'Du benötigst VIP Platinum, VIP Ultimate oder VIP Elite Plus für ein eigenes Hintergrundbild.'}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <div className="p-6 rounded-xl bg-white/[0.02] border border-white/5 text-center mt-4">
-                  <Smartphone className="w-10 h-10 text-white/15 mx-auto mb-3" />
-                  <p className="text-white/40 text-sm">Installiere Hamburg Horizon als App, um ein eigenes Hintergrundbild festzulegen.</p>
-                </div>
-              )}
-            </div>
+              );
+            })()}
 
             {/* === ÜBER === */}
             <div className="glass rounded-2xl p-6 border border-white/[0.08]">

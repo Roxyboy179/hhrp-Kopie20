@@ -106,7 +106,7 @@ export default function RootClientLayout({ children }) {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                backgroundImage: `url(${customBg})`,
+                backgroundImage: `url(${customBg === 'standard' ? '/hhrp-standard-bg.webp' : customBg})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 backgroundAttachment: 'fixed',
