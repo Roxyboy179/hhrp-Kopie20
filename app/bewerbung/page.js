@@ -266,8 +266,10 @@ function BewerbungCards({ user, onSelect, settings }) {
       icon: <Sparkles className="w-6 h-6 md:w-7 md:h-7" />,
       color: 'from-neutral-800 to-neutral-900',
       borderHover: 'hover:border-purple-500/20',
-      show: !isTeamler && !hasBetaTesterRole,
-      isOpen: settings?.beta_tester_open !== false
+      show: true, // Immer anzeigen
+      isOpen: settings?.beta_tester_open !== false,
+      isLocked: hasBetaTesterRole, // Gesperrt wenn User bereits Beta Tester ist
+      lockedReason: 'Du bist bereits Beta Tester'
     },
     {
       type: 'uprank',
@@ -308,22 +310,36 @@ function BewerbungCards({ user, onSelect, settings }) {
       <div className={`grid ${visibleCards.length === 1 ? 'max-w-md mx-auto' : 'md:grid-cols-2'} gap-4 md:gap-5`}>
         {visibleCards.map((card, i) => {
           const hasDraft = typeof window !== 'undefined' && localStorage.getItem(`hhrp-draft-${card.type}`);
+          const isDisabled = !card.isOpen || card.isLocked;
+          
           return (
           <button
             key={card.type}
-            onClick={() => card.isOpen ? onSelect(card.type) : null}
-            disabled={!card.isOpen}
+            onClick={() => (!isDisabled) ? onSelect(card.type) : null}
+            disabled={isDisabled}
             className={`group relative text-left p-6 md:p-8 rounded-xl md:rounded-2xl glass
-              ${card.isOpen ? 'hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/30 cursor-pointer' : 'opacity-60 cursor-not-allowed'}
+              ${!isDisabled ? 'hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/30 cursor-pointer' : 'opacity-60 cursor-not-allowed'}
               transition-all duration-500 animate-fade-in-up min-h-[44px]`}
             style={{ animationDelay: `${0.4 + i * 0.15}s`, animationFillMode: 'both' }}
           >
-            {!card.isOpen && (
+            {/* Gesperrt weil Bewerbungen geschlossen */}
+            {!card.isOpen && !card.isLocked && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-xl md:rounded-2xl backdrop-blur-sm z-10">
                 <div className="text-center px-6">
                   <Lock className="w-8 h-8 md:w-10 md:h-10 text-red-400/70 mx-auto mb-2 md:mb-3" />
                   <p className="text-white font-semibold text-sm md:text-base">Bewerbungen geschlossen</p>
                   <p className="text-white/50 text-xs mt-1">Derzeit nicht verfügbar</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Gesperrt weil User bereits Beta Tester */}
+            {card.isLocked && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-xl md:rounded-2xl backdrop-blur-sm z-10">
+                <div className="text-center px-6">
+                  <CheckCircle2 className="w-8 h-8 md:w-10 md:h-10 mx-auto mb-2 md:mb-3" style={{ color: 'var(--theme-accent)' }} />
+                  <p className="text-white font-semibold text-sm md:text-base">{card.lockedReason}</p>
+                  <p className="text-white/50 text-xs mt-1">Du hast diese Rolle bereits</p>
                 </div>
               </div>
             )}

@@ -126,11 +126,34 @@ export function Navbar({ user, loading }) {
                 )}
                 <div className="flex flex-col">
                   <span className="text-sm text-white/70 max-w-[120px] truncate">{user.globalName || user.username}</span>
-                  {user.roles && user.roles.includes('1494434149623136276') && (
-                    <span className="text-[10px] font-medium leading-tight" style={{ color: 'var(--theme-accent)' }}>
-                      VIP Premium · HHRP Beta Tester
-                    </span>
-                  )}
+                  {(() => {
+                    // VIP Status aus Lizenzen prüfen
+                    const licenses = user?.licenses || [];
+                    const hasVipElitePlus = licenses.includes('vip_elite_plus');
+                    const hasVipUltimate = licenses.includes('vip_ultimate');
+                    const hasVipPlatinum = licenses.includes('vip_platinum');
+                    const hasVipPremium = licenses.includes('vip_premium');
+                    const hasBetaTester = user.roles?.includes('1494434149623136276');
+                    
+                    // Bestimme VIP Level (höchstes zuerst)
+                    let vipStatus = '';
+                    if (hasVipElitePlus) vipStatus = 'VIP Elite Plus';
+                    else if (hasVipUltimate) vipStatus = 'VIP Ultimate';
+                    else if (hasVipPlatinum) vipStatus = 'VIP Platinum';
+                    else if (hasVipPremium) vipStatus = 'VIP Premium';
+                    else vipStatus = 'Standard Plan "Free"'; // Fallback wenn keine VIP Lizenz
+                    
+                    // Kombiniere mit Beta Tester
+                    const statusText = hasBetaTester 
+                      ? `${vipStatus} · Beta Tester`
+                      : vipStatus;
+                    
+                    return (
+                      <span className="text-[10px] font-medium leading-tight" style={{ color: 'var(--theme-accent)' }}>
+                        {statusText}
+                      </span>
+                    );
+                  })()}
                 </div>
               </Link>
               <Button variant="ghost" size="icon" onClick={handleLogout} className="text-white/30 hover:text-white hover:bg-white/[0.06] rounded-xl h-9 w-9">
