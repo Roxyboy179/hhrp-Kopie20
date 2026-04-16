@@ -983,7 +983,7 @@ export default function ProfilPage() {
   const [customBg, setCustomBg] = useState(null);
   const [bgUploading, setBgUploading] = useState(false);
   const [kompaktModus, setKompaktModus] = useState(false);
-  const [akzentFarbe, setAkzentFarbe] = useState('blue');
+  const [notificationStyle, setNotificationStyle] = useState('normal'); // 'normal' oder 'glass'
   const [animationen, setAnimationen] = useState(true);
   const [textGroesse, setTextGroesse] = useState('normal');
   const [datensparmodus, setDatensparmodus] = useState(false);
@@ -1089,9 +1089,9 @@ export default function ProfilPage() {
     const savedKompakt = localStorage.getItem('hhrp-kompakt');
     if (savedKompakt === 'true') setKompaktModus(true);
 
-    // Akzentfarbe
-    const savedAkzent = localStorage.getItem('hhrp-akzent');
-    if (savedAkzent) setAkzentFarbe(savedAkzent);
+    // Benachrichtigungsstil
+    const savedNotificationStyle = localStorage.getItem('hhrp-notification-style');
+    if (savedNotificationStyle) setNotificationStyle(savedNotificationStyle);
 
     // Animationen
     const savedAnim = localStorage.getItem('hhrp-animationen');
@@ -3632,38 +3632,40 @@ export default function ProfilPage() {
                   </div>
                 </div>
 
-                {/* Akzentfarbe */}
+                {/* Benachrichtigungsstil */}
                 <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center">
-                      <Gem className="w-5 h-5 text-white/40" />
+                      <Bell className="w-5 h-5 text-white/40" />
                     </div>
                     <div>
-                      <p className="font-medium text-white text-sm">Akzentfarbe</p>
-                      <p className="text-xs text-white/40">Wähle deine bevorzugte Farbe</p>
+                      <p className="font-medium text-white text-sm">Benachrichtigungsstil</p>
+                      <p className="text-xs text-white/40">Wähle das Design für Toast-Nachrichten</p>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex gap-3">
                     {[
-                      { id: 'blue', color: 'bg-blue-500', ring: 'ring-blue-400' },
-                      { id: 'purple', color: 'bg-purple-500', ring: 'ring-purple-400' },
-                      { id: 'cyan', color: 'bg-cyan-500', ring: 'ring-cyan-400' },
-                      { id: 'green', color: 'bg-green-500', ring: 'ring-green-400' },
-                      { id: 'pink', color: 'bg-pink-500', ring: 'ring-pink-400' },
-                      { id: 'orange', color: 'bg-orange-500', ring: 'ring-orange-400' },
-                      { id: 'red', color: 'bg-red-500', ring: 'ring-red-400' },
-                      { id: 'yellow', color: 'bg-yellow-500', ring: 'ring-yellow-400' }
-                    ].map((c) => (
+                      { id: 'normal', label: 'Normal', icon: <Bell className="w-5 h-5" />, desc: 'Standard-Design' },
+                      { id: 'glass', label: 'Glasmorphism', icon: <Sparkles className="w-5 h-5" />, desc: 'Moderner Glas-Effekt' }
+                    ].map((style) => (
                       <button
-                        key={c.id}
+                        key={style.id}
                         onClick={() => {
-                          setAkzentFarbe(c.id);
-                          localStorage.setItem('hhrp-akzent', c.id);
-                          window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { akzent: c.id } }));
-                          toast.success(`Akzentfarbe: ${c.id.charAt(0).toUpperCase() + c.id.slice(1)}`);
+                          setNotificationStyle(style.id);
+                          localStorage.setItem('hhrp-notification-style', style.id);
+                          window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { notificationStyle: style.id } }));
+                          toast.success(`Benachrichtigungsstil: ${style.label}`);
                         }}
-                        className={`w-9 h-9 rounded-full ${c.color} transition-all ${akzentFarbe === c.id ? `ring-2 ${c.ring} ring-offset-2 ring-offset-[#0a0a1a] scale-110` : 'opacity-60 hover:opacity-100 hover:scale-105'}`}
-                      />
+                        className={`flex-1 p-4 rounded-lg border transition-all ${notificationStyle === style.id ? 'border-blue-500/50 bg-blue-500/10 text-white' : 'border-white/10 bg-white/[0.02] text-white/60 hover:bg-white/[0.05]'}`}
+                      >
+                        <div className="text-center">
+                          <div className="flex items-center justify-center mb-2" style={{ color: notificationStyle === style.id ? '#3b82f6' : 'rgba(255,255,255,0.4)' }}>
+                            {style.icon}
+                          </div>
+                          <p className="text-sm font-medium mb-1">{style.label}</p>
+                          <p className="text-[10px] text-white/30">{style.desc}</p>
+                        </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -4004,7 +4006,7 @@ export default function ProfilPage() {
                     onClick={() => {
                       localStorage.removeItem('hhrp-custom-bg');
                       localStorage.removeItem('hhrp-kompakt');
-                      localStorage.removeItem('hhrp-akzent');
+                      localStorage.removeItem('hhrp-notification-style');
                       localStorage.removeItem('hhrp-animationen');
                       localStorage.removeItem('hhrp-textgroesse');
                       localStorage.removeItem('hhrp-datensparmodus');
@@ -4013,7 +4015,7 @@ export default function ProfilPage() {
                       localStorage.removeItem('hhrp-offline');
                       setCustomBg(null);
                       setKompaktModus(false);
-                      setAkzentFarbe('blue');
+                      setNotificationStyle('normal');
                       setAnimationen(true);
                       setTextGroesse('normal');
                       setDatensparmodus(false);
@@ -4029,7 +4031,8 @@ export default function ProfilPage() {
                           datensparmodus: false,
                           schnellstart: false,
                           autosync: true,
-                          offline: false
+                          offline: false,
+                          notificationStyle: 'normal'
                         } 
                       }));
                       toast.success('Alle Einstellungen zurückgesetzt');

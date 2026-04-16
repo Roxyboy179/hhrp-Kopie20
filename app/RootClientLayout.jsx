@@ -28,7 +28,7 @@ export default function RootClientLayout({ children }) {
   const [schnellstart, setSchnellstart] = useState(false);
   const [autoSync, setAutoSync] = useState(true);
   const [offlineModus, setOfflineModus] = useState(false);
-  const [akzentFarbe, setAkzentFarbe] = useState('blue');
+  const [notificationStyle, setNotificationStyle] = useState('normal');
   const pathname = usePathname();
   const isProfilePage = pathname === '/profil';
   const handleSplashComplete = useCallback(() => {
@@ -48,18 +48,6 @@ export default function RootClientLayout({ children }) {
     };
     checkPWA();
   }, []);
-
-  // Farbwerte für Akzentfarben
-  const akzentFarbWerte = {
-    blue: { hex: '#3b82f6', rgb: '59, 130, 246' },
-    purple: { hex: '#a855f7', rgb: '168, 85, 247' },
-    cyan: { hex: '#06b6d4', rgb: '6, 182, 212' },
-    green: { hex: '#10b981', rgb: '16, 185, 129' },
-    pink: { hex: '#ec4899', rgb: '236, 72, 153' },
-    orange: { hex: '#f97316', rgb: '249, 115, 22' },
-    red: { hex: '#ef4444', rgb: '239, 68, 68' },
-    yellow: { hex: '#eab308', rgb: '234, 179, 8' }
-  };
 
   // Hilfsfunktion: Konvertiert preset IDs in echte Dateipfade
   const getBgUrl = (bgValue) => {
@@ -100,8 +88,8 @@ export default function RootClientLayout({ children }) {
     const savedOfflineModus = localStorage.getItem('hhrp-offline');
     if (savedOfflineModus === 'true') setOfflineModus(true);
 
-    const savedAkzent = localStorage.getItem('hhrp-akzent');
-    if (savedAkzent) setAkzentFarbe(savedAkzent);
+    const savedNotificationStyle = localStorage.getItem('hhrp-notification-style');
+    if (savedNotificationStyle) setNotificationStyle(savedNotificationStyle);
 
     // Auf Änderungen vom Profil-Einstellungen hören
     const handleBgChange = (e) => {
@@ -115,7 +103,7 @@ export default function RootClientLayout({ children }) {
       if (e.detail?.schnellstart !== undefined) setSchnellstart(e.detail.schnellstart);
       if (e.detail?.autosync !== undefined) setAutoSync(e.detail.autosync);
       if (e.detail?.offline !== undefined) setOfflineModus(e.detail.offline);
-      if (e.detail?.akzent !== undefined) setAkzentFarbe(e.detail.akzent);
+      if (e.detail?.notificationStyle !== undefined) setNotificationStyle(e.detail.notificationStyle);
     };
     window.addEventListener('hhrp-bg-change', handleBgChange);
     window.addEventListener('hhrp-settings-change', handleSettingsChange);
@@ -166,14 +154,6 @@ export default function RootClientLayout({ children }) {
       <ThemeProvider>
         {!splashDone && <SplashScreen onComplete={handleSplashComplete} />}
         
-        {/* Dynamisches CSS für Akzentfarbe */}
-        <style jsx global>{`
-          :root {
-            --theme-accent: ${akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6'};
-            --theme-accent-rgb: ${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'};
-          }
-        `}</style>
-        
         {/* Loading Spinner nach Splash Screen - Nur für PWA, im Splash-Screen-Stil */}
         {splashDone && pageLoading && isPWA && (
           <div 
@@ -183,9 +163,7 @@ export default function RootClientLayout({ children }) {
             {/* Ambient glow */}
             <div 
               className="absolute w-[400px] h-[400px] rounded-full blur-[200px]"
-              style={{ 
-                background: `rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.12)`
-              }}
+              style={{ background: 'rgba(59, 130, 246, 0.12)' }}
             />
 
             <div className="text-center relative">
@@ -195,66 +173,37 @@ export default function RootClientLayout({ children }) {
                   src="/icon-192.png" 
                   alt="Hamburg Horizon RP" 
                   className="w-full h-full rounded-2xl shadow-2xl"
-                  style={{
-                    boxShadow: `0 20px 60px rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.4)`
-                  }}
+                  style={{ boxShadow: '0 20px 60px rgba(59, 130, 246, 0.4)' }}
                 />
                 
                 {/* Rotating ring */}
                 <div 
                   className="absolute inset-[-4px] rounded-2xl border-2 border-dashed animate-spin"
-                  style={{ 
-                    borderColor: `rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.3)`,
-                    animationDuration: '12s'
-                  }} 
+                  style={{ borderColor: 'rgba(59, 130, 246, 0.3)', animationDuration: '12s' }} 
                 />
                 
                 {/* Pulse ring */}
                 <div 
                   className="absolute inset-[-8px] rounded-2xl border animate-pulse"
-                  style={{ 
-                    borderColor: `rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.2)`,
-                    animationDuration: '3s'
-                  }} 
+                  style={{ borderColor: 'rgba(59, 130, 246, 0.2)', animationDuration: '3s' }} 
                 />
               </div>
 
               {/* Text */}
               <h3 className="text-2xl font-bold text-white mb-2">Lädt...</h3>
               <div className="flex items-center justify-center gap-2 mb-4">
-                <div className="w-8 h-px" style={{ background: `linear-gradient(to right, transparent, rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.5))` }} />
+                <div className="w-8 h-px" style={{ background: 'linear-gradient(to right, transparent, rgba(59, 130, 246, 0.5))' }} />
                 <p className="text-xs font-light tracking-[0.2em] uppercase text-white/40">
                   Hamburg Horizon RP
                 </p>
-                <div className="w-8 h-px" style={{ background: `linear-gradient(to left, transparent, rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.5))` }} />
+                <div className="w-8 h-px" style={{ background: 'linear-gradient(to left, transparent, rgba(59, 130, 246, 0.5))' }} />
               </div>
 
               {/* Progress indicator */}
               <div className="flex gap-1.5 justify-center">
-                <div 
-                  className="w-1.5 h-1.5 rounded-full animate-bounce"
-                  style={{ 
-                    backgroundColor: akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6',
-                    animationDelay: '0ms',
-                    animationDuration: '1s'
-                  }}
-                />
-                <div 
-                  className="w-1.5 h-1.5 rounded-full animate-bounce"
-                  style={{ 
-                    backgroundColor: akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6',
-                    animationDelay: '200ms',
-                    animationDuration: '1s'
-                  }}
-                />
-                <div 
-                  className="w-1.5 h-1.5 rounded-full animate-bounce"
-                  style={{ 
-                    backgroundColor: akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6',
-                    animationDelay: '400ms',
-                    animationDuration: '1s'
-                  }}
-                />
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms', animationDuration: '1s' }} />
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '200ms', animationDuration: '1s' }} />
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '400ms', animationDuration: '1s' }} />
               </div>
             </div>
           </div>
@@ -295,10 +244,15 @@ export default function RootClientLayout({ children }) {
             position="bottom-right" 
             theme="dark"
             toastOptions={{
-              style: {
-                background: 'rgba(15, 23, 42, 0.95)',
+              style: notificationStyle === 'glass' ? {
+                background: 'rgba(15, 23, 42, 0.7)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                backdropFilter: 'blur(24px)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05) inset',
+                color: 'white',
+              } : {
+                background: 'rgba(30, 41, 59, 0.95)',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(20px)',
                 color: 'white',
               },
             }}
