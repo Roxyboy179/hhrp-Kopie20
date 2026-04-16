@@ -754,7 +754,7 @@ export default function BewerbungPage() {
                 </div>
               </div>
               <a 
-                href="https://discord.gg/hamburg-horizon-rp" 
+                href="https://discord.gg/nJWPrTURq5" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 px-6 py-3 bg-[#5865F2] hover:bg-[#4752C4] text-white rounded-xl font-medium transition-all"
