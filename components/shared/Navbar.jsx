@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Shield, LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2, Bell, Users
+  Shield, LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2, Bell, Users, Sparkles
 } from 'lucide-react';
 import { NotificationBell } from '@/components/shared/NotificationBell';
 import { LoginModal } from '@/components/LoginModal';
