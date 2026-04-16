@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { GlassCard } from '@/components/shared/GlassCard';
 import { Skeleton } from '@/components/shared/Skeleton';
 import { Users, Shield, Crown, Star, Award, Gamepad2, Headphones, Loader2 } from 'lucide-react';
@@ -247,13 +248,13 @@ export default function TeamPage() {
           <h3 className="text-xl font-bold text-white mb-2">Teil des Teams werden?</h3>
           <p className="mb-6" style={{ color: 'rgba(var(--theme-accent-rgb), 0.4)' }}>Bewirb dich jetzt und werde Teil von Hamburg Horizon RP!</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a
+            <Link
               href="/bewerbung"
               className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02]"
               style={{ background: 'var(--theme-accent)', color: '#000' }}
             >
               Jetzt bewerben
-            </a>
+            </Link>
             <a
               href="https://discord.gg/g784tka9sh"
               target="_blank"

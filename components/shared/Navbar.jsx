@@ -82,8 +82,8 @@ export function Navbar({ user, loading }) {
               );
             }
             
-  return (
-              <a
+            return (
+              <Link
                 key={n.id}
                 href={n.id}
                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
@@ -98,7 +98,7 @@ export function Navbar({ user, loading }) {
                 } : {}}
               >
                 {n.icon}<span className="hidden lg:inline">{n.label}</span>
-              </a>
+              </Link>
             );
           })}
           </div>
@@ -168,14 +168,14 @@ export function Navbar({ user, loading }) {
             }
             
             return (
-              <a
+              <Link
                 key={n.id}
                 href={n.id}
                 onClick={() => setMobileOpen(false)}
                 className="w-full text-left px-4 py-3 rounded-xl text-sm text-white/70 hover:bg-white/[0.06] transition-all flex items-center gap-3"
               >
                 {n.icon}{n.label}
-              </a>
+              </Link>
             );
           })}
         </div>
