@@ -189,10 +189,15 @@ export function PWANotifications({ userData, isPWA }) {
     }
   };
 
-  // Permission anfordern
+  // Permission anfordern und Backend-Subscription erstellen
   const requestPermission = async () => {
     if (!('Notification' in window)) {
       toast.error('Benachrichtigungen werden von deinem Browser nicht unterstützt');
+      return;
+    }
+
+    if (!('serviceWorker' in navigator)) {
+      toast.error('Service Worker wird nicht unterstützt');
       return;
     }
 
@@ -201,16 +206,41 @@ export function PWANotifications({ userData, isPWA }) {
       setPermission(result);
       
       if (result === 'granted') {
-        setNotificationsEnabled(true);
-        toast.success('Benachrichtigungen aktiviert! 🔔');
+        // Registriere Service Worker und erstelle Push-Subscription
+        const registration = await navigator.serviceWorker.ready;
         
-        // Sende Test-Benachrichtigung
-        sendNotification({
-          title: '🔔 Test-Benachrichtigung',
-          body: 'Benachrichtigungen sind jetzt aktiv! Du wirst informiert, wenn Cooldowns fertig sind.',
-          icon: '/icon-512.png',
-          tag: 'test'
+        // VAPID Public Key (muss generiert werden)
+        const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 
+          'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
+        
+        // Konvertiere VAPID Key
+        const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+        
+        // Erstelle Push-Subscription
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: convertedVapidKey
         });
+
+        // Sende Subscription an Backend
+        const response = await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            subscription: subscription.toJSON(),
+            userId: userData?.user_id || 'unknown'
+          })
+        });
+
+        if (response.ok) {
+          setNotificationsEnabled(true);
+          toast.success('Benachrichtigungen aktiviert! 🔔');
+          toast.info('Du erhältst jetzt Benachrichtigungen, auch wenn die App geschlossen ist!');
+        } else {
+          throw new Error('Backend error');
+        }
       } else {
         toast.error('Benachrichtigungen wurden abgelehnt');
       }
@@ -219,6 +249,22 @@ export function PWANotifications({ userData, isPWA }) {
       toast.error('Fehler beim Aktivieren der Benachrichtigungen');
     }
   };
+
+  // Helper-Funktion für VAPID Key Konvertierung
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/\-/g, '+')
+      .replace(/_/g, '/');
+    
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
 
   if (!isPWA) return null;
 
