@@ -47,8 +47,8 @@ export function Navbar({ user, loading }) {
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled ? 'bg-[#0a0a0a]/90 backdrop-blur-2xl border-b border-white/[0.04] shadow-2xl shadow-black/40' : 'bg-transparent'}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center relative">
-        {/* Logo - Ganz links */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        {/* Logo - Links */}
         <div className="flex items-center flex-shrink-0">
           <Link href="/" className="flex items-center gap-3 cursor-pointer select-none group">
             <div className="w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg shadow-black/30 group-hover:shadow-black/50 transition-all group-hover:scale-105 overflow-hidden">
@@ -61,8 +61,8 @@ export function Navbar({ user, loading }) {
           </Link>
         </div>
 
-        {/* Navigation Tabs - Absolut zentriert */}
-        <div className="hidden md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        {/* Navigation Tabs - Zentriert mit flex-1 */}
+        <div className="hidden md:flex flex-1 items-center justify-center px-4">
           <div className="flex items-center gap-1 bg-white/[0.03] backdrop-blur-xl rounded-2xl p-1 border border-white/[0.06]">
             {navItems.filter(n => n.show).map(n => {
               const requiresDiscordAuth = n.requireAuth && !user;
@@ -109,8 +109,8 @@ export function Navbar({ user, loading }) {
           </div>
         </div>
           
-        {/* Notification Bell + Profile - Ganz rechts */}
-        <div className="flex items-center gap-3 ml-auto">
+        {/* Notification Bell + Profile - Rechts */}
+        <div className="flex items-center gap-3 flex-shrink-0">
           {loading ? (
             <div className="w-9 h-9 rounded-xl bg-white/[0.04] flex items-center justify-center">
               <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
