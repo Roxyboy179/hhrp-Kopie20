@@ -24,6 +24,19 @@ export default function RootClientLayout({ children }) {
   const isProfilePage = pathname === '/profil';
   const handleSplashComplete = useCallback(() => setSplashDone(true), []);
 
+  // Hilfsfunktion: Konvertiert preset IDs in echte Dateipfade
+  const getBgUrl = (bgValue) => {
+    if (!bgValue) return null;
+    if (bgValue === 'standard') return '/hhrp-standard-bg.webp';
+    if (bgValue.startsWith('preset:')) {
+      // preset:city-1 → /bg-city-1.webp
+      const presetName = bgValue.replace('preset:', '');
+      return `/${presetName}.webp`;
+    }
+    // Custom Upload (Base64 oder URL)
+    return bgValue;
+  };
+
   // Custom Background und Einstellungen aus localStorage laden
   useEffect(() => {
     const savedBg = localStorage.getItem('hhrp-custom-bg');
@@ -106,7 +119,7 @@ export default function RootClientLayout({ children }) {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                backgroundImage: `url(${customBg === 'standard' ? '/hhrp-standard-bg.webp' : customBg})`,
+                backgroundImage: `url(${getBgUrl(customBg)})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 backgroundAttachment: 'fixed',
