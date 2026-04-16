@@ -2440,6 +2440,32 @@ export async function POST(request) {
     }
   }
 
+  // === Push Notifications: Unsubscribe ===
+  if (p === 'push/unsubscribe') {
+    try {
+      const { userId } = await request.json();
+      if (!userId) {
+        return NextResponse.json({ error: 'userId erforderlich' }, { status: 400 });
+      }
+
+      const { error } = await supabaseAdmin
+        .from('push_subscriptions')
+        .delete()
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('[Push API] Error deleting subscription:', error);
+        return NextResponse.json({ error: 'Fehler beim Löschen' }, { status: 500 });
+      }
+
+      console.log(`[Push API] Subscription deleted for user ${userId}`);
+      return NextResponse.json({ success: true });
+    } catch (error) {
+      console.error('[Push API] Unsubscribe error:', error);
+      return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500 });
+    }
+  }
+
   switch (p) {
     case 'auth/logout': return handleLogout(request);
     case 'bewerbungen': return handleCreateBewerbung(request);

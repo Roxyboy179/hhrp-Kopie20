@@ -14,7 +14,7 @@ import {
   Building2, Hash, Key, Copy, ArrowUpRight, ArrowDownRight, AlertCircle, 
   Shield, Star, MessageSquare, Ban, ChevronUp, ShieldCheck, CheckCircle, DollarSign, RefreshCw,
   ShoppingCart, PiggyBank, Receipt, Heart, Smartphone, Bell, Zap, Download, Crown, Sparkles,
-  Rocket, Wifi, WifiOff, Globe, Timer, Lock, Gem, PartyPopper, Handshake, Monitor, BadgeCheck, CircleDollarSign, BellRing, AppWindow
+  Rocket, Wifi, WifiOff, Globe, Timer, Lock, Gem, PartyPopper, Handshake, Monitor, BadgeCheck, CircleDollarSign, BellRing, AppWindow, Settings, ImagePlus, Trash2, Upload, BellOff
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -976,6 +976,12 @@ export default function ProfilPage() {
   const [userData, setUserData] = useState(null);
   const [nichtVerifiziert, setNichtVerifiziert] = useState(false);
   const [rewards, setRewards] = useState([]);
+  
+  // Einstellungen States
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const [customBg, setCustomBg] = useState(null);
+  const [bgUploading, setBgUploading] = useState(false);
   const [bewerbungen, setBewerbungen] = useState([]);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(null);
@@ -1023,7 +1029,8 @@ export default function ProfilPage() {
     { id: 'finance', label: 'Finanzen', icon: Wallet, hasSubTabs: true },
     { id: 'documents', label: 'Dokumente', icon: IdCard, hasSubTabs: true },
     { id: 'marketplace', label: 'Marktplatz', icon: ShoppingCart },
-    { id: 'applications', label: 'Bewerbungen', icon: ClipboardList }
+    { id: 'applications', label: 'Bewerbungen', icon: ClipboardList },
+    { id: 'settings', label: 'Einstellungen', icon: Settings }
   ];
 
   const subTabs = {
@@ -1063,6 +1070,18 @@ export default function ProfilPage() {
       }
     }
   }, [user, authLoading, router]);
+
+  // Lade Einstellungen aus localStorage
+  useEffect(() => {
+    // Custom Background
+    const savedBg = localStorage.getItem('hhrp-custom-bg');
+    if (savedBg) setCustomBg(savedBg);
+
+    // Push Notification Status
+    if ('Notification' in window && 'serviceWorker' in navigator) {
+      setPushEnabled(Notification.permission === 'granted');
+    }
+  }, []);
 
   // Auto-Retry: Prüfe alle 15 Sekunden im Hintergrund ob Bot wieder online ist
   useEffect(() => {
@@ -3442,6 +3461,235 @@ export default function ProfilPage() {
                 </Button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* EINSTELLUNGEN TAB */}
+        {activeTab === 'settings' && (
+          <div className="space-y-6">
+            {/* Push-Benachrichtigungen */}
+            <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+              <div className="flex items-center gap-3 mb-6">
+                <BellRing className="w-6 h-6 text-blue-400" />
+                <h2 className="text-xl font-bold text-white">Push-Benachrichtigungen</h2>
+              </div>
+
+              {isPWA ? (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg ${pushEnabled ? 'bg-green-500/15' : 'bg-white/[0.06]'} flex items-center justify-center`}>
+                        {pushEnabled ? (
+                          <BellRing className="w-5 h-5 text-green-400" />
+                        ) : (
+                          <BellOff className="w-5 h-5 text-white/30" />
+                        )}
+                      </div>
+                      <div>
+                        <p className="font-medium text-white">Benachrichtigungen</p>
+                        <p className="text-xs text-white/40">
+                          {pushEnabled ? 'Du erhältst Push-Benachrichtigungen' : 'Push-Benachrichtigungen sind deaktiviert'}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        setPushLoading(true);
+                        try {
+                          if (pushEnabled) {
+                            // Deaktivieren: Subscription auf dem Server löschen
+                            const registration = await navigator.serviceWorker.ready;
+                            const subscription = await registration.pushManager.getSubscription();
+                            if (subscription) {
+                              // Unsubscribe lokal
+                              await subscription.unsubscribe();
+                              // Subscription auf dem Server löschen
+                              await fetch('/api/push/unsubscribe', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ userId: user?.id })
+                              });
+                            }
+                            setPushEnabled(false);
+                            toast.success('Benachrichtigungen deaktiviert');
+                          } else {
+                            // Aktivieren: Permission anfordern
+                            const permission = await Notification.requestPermission();
+                            if (permission === 'granted') {
+                              // Re-subscribe
+                              const registration = await navigator.serviceWorker.ready;
+                              const vapidRes = await fetch('/api/push/vapid-key');
+                              const { publicKey } = await vapidRes.json();
+                              const subscription = await registration.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: publicKey
+                              });
+                              await fetch('/api/push/subscribe', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  subscription: subscription.toJSON(),
+                                  userId: user?.id,
+                                  username: user?.username
+                                })
+                              });
+                              setPushEnabled(true);
+                              toast.success('Benachrichtigungen aktiviert!');
+                            } else {
+                              toast.error('Berechtigung verweigert', { description: 'Bitte erlaube Benachrichtigungen in deinen Browser-Einstellungen.' });
+                            }
+                          }
+                        } catch (err) {
+                          console.error('Push toggle error:', err);
+                          toast.error('Fehler beim Umschalten');
+                        } finally {
+                          setPushLoading(false);
+                        }
+                      }}
+                      disabled={pushLoading}
+                      className={`relative w-14 h-7 rounded-full transition-all duration-300 ${pushEnabled ? 'bg-green-500' : 'bg-white/10'} ${pushLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 ${pushEnabled ? 'left-7' : 'left-0.5'}`} />
+                    </button>
+                  </div>
+
+                  {pushEnabled && (
+                    <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/15">
+                      <p className="text-sm text-white/60">Du wirst benachrichtigt bei:</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+                        {[
+                          { icon: CircleDollarSign, text: 'Cooldown fertig (/collect, /rob)' },
+                          { icon: Gift, text: 'Daily Bonus verfügbar' },
+                          { icon: Shield, text: 'Wartungsarbeiten' },
+                          { icon: Sparkles, text: 'Neue Events' }
+                        ].map((item, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <item.icon className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
+                            <span className="text-xs text-white/50">{item.text}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-6 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                  <Smartphone className="w-10 h-10 text-white/15 mx-auto mb-3" />
+                  <p className="text-white/40 text-sm">Push-Benachrichtigungen sind nur als PWA (installierte App) verfügbar.</p>
+                  <p className="text-white/25 text-xs mt-1">Installiere Hamburg Horizon als App um diese Funktion zu nutzen.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Hintergrundbild */}
+            <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+              <div className="flex items-center gap-3 mb-6">
+                <ImagePlus className="w-6 h-6 text-purple-400" />
+                <h2 className="text-xl font-bold text-white">Eigenes Hintergrundbild</h2>
+              </div>
+
+              {isPWA ? (
+                <div className="space-y-4">
+                  {/* Vorschau */}
+                  {customBg && (
+                    <div className="relative rounded-xl overflow-hidden border border-white/[0.08]">
+                      <img 
+                        src={customBg} 
+                        alt="Hintergrundbild Vorschau" 
+                        className="w-full h-48 object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+                        <span className="text-xs text-white/60 bg-black/40 px-2 py-1 rounded-lg">Aktives Hintergrundbild</span>
+                        <button
+                          onClick={() => {
+                            localStorage.removeItem('hhrp-custom-bg');
+                            setCustomBg(null);
+                            // Event für RootClientLayout
+                            window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
+                            toast.success('Hintergrundbild entfernt');
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/80 hover:bg-red-500 text-white text-xs rounded-lg transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Entfernen
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Upload */}
+                  <label className={`flex flex-col items-center justify-center p-8 rounded-xl border-2 border-dashed transition-all cursor-pointer ${customBg ? 'border-white/10 hover:border-white/20 bg-white/[0.01]' : 'border-purple-500/30 hover:border-purple-500/50 bg-purple-500/5'}`}>
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp,image/gif"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+
+                        // Größen-Check: Max 10MB
+                        if (file.size > 10 * 1024 * 1024) {
+                          toast.error('Datei zu groß', { description: 'Maximale Größe: 10 MB' });
+                          return;
+                        }
+
+                        // Typ-Check
+                        if (!file.type.startsWith('image/')) {
+                          toast.error('Ungültiges Format', { description: 'Nur Bilder (PNG, JPG, WebP, GIF) erlaubt.' });
+                          return;
+                        }
+
+                        setBgUploading(true);
+                        try {
+                          const reader = new FileReader();
+                          reader.onload = (event) => {
+                            const base64 = event.target.result;
+                            try {
+                              localStorage.setItem('hhrp-custom-bg', base64);
+                              setCustomBg(base64);
+                              // Event für RootClientLayout
+                              window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: base64 } }));
+                              toast.success('Hintergrundbild gespeichert!');
+                            } catch (storageErr) {
+                              toast.error('Speicherfehler', { description: 'Das Bild ist zu groß für den lokalen Speicher. Versuche ein kleineres Bild.' });
+                            }
+                            setBgUploading(false);
+                          };
+                          reader.onerror = () => {
+                            toast.error('Fehler beim Lesen der Datei');
+                            setBgUploading(false);
+                          };
+                          reader.readAsDataURL(file);
+                        } catch (err) {
+                          toast.error('Fehler beim Hochladen');
+                          setBgUploading(false);
+                        }
+                        // Reset input
+                        e.target.value = '';
+                      }}
+                    />
+                    {bgUploading ? (
+                      <Loader2 className="w-8 h-8 text-purple-400 animate-spin mb-2" />
+                    ) : (
+                      <Upload className="w-8 h-8 text-purple-400 mb-2" />
+                    )}
+                    <p className="text-sm font-medium text-white">{customBg ? 'Bild ändern' : 'Bild hochladen'}</p>
+                    <p className="text-xs text-white/35 mt-1">PNG, JPG, WebP oder GIF (max. 10 MB)</p>
+                  </label>
+
+                  <p className="text-xs text-white/25 text-center">
+                    Das Hintergrundbild wird lokal auf deinem Gerät gespeichert und ist nur für dich sichtbar.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-6 rounded-xl bg-white/[0.02] border border-white/5 text-center">
+                  <ImagePlus className="w-10 h-10 text-white/15 mx-auto mb-3" />
+                  <p className="text-white/40 text-sm">Eigene Hintergrundbilder sind nur als PWA (installierte App) verfügbar.</p>
+                  <p className="text-white/25 text-xs mt-1">Installiere Hamburg Horizon als App um diese Funktion zu nutzen.</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
         </>

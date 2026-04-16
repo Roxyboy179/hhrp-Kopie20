@@ -17,9 +17,23 @@ import Link from 'next/link';
 
 export default function RootClientLayout({ children }) {
   const [splashDone, setSplashDone] = useState(false);
+  const [customBg, setCustomBg] = useState(null);
   const pathname = usePathname();
   const isProfilePage = pathname === '/profil';
   const handleSplashComplete = useCallback(() => setSplashDone(true), []);
+
+  // Custom Background aus localStorage laden
+  useEffect(() => {
+    const savedBg = localStorage.getItem('hhrp-custom-bg');
+    if (savedBg) setCustomBg(savedBg);
+
+    // Auf Änderungen vom Profil-Einstellungen hören
+    const handleBgChange = (e) => {
+      setCustomBg(e.detail?.bg || null);
+    };
+    window.addEventListener('hhrp-bg-change', handleBgChange);
+    return () => window.removeEventListener('hhrp-bg-change', handleBgChange);
+  }, []);
 
   // Register Service Worker
   useEffect(() => {
@@ -61,7 +75,31 @@ export default function RootClientLayout({ children }) {
     <AuthProvider>
       <ThemeProvider>
         {!splashDone && <SplashScreen onComplete={handleSplashComplete} />}
-        <div style={{ opacity: splashDone ? 1 : 0, transition: 'opacity 0.5s ease' }}>
+        <div style={{ 
+          opacity: splashDone ? 1 : 0, 
+          transition: 'opacity 0.5s ease',
+          ...(customBg ? {
+            position: 'relative',
+          } : {})
+        }}>
+          {customBg && (
+            <div 
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundImage: `url(${customBg})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundAttachment: 'fixed',
+                opacity: 0.15,
+                zIndex: 0,
+                pointerEvents: 'none'
+              }}
+            />
+          )}
           <WartungsBanner />
           <LayoutContent>{children}</LayoutContent>
           <CookieBanner />
