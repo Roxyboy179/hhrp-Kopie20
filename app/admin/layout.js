@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, FileText, UserPlus, Settings, LogOut, 
   Menu, X, Shield, ChevronRight, Sliders, Clock
@@ -21,6 +21,7 @@ export default function AdminLayout({ children }) {
 
 function AdminLayoutInner({ children }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { admin, logout } = useAdminAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -41,7 +42,7 @@ function AdminLayoutInner({ children }) {
   const handleLogout = async () => {
     await logout();
     toast.success('Abgemeldet', { description: 'Du wurdest komplett abgemeldet.' });
-    window.location.href = '/';
+    router.push('/');
   };
 
   return (

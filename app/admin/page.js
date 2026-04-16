@@ -116,7 +116,7 @@ export default function AdminPage() {
   const handleLogout = async () => {
     await logout();
     toast.success('Abgemeldet', { description: 'Du wurdest komplett abgemeldet.' });
-    window.location.href = '/';
+    router.push('/');
   };
 
   if (loading) {

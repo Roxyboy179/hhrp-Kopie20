@@ -2,14 +2,16 @@
 
 import { WifiOff, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function OfflinePage() {
   const [isOnline, setIsOnline] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const handleOnline = () => {
       setIsOnline(true);
-      window.location.href = '/';
+      router.push('/');
     };
 
     const handleOffline = () => {
@@ -25,10 +27,11 @@ export default function OfflinePage() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [router]);
 
   const handleRetry = () => {
-    window.location.reload();
+    router.refresh();
+    router.push('/');
   };
 
   return (

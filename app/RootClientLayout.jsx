@@ -203,10 +203,8 @@ export default function RootClientLayout({ children }) {
             
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('✨ New Service Worker installed! Page will reload to activate...');
-                // Aktiviere neuen SW und lade Seite neu
-                newWorker.postMessage({ type: 'SKIP_WAITING' });
-                window.location.reload();
+                console.log('✨ New Service Worker installed and activated!');
+                // Keine Auto-Reload mehr - User kann App weiter nutzen
               }
             });
           });
