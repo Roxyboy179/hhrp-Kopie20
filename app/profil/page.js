@@ -1446,21 +1446,25 @@ export default function ProfilPage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {Object.entries(userData.cooldowns).map(([key, timestamp]) => {
-                    // Cooldown-Namen und Icons mapping
+                    // Cooldown-Namen, Icons und Dauer mapping
                     const cooldownConfig = {
-                      collect: { label: 'Gehalt abholen', icon: Gift, color: 'green' },
-                      daily: { label: 'Daily Bonus', icon: Trophy, color: 'blue' },
-                      ueberfall: { label: 'Überfall', icon: AlertCircle, color: 'red' },
-                      rob: { label: 'Rob', icon: AlertCircle, color: 'red' },
-                      elite_plus_daily: { label: 'Elite+ Daily', icon: Star, color: 'purple' },
-                      work: { label: 'Arbeiten', icon: Building2, color: 'orange' }
+                      collect: { label: 'Gehalt abholen', icon: Gift, color: 'green', duration: 4 * 60 * 60 * 1000 }, // 4h Standard
+                      daily: { label: 'Daily Bonus', icon: Trophy, color: 'blue', duration: 24 * 60 * 60 * 1000 },
+                      ueberfall: { label: 'Überfall', icon: AlertCircle, color: 'red', duration: 24 * 60 * 60 * 1000 },
+                      rob: { label: 'Rob', icon: AlertCircle, color: 'red', duration: 24 * 60 * 60 * 1000 },
+                      elitePlusDaily: { label: 'Elite+ Daily', icon: Star, color: 'purple', duration: 24 * 60 * 60 * 1000 },
+                      work: { label: 'Arbeiten', icon: Building2, color: 'orange', duration: 1 * 60 * 60 * 1000 }
                     };
                     
                     const config = cooldownConfig[key] || { 
                       label: key.charAt(0).toUpperCase() + key.slice(1), 
                       icon: Clock, 
-                      color: 'gray' 
+                      color: 'gray',
+                      duration: 1 * 60 * 60 * 1000 // Default 1h
                     };
+                    
+                    // Berechne End-Timestamp (Start + Dauer)
+                    const endTimestamp = timestamp + config.duration;
                     
                     const IconComponent = config.icon;
                     
@@ -1474,7 +1478,7 @@ export default function ProfilPage() {
                             <span className="text-sm font-medium text-white">{config.label}</span>
                           </div>
                         </div>
-                        <Countdown targetTimestamp={timestamp} />
+                        <Countdown targetTimestamp={endTimestamp} />
                       </div>
                     );
                   })}
