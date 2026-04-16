@@ -2422,13 +2422,16 @@ export default function ProfilPage() {
                     </p>
                   </div>
                   
-                  {/* Mögliche Rückerstattung (15% von gesamt) */}
+                  {/* Mögliche Rückerstattung (45% von gesamt) */}
                   <div className="p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20">
                     <p className="text-sm text-white/60 mb-1">Mögliche Rückerstattung</p>
                     <p className="text-2xl font-bold text-green-400">
-                      {Math.floor(userData.taxSummary.gesamtGezahlt * 0.15).toLocaleString('de-DE')} €
+                      {Math.floor(userData.taxSummary.gesamtGezahlt * 0.45).toLocaleString('de-DE')} €
                     </p>
-                    <p className="text-xs text-green-400/60 mt-1">~15% zurück</p>
+                    <p className="text-xs text-green-400/60 mt-1">45% zurück</p>
+                    {Math.floor(userData.taxSummary.gesamtGezahlt * 0.45) < 50000 && (
+                      <p className="text-xs text-orange-400 mt-1">⚠️ Mind. 50.000€ nötig</p>
+                    )}
                   </div>
                   
                   {/* Letzte Erklärung */}
@@ -2448,11 +2451,22 @@ export default function ProfilPage() {
                 <div className="mt-4 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
                   <div className="flex items-start gap-3">
                     <TrendingUp className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm font-medium text-white mb-1">Steuererklärung einreichen</p>
-                      <p className="text-xs text-white/60 leading-relaxed">
-                        Reiche deine Steuererklärung beim Bot ein (<code className="px-1 py-0.5 rounded bg-white/10">/steuererklaerung</code>) um bis zu 15% deiner gezahlten Steuern zurückzuerhalten!
+                      <p className="text-xs text-white/60 leading-relaxed mb-2">
+                        Reiche deine Steuererklärung beim Bot ein (<code className="px-1 py-0.5 rounded bg-white/10">/steuererklaerung</code>) um 45% deiner gezahlten Steuern zurückzuerhalten!
                       </p>
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        <span className="px-2 py-1 rounded-lg bg-green-500/20 text-green-300">
+                          ✓ 45% Rückerstattung
+                        </span>
+                        <span className="px-2 py-1 rounded-lg bg-orange-500/20 text-orange-300">
+                          ⚠️ Mind. 50.000€ nötig
+                        </span>
+                        <span className="px-2 py-1 rounded-lg bg-purple-500/20 text-purple-300">
+                          ⏱️ 1x pro Monat
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
