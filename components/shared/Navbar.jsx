@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { NotificationBell } from '@/components/shared/NotificationBell';
 import { LoginModal } from '@/components/LoginModal';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 const DiscordIcon = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 127.14 96.36" fill="currentColor">
@@ -21,6 +22,7 @@ export function Navbar({ user, loading }) {
   const [scrolled, setScrolled] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const pathname = usePathname();
+  const { refreshUser } = useAuth();
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 20);
@@ -30,7 +32,8 @@ export function Navbar({ user, loading }) {
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-    window.location.href = '/';
+    // User-Daten im Hintergrund aktualisieren statt Full-Page-Reload
+    refreshUser();
   };
 
   const navItems = [

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 export function LoginModal({ open, onOpenChange }) {
   const [status, setStatus] = useState('loading');
@@ -12,17 +13,18 @@ export function LoginModal({ open, onOpenChange }) {
   const popupRef = useRef(null);
   const checkClosedIntervalRef = useRef(null);
   const countdownTimerRef = useRef(null);
+  const { refreshUser } = useAuth();
 
   const handleClose = useCallback(() => {
     onOpenChange(false);
     
-    // Bei Erfolg Seite neu laden
+    // Bei Erfolg User-Daten im Hintergrund aktualisieren statt Full-Page-Reload
     if (status === 'success') {
       setTimeout(() => {
-        window.location.reload();
+        refreshUser();
       }, 100);
     }
-  }, [status, onOpenChange]);
+  }, [status, onOpenChange, refreshUser]);
 
   const handleManualClose = useCallback(() => {
     handleClose();
