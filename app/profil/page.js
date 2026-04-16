@@ -10,7 +10,8 @@ import {
   Wallet, CreditCard, Trophy, Gift, User, Award, Clock, TrendingUp, 
   Check, Loader2, FileText, Calendar, Mail, ExternalLink, LayoutDashboard, IdCard, ClipboardList,
   Building2, Hash, Key, Copy, ArrowUpRight, ArrowDownRight, AlertCircle, 
-  Shield, Star, MessageSquare, Ban, ChevronUp, ShieldCheck, CheckCircle, DollarSign, RefreshCw
+  Shield, Star, MessageSquare, Ban, ChevronUp, ShieldCheck, CheckCircle, DollarSign, RefreshCw,
+  ShoppingCart, PiggyBank, Receipt
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -975,10 +976,45 @@ export default function ProfilPage() {
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [activeSubTab, setActiveSubTab] = useState('transactions'); // Default Sub-Tab
   const [transactionsPage, setTransactionsPage] = useState(1);
   const [invoicesPage, setInvoicesPage] = useState(1);
   const [personalaktePage, setPersonalaktePage] = useState(1);
+  const [marketplacePage, setMarketplacePage] = useState(1);
+  const [savingsPage, setSavingsPage] = useState(1);
+  const [taxPage, setTaxPage] = useState(1);
   const itemsPerPage = 20;
+
+  // Tab-Konfiguration mit Kategorien
+  const mainTabs = [
+    { id: 'overview', label: 'Übersicht', icon: LayoutDashboard },
+    { id: 'finance', label: 'Finanzen', icon: Wallet, hasSubTabs: true },
+    { id: 'documents', label: 'Dokumente', icon: IdCard, hasSubTabs: true },
+    { id: 'marketplace', label: 'Marktplatz', icon: ShoppingCart },
+    { id: 'applications', label: 'Bewerbungen', icon: ClipboardList }
+  ];
+
+  const subTabs = {
+    finance: [
+      { id: 'transactions', label: 'Transaktionen', icon: TrendingUp },
+      { id: 'invoices', label: 'Rechnungen', icon: FileText },
+      { id: 'savings', label: 'Sparkonto', icon: PiggyBank },
+      { id: 'tax', label: 'Steuer-Records', icon: Receipt }
+    ],
+    documents: [
+      { id: 'cards', label: 'Ausweise', icon: IdCard },
+      { id: 'personalakte', label: 'Personalakte', icon: Award }
+    ]
+  };
+
+  // Handler für Haupt-Tab Wechsel
+  const handleMainTabChange = (tabId) => {
+    setActiveTab(tabId);
+    // Setze Default Sub-Tab wenn Kategorie Sub-Tabs hat
+    if (subTabs[tabId]) {
+      setActiveSubTab(subTabs[tabId][0].id);
+    }
+  };
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [botStatus, setBotStatus] = useState({ isOnline: true, checking: true, error: null });
 
@@ -1133,6 +1169,9 @@ export default function ProfilPage() {
     { id: 'transactions', label: 'Transaktionen', icon: TrendingUp },
     { id: 'invoices', label: 'Meine Rechnungen', icon: FileText },
     { id: 'personalakte', label: 'Meine Personalakte', icon: Award },
+    { id: 'marketplace', label: 'Marktplatz', icon: ShoppingCart },
+    { id: 'savings', label: 'Sparkonto', icon: PiggyBank },
+    { id: 'tax', label: 'Steuer-Records', icon: Receipt },
     { id: 'applications', label: 'Bewerbungen', icon: ClipboardList }
   ];
 
@@ -1168,28 +1207,97 @@ export default function ProfilPage() {
           </div>
         </div>
 
-        {/* Tab Navigation */}
+        {/* Tab Navigation - Haupt-Tabs */}
         <div className="glass rounded-2xl p-2 border border-white/[0.08]">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {tabs.map((tab) => {
+          {/* Mobile: Horizontal Scrollable */}
+          <div className="flex lg:hidden gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
+            {mainTabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center justify-center gap-2 px-3 py-3 sm:px-4 rounded-xl transition-all text-sm sm:text-base ${
+                  onClick={() => handleMainTabChange(tab.id)}
+                  className={`flex items-center gap-2 px-4 py-3 rounded-xl transition-all text-sm whitespace-nowrap snap-center flex-shrink-0 ${
+                    activeTab === tab.id
+                      ? 'bg-white/10 text-white border border-white/20 shadow-lg'
+                      : 'text-white/50 hover:text-white/70 hover:bg-white/5 border border-transparent'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <span className="font-medium">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          
+          {/* Desktop: Grid Layout */}
+          <div className="hidden lg:grid grid-cols-5 gap-2">
+            {mainTabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleMainTabChange(tab.id)}
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all text-base ${
                     activeTab === tab.id
                       ? 'bg-white/10 text-white border border-white/20'
                       : 'text-white/50 hover:text-white/70 hover:bg-white/5'
                   }`}
                 >
-                  <Icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                  <Icon className="w-5 h-5 flex-shrink-0" />
                   <span className="font-medium">{tab.label}</span>
                 </button>
               );
             })}
           </div>
         </div>
+
+        {/* Sub-Tabs (nur wenn Haupt-Tab Sub-Tabs hat) */}
+        {subTabs[activeTab] && (
+          <div className="glass rounded-2xl p-2 border border-white/[0.08]">
+            {/* Mobile: Horizontal Scrollable */}
+            <div className="flex lg:hidden gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {subTabs[activeTab].map((subTab) => {
+                const Icon = subTab.icon;
+                return (
+                  <button
+                    key={subTab.id}
+                    onClick={() => setActiveSubTab(subTab.id)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-xs whitespace-nowrap flex-shrink-0 ${
+                      activeSubTab === subTab.id
+                        ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white border border-blue-400/30'
+                        : 'text-white/50 hover:text-white/70 hover:bg-white/5'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="font-medium">{subTab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            
+            {/* Desktop: Flex Layout */}
+            <div className="hidden lg:flex gap-2 justify-center">
+              {subTabs[activeTab].map((subTab) => {
+                const Icon = subTab.icon;
+                return (
+                  <button
+                    key={subTab.id}
+                    onClick={() => setActiveSubTab(subTab.id)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm ${
+                      activeSubTab === subTab.id
+                        ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white border border-blue-400/30'
+                        : 'text-white/50 hover:text-white/70 hover:bg-white/5'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <span className="font-medium">{subTab.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Rewards Section */}
         {rewards.length > 0 && (
@@ -1472,7 +1580,7 @@ export default function ProfilPage() {
         )}
 
         {/* Bankkarten Tab */}
-        {activeTab === 'cards' && (
+        {activeTab === 'documents' && activeSubTab === 'cards' && (
           <>
             {/* Bot Status Check - zeige Error wenn Bot offline (auch während checking) */}
             {!botStatus.isOnline ? (
@@ -1577,7 +1685,7 @@ export default function ProfilPage() {
         )}
 
         {/* Transaktionen Tab */}
-        {activeTab === 'transactions' && (
+        {activeTab === 'finance' && activeSubTab === 'transactions' && (
           <div className="space-y-6">
             {!botStatus.isOnline ? (
               <BotStatusCard status={botStatus} onRetry={loadData} />
@@ -1698,7 +1806,7 @@ export default function ProfilPage() {
         )}
 
         {/* Rechnungen Tab */}
-        {activeTab === 'invoices' && (
+        {activeTab === 'finance' && activeSubTab === 'invoices' && (
           <div className="space-y-6">
             {!botStatus.isOnline ? (
               <BotStatusCard status={botStatus} onRetry={loadData} />
@@ -1871,7 +1979,7 @@ export default function ProfilPage() {
         )}
 
         {/* Personalakte Tab */}
-        {activeTab === 'personalakte' && (
+        {activeTab === 'documents' && activeSubTab === 'personalakte' && (
           <div className="space-y-6">
             {!botStatus.isOnline ? (
               <BotStatusCard status={botStatus} onRetry={loadData} />
@@ -2150,6 +2258,198 @@ export default function ProfilPage() {
                     </p>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Marktplatz Tab */}
+        {activeTab === 'marketplace' && (
+          <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
+            <div className="flex items-center gap-3 mb-6">
+              <ShoppingCart className="w-6 h-6 text-white/60" />
+              <h2 className="text-lg sm:text-xl font-bold text-white">Marktplatz</h2>
+              {userData?.marketplace?.length > 0 && (
+                <span className="px-2 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold">
+                  {userData.marketplace.length}
+                </span>
+              )}
+            </div>
+            {userData?.marketplace && userData.marketplace.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {userData.marketplace
+                    .slice((marketplacePage - 1) * itemsPerPage, marketplacePage * itemsPerPage)
+                    .map((item, index) => (
+                    <div key={index} className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h3 className="text-base font-bold text-white mb-1">{item.itemName || 'Item'}</h3>
+                          {item.description && (
+                            <p className="text-sm text-white/60">{item.description}</p>
+                          )}
+                        </div>
+                        <span className="text-lg font-bold text-green-400 ml-2">
+                          {item.price?.toLocaleString('de-DE')} €
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-white/50">
+                        {item.quantity && (
+                          <span>Anzahl: {item.quantity}</span>
+                        )}
+                        {item.createdAt && (
+                          <span>{new Date(item.createdAt).toLocaleDateString('de-DE')}</span>
+                        )}
+                        {item.status && (
+                          <span className={`px-2 py-0.5 rounded-full ${
+                            item.status === 'sold' ? 'bg-green-500/20 text-green-300' : 'bg-blue-500/20 text-blue-300'
+                          }`}>
+                            {item.status === 'sold' ? 'Verkauft' : 'Verfügbar'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Pagination 
+                  currentPage={marketplacePage}
+                  totalItems={userData.marketplace.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setMarketplacePage}
+                />
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <ShoppingCart className="w-16 h-16 mx-auto mb-4 text-white/20" />
+                <h3 className="text-lg font-bold text-white mb-2">Keine Listings</h3>
+                <p className="text-sm text-white/40">Du hast keine aktiven Listings im Marktplatz.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Sparkonto Tab */}
+        {activeTab === 'finance' && activeSubTab === 'savings' && (
+          <div className="space-y-6">
+            {userData?.savingsAccount ? (
+              <>
+                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                  <div className="flex items-center gap-3 mb-6">
+                    <PiggyBank className="w-6 h-6 text-white/60" />
+                    <h2 className="text-xl font-bold text-white">Mein Sparkonto</h2>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20">
+                      <p className="text-sm text-white/60 mb-1">Guthaben</p>
+                      <p className="text-2xl font-bold text-white">
+                        {userData.savingsAccount.balance?.toLocaleString('de-DE')} €
+                      </p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20">
+                      <p className="text-sm text-white/60 mb-1">Zinssatz</p>
+                      <p className="text-2xl font-bold text-white">
+                        {userData.savingsAccount.interestRate || 0}%
+                      </p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20">
+                      <p className="text-sm text-white/60 mb-1">Verdiente Zinsen</p>
+                      <p className="text-2xl font-bold text-white">
+                        {userData.savingsAccount.earnedInterest?.toLocaleString('de-DE') || 0} €
+                      </p>
+                    </div>
+                  </div>
+                  {userData.savingsAccount.transactions && userData.savingsAccount.transactions.length > 0 && (
+                    <div>
+                      <h3 className="text-base font-bold text-white mb-4">Letzte Transaktionen</h3>
+                      <div className="space-y-2">
+                        {userData.savingsAccount.transactions.slice(0, 10).map((tx, i) => (
+                          <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-white/[0.03]">
+                            <div>
+                              <p className="text-sm font-medium text-white">{tx.type === 'deposit' ? 'Einzahlung' : 'Auszahlung'}</p>
+                              <p className="text-xs text-white/50">{new Date(tx.date || tx.createdAt).toLocaleDateString('de-DE')}</p>
+                            </div>
+                            <p className={`text-base font-bold ${tx.type === 'deposit' ? 'text-green-400' : 'text-red-400'}`}>
+                              {tx.type === 'deposit' ? '+' : '-'}{tx.amount?.toLocaleString('de-DE')} €
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="glass rounded-2xl p-12 border border-white/[0.08] text-center">
+                <PiggyBank className="w-16 h-16 mx-auto mb-4 text-white/20" />
+                <h3 className="text-lg font-bold text-white mb-2">Kein Sparkonto</h3>
+                <p className="text-sm text-white/40">Du hast noch kein Sparkonto eröffnet.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Steuer-Records Tab */}
+        {activeTab === 'finance' && activeSubTab === 'tax' && (
+          <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
+            <div className="flex items-center gap-3 mb-6">
+              <Receipt className="w-6 h-6 text-white/60" />
+              <h2 className="text-lg sm:text-xl font-bold text-white">Steuer-Records</h2>
+              {userData?.taxRecords?.length > 0 && (
+                <span className="px-2 py-1 rounded-full bg-orange-500/20 text-orange-300 text-xs font-bold">
+                  {userData.taxRecords.length}
+                </span>
+              )}
+            </div>
+            {userData?.taxRecords && userData.taxRecords.length > 0 ? (
+              <>
+                <div className="space-y-3">
+                  {userData.taxRecords
+                    .slice((taxPage - 1) * itemsPerPage, taxPage * itemsPerPage)
+                    .map((record, index) => (
+                    <div key={index} className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all">
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <h3 className="text-base font-bold text-white mb-1">
+                            {record.taxType || 'Steuer'} {record.period ? `- ${record.period}` : ''}
+                          </h3>
+                          {record.description && (
+                            <p className="text-sm text-white/60">{record.description}</p>
+                          )}
+                        </div>
+                        <span className="text-lg font-bold text-red-400 ml-2">
+                          -{record.amount?.toLocaleString('de-DE')} €
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-white/50">
+                        {record.date && (
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>{new Date(record.date).toLocaleDateString('de-DE')}</span>
+                          </div>
+                        )}
+                        {record.status && (
+                          <span className={`px-2 py-0.5 rounded-full ${
+                            record.status === 'paid' ? 'bg-green-500/20 text-green-300' : 'bg-yellow-500/20 text-yellow-300'
+                          }`}>
+                            {record.status === 'paid' ? 'Bezahlt' : 'Offen'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <Pagination 
+                  currentPage={taxPage}
+                  totalItems={userData.taxRecords.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setTaxPage}
+                />
+              </>
+            ) : (
+              <div className="text-center py-12">
+                <Receipt className="w-16 h-16 mx-auto mb-4 text-white/20" />
+                <h3 className="text-lg font-bold text-white mb-2">Keine Steuer-Records</h3>
+                <p className="text-sm text-white/40">Du hast noch keine Steueraufzeichnungen.</p>
               </div>
             )}
           </div>

@@ -400,3 +400,22 @@ input, textarea, select, button, a, [role="button"] {
 .card-shine:hover::after {
   transform: translateX(100%) rotate(45deg);
 }
+
+
+
+/* Scrollbar hide for horizontal tab scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
+
+/* Smooth scroll snap */
+.snap-x {
+  scroll-snap-type: x mandatory;
+}
+.snap-center {
+  scroll-snap-align: center;
+}
