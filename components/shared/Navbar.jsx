@@ -117,7 +117,14 @@ export function Navbar({ user, loading }) {
                 ) : (
                   <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: 'rgba(var(--theme-accent-rgb), 0.3)' }}><User className="w-3.5 h-3.5" /></div>
                 )}
-                <span className="text-sm text-white/70 max-w-[100px] truncate">{user.globalName || user.username}</span>
+                <div className="flex flex-col">
+                  <span className="text-sm text-white/70 max-w-[100px] truncate">{user.globalName || user.username}</span>
+                  {user.roles && user.roles.includes('1494434149623136276') && (
+                    <span className="text-[10px] font-medium" style={{ color: 'var(--theme-accent)' }}>
+                      VIP Premium · HHRP Beta Tester
+                    </span>
+                  )}
+                </div>
               </Link>
               <Button variant="ghost" size="icon" onClick={handleLogout} className="text-white/30 hover:text-white hover:bg-white/[0.06] rounded-xl h-9 w-9">
                 <LogOut className="w-4 h-4" />

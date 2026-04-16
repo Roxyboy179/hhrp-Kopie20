@@ -396,3 +396,160 @@ export function UprankStep3({ formData, setFormData }) {
     </WizardStep>
   );
 }
+
+
+// ============ BETA TESTER BEWERBUNG - MULTI STEP ============
+
+export function BetaTesterStep1({ formData, setFormData }) {
+  return (
+    <WizardStep 
+      title="Persönliche Daten" 
+      description="Grundlegende Informationen über dich"
+    >
+      <FormField label="Vollständiger Name" required>
+        <Input 
+          value={formData.name || ''} 
+          onChange={e => setFormData({ ...formData, name: e.target.value })} 
+          placeholder="Max Mustermann" 
+          className={inputClass} 
+        />
+      </FormField>
+      <FormField label="Discord Name" required>
+        <Input 
+          value={formData.discordName || ''} 
+          onChange={e => setFormData({ ...formData, discordName: e.target.value })} 
+          className={inputClass}
+          disabled
+        />
+      </FormField>
+      <FormField label="Alter" required>
+        <Input 
+          type="number" 
+          value={formData.alter || ''} 
+          onChange={e => setFormData({ ...formData, alter: e.target.value })} 
+          placeholder="18" 
+          className={inputClass} 
+          min="13" 
+        />
+      </FormField>
+      <FormField label="Warum möchtest du Beta Tester werden?" required>
+        <Textarea 
+          value={formData.warum || ''} 
+          onChange={e => setFormData({ ...formData, warum: e.target.value })} 
+          placeholder="Beschreibe deine Motivation..." 
+          className={inputClass + " min-h-[120px] resize-none"} 
+        />
+      </FormField>
+    </WizardStep>
+  );
+}
+
+export function BetaTesterStep2({ formData, setFormData }) {
+  return (
+    <WizardStep 
+      title="Erfahrung & Verfügbarkeit" 
+      description="Deine Testing-Erfahrung und zeitliche Verfügbarkeit"
+    >
+      <FormField label="Hast du Erfahrung mit Beta Testing oder Qualitätssicherung?" required>
+        <Textarea 
+          value={formData.erfahrung || ''} 
+          onChange={e => setFormData({ ...formData, erfahrung: e.target.value })} 
+          placeholder="Beschreibe deine Erfahrungen..." 
+          className={inputClass + " min-h-[100px] resize-none"} 
+        />
+      </FormField>
+      <FormField label="Wie viel Zeit kannst du pro Woche für Beta Testing aufbringen?">
+        <Input 
+          value={formData.verfuegbarkeit || ''} 
+          onChange={e => setFormData({ ...formData, verfuegbarkeit: e.target.value })} 
+          placeholder="z.B. 5-10 Stunden pro Woche" 
+          className={inputClass} 
+        />
+      </FormField>
+      <FormField label="Welche Features würdest du am liebsten testen?">
+        <Textarea 
+          value={formData.features || ''} 
+          onChange={e => setFormData({ ...formData, features: e.target.value })} 
+          placeholder="z.B. Neue Bewerbungssysteme, Admin-Tools, UI-Updates..." 
+          className={inputClass + " min-h-[100px] resize-none"} 
+        />
+      </FormField>
+      <FormField label="Wie gehst du vor, wenn du einen Bug findest?">
+        <Textarea 
+          value={formData.bugs || ''} 
+          onChange={e => setFormData({ ...formData, bugs: e.target.value })} 
+          placeholder="Beschreibe deinen Prozess zum Dokumentieren und Melden von Bugs..." 
+          className={inputClass + " min-h-[100px] resize-none"} 
+        />
+      </FormField>
+    </WizardStep>
+  );
+}
+
+export function BetaTesterStep3({ formData, setFormData }) {
+  return (
+    <WizardStep 
+      title="Feedback & Kommunikation" 
+      description="Deine Art zu kommunizieren und Feedback zu geben"
+    >
+      <FormField label="Wie gibst du konstruktives Feedback?">
+        <Textarea 
+          value={formData.feedback || ''} 
+          onChange={e => setFormData({ ...formData, feedback: e.target.value })} 
+          placeholder="Beschreibe, wie du Verbesserungsvorschläge formulierst..." 
+          className={inputClass + " min-h-[100px] resize-none"} 
+        />
+      </FormField>
+      <FormField label="Wie würdest du mit anderen Beta Testern kommunizieren?">
+        <Textarea 
+          value={formData.kommunikation || ''} 
+          onChange={e => setFormData({ ...formData, kommunikation: e.target.value })} 
+          placeholder="z.B. Discord, Ticket-System, direkter Austausch..." 
+          className={inputClass + " min-h-[100px] resize-none"} 
+        />
+      </FormField>
+      <FormField label="Was erwartest du vom Beta Tester Programm?">
+        <Textarea 
+          value={formData.erwartungen || ''} 
+          onChange={e => setFormData({ ...formData, erwartungen: e.target.value })} 
+          placeholder="Deine Erwartungen und Ziele..." 
+          className={inputClass + " min-h-[100px] resize-none"} 
+        />
+      </FormField>
+    </WizardStep>
+  );
+}
+
+export function BetaTesterStep4({ formData, setFormData }) {
+  return (
+    <WizardStep 
+      title="Persönliche Einschätzung" 
+      description="Letzte Fragen zu deinen Stärken und Schwächen"
+    >
+      <FormField label="Was sind deine Stärken?">
+        <Textarea 
+          value={formData.staerken || ''} 
+          onChange={e => setFormData({ ...formData, staerken: e.target.value })} 
+          placeholder="z.B. Detailgenauigkeit, technisches Verständnis, Kreativität..." 
+          className={inputClass + " min-h-[100px] resize-none"} 
+        />
+      </FormField>
+      <FormField label="Was sind deine Schwächen im Bereich Testing?">
+        <Textarea 
+          value={formData.schwaechen || ''} 
+          onChange={e => setFormData({ ...formData, schwaechen: e.target.value })} 
+          placeholder="Sei ehrlich - wir schätzen Selbstreflexion!" 
+          className={inputClass + " min-h-[100px] resize-none"} 
+        />
+      </FormField>
+      <FormField label="Möchtest du uns noch etwas mitteilen?">
+        <Textarea 
+          value={formData.zusaetzlich || ''} 
+          onChange={e => setFormData({ ...formData, zusaetzlich: e.target.value })} 
+          placeholder="Zusätzliche Informationen..." 
+          className={inputClass + " min-h-[100px] resize-none"} 
+        />
+      </FormField>
+    </WizardStep>
+  );
+}

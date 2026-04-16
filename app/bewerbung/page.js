@@ -12,13 +12,14 @@ import { toast } from 'sonner';
 import { 
   FileText, Send, Loader2, AlertTriangle, CheckCircle2, ArrowLeft, ArrowRight,
   User, Gamepad2, Target, MessageSquare, Eye, Edit,
-  Shield, Mic, BookOpen, Heart, TrendingUp, Briefcase, Lock, Clock, BarChart3, ExternalLink
+  Shield, Mic, BookOpen, Heart, TrendingUp, Briefcase, Lock, Clock, BarChart3, ExternalLink, Sparkles
 } from 'lucide-react';
 import { MultiStepWizard, WizardStep } from '@/components/bewerbung/MultiStepWizard';
 import { 
   NormalStep1, NormalStep2, NormalStep3, NormalStep4,
   PraktikumStep1, PraktikumStep2, PraktikumStep3, PraktikumStep4,
-  UprankStep1, UprankStep2, UprankStep3
+  UprankStep1, UprankStep2, UprankStep3,
+  BetaTesterStep1, BetaTesterStep2, BetaTesterStep3, BetaTesterStep4
 } from '@/components/bewerbung/BewerbungSteps';
 
 const inputClass = "bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/20 focus:ring-white/10 rounded-xl transition-all duration-300 focus:bg-white/[0.05] min-h-[44px]";
@@ -58,6 +59,8 @@ function ProgressBar({ formData, selectedType }) {
       requiredFields = ['vorname', 'alter', 'robloxName', 'fraktion', 'spielzeit', 'warumTeam', 'stundenProWoche', 'hatMikro', 'kenntRegeln', 'bleibtNett'];
     } else if (selectedType === 'uprank') {
       requiredFields = ['seitWannImTeam', 'aktuelleAufgaben', 'gewuenschterRang', 'warumUprank', 'zusaetzlicheVerantwortung', 'stundenProWoche'];
+    } else if (selectedType === 'beta_tester') {
+      requiredFields = ['name', 'discordName', 'alter', 'warum', 'erfahrung'];
     }
     
     const filledCount = requiredFields.filter(field => {
@@ -233,6 +236,7 @@ function PreviewScreen({ formData, selectedType, onEdit, onSubmit, submitting })
 // ========== KARTEN-AUSWAHL ==========
 function BewerbungCards({ user, onSelect, settings }) {
   const isTeamler = user?.isTeamMember || false;
+  const hasBetaTesterRole = user?.roles?.includes('1494434149623136276');
 
   const cards = [
     {
@@ -254,6 +258,16 @@ function BewerbungCards({ user, onSelect, settings }) {
       borderHover: 'hover:border-white/20',
       show: !isTeamler,
       isOpen: settings?.praktikum_open !== false
+    },
+    {
+      type: 'beta_tester',
+      title: 'Beta Tester',
+      desc: 'Werde Teil unseres exklusiven Beta Tester Programms!',
+      icon: <Sparkles className="w-6 h-6 md:w-7 md:h-7" />,
+      color: 'from-neutral-800 to-neutral-900',
+      borderHover: 'hover:border-purple-500/20',
+      show: !isTeamler && !hasBetaTesterRole,
+      isOpen: settings?.beta_tester_open !== false
     },
     {
       type: 'uprank',
@@ -524,10 +538,10 @@ export default function BewerbungPage() {
     try {
       const res = await fetch('/api/bewerbung-settings');
       const data = await res.json();
-      setBewerbungSettings(data.settings || { normal_open: true, praktikum_open: true, uprank_open: true });
+      setBewerbungSettings(data.settings || { normal_open: true, praktikum_open: true, uprank_open: true, beta_tester_open: true });
     } catch (e) {
       console.error('Fehler beim Laden der Settings:', e);
-      setBewerbungSettings({ normal_open: true, praktikum_open: true, uprank_open: true });
+      setBewerbungSettings({ normal_open: true, praktikum_open: true, uprank_open: true, beta_tester_open: true });
     } finally {
       setLoadingSettings(false);
     }
@@ -569,6 +583,9 @@ export default function BewerbungPage() {
     }
     if (type === 'uprank') {
       return { ...base, seitWannImTeam: '', aktuelleAufgaben: '', gewuenschterRang: '', warumUprank: '', zusaetzlicheVerantwortung: '', stundenProWoche: '' };
+    }
+    if (type === 'beta_tester') {
+      return { ...base, name: '', discordName: user?.globalName || user?.username || '', alter: '', warum: '', erfahrung: '', verfuegbarkeit: '', features: '', bugs: '', feedback: '', kommunikation: '', erwartungen: '', staerken: '', schwaechen: '', zusaetzlich: '' };
     }
     return base;
   };
@@ -868,8 +885,13 @@ export default function BewerbungPage() {
   }
 
   // FORMULAR MIT MULTI-STEP WIZARD
-  const typeLabels = { normal: 'Team-Bewerbung', praktikum: 'Praktikum-Bewerbung', uprank: 'Uprank-Bewerbung' };
-  const totalSteps = selectedType === 'uprank' ? 3 : 4;
+  const typeLabels = { 
+    normal: 'Team-Bewerbung', 
+    praktikum: 'Praktikum-Bewerbung', 
+    uprank: 'Uprank-Bewerbung', 
+    beta_tester: 'Beta Tester Bewerbung' 
+  };
+  const totalSteps = (selectedType === 'uprank') ? 3 : 4;
 
   return (
     <div className="min-h-screen">
@@ -915,6 +937,12 @@ export default function BewerbungPage() {
               {selectedType === 'praktikum' && currentStep === 1 && <PraktikumStep2 formData={formData} setFormData={setFormData} />}
               {selectedType === 'praktikum' && currentStep === 2 && <PraktikumStep3 formData={formData} setFormData={setFormData} />}
               {selectedType === 'praktikum' && currentStep === 3 && <PraktikumStep4 formData={formData} setFormData={setFormData} />}
+
+              {/* Beta Tester Bewerbung - 4 Steps */}
+              {selectedType === 'beta_tester' && currentStep === 0 && <BetaTesterStep1 formData={formData} setFormData={setFormData} />}
+              {selectedType === 'beta_tester' && currentStep === 1 && <BetaTesterStep2 formData={formData} setFormData={setFormData} />}
+              {selectedType === 'beta_tester' && currentStep === 2 && <BetaTesterStep3 formData={formData} setFormData={setFormData} />}
+              {selectedType === 'beta_tester' && currentStep === 3 && <BetaTesterStep4 formData={formData} setFormData={setFormData} />}
 
               {/* Uprank-Bewerbung - 3 Steps */}
               {selectedType === 'uprank' && currentStep === 0 && <UprankStep1 formData={formData} setFormData={setFormData} user={user} />}

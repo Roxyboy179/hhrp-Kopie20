@@ -18,7 +18,7 @@ import {
   getBewerbungSettings,
   updateBewerbungSettings
 } from '@/lib/supabase-helpers';
-import { sendNewBewerbungNotification, sendStatusUpdateNotification, sendAccountStatusChangeNotification, sendPasswordChangeNotification } from '@/lib/discord-bot';
+import { sendNewBewerbungNotification, sendStatusUpdateNotification, sendAccountStatusChangeNotification, sendPasswordChangeNotification, assignDiscordRole } from '@/lib/discord-bot';
 import { logActivity, cleanupOldLogs, getLogs, getIpAddress, LOG_ACTIONS } from '@/lib/activity-logger';
 import { createNotification, getUserNotifications, getUnreadCount, markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/notifications';
 
@@ -1113,6 +1113,18 @@ async function handleAdminUpdateBewerbung(request, id) {
 
     const updated = await updateBewerbung(id, updates);
     const newStatus = updated.status;
+
+    // Automatische Discord-Rollen-Vergabe für Beta Tester bei Annahme
+    if (newStatus === 'Angenommen' && updated.form_data?.bewerbungstyp === 'beta_tester') {
+      try {
+        console.log('[BETA TESTER] Vergebe Beta Tester Rolle...');
+        await assignDiscordRole(updated.discord_user_id, '1494434149623136276');
+        console.log('[BETA TESTER] Rolle erfolgreich vergeben!');
+      } catch (roleError) {
+        console.error('[BETA TESTER] Fehler beim Vergeben der Rolle:', roleError);
+        // Weiter machen, auch wenn Rollen-Vergabe fehlschlägt
+      }
+    }
 
     // DM + Channel-Nachricht bei Statusänderung (korrekte Argumente!)
     if (oldStatus !== newStatus) {

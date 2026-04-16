@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Loader2, Save, CheckCircle2, XCircle, FileText, Briefcase, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Loader2, Save, CheckCircle2, XCircle, FileText, Briefcase, TrendingUp, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -14,7 +14,8 @@ export default function BewerbungVerwaltungPage() {
   const [settings, setSettings] = useState({
     normal_open: true,
     praktikum_open: true,
-    uprank_open: true
+    uprank_open: true,
+    beta_tester_open: true
   });
 
   useEffect(() => {
@@ -46,7 +47,7 @@ export default function BewerbungVerwaltungPage() {
     try {
       const res = await fetch('/api/bewerbung-settings');
       const data = await res.json();
-      setSettings(data.settings || { normal_open: true, praktikum_open: true, uprank_open: true });
+      setSettings(data.settings || { normal_open: true, praktikum_open: true, uprank_open: true, beta_tester_open: true });
     } catch (e) {
       console.error('Fehler beim Laden der Settings:', e);
     }
@@ -104,11 +105,18 @@ export default function BewerbungVerwaltungPage() {
       color: 'orange'
     },
     {
+      key: 'beta_tester',
+      title: 'Beta Tester Bewerbung',
+      desc: 'User können sich als Beta Tester bewerben',
+      icon: <Sparkles className="w-6 h-6" />,
+      color: 'purple'
+    },
+    {
       key: 'uprank',
       title: 'Uprank Bewerbung',
       desc: 'Teammitglieder können eine Beförderung beantragen',
       icon: <TrendingUp className="w-6 h-6" />,
-      color: 'purple'
+      color: 'green'
     }
   ];
 
@@ -137,7 +145,8 @@ export default function BewerbungVerwaltungPage() {
             const colorClasses = {
               blue: 'border-blue-500/30 bg-blue-500/5',
               orange: 'border-orange-500/30 bg-orange-500/5',
-              purple: 'border-purple-500/30 bg-purple-500/5'
+              purple: 'border-purple-500/30 bg-purple-500/5',
+              green: 'border-green-500/30 bg-green-500/5'
             };
 
             return (
