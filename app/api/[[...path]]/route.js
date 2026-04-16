@@ -2747,7 +2747,64 @@ async function handleGetUserData(request) {
       return NextResponse.json({ error: 'Fehler beim Laden der Daten' }, { status: 500 });
     }
 
-    return NextResponse.json({ data: data || null });
+    // Server Booster Check via Discord API (Role ID: 1274419855227093147)
+    const BOOSTER_ROLE_ID = '1274419855227093147';
+    let userData = data || null;
+
+    if (userData && userData.data) {
+      try {
+        const member = await getGuildMember(user.id);
+        if (member && member.roles) {
+          const isBooster = member.roles.includes(BOOSTER_ROLE_ID);
+          const licenses = userData.data.licenses || [];
+
+          if (isBooster && !licenses.includes('server_booster')) {
+            // User hat die Booster-Rolle auf Discord, aber nicht in den Lizenzen
+            userData = {
+              ...userData,
+              data: {
+                ...userData.data,
+                licenses: [...licenses, 'server_booster']
+              }
+            };
+            console.log(`[UserData] Added server_booster license for user ${user.id} (has Discord role ${BOOSTER_ROLE_ID})`);
+          } else if (!isBooster && licenses.includes('server_booster')) {
+            // User hat die Booster-Rolle NICHT mehr, aber noch in Lizenzen
+            userData = {
+              ...userData,
+              data: {
+                ...userData.data,
+                licenses: licenses.filter(l => l !== 'server_booster')
+              }
+            };
+            console.log(`[UserData] Removed server_booster license for user ${user.id} (no longer has Discord role ${BOOSTER_ROLE_ID})`);
+          }
+        }
+      } catch (roleCheckErr) {
+        console.error('[UserData] Error checking Discord booster role:', roleCheckErr.message);
+        // Fehler beim Rollen-Check soll die Daten nicht blockieren
+      }
+    } else if (!userData || !userData.data) {
+      // Kein user_data vorhanden, trotzdem Booster-Check
+      try {
+        const member = await getGuildMember(user.id);
+        if (member && member.roles && member.roles.includes(BOOSTER_ROLE_ID)) {
+          userData = {
+            discord_user_id: user.id,
+            data: {
+              licenses: ['server_booster'],
+              cooldowns: {},
+              balance: 0
+            }
+          };
+          console.log(`[UserData] Created minimal user data with server_booster for user ${user.id}`);
+        }
+      } catch (roleCheckErr) {
+        console.error('[UserData] Error checking Discord booster role (no data):', roleCheckErr.message);
+      }
+    }
+
+    return NextResponse.json({ data: userData });
   } catch (error) {
     console.error('Get user data exception:', error);
     return NextResponse.json({ error: 'Fehler' }, { status: 500 });
