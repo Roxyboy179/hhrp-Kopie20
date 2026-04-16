@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import DailyBonusCard from '@/components/DailyBonusCard';
 import AnimatedValue from '@/components/AnimatedValue';
 import Pagination from '@/components/Pagination';
+import { Countdown } from '@/components/Countdown';
 import { 
   Wallet, CreditCard, Trophy, Gift, User, Award, Clock, TrendingUp, 
   Check, Loader2, FileText, Calendar, Mail, ExternalLink, LayoutDashboard, IdCard, ClipboardList,
@@ -985,6 +986,13 @@ export default function ProfilPage() {
   const [taxPage, setTaxPage] = useState(1);
   const itemsPerPage = 20;
 
+  // Filter States
+  const [transactionSearch, setTransactionSearch] = useState('');
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState('all');
+  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState('all');
+  const [invoiceFraktionFilter, setInvoiceFraktionFilter] = useState('all');
+  const [strafakteStatusFilter, setStrafakteStatusFilter] = useState('all');
+
   // Tab-Konfiguration mit Kategorien
   const mainTabs = [
     { id: 'overview', label: 'Übersicht', icon: LayoutDashboard },
@@ -1429,6 +1437,51 @@ export default function ProfilPage() {
               </div>
             )}
 
+            {/* Cooldowns Section */}
+            {userData?.cooldowns && Object.keys(userData.cooldowns).length > 0 && (
+              <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                <div className="flex items-center gap-3 mb-6">
+                  <Clock className="w-6 h-6 text-white/60" />
+                  <h2 className="text-xl font-bold text-white">Aktive Cooldowns</h2>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {Object.entries(userData.cooldowns).map(([key, timestamp]) => {
+                    // Cooldown-Namen und Icons mapping
+                    const cooldownConfig = {
+                      collect: { label: 'Gehalt abholen', icon: Gift, color: 'green' },
+                      daily: { label: 'Daily Bonus', icon: Trophy, color: 'blue' },
+                      ueberfall: { label: 'Überfall', icon: AlertCircle, color: 'red' },
+                      rob: { label: 'Rob', icon: AlertCircle, color: 'red' },
+                      elite_plus_daily: { label: 'Elite+ Daily', icon: Star, color: 'purple' },
+                      work: { label: 'Arbeiten', icon: Building2, color: 'orange' }
+                    };
+                    
+                    const config = cooldownConfig[key] || { 
+                      label: key.charAt(0).toUpperCase() + key.slice(1), 
+                      icon: Clock, 
+                      color: 'gray' 
+                    };
+                    
+                    const IconComponent = config.icon;
+                    
+                    return (
+                      <div key={key} className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-8 h-8 rounded-lg bg-${config.color}-500/20 flex items-center justify-center`}>
+                              <IconComponent className={`w-4 h-4 text-${config.color}-400`} />
+                            </div>
+                            <span className="text-sm font-medium text-white">{config.label}</span>
+                          </div>
+                        </div>
+                        <Countdown targetTimestamp={timestamp} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Character Info */}
               {!botStatus.isOnline ? null : loading ? (
@@ -1699,10 +1752,50 @@ export default function ProfilPage() {
                   )}
                 </div>
 
+                {/* Search & Filter */}
+                <div className="mb-6 flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="text"
+                    placeholder="🔍 Suchen (Typ, Details, Betrag)..."
+                    value={transactionSearch}
+                    onChange={(e) => setTransactionSearch(e.target.value)}
+                    className="flex-1 px-4 py-2 rounded-lg bg-white/[0.05] border border-white/[0.1] text-white placeholder-white/40 focus:outline-none focus:border-white/30 transition-colors"
+                  />
+                  <select
+                    value={transactionTypeFilter}
+                    onChange={(e) => setTransactionTypeFilter(e.target.value)}
+                    className="px-4 py-2 rounded-lg bg-white/[0.05] border border-white/[0.1] text-white focus:outline-none focus:border-white/30 transition-colors cursor-pointer"
+                  >
+                    <option value="all">Alle Typen</option>
+                    <option value="COLLECT">Gehalt</option>
+                    <option value="TRANSFER_IN">Eingang</option>
+                    <option value="TRANSFER_OUT">Ausgang</option>
+                    <option value="CREDITS_BUY">Credits Kauf</option>
+                    <option value="LIMIT_UPGRADE">Limit Upgrade</option>
+                  </select>
+                </div>
+
                 {userData?.transactions && userData.transactions.length > 0 ? (
                   <>
                     <div className="space-y-3">
                       {userData.transactions
+                        .filter(tx => {
+                          // Search filter
+                          if (transactionSearch) {
+                            const search = transactionSearch.toLowerCase();
+                            return (
+                              tx.type?.toLowerCase().includes(search) ||
+                              tx.details?.toLowerCase().includes(search) ||
+                              tx.amount?.toString().includes(search)
+                            );
+                          }
+                          return true;
+                        })
+                        .filter(tx => {
+                          // Type filter
+                          if (transactionTypeFilter === 'all') return true;
+                          return tx.type === transactionTypeFilter;
+                        })
                         .slice((transactionsPage - 1) * itemsPerPage, transactionsPage * itemsPerPage)
                         .map((transaction, index) => {
                           const isNew = transaction.timestamp && 
@@ -1820,10 +1913,46 @@ export default function ProfilPage() {
                   )}
                 </div>
 
+                {/* Filter */}
+                <div className="mb-6 flex flex-col sm:flex-row gap-3">
+                  <select
+                    value={invoiceStatusFilter}
+                    onChange={(e) => setInvoiceStatusFilter(e.target.value)}
+                    className="flex-1 px-4 py-2 rounded-lg bg-white/[0.05] border border-white/[0.1] text-white focus:outline-none focus:border-white/30 transition-colors cursor-pointer"
+                  >
+                    <option value="all">Alle Status</option>
+                    <option value="offen">Offen</option>
+                    <option value="paid">Bezahlt</option>
+                    <option value="cancelled">Storniert</option>
+                  </select>
+                  <select
+                    value={invoiceFraktionFilter}
+                    onChange={(e) => setInvoiceFraktionFilter(e.target.value)}
+                    className="flex-1 px-4 py-2 rounded-lg bg-white/[0.05] border border-white/[0.1] text-white focus:outline-none focus:border-white/30 transition-colors cursor-pointer"
+                  >
+                    <option value="all">Alle Fraktionen</option>
+                    <option value="Polizei">Polizei</option>
+                    <option value="Feuerwehr">Feuerwehr</option>
+                    <option value="Rettungsdienst">Rettungsdienst</option>
+                    <option value="Staat">Staat</option>
+                  </select>
+                </div>
+
                 {userData?.invoices && userData.invoices.length > 0 ? (
                   <>
                     <div className="space-y-3">
                       {userData.invoices
+                        .filter(inv => {
+                          // Status filter
+                          if (invoiceStatusFilter !== 'all' && inv.status !== invoiceStatusFilter) {
+                            return false;
+                          }
+                          // Fraktion filter
+                          if (invoiceFraktionFilter !== 'all' && inv.fraktion !== invoiceFraktionFilter) {
+                            return false;
+                          }
+                          return true;
+                        })
                         .slice((invoicesPage - 1) * itemsPerPage, invoicesPage * itemsPerPage)
                         .map((invoice, index) => {
                           const isNew = invoice.createdAt && 
@@ -1993,6 +2122,20 @@ export default function ProfilPage() {
                   )}
                 </div>
 
+                {/* Filter */}
+                <div className="mb-6">
+                  <select
+                    value={strafakteStatusFilter}
+                    onChange={(e) => setStrafakteStatusFilter(e.target.value)}
+                    className="w-full sm:w-auto px-4 py-2 rounded-lg bg-white/[0.05] border border-white/[0.1] text-white focus:outline-none focus:border-white/30 transition-colors cursor-pointer"
+                  >
+                    <option value="all">Alle Status</option>
+                    <option value="storniert">Storniert</option>
+                    <option value="bezahlt">Bezahlt</option>
+                    <option value="offen">Offen</option>
+                  </select>
+                </div>
+
                 {userData?.personalakte && userData.personalakte.length > 0 ? (
                   <>
                     <div className="relative">
@@ -2001,6 +2144,13 @@ export default function ProfilPage() {
                       
                       <div className="space-y-4 sm:space-y-6">
                         {userData.personalakte
+                          .filter(record => {
+                            // Status filter
+                            if (strafakteStatusFilter !== 'all' && record.status !== strafakteStatusFilter) {
+                              return false;
+                            }
+                            return true;
+                          })
                           .slice((personalaktePage - 1) * itemsPerPage, personalaktePage * itemsPerPage)
                           .map((record, index) => {
                         const isNew = (record.createdAt || record.date) && 
