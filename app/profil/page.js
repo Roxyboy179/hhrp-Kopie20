@@ -14,7 +14,7 @@ import {
   Building2, Hash, Key, Copy, ArrowUpRight, ArrowDownRight, AlertCircle, 
   Shield, Star, MessageSquare, Ban, ChevronUp, ShieldCheck, CheckCircle, DollarSign, RefreshCw,
   ShoppingCart, PiggyBank, Receipt, Heart, Smartphone, Bell, Zap, Download, Crown, Sparkles,
-  Rocket, Wifi, WifiOff, Globe, Timer, Lock, Gem, PartyPopper, Handshake, Monitor, BadgeCheck, CircleDollarSign, BellRing, AppWindow, Settings, ImagePlus, Trash2, Upload, BellOff
+  Rocket, Wifi, WifiOff, Globe, Timer, Lock, Gem, PartyPopper, Handshake, Monitor, BadgeCheck, CircleDollarSign, BellRing, AppWindow, Settings, ImagePlus, Trash2, Upload, BellOff, ZoomIn, ZoomOut
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -3607,9 +3607,9 @@ export default function ProfilPage() {
                   </div>
                   <div className="flex gap-3">
                     {[
-                      { id: 'klein', label: 'Klein', icon: '🔍' },
-                      { id: 'normal', label: 'Normal', icon: '📄' },
-                      { id: 'gross', label: 'Groß', icon: '🔎' }
+                      { id: 'klein', label: 'Klein', icon: <ZoomOut className="w-5 h-5" /> },
+                      { id: 'normal', label: 'Normal', icon: <FileText className="w-5 h-5" /> },
+                      { id: 'gross', label: 'Groß', icon: <ZoomIn className="w-5 h-5" /> }
                     ].map((size) => (
                       <button
                         key={size.id}
@@ -3622,7 +3622,9 @@ export default function ProfilPage() {
                         className={`flex-1 p-3 rounded-lg border transition-all ${textGroesse === size.id ? 'border-blue-500/50 bg-blue-500/10 text-white' : 'border-white/10 bg-white/[0.02] text-white/60 hover:bg-white/[0.05]'}`}
                       >
                         <div className="text-center">
-                          <div className="text-2xl mb-1">{size.icon}</div>
+                          <div className="flex items-center justify-center mb-2" style={{ color: textGroesse === size.id ? '#3b82f6' : 'rgba(255,255,255,0.4)' }}>
+                            {size.icon}
+                          </div>
                           <p className="text-xs font-medium">{size.label}</p>
                         </div>
                       </button>

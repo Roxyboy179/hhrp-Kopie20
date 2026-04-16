@@ -14,6 +14,7 @@ import { WartungsBanner } from '@/components/shared/WartungsBanner';
 import { BetaNotice } from '@/components/shared/BetaNotice';
 import { Toaster } from 'sonner';
 import Link from 'next/link';
+import { Loader2, Sparkles, Zap } from 'lucide-react';
 
 export default function RootClientLayout({ children }) {
   const [splashDone, setSplashDone] = useState(false);
@@ -26,6 +27,7 @@ export default function RootClientLayout({ children }) {
   const [schnellstart, setSchnellstart] = useState(false);
   const [autoSync, setAutoSync] = useState(true);
   const [offlineModus, setOfflineModus] = useState(false);
+  const [akzentFarbe, setAkzentFarbe] = useState('blue');
   const pathname = usePathname();
   const isProfilePage = pathname === '/profil';
   const handleSplashComplete = useCallback(() => {
@@ -34,6 +36,18 @@ export default function RootClientLayout({ children }) {
     const loadDelay = localStorage.getItem('hhrp-schnellstart') === 'true' ? 300 : 1200;
     setTimeout(() => setPageLoading(false), loadDelay);
   }, []);
+
+  // Farbwerte für Akzentfarben
+  const akzentFarbWerte = {
+    blue: { hex: '#3b82f6', rgb: '59, 130, 246' },
+    purple: { hex: '#a855f7', rgb: '168, 85, 247' },
+    cyan: { hex: '#06b6d4', rgb: '6, 182, 212' },
+    green: { hex: '#10b981', rgb: '16, 185, 129' },
+    pink: { hex: '#ec4899', rgb: '236, 72, 153' },
+    orange: { hex: '#f97316', rgb: '249, 115, 22' },
+    red: { hex: '#ef4444', rgb: '239, 68, 68' },
+    yellow: { hex: '#eab308', rgb: '234, 179, 8' }
+  };
 
   // Hilfsfunktion: Konvertiert preset IDs in echte Dateipfade
   const getBgUrl = (bgValue) => {
@@ -74,6 +88,9 @@ export default function RootClientLayout({ children }) {
     const savedOfflineModus = localStorage.getItem('hhrp-offline');
     if (savedOfflineModus === 'true') setOfflineModus(true);
 
+    const savedAkzent = localStorage.getItem('hhrp-akzent');
+    if (savedAkzent) setAkzentFarbe(savedAkzent);
+
     // Auf Änderungen vom Profil-Einstellungen hören
     const handleBgChange = (e) => {
       setCustomBg(e.detail?.bg || null);
@@ -86,6 +103,7 @@ export default function RootClientLayout({ children }) {
       if (e.detail?.schnellstart !== undefined) setSchnellstart(e.detail.schnellstart);
       if (e.detail?.autosync !== undefined) setAutoSync(e.detail.autosync);
       if (e.detail?.offline !== undefined) setOfflineModus(e.detail.offline);
+      if (e.detail?.akzent !== undefined) setAkzentFarbe(e.detail.akzent);
     };
     window.addEventListener('hhrp-bg-change', handleBgChange);
     window.addEventListener('hhrp-settings-change', handleSettingsChange);
@@ -136,18 +154,104 @@ export default function RootClientLayout({ children }) {
       <ThemeProvider>
         {!splashDone && <SplashScreen onComplete={handleSplashComplete} />}
         
-        {/* Loading Spinner nach Splash Screen */}
+        {/* Dynamisches CSS für Akzentfarbe */}
+        <style jsx global>{`
+          :root {
+            --theme-accent: ${akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6'};
+            --theme-accent-rgb: ${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'};
+          }
+        `}</style>
+        
+        {/* Loading Spinner nach Splash Screen - Modern Design */}
         {splashDone && pageLoading && (
           <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(10, 10, 26, 0.95)' }}>
             <div className="text-center">
-              <div className="relative w-24 h-24 mx-auto mb-6">
-                <div className="absolute inset-0 rounded-full border-4 border-white/10"></div>
-                <div className="absolute inset-0 rounded-full border-4 border-t-purple-500 border-r-transparent border-b-transparent border-l-transparent animate-spin"></div>
-                <div className="absolute inset-3 rounded-full border-4 border-white/5"></div>
-                <div className="absolute inset-3 rounded-full border-4 border-t-transparent border-r-blue-500 border-b-transparent border-l-transparent animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }}></div>
+              {/* Haupt-Icon mit Glow-Effekt */}
+              <div className="relative w-32 h-32 mx-auto mb-8">
+                {/* Äußerer Glow */}
+                <div 
+                  className="absolute inset-0 rounded-full blur-3xl opacity-40 animate-pulse"
+                  style={{ 
+                    background: `radial-gradient(circle, ${akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6'} 0%, transparent 70%)`,
+                    animationDuration: '2s'
+                  }}
+                ></div>
+                
+                {/* Rotierender Ring */}
+                <div 
+                  className="absolute inset-0 rounded-full animate-spin"
+                  style={{ 
+                    background: `conic-gradient(from 0deg, transparent 0%, ${akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6'} 50%, transparent 100%)`,
+                    opacity: 0.3,
+                    animationDuration: '3s'
+                  }}
+                ></div>
+                
+                {/* Glas-Container */}
+                <div 
+                  className="absolute inset-2 rounded-full flex items-center justify-center backdrop-blur-xl"
+                  style={{ 
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: `2px solid rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.3)`,
+                    boxShadow: `0 0 40px rgba(${akzentFarbWerte[akzentFarbe]?.rgb || '59, 130, 246'}, 0.2)`
+                  }}
+                >
+                  {/* Haupt-Icon (rotierend) */}
+                  <Loader2 
+                    className="w-12 h-12 animate-spin"
+                    style={{ color: akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6', animationDuration: '2s' }}
+                  />
+                </div>
+
+                {/* Kleine orbit-Icons */}
+                <div className="absolute inset-0 animate-spin" style={{ animationDuration: '4s' }}>
+                  <Sparkles 
+                    className="absolute top-0 left-1/2 -translate-x-1/2 w-4 h-4"
+                    style={{ color: akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6', opacity: 0.6 }}
+                  />
+                </div>
+                <div className="absolute inset-0 animate-spin" style={{ animationDuration: '4s', animationDirection: 'reverse' }}>
+                  <Zap 
+                    className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-4"
+                    style={{ color: akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6', opacity: 0.6 }}
+                  />
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">Lädt...</h3>
-              <p className="text-sm text-white/40">Daten werden geladen</p>
+
+              {/* Text mit Gradient */}
+              <h3 
+                className="text-2xl font-bold mb-2 bg-clip-text text-transparent"
+                style={{ 
+                  backgroundImage: `linear-gradient(135deg, ${akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6'} 0%, white 100%)`
+                }}
+              >
+                Lädt...
+              </h3>
+              
+              {/* Animierte Dots */}
+              <div className="flex items-center justify-center gap-2">
+                <div 
+                  className="w-2 h-2 rounded-full animate-bounce"
+                  style={{ 
+                    backgroundColor: akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6',
+                    animationDelay: '0ms'
+                  }}
+                ></div>
+                <div 
+                  className="w-2 h-2 rounded-full animate-bounce"
+                  style={{ 
+                    backgroundColor: akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6',
+                    animationDelay: '150ms'
+                  }}
+                ></div>
+                <div 
+                  className="w-2 h-2 rounded-full animate-bounce"
+                  style={{ 
+                    backgroundColor: akzentFarbWerte[akzentFarbe]?.hex || '#3b82f6',
+                    animationDelay: '300ms'
+                  }}
+                ></div>
+              </div>
             </div>
           </div>
         )}
