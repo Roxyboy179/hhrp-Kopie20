@@ -9,12 +9,17 @@ import Pagination from '@/components/Pagination';
 import { Countdown } from '@/components/Countdown';
 import { PWANotifications } from '@/components/PWANotifications';
 import { 
-  Wallet, CreditCard, Trophy, Gift, User, Award, Clock, TrendingUp, 
-  Check, Loader2, FileText, Calendar, Mail, ExternalLink, LayoutDashboard, IdCard, ClipboardList,
-  Building2, Hash, Key, Copy, ArrowUpRight, ArrowDownRight, AlertCircle, 
-  Shield, Star, MessageSquare, Ban, ChevronUp, ShieldCheck, CheckCircle, DollarSign, RefreshCw,
-  ShoppingCart, PiggyBank, Receipt, Heart, Smartphone, Bell, Zap, Download, Crown, Sparkles,
-  Rocket, Wifi, WifiOff, Globe, Timer, Lock, Gem, PartyPopper, Handshake, Monitor, BadgeCheck, CircleDollarSign, BellRing, AppWindow, Settings, ImagePlus, Trash2, Upload, BellOff, ZoomIn, ZoomOut
+  Wallet, CreditCard, Trophy, Gift, User, Award, Clock, 
+  TrendingUp, TrendingDown, Check, Loader2, FileText, Calendar, 
+  Mail, ExternalLink, LayoutDashboard, IdCard, ClipboardList,
+  Building2, Hash, Key, Copy, ArrowUpRight, ArrowDownRight, 
+  AlertCircle, AlertTriangle, Shield, Star, MessageSquare, Ban, 
+  ChevronUp, ShieldCheck, CheckCircle, DollarSign, RefreshCw,
+  ShoppingCart, PiggyBank, Receipt, Heart, Smartphone, Bell, 
+  Zap, Download, Crown, Sparkles, Rocket, Wifi, WifiOff, Globe, 
+  Timer, Lock, Gem, PartyPopper, Handshake, Monitor, BadgeCheck, 
+  CircleDollarSign, BellRing, AppWindow, Settings, ImagePlus, 
+  Trash2, Upload, BellOff, ZoomIn, ZoomOut, PieChart, BarChart3
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -1047,6 +1052,7 @@ export default function ProfilPage() {
       { id: 'discord', label: 'Discord Vorteile', icon: Crown }
     ],
     finance: [
+      { id: 'overview', label: 'Übersicht', icon: BarChart3 },
       { id: 'transactions', label: 'Transaktionen', icon: TrendingUp },
       { id: 'invoices', label: 'Rechnungen', icon: FileText },
       { id: 'savings', label: 'Sparkonto', icon: PiggyBank },
@@ -2455,6 +2461,231 @@ export default function ProfilPage() {
                 </div>
               </>
             )}
+          </div>
+        )}
+
+
+        {/* Vermögens-Übersicht Tab */}
+        {activeTab === 'finance' && activeSubTab === 'overview' && (
+          <div className="space-y-6">
+            {(() => {
+              // Berechne Vermögen
+              const cash = userData?.balance?.cash || 0;
+              const bank = userData?.balance?.bank || 0;
+              const savings = userData?.balance?.savings || 0;
+              
+              // Berechne Schulden (Kredite + offene Rechnungen)
+              const kreditSchulden = (userData?.kredite || [])
+                .filter(k => k.status === 'aktiv' || k.status === 'pending')
+                .reduce((sum, k) => sum + (k.rueckzahlungsBetrag || 0), 0);
+              
+              const rechnungSchulden = (userData?.invoices || [])
+                .filter(inv => inv.status === 'pending')
+                .reduce((sum, inv) => sum + (inv.amount || 0), 0);
+              
+              const totalSchulden = kreditSchulden + rechnungSchulden;
+              const totalVermögen = cash + bank + savings - totalSchulden;
+              const bruttoVermögen = cash + bank + savings;
+
+              // Berechne Prozente für Visualisierung
+              const cashPercent = bruttoVermögen > 0 ? (cash / bruttoVermögen * 100).toFixed(1) : 0;
+              const bankPercent = bruttoVermögen > 0 ? (bank / bruttoVermögen * 100).toFixed(1) : 0;
+              const savingsPercent = bruttoVermögen > 0 ? (savings / bruttoVermögen * 100).toFixed(1) : 0;
+
+              return (
+                <>
+                  {/* Hauptkarte - Gesamtvermögen */}
+                  <div className="glass rounded-3xl p-8 border border-white/[0.08] relative overflow-hidden">
+                    {/* Gradient Background */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 via-transparent to-blue-500/10 pointer-events-none" />
+                    
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+                          <Wallet className="w-8 h-8 text-white" />
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-semibold text-white/60">Gesamtvermögen</h2>
+                          <p className="text-sm text-white/40">Nach Abzug aller Schulden</p>
+                        </div>
+                      </div>
+
+                      <div className="mb-6">
+                        <div className="text-5xl md:text-6xl font-bold text-white mb-2">
+                          {totalVermögen.toLocaleString('de-DE')} €
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          {totalVermögen >= 0 ? (
+                            <>
+                              <TrendingUp className="w-4 h-4 text-green-400" />
+                              <span className="text-green-400">Positiv</span>
+                            </>
+                          ) : (
+                            <>
+                              <TrendingDown className="w-4 h-4 text-red-400" />
+                              <span className="text-red-400">Negativ</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Quick Stats */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                          <div className="text-2xl font-bold text-white">{cash.toLocaleString('de-DE')} €</div>
+                          <div className="text-xs text-white/40 mt-1">Bargeld</div>
+                        </div>
+                        <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                          <div className="text-2xl font-bold text-white">{bank.toLocaleString('de-DE')} €</div>
+                          <div className="text-xs text-white/40 mt-1">Bank</div>
+                        </div>
+                        <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                          <div className="text-2xl font-bold text-white">{savings.toLocaleString('de-DE')} €</div>
+                          <div className="text-xs text-white/40 mt-1">Sparkonto</div>
+                        </div>
+                        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30">
+                          <div className="text-2xl font-bold text-red-400">{totalSchulden.toLocaleString('de-DE')} €</div>
+                          <div className="text-xs text-red-400/60 mt-1">Schulden</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Vermögensaufteilung */}
+                  <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                    <div className="flex items-center gap-3 mb-6">
+                      <PieChart className="w-6 h-6 text-white/60" />
+                      <h3 className="text-xl font-bold text-white">Vermögensaufteilung</h3>
+                    </div>
+
+                    {/* Visual Progress Bars */}
+                    <div className="space-y-4">
+                      {/* Bargeld */}
+                      <div>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="text-white/70">Bargeld</span>
+                          <span className="text-white font-semibold">{cash.toLocaleString('de-DE')} € ({cashPercent}%)</span>
+                        </div>
+                        <div className="h-3 bg-white/[0.05] rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full transition-all duration-500"
+                            style={{ width: `${cashPercent}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Bank */}
+                      <div>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="text-white/70">Bank-Konto</span>
+                          <span className="text-white font-semibold">{bank.toLocaleString('de-DE')} € ({bankPercent}%)</span>
+                        </div>
+                        <div className="h-3 bg-white/[0.05] rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500"
+                            style={{ width: `${bankPercent}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Sparkonto */}
+                      <div>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="text-white/70">Sparkonto</span>
+                          <span className="text-white font-semibold">{savings.toLocaleString('de-DE')} € ({savingsPercent}%)</span>
+                        </div>
+                        <div className="h-3 bg-white/[0.05] rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all duration-500"
+                            style={{ width: `${savingsPercent}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Gesamt */}
+                    <div className="mt-6 pt-6 border-t border-white/[0.08]">
+                      <div className="flex justify-between items-center">
+                        <span className="text-white/70 font-medium">Brutto-Vermögen</span>
+                        <span className="text-2xl font-bold text-white">{bruttoVermögen.toLocaleString('de-DE')} €</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Schulden-Übersicht */}
+                  {totalSchulden > 0 && (
+                    <div className="glass rounded-2xl p-6 border border-red-500/20 bg-red-500/5">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
+                          <AlertTriangle className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold text-white">Offene Schulden</h3>
+                          <p className="text-sm text-white/50">Gesamt: {totalSchulden.toLocaleString('de-DE')} €</p>
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {/* Kredite */}
+                        <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                          <div className="flex items-center gap-3 mb-2">
+                            <CreditCard className="w-5 h-5 text-orange-400" />
+                            <span className="text-sm text-white/60">Kredite</span>
+                          </div>
+                          <div className="text-2xl font-bold text-orange-400">{kreditSchulden.toLocaleString('de-DE')} €</div>
+                          <div className="text-xs text-white/40 mt-1">
+                            {(userData?.kredite || []).filter(k => k.status === 'aktiv' || k.status === 'pending').length} aktiv
+                          </div>
+                        </div>
+
+                        {/* Rechnungen */}
+                        <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                          <div className="flex items-center gap-3 mb-2">
+                            <FileText className="w-5 h-5 text-red-400" />
+                            <span className="text-sm text-white/60">Offene Rechnungen</span>
+                          </div>
+                          <div className="text-2xl font-bold text-red-400">{rechnungSchulden.toLocaleString('de-DE')} €</div>
+                          <div className="text-xs text-white/40 mt-1">
+                            {(userData?.invoices || []).filter(inv => inv.status === 'pending').length} offen
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Finanz-Tipps */}
+                  <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Lightbulb className="w-6 h-6 text-yellow-400" />
+                      <h3 className="text-lg font-bold text-white">Finanz-Tipps</h3>
+                    </div>
+                    <div className="space-y-3">
+                      {totalSchulden > bruttoVermögen * 0.5 && (
+                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                          <p className="text-sm text-red-300">
+                            ⚠️ Deine Schulden sind sehr hoch ({((totalSchulden/bruttoVermögen)*100).toFixed(0)}% vom Vermögen). Versuche sie schnell abzubauen.
+                          </p>
+                        </div>
+                      )}
+                      {savings < bruttoVermögen * 0.1 && bruttoVermögen > 0 && (
+                        <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                          <p className="text-sm text-yellow-300">
+                            💡 Du hast wenig auf dem Sparkonto. Überlege, 10-20% deines Vermögens zu sparen.
+                          </p>
+                        </div>
+                      )}
+                      {totalSchulden === 0 && bruttoVermögen > 100000 && (
+                        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                          <p className="text-sm text-green-300">
+                            ✅ Glückwunsch! Du bist schuldenfrei und hast ein solides Vermögen aufgebaut.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
 
