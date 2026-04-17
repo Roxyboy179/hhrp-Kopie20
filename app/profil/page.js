@@ -35,6 +35,7 @@ import {
 import { KrediteDetailView, FinanzStatistikenView } from '@/components/profile/FinanceTabsContent';
 import { ErweiterteTransaktionenView, SparkontoManagementView } from '@/components/profile/FinanceTabsContent2';
 import { TransferMoneyView } from '@/components/profile/TransferMoneyView';
+import { ShopView } from '@/components/profile/ShopView';
 
 function SkeletonCard({ className = "" }) {
   return (
@@ -1064,7 +1065,8 @@ export default function ProfilPage() {
     { id: 'benefits', label: 'Meine Vorteile', icon: Gift, hasSubTabs: true },
     { id: 'finance', label: 'Finanzen', icon: Wallet, hasSubTabs: true },
     { id: 'documents', label: 'Dokumente', icon: IdCard, hasSubTabs: true },
-    { id: 'marketplace', label: 'Marktplatz', icon: ShoppingCart },
+    { id: 'shop', label: 'Shop', icon: ShoppingCart },
+    { id: 'marketplace', label: 'Marktplatz', icon: Trophy },
     { id: 'applications', label: 'Bewerbungen', icon: ClipboardList },
     { id: 'settings', label: 'Einstellungen', icon: Settings }
   ];
@@ -3244,6 +3246,21 @@ export default function ProfilPage() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Shop Tab */}
+        {activeTab === 'shop' && (
+          <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
+            <div className="flex items-center gap-3 mb-6">
+              <ShoppingCart className="w-6 h-6 text-white/60" />
+              <h2 className="text-lg sm:text-xl font-bold text-white">Hamburg Horizon RP Shop</h2>
+            </div>
+            <ShopView 
+              user={user} 
+              userData={userData} 
+              onRefresh={() => fetchUserData(user.id)}
+            />
           </div>
         )}
 

@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import webpush from 'web-push';
 import { supabaseAdmin } from '@/lib/supabase';
 import { readStats, writeStats, incrementStat } from '@/lib/stats-file';
+import { SHOP_ITEMS, CREDIT_PURCHASE_OPTIONS, BANK_LIMIT_UPGRADES } from '@/lib/shop-data';
 import { 
   createBewerbung, 
   getUserBewerbungen, 
@@ -2735,6 +2736,10 @@ export async function POST(request) {
     case 'kredite': return handleGetKredite(request);
     case 'transfer': return handleTransferMoney(request);
     case 'transfer/debug': return handleTransferDebug(request);
+    case 'shop/items': return handleGetShopItems(request);
+    case 'shop/purchase': return handleShopPurchase(request);
+    case 'shop/purchase-credits': return handlePurchaseCredits(request);
+    case 'shop/upgrade-bank-limit': return handleUpgradeBankLimit(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
@@ -3871,4 +3876,262 @@ async function handleTransferMoney(request) {
 }
 
 
+
+
+
+// ===================================================
+// SHOP SYSTEM - Handlers
+// ===================================================
+
+// GET /api/shop/items - Alle Shop Items abrufen
+async function handleGetShopItems(request) {
+  try {
+    return NextResponse.json({
+      success: true,
+      items: SHOP_ITEMS,
+      creditOptions: CREDIT_PURCHASE_OPTIONS,
+      bankLimitUpgrades: BANK_LIMIT_UPGRADES
+    });
+  } catch (e) {
+    console.error('Get shop items error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+// POST /api/shop/purchase - Item kaufen
+async function handleShopPurchase(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const { itemId } = await request.json();
+
+    if (!itemId || !SHOP_ITEMS[itemId]) {
+      return NextResponse.json({ error: 'Item nicht gefunden' }, { status: 400 });
+    }
+
+    const item = SHOP_ITEMS[itemId];
+
+    // Hole User Data aus Supabase
+    const { data: userData, error: fetchError } = await supabaseAdmin
+      .from('user_data')
+      .select('*')
+      .eq('discord_user_id', user.id)
+      .single();
+
+    if (fetchError || !userData) {
+      return NextResponse.json({ error: 'User nicht gefunden' }, { status: 404 });
+    }
+
+    const userDataObj = typeof userData.data === 'string' 
+      ? JSON.parse(userData.data) 
+      : userData.data;
+
+    const currentBalance = userDataObj?.money?.bank || 0;
+
+    // Prüfe ob genug Geld vorhanden
+    if (currentBalance < item.price) {
+      return NextResponse.json({ 
+        error: 'Nicht genug Guthaben',
+        required: item.price,
+        current: currentBalance
+      }, { status: 400 });
+    }
+
+    // Erstelle Eintrag in pending_shop_purchases
+    const { data: purchase, error: insertError } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .insert({
+        buyer_discord_id: user.id,
+        item_id: itemId,
+        item_name: item.name,
+        item_category: item.category,
+        price: item.price,
+        status: 'pending',
+        initiated_from: 'website'
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      return NextResponse.json({ error: 'Fehler beim Erstellen des Kaufs' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Kauf wird verarbeitet...',
+      purchase: {
+        id: purchase.id,
+        item: item.name,
+        price: item.price,
+        status: 'pending'
+      }
+    });
+
+  } catch (e) {
+    console.error('Shop purchase error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+// POST /api/shop/purchase-credits - Credits kaufen mit Geld
+async function handlePurchaseCredits(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const { optionIndex } = await request.json();
+
+    if (optionIndex === undefined || !CREDIT_PURCHASE_OPTIONS[optionIndex]) {
+      return NextResponse.json({ error: 'Ungültige Option' }, { status: 400 });
+    }
+
+    const option = CREDIT_PURCHASE_OPTIONS[optionIndex];
+
+    // Hole User Data
+    const { data: userData, error: fetchError } = await supabaseAdmin
+      .from('user_data')
+      .select('*')
+      .eq('discord_user_id', user.id)
+      .single();
+
+    if (fetchError || !userData) {
+      return NextResponse.json({ error: 'User nicht gefunden' }, { status: 404 });
+    }
+
+    const userDataObj = typeof userData.data === 'string' 
+      ? JSON.parse(userData.data) 
+      : userData.data;
+
+    const currentBalance = userDataObj?.money?.bank || 0;
+
+    // Prüfe Guthaben
+    if (currentBalance < option.cost) {
+      return NextResponse.json({ 
+        error: 'Nicht genug Guthaben',
+        required: option.cost,
+        current: currentBalance
+      }, { status: 400 });
+    }
+
+    // Erstelle Special Purchase für Credits
+    const { data: purchase, error: insertError } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .insert({
+        buyer_discord_id: user.id,
+        item_id: `credits_${option.credits}`,
+        item_name: `${option.credits} Credits`,
+        item_category: 'credits',
+        price: option.cost,
+        status: 'pending',
+        initiated_from: 'website'
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      return NextResponse.json({ error: 'Fehler beim Erstellen des Kaufs' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `${option.credits} Credits werden gutgeschrieben...`,
+      purchase: {
+        id: purchase.id,
+        credits: option.credits,
+        cost: option.cost,
+        status: 'pending'
+      }
+    });
+
+  } catch (e) {
+    console.error('Purchase credits error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+// POST /api/shop/upgrade-bank-limit - Bank Limit mit Credits erhöhen
+async function handleUpgradeBankLimit(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const { upgradeIndex } = await request.json();
+
+    if (upgradeIndex === undefined || !BANK_LIMIT_UPGRADES[upgradeIndex]) {
+      return NextResponse.json({ error: 'Ungültige Option' }, { status: 400 });
+    }
+
+    const upgrade = BANK_LIMIT_UPGRADES[upgradeIndex];
+
+    // Hole User Data
+    const { data: userData, error: fetchError } = await supabaseAdmin
+      .from('user_data')
+      .select('*')
+      .eq('discord_user_id', user.id)
+      .single();
+
+    if (fetchError || !userData) {
+      return NextResponse.json({ error: 'User nicht gefunden' }, { status: 404 });
+    }
+
+    const userDataObj = typeof userData.data === 'string' 
+      ? JSON.parse(userData.data) 
+      : userData.data;
+
+    const currentCredits = userDataObj?.credits || 0;
+
+    // Prüfe Credits
+    if (currentCredits < upgrade.creditCost) {
+      return NextResponse.json({ 
+        error: 'Nicht genug Credits',
+        required: upgrade.creditCost,
+        current: currentCredits
+      }, { status: 400 });
+    }
+
+    // Erstelle Special Purchase für Bank Limit
+    const { data: purchase, error: insertError } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .insert({
+        buyer_discord_id: user.id,
+        item_id: `bank_limit_${upgrade.addLimit}`,
+        item_name: upgrade.label,
+        item_category: 'bank_limit',
+        price: 0, // Kosten in Credits, nicht Geld
+        status: 'pending',
+        initiated_from: 'website'
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      return NextResponse.json({ error: 'Fehler beim Erstellen des Upgrades' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Bank Limit wird um ${upgrade.addLimit.toLocaleString('de-DE')}€ erhöht...`,
+      purchase: {
+        id: purchase.id,
+        addLimit: upgrade.addLimit,
+        creditCost: upgrade.creditCost,
+        status: 'pending'
+      }
+    });
+
+  } catch (e) {
+    console.error('Upgrade bank limit error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
 
