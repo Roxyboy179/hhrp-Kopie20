@@ -69,8 +69,12 @@ export function ShopView({ user, userData, onRefresh }) {
     'versicherungen': { name: 'Versicherungen', icon: Briefcase, color: 'blue' },
     'vip_premiums': { name: 'VIP', icon: Sparkles, color: 'purple' },
     'werkzeuge': { name: 'Werkzeuge', icon: Wrench, color: 'yellow' },
-    'schutzbriefe': { name: 'Schutzbriefe', icon: FileText, color: 'orange' },
-    'credits': { name: 'Credits', icon: CreditCard, color: 'emerald' },
+    'schutzbriefe': { name: 'Schutzbriefe', icon: FileText, color: 'orange' }
+  };
+
+  // Separate Kategorie für Credits & Upgrades
+  const specialCategories = {
+    'credits': { name: 'Credits kaufen', icon: CreditCard, color: 'emerald' },
     'bank_limit': { name: 'Bank Limit', icon: TrendingUp, color: 'cyan' }
   };
 
@@ -115,10 +119,16 @@ export function ShopView({ user, userData, onRefresh }) {
       return;
     }
 
+    // Berechne Preis mit VIP-Rabatt
+    const originalPrice = item.price;
+    const discountedPrice = calculatePrice(originalPrice);
+
     const cartItem = {
       id: itemId,
       name: item.name,
-      price: item.price,
+      originalPrice: originalPrice,
+      price: discountedPrice, // Mit Rabatt!
+      hasDiscount: discountedPrice < originalPrice,
       type: itemType,
       icon: itemIcons[itemId]
     };
@@ -138,6 +148,8 @@ export function ShopView({ user, userData, onRefresh }) {
   };
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price, 0);
+  const cartOriginalTotal = cart.reduce((sum, item) => sum + item.originalPrice, 0);
+  const cartSavings = cartOriginalTotal - cartTotal;
 
   // PIN Validierung & Kauf
   const openPinModal = (purchaseData) => {
@@ -352,25 +364,52 @@ export function ShopView({ user, userData, onRefresh }) {
         </button>
       </div>
 
-      {/* Categories */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        {Object.entries(categories).map(([key, cat]) => {
-          const Icon = cat.icon;
-          return (
-            <button
-              key={key}
-              onClick={() => setSelectedCategory(key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
-                selectedCategory === key
-                  ? 'bg-blue-500 text-white'
-                  : 'glass border border-white/[0.08] hover:bg-white/10'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {cat.name}
-            </button>
-          );
-        })}
+      {/* Categories für normale Shop-Items */}
+      <div className="mb-6">
+        <h3 className="text-lg font-bold mb-3 text-white/80">🛍️ Shop Kategorien</h3>
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {Object.entries(categories).map(([key, cat]) => {
+            const Icon = cat.icon;
+            return (
+              <button
+                key={key}
+                onClick={() => setSelectedCategory(key)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                  selectedCategory === key
+                    ? 'bg-blue-500 text-white'
+                    : 'glass border border-white/[0.08] hover:bg-white/10'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {cat.name}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Separate Sektion für Credits & Upgrades */}
+      <div className="mb-6">
+        <h3 className="text-lg font-bold mb-3 text-white/80">💎 Credits & Upgrades</h3>
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {Object.entries(specialCategories).map(([key, cat]) => {
+            const Icon = cat.icon;
+            return (
+              <button
+                key={key}
+                onClick={() => setSelectedCategory(key)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
+                  selectedCategory === key
+                    ? 'bg-emerald-500 text-white'
+                    : 'glass border border-emerald-500/30 hover:bg-emerald-500/10'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {cat.name}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Credits kaufen */}
@@ -614,7 +653,8 @@ export function ShopView({ user, userData, onRefresh }) {
               </div>
             ) : (
               <>
-                <div className="space-y-3 mb-6">
+                {/* Scrollbarer Items-Bereich */}
+                <div className="space-y-3 mb-6 max-h-[50vh] overflow-y-auto pr-2">
                   {cart.map((item, index) => {
                     const ItemIcon = item.icon || ShoppingCart;
                     return (
@@ -622,7 +662,26 @@ export function ShopView({ user, userData, onRefresh }) {
                         <ItemIcon className="w-6 h-6 text-blue-400" />
                         <div className="flex-1">
                           <div className="font-bold text-white">{item.name}</div>
-                          <div className="text-sm text-green-400">{item.price.toLocaleString('de-DE')}€</div>
+                          <div className="flex items-center gap-2 text-sm">
+                            {item.hasDiscount && (
+                              <>
+                                <span className="text-white/30 line-through">
+                                  {item.originalPrice.toLocaleString('de-DE')}€
+                                </span>
+                                <span className="text-green-400 font-bold">
+                                  {item.price.toLocaleString('de-DE')}€
+                                </span>
+                                <span className="bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded text-xs font-bold">
+                                  -{Math.round(vipDiscount * 100)}% VIP
+                                </span>
+                              </>
+                            )}
+                            {!item.hasDiscount && (
+                              <span className="text-green-400 font-bold">
+                                {item.price.toLocaleString('de-DE')}€
+                              </span>
+                            )}
+                          </div>
                         </div>
                         <button
                           onClick={() => removeFromCart(index)}
@@ -636,6 +695,18 @@ export function ShopView({ user, userData, onRefresh }) {
                 </div>
 
                 <div className="p-4 rounded-xl bg-blue-500/20 border border-blue-500/30 mb-6">
+                  {cartSavings > 0 && (
+                    <div className="flex items-center justify-between text-sm mb-2 text-white/70">
+                      <span>Original:</span>
+                      <span className="line-through">{cartOriginalTotal.toLocaleString('de-DE')}€</span>
+                    </div>
+                  )}
+                  {cartSavings > 0 && (
+                    <div className="flex items-center justify-between text-sm mb-2 text-green-400">
+                      <span>Ersparnis:</span>
+                      <span className="font-bold">-{cartSavings.toLocaleString('de-DE')}€</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-lg font-bold">
                     <span>Gesamt:</span>
                     <span className="text-green-400">{cartTotal.toLocaleString('de-DE')}€</span>
@@ -663,6 +734,7 @@ export function ShopView({ user, userData, onRefresh }) {
                 </div>
               </>
             )}
+          </div>
           </div>
         </>
       )}
