@@ -3619,11 +3619,20 @@ async function handleTransferMoney(request) {
       }, { status: 400 });
     }
 
-    // User Bank Info
-    const userBankData = userData.data?.bank || {};
-    const senderAccountNumber = userBankData.accountNumber;
-    const bankId = userBankData.bankId || 'hamburg_horizon';
-    const bankBalance = userBankData.balance || 0;
+    // User Bank Info - Daten sind in userData.data direkt!
+    const userDataObj = userData.data || {};
+    
+    // Kontonummer aus cards
+    const userCard = userDataObj.cards?.[0] || {};
+    const senderAccountNumber = userCard.cardNumber;
+    const bankId = userCard.bankId || 'hamburg_horizon';
+    
+    // Guthaben aus money.bank
+    const bankBalance = userDataObj.money?.bank || 0;
+
+    console.log('[TRANSFER API] senderAccountNumber:', senderAccountNumber);
+    console.log('[TRANSFER API] bankBalance:', bankBalance);
+    console.log('[TRANSFER API] bankId:', bankId);
 
     if (!senderAccountNumber) {
       return NextResponse.json({ 
@@ -3651,8 +3660,22 @@ async function handleTransferMoney(request) {
     const bank = BANKS[bankId] || BANKS['hamburg_horizon'];
     let feeRate = bank.fee;
 
-    // VIP Discount
-    const vipType = userData.data?.vip?.type;
+    // VIP Discount - aus licenses Array ermitteln
+    const licenses = userDataObj.licenses || [];
+    let vipType = null;
+    
+    if (licenses.includes('vip_elite_plus')) {
+      vipType = 'elite_plus';
+    } else if (licenses.includes('vip_ultimate')) {
+      vipType = 'ultimate';
+    } else if (licenses.includes('vip_platinum')) {
+      vipType = 'platinum';
+    } else if (licenses.includes('vip_premium')) {
+      vipType = 'premium';
+    }
+    
+    console.log('[TRANSFER API] vipType:', vipType);
+    
     const VIP_DISCOUNTS = {
       'premium': 0.5,
       'platinum': 0.75,
@@ -3688,7 +3711,9 @@ async function handleTransferMoney(request) {
 
     let receiverDiscordId = null;
     for (const u of allUsers) {
-      if (u.data?.bank?.accountNumber === kontonummer) {
+      // Empfänger-Kontonummer aus cards
+      const receiverCard = u.data?.cards?.[0];
+      if (receiverCard && receiverCard.cardNumber === kontonummer) {
         receiverDiscordId = u.discord_user_id;
         break;
       }
