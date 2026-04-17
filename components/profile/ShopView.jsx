@@ -65,7 +65,15 @@ export function ShopView({ user, userData, onRefresh }) {
 
   useEffect(() => {
     loadShopData();
-  }, []);
+    // Debug: Log userData
+    if (userData) {
+      console.log('[SHOP] UserData:', {
+        bank: userData?.data?.money?.bank,
+        credits: userData?.data?.credits,
+        bankLimit: userData?.data?.bankLimit
+      });
+    }
+  }, [userData]);
 
   const loadShopData = async () => {
     try {
@@ -223,6 +231,33 @@ export function ShopView({ user, userData, onRefresh }) {
   const userBalance = userData?.data?.money?.bank || 0;
   const userCredits = userData?.data?.credits || 0;
   const userBankLimit = userData?.data?.bankLimit || 1000000;
+  
+  // VIP Status prüfen für Rabatte
+  // Licenses ist ein ARRAY in Supabase!
+  const userLicensesArray = userData?.data?.licenses || [];
+  const userLicenses = {};
+  userLicensesArray.forEach(license => {
+    userLicenses[license] = { active: true }; // Konvertiere zu Object für einfachere Prüfung
+  });
+  
+  const hasVIPPremium = userLicensesArray.includes('vip_premium');
+  const hasVIPPlatinum = userLicensesArray.includes('vip_platinum');
+  const hasVIPUltimate = userLicensesArray.includes('vip_ultimate');
+  const hasVIPElitePlus = userLicensesArray.includes('vip_elite_plus');
+  
+  // Berechne VIP-Rabatt
+  let vipDiscount = 0;
+  if (hasVIPElitePlus) vipDiscount = 0.35; // 35%
+  else if (hasVIPUltimate) vipDiscount = 0.20; // 20%
+  else if (hasVIPPlatinum) vipDiscount = 0.10; // 10%
+  
+  // Funktion: Berechne Preis mit VIP-Rabatt
+  const calculatePrice = (basePrice) => {
+    if (vipDiscount > 0) {
+      return Math.floor(basePrice * (1 - vipDiscount));
+    }
+    return basePrice;
+  };
 
   if (loading) {
     return (
@@ -264,6 +299,24 @@ export function ShopView({ user, userData, onRefresh }) {
           </div>
         </div>
       </div>
+
+      {/* VIP Rabatt Info */}
+      {vipDiscount > 0 && (
+        <div className="glass rounded-xl p-4 border border-purple-500/30 bg-purple-500/10">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-6 h-6 text-purple-400" />
+            <div>
+              <div className="font-bold text-purple-400">VIP Rabatt aktiv!</div>
+              <div className="text-sm text-white/70">
+                Du erhältst {Math.round(vipDiscount * 100)}% Rabatt auf alle Shop-Items
+                {hasVIPElitePlus && ' (VIP Elite Plus)'}
+                {hasVIPUltimate && ' (VIP Ultimate)'}
+                {hasVIPPlatinum && ' (VIP Platinum)'}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Warenkorb Button */}
       <div className="flex justify-end">
@@ -387,12 +440,16 @@ export function ShopView({ user, userData, onRefresh }) {
             {filteredItems.map(([id, item]) => {
               const ItemIcon = itemIcons[id] || ShoppingCart;
               
-              // Prüfe ob User dieses Item bereits hat
-              const userLicenses = userData?.data?.licenses || {};
-              const hasItem = userLicenses[id];
-              const isActive = hasItem?.active;
-              const expiresAt = hasItem?.expiresAt ? new Date(hasItem.expiresAt) : null;
-              const isExpired = expiresAt && expiresAt < new Date();
+              // Prüfe ob User dieses Item bereits hat (licenses ist Array in Supabase!)
+              const hasItem = userLicensesArray.includes(id);
+              const isActive = hasItem;
+              const expiresAt = null; // TODO: Ablaufdatum
+              const isExpired = false;
+              
+              // Berechne Preis mit VIP-Rabatt
+              const originalPrice = item.price;
+              const discountedPrice = calculatePrice(originalPrice);
+              const hasDiscount = discountedPrice < originalPrice;
               
               return (
                 <div key={id} className="glass rounded-xl p-6 border border-white/[0.08] hover:border-white/20 transition-all relative">
@@ -425,7 +482,21 @@ export function ShopView({ user, userData, onRefresh }) {
                   <div className="space-y-2 mb-4 p-3 rounded-lg bg-white/5">
                     <div className="flex items-center justify-between text-sm">
                       <span className="text-white/50">Preis:</span>
-                      <span className="font-bold text-green-400">{item.price.toLocaleString('de-DE')}€</span>
+                      <div className="flex items-center gap-2">
+                        {hasDiscount && (
+                          <span className="text-white/30 line-through text-xs">
+                            {originalPrice.toLocaleString('de-DE')}€
+                          </span>
+                        )}
+                        <span className="font-bold text-green-400">
+                          {discountedPrice.toLocaleString('de-DE')}€
+                        </span>
+                        {hasDiscount && (
+                          <span className="bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded text-xs font-bold">
+                            -{Math.round(vipDiscount * 100)}% VIP
+                          </span>
+                        )}
+                      </div>
                     </div>
                     {item.duration > 0 && (
                       <div className="flex items-center justify-between text-sm">
@@ -471,7 +542,7 @@ export function ShopView({ user, userData, onRefresh }) {
                     </button>
                     <button
                       onClick={() => openPinModal({ type: 'item', itemId: id })}
-                      disabled={purchasing || userBalance < item.price || (hasItem && !isExpired)}
+                      disabled={purchasing || userBalance < discountedPrice || (hasItem && !isExpired)}
                       className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold py-2 rounded-lg transition-all disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
                     >
                       <Lock className="w-4 h-4" />
