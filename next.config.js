@@ -21,7 +21,7 @@ const nextConfig = {
   
   experimental: {
     serverComponentsExternalPackages: ['mongodb'],
-    optimizeCss: true, // CSS Optimierung
+    // optimizeCss: true, // Deaktiviert - benötigt 'critters' Package
   },
   
   webpack(config, { dev, isServer }) {
