@@ -2734,6 +2734,7 @@ export async function POST(request) {
     case 'profile/stats': return handleGetProfileStats(request);
     case 'kredite': return handleGetKredite(request);
     case 'transfer': return handleTransferMoney(request);
+    case 'transfer/debug': return handleTransferDebug(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
@@ -3585,7 +3586,8 @@ async function handleGetKredite(request) {
 }
 
 // ===== TRANSFER MONEY HANDLER =====
-async function handleTransferMoney(request) {
+// Debug Endpoint für Transfer-Troubleshooting
+async function handleTransferDebug(request) {
   try {
     const decoded = verifyToken(request.cookies.get('auth_token')?.value);
     if (!decoded) {
@@ -3600,8 +3602,68 @@ async function handleTransferMoney(request) {
       .eq('discord_user_id', userId)
       .single();
 
+    // Get all users with account numbers
+    const { data: allUsers } = await supabaseAdmin
+      .from('user_data')
+      .select('discord_user_id, data');
+
+    const usersWithAccounts = allUsers?.map(u => {
+      const parsedData = typeof u.data === 'string' ? JSON.parse(u.data) : (u.data || {});
+      return {
+        discord_id: u.discord_user_id,
+        accountNumber: parsedData.cards?.[0]?.accountNumber || 'KEIN KONTO',
+        bankBalance: parsedData.money?.bank || 0,
+        bankId: parsedData.cards?.[0]?.bankId || 'keine'
+      };
+    }) || [];
+
+    const currentUserData = typeof userData?.data === 'string' 
+      ? JSON.parse(userData.data) 
+      : (userData?.data || {});
+
+    return NextResponse.json({
+      currentUser: {
+        discord_id: userId,
+        found: !!userData,
+        error: userError?.message,
+        accountNumber: currentUserData.cards?.[0]?.accountNumber,
+        bankBalance: currentUserData.money?.bank,
+        hasCards: !!currentUserData.cards?.length
+      },
+      allUsersInDB: usersWithAccounts,
+      totalUsers: usersWithAccounts.length
+    });
+  } catch (e) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
+  }
+}
+
+
+async function handleTransferMoney(request) {
+  try {
+    const decoded = verifyToken(request.cookies.get('auth_token')?.value);
+    if (!decoded) {
+      return NextResponse.json({ error: 'Ungültiges Token' }, { status: 401 });
+    }
+    const userId = decoded.userId;
+    console.log('[TRANSFER] 🔐 User ID aus Token:', userId);
+
+    // Get user data
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('user_data')
+      .select('*')
+      .eq('discord_user_id', userId)
+      .single();
+
+    console.log('[TRANSFER] 📊 User Data gefunden:', !!userData);
+    console.log('[TRANSFER] ❌ User Error:', userError?.message);
+
     if (userError || !userData) {
-      return NextResponse.json({ error: 'User nicht gefunden' }, { status: 404 });
+      console.log('[TRANSFER] ⚠️ FEHLER: Sender User nicht in Datenbank gefunden!');
+      return NextResponse.json({ 
+        error: 'Dein Account nicht gefunden',
+        details: 'Dein Discord-Account hat noch keine Spieldaten. Verbinde dich mit dem Discord Bot.'
+      }, { status: 404 });
     }
 
     const body = await request.json();
@@ -3622,8 +3684,13 @@ async function handleTransferMoney(request) {
       }, { status: 400 });
     }
 
-    // User Bank Info - Daten sind in userData.data direkt!
-    const userDataObj = userData.data || {};
+    // User Bank Info - Parse data if it's a JSON string
+    const userDataObj = typeof userData.data === 'string' 
+      ? JSON.parse(userData.data) 
+      : (userData.data || {});
+    
+    console.log('[TRANSFER] 📦 userData.data type:', typeof userData.data);
+    console.log('[TRANSFER] 📦 userDataObj keys:', Object.keys(userDataObj));
     
     // Kontonummer aus cards - heißt 'accountNumber', nicht 'cardNumber'!
     const userCard = userDataObj.cards?.[0] || {};
@@ -3703,28 +3770,41 @@ async function handleTransferMoney(request) {
     }
 
     // Empfänger suchen
+    console.log('[TRANSFER] 🔍 Suche Empfänger mit Kontonummer:', kontonummer);
     const { data: allUsers, error: allUsersError } = await supabaseAdmin
       .from('user_data')
       .select('discord_user_id, data');
 
     if (allUsersError) {
-      console.error('Error fetching users:', allUsersError);
+      console.error('[TRANSFER] ❌ Error fetching users:', allUsersError);
       return NextResponse.json({ error: 'Fehler beim Suchen des Empfängers' }, { status: 500 });
     }
 
+    console.log('[TRANSFER] 👥 Anzahl User in DB:', allUsers?.length || 0);
+
     let receiverDiscordId = null;
     for (const u of allUsers) {
+      // Parse data if it's a JSON string
+      const receiverDataObj = typeof u.data === 'string' 
+        ? JSON.parse(u.data) 
+        : (u.data || {});
+      
       // Empfänger-Kontonummer aus cards - heißt 'accountNumber'!
-      const receiverCard = u.data?.cards?.[0];
+      const receiverCard = receiverDataObj?.cards?.[0];
+      const receiverAccountNum = receiverCard?.accountNumber;
+      console.log('[TRANSFER] 🔎 Prüfe User:', u.discord_user_id, 'Kontonummer:', receiverAccountNum);
+      
       if (receiverCard && receiverCard.accountNumber === kontonummer) {
         receiverDiscordId = u.discord_user_id;
+        console.log('[TRANSFER] ✅ Empfänger gefunden:', receiverDiscordId);
         break;
       }
     }
 
     if (!receiverDiscordId) {
+      console.log('[TRANSFER] ⚠️ FEHLER: Kein User mit Kontonummer', kontonummer, 'gefunden');
       return NextResponse.json({ 
-        error: 'Konto nicht gefunden',
+        error: 'Empfänger nicht gefunden',
         details: `Kein Konto mit der Nummer ${kontonummer} gefunden.`
       }, { status: 404 });
     }
