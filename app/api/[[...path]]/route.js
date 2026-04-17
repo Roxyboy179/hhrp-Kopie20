@@ -1530,32 +1530,49 @@ export async function GET(request) {
   // GET /api/stats - Website Statistiken abrufen (öffentlich)
   if (p === 'stats') {
     try {
+      // Prüfe ob Tabelle existiert, wenn nicht, gib Default-Werte zurück
       const { data, error } = await supabaseAdmin
         .from('website_stats')
         .select('*');
       
-      if (error) {
-        console.error('[Stats] Fehler beim Abrufen:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+      let stats = {
+        totalVisits: 0,
+        uniqueVisitors: 0,
+        appInstalls: 0
+      };
+      
+      if (!error && data) {
+        data?.forEach(stat => {
+          const value = parseInt(stat.metric_value);
+          if (stat.metric_name === 'total_visits') stats.totalVisits = value;
+          if (stat.metric_name === 'unique_visitors') stats.uniqueVisitors = value;
+          if (stat.metric_name === 'app_installs') stats.appInstalls = value;
+        });
       }
       
-      // In ein Object umwandeln für einfacheren Zugriff
-      const stats = {};
-      data?.forEach(stat => {
-        stats[stat.metric_name] = parseInt(stat.metric_value);
-      });
+      // Zähle registrierte User aus user_data Tabelle
+      const { count: registeredUsers } = await supabaseAdmin
+        .from('user_data')
+        .select('*', { count: 'exact', head: true });
+      
+      stats.registeredUsers = registeredUsers || 0;
       
       return NextResponse.json({
         success: true,
-        stats: {
-          totalVisits: stats.total_visits || 0,
-          uniqueVisitors: stats.unique_visitors || 0,
-          appInstalls: stats.app_installs || 0
-        }
+        stats
       });
     } catch (e) {
       console.error('[Stats] Exception:', e);
-      return NextResponse.json({ error: e.message }, { status: 500 });
+      // Fallback bei Fehler
+      return NextResponse.json({
+        success: true,
+        stats: {
+          totalVisits: 0,
+          uniqueVisitors: 0,
+          appInstalls: 0,
+          registeredUsers: 0
+        }
+      });
     }
   }
 

@@ -7,27 +7,57 @@ import { GlassCard } from '@/components/shared/GlassCard';
 import { Button } from '@/components/ui/button';
 import { ScrollProgressBar } from '@/components/shared/ScrollProgressBar';
 import { LoginModal } from '@/components/LoginModal';
+import WebsiteStatsTracker from '@/components/WebsiteStatsTracker';
 import { 
   FileText, Users, CheckCircle2, Clock, ArrowRight, 
   Zap, Target, Loader2, ChevronDown, Sparkles, UserCircle,
-  Gamepad2, Shield, TrendingUp, Heart, Scale, Siren
+  Gamepad2, Shield, TrendingUp, Heart, Scale, Siren, 
+  Eye, Download, UserPlus, Activity
 } from 'lucide-react';
 
-function AnimatedCounter({ value, suffix = '' }) {
+function AnimatedCounter({ value, suffix = '', showDiff = false }) {
   const [count, setCount] = useState(0);
+  const [prevCount, setPrevCount] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
+  
   useEffect(() => {
     const end = parseInt(value) || 0;
     if (end === 0) { setCount(0); return; }
-    let start = 0;
-    const increment = end / 40;
+    
+    // Animation wenn sich der Wert ändert
+    if (end !== prevCount && prevCount !== 0) {
+      setIsAnimating(true);
+      setTimeout(() => setIsAnimating(false), 600);
+    }
+    
+    let start = count;
+    const increment = (end - start) / 40;
     const timer = setInterval(() => {
       start += increment;
-      if (start >= end) { setCount(end); clearInterval(timer); }
-      else setCount(Math.floor(start));
+      if (start >= end) { 
+        setCount(end); 
+        setPrevCount(end);
+        clearInterval(timer); 
+      } else {
+        setCount(Math.floor(start));
+      }
     }, 20);
     return () => clearInterval(timer);
   }, [value]);
-  return <span>{count}{suffix}</span>;
+  
+  const diff = count - prevCount;
+  
+  return (
+    <span className={`inline-block transition-all duration-300 ${isAnimating ? 'scale-110 text-green-400' : ''}`}>
+      {count.toLocaleString('de-DE')}
+      {suffix}
+      {showDiff && diff > 0 && isAnimating && (
+        <span className="ml-2 text-sm text-green-400 animate-bounce">
+          +{diff}
+        </span>
+      )}
+    </span>
+  );
 }
 
 export default function HomePage() {
@@ -35,6 +65,12 @@ export default function HomePage() {
   const { user, loading } = useAuth();
   const [stats, setStats] = useState({ total: 0, angenommen: 0, inBearbeitung: 0 });
   const [discordStats, setDiscordStats] = useState({ memberCount: 0, onlineCount: 0, teamCount: 0 });
+  const [websiteStats, setWebsiteStats] = useState({ 
+    totalVisits: 0, 
+    uniqueVisitors: 0, 
+    appInstalls: 0,
+    registeredUsers: 0 
+  });
   const [teamMembers, setTeamMembers] = useState([]);
   const [isMobile, setIsMobile] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
@@ -44,6 +80,7 @@ export default function HomePage() {
     fetchStats();
     fetchDiscordStats();
     fetchTeamPreview();
+    fetchWebsiteStats();
   }, []);
 
   const fetchStats = async () => {
@@ -59,6 +96,27 @@ export default function HomePage() {
       if (res.ok) setDiscordStats(await res.json());
     } catch (e) { console.error(e); }
   };
+  
+  const fetchWebsiteStats = async () => {
+    try {
+      const res = await fetch('/api/stats');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setWebsiteStats(data.stats);
+        }
+      }
+    } catch (e) { console.error('Stats fetch error:', e); }
+  };
+
+  // Auto-refresh stats alle 10 Sekunden
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchWebsiteStats();
+    }, 10000); // 10 Sekunden
+    
+    return () => clearInterval(interval);
+  }, []);
 
   const fetchTeamPreview = async () => {
     try {
@@ -81,6 +139,9 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen relative">
+      {/* Invisible Stats Tracker */}
+      {/* <WebsiteStatsTracker /> */}
+      
       {/* Scroll Progress Bar */}
       <ScrollProgressBar />
 
@@ -205,7 +266,7 @@ export default function HomePage() {
           <div className="h-px mb-12 md:mb-16" style={{ background: `linear-gradient(to right, transparent, rgba(var(--theme-accent-rgb), 0.15), transparent)` }} />
           
           {/* Stats Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-6">
             {[
               { icon: <FileText className="w-5 h-5" />, value: stats.total, label: 'Bewerbungen' },
               { icon: <CheckCircle2 className="w-5 h-5" />, value: stats.angenommen, label: 'Angenommen' },
@@ -230,6 +291,73 @@ export default function HomePage() {
                 </div>
               </GlassCard>
             ))}
+          </div>
+          
+          {/* Website Stats Grid - NEU mit Icons & Animationen */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
+            {[
+              { 
+                icon: Eye, 
+                value: websiteStats.totalVisits, 
+                label: 'Webseiten-Besuche', 
+                gradient: 'from-blue-500 to-cyan-500',
+                bgGlow: 'rgba(59, 130, 246, 0.15)'
+              },
+              { 
+                icon: UserPlus, 
+                value: websiteStats.registeredUsers, 
+                label: 'Registrierte User', 
+                gradient: 'from-purple-500 to-pink-500',
+                bgGlow: 'rgba(168, 85, 247, 0.15)'
+              },
+              { 
+                icon: Activity, 
+                value: websiteStats.uniqueVisitors, 
+                label: 'Aktive Besucher', 
+                gradient: 'from-green-500 to-emerald-500',
+                bgGlow: 'rgba(34, 197, 94, 0.15)'
+              },
+            ].map((stat, i) => {
+              const IconComponent = stat.icon;
+              return (
+                <GlassCard 
+                  key={i} 
+                  className="p-6 md:p-8 text-center animate-fade-in-up relative overflow-hidden group" 
+                  hover
+                >
+                  {/* Glow Effect on Hover */}
+                  <div 
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-2xl"
+                    style={{ background: stat.bgGlow }}
+                  />
+                  
+                  <div className="relative z-10">
+                    <div 
+                      className={`w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 bg-gradient-to-br ${stat.gradient} group-hover:scale-110 group-hover:rotate-6`}
+                      style={{ 
+                        boxShadow: '0 4px 24px rgba(0,0,0,0.15)'
+                      }}
+                    >
+                      <IconComponent className="w-5 h-5 md:w-6 md:h-6 text-white" />
+                    </div>
+                    
+                    <div className="text-3xl md:text-4xl lg:text-5xl font-bold text-white tabular-nums mb-2">
+                      <AnimatedCounter value={stat.value} showDiff={true} />
+                    </div>
+                    
+                    <div className="text-xs md:text-sm tracking-wider uppercase font-medium text-white/40">
+                      {stat.label}
+                    </div>
+                    
+                    {/* Live Indicator */}
+                    <div className="flex items-center justify-center gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                      <span className="text-[10px] text-green-400 uppercase tracking-wider">Live</span>
+                    </div>
+                  </div>
+                </GlassCard>
+              );
+            })}
           </div>
           
           {/* Bottom Divider */}
