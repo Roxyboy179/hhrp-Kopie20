@@ -1535,7 +1535,7 @@ export async function GET(request) {
         totalVisits: 0,
         uniqueVisitors: 0,
         appInstalls: 0,
-        pwaUsers: 0,
+        pwaDownloads: 0,  // Renamed: Einmalige PWA-Downloads
         registeredUsers: 0
       };
       
@@ -1554,7 +1554,9 @@ export async function GET(request) {
             if (stat.metric_name === 'total_visits') stats.totalVisits = value;
             if (stat.metric_name === 'unique_visitors') stats.uniqueVisitors = value;
             if (stat.metric_name === 'app_installs') stats.appInstalls = value;
-            if (stat.metric_name === 'pwa_users') stats.pwaUsers = value;
+            if (stat.metric_name === 'pwa_downloads') stats.pwaDownloads = value;
+            // Legacy support
+            if (stat.metric_name === 'pwa_users') stats.pwaDownloads = value;
           });
           
           source = 'supabase';
@@ -1569,7 +1571,7 @@ export async function GET(request) {
         stats.totalVisits = fileStats.total_visits || 0;
         stats.uniqueVisitors = fileStats.unique_visitors || 0;
         stats.appInstalls = fileStats.app_installs || 0;
-        stats.pwaUsers = fileStats.pwa_users || 0;
+        stats.pwaDownloads = fileStats.pwa_downloads || fileStats.pwa_users || 0;
       }
       
       // Registrierte User IMMER aus user_data Tabelle
@@ -2539,7 +2541,7 @@ export async function POST(request) {
     }
   }
   
-  // POST /api/stats/pwa-session - Track PWA user session
+  // POST /api/stats/pwa-session - Track PWA Download (EINMALIG pro User!)
   if (p === 'stats/pwa-session') {
     try {
       const body = await request.json();
@@ -2553,17 +2555,18 @@ export async function POST(request) {
           });
         }
         
+        // Increment pwa_downloads (nicht pwa_users, da es nur 1x pro User gezählt wird)
         await supabaseAdmin.rpc('increment_stat', {
-          stat_name: 'pwa_users',
+          stat_name: 'pwa_downloads',
           increment_by: 1
         });
         
-        console.log('[Stats] ✅ PWA-Session getrackt (Supabase)');
+        console.log('[Stats] ✅ PWA-Download getrackt (Supabase) - EINMALIG');
         return NextResponse.json({ success: true, source: 'supabase' });
       } catch (supabaseError) {
         // Fallback zu File
-        incrementStat('pwa_users', 1);
-        console.log('[Stats] ✅ PWA-Session getrackt (File Fallback)');
+        incrementStat('pwa_downloads', 1);
+        console.log('[Stats] ✅ PWA-Download getrackt (File Fallback) - EINMALIG');
         return NextResponse.json({ success: true, source: 'file' });
       }
     } catch (e) {

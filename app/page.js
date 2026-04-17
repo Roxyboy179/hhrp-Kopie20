@@ -69,7 +69,7 @@ export default function HomePage() {
     totalVisits: 0, 
     uniqueVisitors: 0, 
     appInstalls: 0,
-    pwaUsers: 0,
+    pwaDownloads: 0,  // Renamed: Einmalige PWA-Downloads
     registeredUsers: 0 
   });
   const [teamMembers, setTeamMembers] = useState([]);
@@ -313,8 +313,8 @@ export default function HomePage() {
               },
               { 
                 icon: Smartphone, 
-                value: websiteStats.pwaUsers, 
-                label: 'PWA-Nutzer', 
+                value: websiteStats.pwaDownloads, 
+                label: 'PWA-Downloads', 
                 gradient: 'from-green-500 to-emerald-500',
                 bgGlow: 'rgba(34, 197, 94, 0.15)'
               },
