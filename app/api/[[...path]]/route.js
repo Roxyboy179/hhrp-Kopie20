@@ -1525,6 +1525,40 @@ export async function GET(request) {
     }
   }
 
+  // ===== WEBSITE STATISTICS ROUTES =====
+  
+  // GET /api/stats - Website Statistiken abrufen (öffentlich)
+  if (p === 'stats') {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('website_stats')
+        .select('*');
+      
+      if (error) {
+        console.error('[Stats] Fehler beim Abrufen:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      
+      // In ein Object umwandeln für einfacheren Zugriff
+      const stats = {};
+      data?.forEach(stat => {
+        stats[stat.metric_name] = parseInt(stat.metric_value);
+      });
+      
+      return NextResponse.json({
+        success: true,
+        stats: {
+          totalVisits: stats.total_visits || 0,
+          uniqueVisitors: stats.unique_visitors || 0,
+          appInstalls: stats.app_installs || 0
+        }
+      });
+    } catch (e) {
+      console.error('[Stats] Exception:', e);
+      return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+  }
+
   // ===== ACTIVITY LOGS ROUTES =====
   
   // GET /api/logs - Alle Logs abrufen (Admin only)
@@ -2394,6 +2428,68 @@ export async function POST(request) {
   const url = new URL(request.url);
   const p = url.pathname.replace('/api/', '');
 
+  // ===== WEBSITE STATISTICS TRACKING =====
+  
+  // POST /api/stats/visit - Track page visit
+  if (p === 'stats/visit') {
+    try {
+      const { error } = await supabaseAdmin.rpc('increment_stat', {
+        stat_name: 'total_visits',
+        increment_by: 1
+      });
+      
+      if (error) {
+        console.error('[Stats] Visit increment error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      
+      return NextResponse.json({ success: true });
+    } catch (e) {
+      console.error('[Stats] Visit exception:', e);
+      return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+  }
+  
+  // POST /api/stats/unique-visitor - Track unique visitor
+  if (p === 'stats/unique-visitor') {
+    try {
+      const { error } = await supabaseAdmin.rpc('increment_stat', {
+        stat_name: 'unique_visitors',
+        increment_by: 1
+      });
+      
+      if (error) {
+        console.error('[Stats] Unique visitor increment error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      
+      return NextResponse.json({ success: true });
+    } catch (e) {
+      console.error('[Stats] Unique visitor exception:', e);
+      return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+  }
+  
+  // POST /api/stats/app-install - Track PWA installation
+  if (p === 'stats/app-install') {
+    try {
+      const { error } = await supabaseAdmin.rpc('increment_stat', {
+        stat_name: 'app_installs',
+        increment_by: 1
+      });
+      
+      if (error) {
+        console.error('[Stats] App install increment error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      
+      return NextResponse.json({ success: true });
+    } catch (e) {
+      console.error('[Stats] App install exception:', e);
+      return NextResponse.json({ error: e.message }, { status: 500 });
+    }
+  }
+
   // Notification routes
   if (p === 'notifications/read-all') {
     const user = getUserFromRequest(request);
@@ -2521,6 +2617,8 @@ export async function POST(request) {
     case 'check-daily': return handleCheckDaily(request);
     case 'bot/status': return handleBotStatus(request);
     case 'beta/feedback': return handleCreateBetaFeedback(request);
+    case 'profile/stats': return handleGetProfileStats(request);
+    case 'kredite': return handleGetKredite(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
@@ -3315,4 +3413,60 @@ async function handleCreateBetaFeedback(request) {
     return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500 });
   }
 }
+
+// Get Kredite Handler
+async function handleGetKredite(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
+    }
+
+    // Lade Kredite aus Bot-Daten
+    const fs = require('fs');
+    const path = require('path');
+    const krediteFile = path.join(process.cwd(), 'discord-bot/data/pendingCredits.json');
+    
+    if (!fs.existsSync(krediteFile)) {
+      return NextResponse.json({ 
+        kredite: [], 
+        stats: { totalKredite: 0, aktiv: 0, abgeschlossen: 0, offenerBetrag: 0 }
+      });
+    }
+
+    const krediteData = JSON.parse(fs.readFileSync(krediteFile, 'utf8'));
+    
+    // Filtere Kredite für diesen User
+    const userKredite = Object.values(krediteData).filter(k => k.userId === user.id);
+    
+    // Berechne Statistiken
+    const stats = {
+      totalKredite: userKredite.length,
+      aktiv: userKredite.filter(k => k.status === 'aktiv' || k.status === 'pending').length,
+      abgeschlossen: userKredite.filter(k => k.status === 'abgeschlossen').length,
+      offenerBetrag: userKredite
+        .filter(k => k.status === 'aktiv' || k.status === 'pending')
+        .reduce((sum, k) => sum + (k.rueckzahlungsBetrag || 0), 0)
+    };
+
+    // Sortiere: Aktive zuerst, dann nach Datum
+    userKredite.sort((a, b) => {
+      if (a.status === 'pending' && b.status !== 'pending') return -1;
+      if (a.status !== 'pending' && b.status === 'pending') return 1;
+      if (a.status === 'aktiv' && b.status !== 'aktiv') return -1;
+      if (a.status !== 'aktiv' && b.status === 'aktiv') return 1;
+      return new Date(b.beantragtAm || b.genehmigtAm) - new Date(a.beantragtAm || a.genehmigtAm);
+    });
+
+    return NextResponse.json({ 
+      kredite: userKredite,
+      stats
+    });
+
+  } catch (e) {
+    console.error('Get kredite error:', e);
+    return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500 });
+  }
+}
+
 
