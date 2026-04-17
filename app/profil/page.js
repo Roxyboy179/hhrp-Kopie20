@@ -2470,10 +2470,15 @@ export default function ProfilPage() {
         {activeTab === 'finance' && activeSubTab === 'overview' && (
           <div className="space-y-6">
             {(() => {
+              // Debug: Log userData structure
+              console.log('🔍 userData:', userData);
+              console.log('🔍 userData.money:', userData?.money);
+              console.log('🔍 userData.balance:', userData?.balance);
+              
               // Berechne Vermögen
-              const cash = userData?.balance?.cash || 0;
-              const bank = userData?.balance?.bank || 0;
-              const savings = userData?.balance?.savings || 0;
+              const cash = userData?.money?.cash || 0;
+              const bank = userData?.money?.bank || 0;
+              const savings = userData?.money?.savings || 0;
               
               // Berechne Schulden (Kredite + offene Rechnungen)
               const kreditSchulden = (userData?.kredite || [])
