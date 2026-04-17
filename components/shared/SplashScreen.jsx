@@ -37,7 +37,7 @@ export function SplashScreen({ onComplete }) {
     const t6 = setTimeout(() => {
       sessionStorage.setItem('hhrp-splash-shown', 'true');
       onComplete();
-    }, 3000); // 3 Sekunden total
+    }, 10000); // 10 Sekunden total
 
     return () => { 
       clearTimeout(t1); 
