@@ -12,7 +12,7 @@ import {
   FileText, Users, CheckCircle2, Clock, ArrowRight, 
   Zap, Target, Loader2, ChevronDown, Sparkles, UserCircle,
   Gamepad2, Shield, TrendingUp, Heart, Scale, Siren, 
-  Eye, Download, UserPlus, Activity
+  Eye, Download, UserPlus, Activity, Smartphone
 } from 'lucide-react';
 
 function AnimatedCounter({ value, suffix = '', showDiff = false }) {
@@ -69,6 +69,7 @@ export default function HomePage() {
     totalVisits: 0, 
     uniqueVisitors: 0, 
     appInstalls: 0,
+    pwaUsers: 0,
     registeredUsers: 0 
   });
   const [teamMembers, setTeamMembers] = useState([]);
@@ -139,8 +140,8 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen relative">
-      {/* Invisible Stats Tracker */}
-      {/* <WebsiteStatsTracker /> */}
+      {/* Stats Tracker - Aktiviert! */}
+      <WebsiteStatsTracker />
       
       {/* Scroll Progress Bar */}
       <ScrollProgressBar />
@@ -311,9 +312,9 @@ export default function HomePage() {
                 bgGlow: 'rgba(168, 85, 247, 0.15)'
               },
               { 
-                icon: Activity, 
-                value: websiteStats.uniqueVisitors, 
-                label: 'Aktive Besucher', 
+                icon: Smartphone, 
+                value: websiteStats.pwaUsers, 
+                label: 'PWA-Nutzer', 
                 gradient: 'from-green-500 to-emerald-500',
                 bgGlow: 'rgba(34, 197, 94, 0.15)'
               },

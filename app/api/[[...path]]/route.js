@@ -1538,7 +1538,8 @@ export async function GET(request) {
       let stats = {
         totalVisits: 0,
         uniqueVisitors: 0,
-        appInstalls: 0
+        appInstalls: 0,
+        pwaUsers: 0
       };
       
       if (!error && data) {
@@ -1547,6 +1548,7 @@ export async function GET(request) {
           if (stat.metric_name === 'total_visits') stats.totalVisits = value;
           if (stat.metric_name === 'unique_visitors') stats.uniqueVisitors = value;
           if (stat.metric_name === 'app_installs') stats.appInstalls = value;
+          if (stat.metric_name === 'pwa_users') stats.pwaUsers = value;
         });
       }
       
@@ -1556,6 +1558,18 @@ export async function GET(request) {
         .select('*', { count: 'exact', head: true });
       
       stats.registeredUsers = registeredUsers || 0;
+      
+      // Optional: Zähle PWA-User auch aus unique_visitors Tabelle
+      const { count: pwaUsersFromTable } = await supabaseAdmin
+        .from('unique_visitors')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_pwa_user', true)
+        .catch(() => ({ count: 0 }));
+      
+      // Verwende den höheren Wert
+      if (pwaUsersFromTable > stats.pwaUsers) {
+        stats.pwaUsers = pwaUsersFromTable;
+      }
       
       return NextResponse.json({
         success: true,
@@ -1570,6 +1584,7 @@ export async function GET(request) {
           totalVisits: 0,
           uniqueVisitors: 0,
           appInstalls: 0,
+          pwaUsers: 0,
           registeredUsers: 0
         }
       });
@@ -2450,60 +2465,85 @@ export async function POST(request) {
   // POST /api/stats/visit - Track page visit
   if (p === 'stats/visit') {
     try {
-      const { error } = await supabaseAdmin.rpc('increment_stat', {
+      const body = await request.json();
+      const { visitorId } = body;
+      const userAgent = request.headers.get('user-agent') || 'unknown';
+      
+      // Track Visitor in unique_visitors Tabelle
+      if (visitorId) {
+        await supabaseAdmin.rpc('track_visitor', {
+          visitor_uuid: visitorId,
+          user_agent_string: userAgent
+        }).catch(err => console.error('[Stats] track_visitor error:', err));
+      }
+      
+      // Increment total_visits
+      await supabaseAdmin.rpc('increment_stat', {
         stat_name: 'total_visits',
         increment_by: 1
-      });
-      
-      if (error) {
-        console.error('[Stats] Visit increment error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
+      }).catch(err => console.error('[Stats] increment_stat error:', err));
       
       return NextResponse.json({ success: true });
     } catch (e) {
       console.error('[Stats] Visit exception:', e);
-      return NextResponse.json({ error: e.message }, { status: 500 });
+      return NextResponse.json({ success: true }); // Silent fail
     }
   }
   
   // POST /api/stats/unique-visitor - Track unique visitor
   if (p === 'stats/unique-visitor') {
     try {
-      const { error } = await supabaseAdmin.rpc('increment_stat', {
+      // Increment unique_visitors counter
+      await supabaseAdmin.rpc('increment_stat', {
         stat_name: 'unique_visitors',
         increment_by: 1
-      });
-      
-      if (error) {
-        console.error('[Stats] Unique visitor increment error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
+      }).catch(err => console.error('[Stats] increment error:', err));
       
       return NextResponse.json({ success: true });
     } catch (e) {
       console.error('[Stats] Unique visitor exception:', e);
-      return NextResponse.json({ error: e.message }, { status: 500 });
+      return NextResponse.json({ success: true }); // Silent fail
+    }
+  }
+  
+  // POST /api/stats/pwa-session - Track PWA user session (NEU!)
+  if (p === 'stats/pwa-session') {
+    try {
+      const body = await request.json();
+      const { visitorId } = body;
+      
+      // Markiere User als PWA-User
+      if (visitorId) {
+        await supabaseAdmin.rpc('mark_as_pwa_user', {
+          visitor_uuid: visitorId
+        }).catch(err => console.error('[Stats] mark_as_pwa_user error:', err));
+      }
+      
+      // Increment pwa_users counter
+      await supabaseAdmin.rpc('increment_stat', {
+        stat_name: 'pwa_users',
+        increment_by: 1
+      }).catch(err => console.error('[Stats] increment error:', err));
+      
+      return NextResponse.json({ success: true });
+    } catch (e) {
+      console.error('[Stats] PWA session exception:', e);
+      return NextResponse.json({ success: true }); // Silent fail
     }
   }
   
   // POST /api/stats/app-install - Track PWA installation
   if (p === 'stats/app-install') {
     try {
-      const { error } = await supabaseAdmin.rpc('increment_stat', {
+      await supabaseAdmin.rpc('increment_stat', {
         stat_name: 'app_installs',
         increment_by: 1
-      });
-      
-      if (error) {
-        console.error('[Stats] App install increment error:', error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
-      }
+      }).catch(err => console.error('[Stats] increment error:', err));
       
       return NextResponse.json({ success: true });
     } catch (e) {
       console.error('[Stats] App install exception:', e);
-      return NextResponse.json({ error: e.message }, { status: 500 });
+      return NextResponse.json({ success: true }); // Silent fail
     }
   }
 
