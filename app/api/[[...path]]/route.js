@@ -2730,6 +2730,7 @@ export async function POST(request) {
     case 'beta/feedback': return handleCreateBetaFeedback(request);
     case 'profile/stats': return handleGetProfileStats(request);
     case 'kredite': return handleGetKredite(request);
+    case 'transfer': return handleTransferMoney(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
@@ -3580,178 +3581,169 @@ async function handleGetKredite(request) {
   }
 }
 
-// ===== TRANSFER MONEY ENDPOINT =====
-export async function POST(request) {
-  const { pathname } = new URL(request.url);
-  
-  if (pathname === '/api/transfer') {
-    try {
-      const token = request.cookies.get('auth_token')?.value;
-      if (!token) {
-        return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
-      }
-
-      const decoded = verifyToken(token);
-      if (!decoded) {
-        return NextResponse.json({ error: 'Ungültiges Token' }, { status: 401 });
-      }
-      const userId = decoded.userId;
-
-      // Get user data
-      const { data: userData, error: userError } = await supabaseAdmin
-        .from('user_data')
-        .select('*')
-        .eq('discord_user_id', userId)
-        .single();
-
-      if (userError || !userData) {
-        return NextResponse.json({ error: 'User nicht gefunden' }, { status: 404 });
-      }
-
-      const body = await request.json();
-      const { kontonummer, betrag } = body;
-
-      // Validierung
-      if (!kontonummer || kontonummer.length !== 9) {
-        return NextResponse.json({ 
-          error: 'Ungültige Kontonummer',
-          details: 'Die Kontonummer muss 9 Ziffern haben.'
-        }, { status: 400 });
-      }
-
-      if (!betrag || betrag <= 0) {
-        return NextResponse.json({ 
-          error: 'Ungültiger Betrag',
-          details: 'Der Betrag muss größer als 0 sein.'
-        }, { status: 400 });
-      }
-
-      // User Bank Info
-      const userBankData = userData.data?.bank || {};
-      const senderAccountNumber = userBankData.accountNumber;
-      const bankId = userBankData.bankId || 'hamburg_horizon';
-      const bankBalance = userBankData.balance || 0;
-
-      if (!senderAccountNumber) {
-        return NextResponse.json({ 
-          error: 'Kein Bankkonto',
-          details: 'Du hast noch kein Bankkonto. Erstelle eins im Discord Bot.'
-        }, { status: 400 });
-      }
-
-      // Eigenes Konto?
-      if (senderAccountNumber === kontonummer) {
-        return NextResponse.json({ 
-          error: 'Ungültige Überweisung',
-          details: 'Du kannst nicht an dich selbst überweisen.'
-        }, { status: 400 });
-      }
-
-      // Bank Gebühren
-      const BANKS = {
-        hamburg_horizon: { fee: 0.02 },
-        nordic_capital: { fee: 0.03 },
-        metrova_trust: { fee: 0.015 },
-        elite_federal: { fee: 0.004 }
-      };
-
-      const bank = BANKS[bankId] || BANKS['hamburg_horizon'];
-      let feeRate = bank.fee;
-
-      // VIP Discount
-      const vipType = userData.data?.vip?.type;
-      const VIP_DISCOUNTS = {
-        'premium': 0.5,
-        'platinum': 0.75,
-        'ultimate': 0.9,
-        'elite_plus': 1.0
-      };
-
-      if (vipType && VIP_DISCOUNTS[vipType]) {
-        const discount = VIP_DISCOUNTS[vipType];
-        feeRate = discount === 1.0 ? 0 : feeRate * (1 - discount);
-      }
-
-      const fee = Math.ceil(betrag * feeRate);
-      const totalCost = betrag + fee;
-
-      // Guthaben prüfen
-      if (bankBalance < totalCost) {
-        return NextResponse.json({ 
-          error: 'Nicht genug Guthaben',
-          details: `Du benötigst ${totalCost.toLocaleString('de-DE')}€ (Betrag: ${betrag.toLocaleString('de-DE')}€ + Gebühr: ${fee.toLocaleString('de-DE')}€). Verfügbar: ${bankBalance.toLocaleString('de-DE')}€`
-        }, { status: 400 });
-      }
-
-      // Empfänger suchen
-      const { data: allUsers, error: allUsersError } = await supabaseAdmin
-        .from('user_data')
-        .select('discord_user_id, data');
-
-      if (allUsersError) {
-        console.error('Error fetching users:', allUsersError);
-        return NextResponse.json({ error: 'Fehler beim Suchen des Empfängers' }, { status: 500 });
-      }
-
-      let receiverDiscordId = null;
-      for (const u of allUsers) {
-        if (u.data?.bank?.accountNumber === kontonummer) {
-          receiverDiscordId = u.discord_user_id;
-          break;
-        }
-      }
-
-      if (!receiverDiscordId) {
-        return NextResponse.json({ 
-          error: 'Konto nicht gefunden',
-          details: `Kein Konto mit der Nummer ${kontonummer} gefunden.`
-        }, { status: 404 });
-      }
-
-      // Transfer in Supabase erstellen
-      const { data: transfer, error: transferError } = await supabaseAdmin
-        .from('pending_transfers')
-        .insert({
-          sender_discord_id: userId,
-          sender_account_number: senderAccountNumber,
-          receiver_discord_id: receiverDiscordId,
-          receiver_account_number: kontonummer,
-          amount: betrag,
-          fee: fee,
-          total_cost: totalCost,
-          sender_bank_id: bankId,
-          sender_vip_status: vipType || null,
-          fee_rate: feeRate,
-          status: 'pending',
-          initiated_from: 'website'
-        })
-        .select()
-        .single();
-
-      if (transferError) {
-        console.error('Transfer insert error:', transferError);
-        return NextResponse.json({ error: 'Fehler beim Erstellen der Überweisung' }, { status: 500 });
-      }
-
-      console.log(`[TRANSFER] Created pending transfer: ${transfer.id}`);
-      console.log(`[TRANSFER] From ${senderAccountNumber} to ${kontonummer}: ${betrag}€ (Fee: ${fee}€)`);
-
-      return NextResponse.json({ 
-        success: true,
-        transfer: {
-          id: transfer.id,
-          amount: betrag,
-          fee: fee,
-          total: totalCost,
-          receiver: kontonummer,
-          status: 'pending'
-        }
-      });
-
-    } catch (e) {
-      console.error('Transfer error:', e);
-      return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500 });
+// ===== TRANSFER MONEY HANDLER =====
+async function handleTransferMoney(request) {
+  try {
+    const decoded = verifyToken(request.cookies.get('auth_token')?.value);
+    if (!decoded) {
+      return NextResponse.json({ error: 'Ungültiges Token' }, { status: 401 });
     }
+    const userId = decoded.userId;
+
+    // Get user data
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('user_data')
+      .select('*')
+      .eq('discord_user_id', userId)
+      .single();
+
+    if (userError || !userData) {
+      return NextResponse.json({ error: 'User nicht gefunden' }, { status: 404 });
+    }
+
+    const body = await request.json();
+    const { kontonummer, betrag } = body;
+
+    // Validierung
+    if (!kontonummer || kontonummer.length !== 9) {
+      return NextResponse.json({ 
+        error: 'Ungültige Kontonummer',
+        details: 'Die Kontonummer muss 9 Ziffern haben.'
+      }, { status: 400 });
+    }
+
+    if (!betrag || betrag <= 0) {
+      return NextResponse.json({ 
+        error: 'Ungültiger Betrag',
+        details: 'Der Betrag muss größer als 0 sein.'
+      }, { status: 400 });
+    }
+
+    // User Bank Info
+    const userBankData = userData.data?.bank || {};
+    const senderAccountNumber = userBankData.accountNumber;
+    const bankId = userBankData.bankId || 'hamburg_horizon';
+    const bankBalance = userBankData.balance || 0;
+
+    if (!senderAccountNumber) {
+      return NextResponse.json({ 
+        error: 'Kein Bankkonto',
+        details: 'Du hast noch kein Bankkonto. Erstelle eins im Discord Bot.'
+      }, { status: 400 });
+    }
+
+    // Eigenes Konto?
+    if (senderAccountNumber === kontonummer) {
+      return NextResponse.json({ 
+        error: 'Ungültige Überweisung',
+        details: 'Du kannst nicht an dich selbst überweisen.'
+      }, { status: 400 });
+    }
+
+    // Bank Gebühren
+    const BANKS = {
+      hamburg_horizon: { fee: 0.02 },
+      nordic_capital: { fee: 0.03 },
+      metrova_trust: { fee: 0.015 },
+      elite_federal: { fee: 0.004 }
+    };
+
+    const bank = BANKS[bankId] || BANKS['hamburg_horizon'];
+    let feeRate = bank.fee;
+
+    // VIP Discount
+    const vipType = userData.data?.vip?.type;
+    const VIP_DISCOUNTS = {
+      'premium': 0.5,
+      'platinum': 0.75,
+      'ultimate': 0.9,
+      'elite_plus': 1.0
+    };
+
+    if (vipType && VIP_DISCOUNTS[vipType]) {
+      const discount = VIP_DISCOUNTS[vipType];
+      feeRate = discount === 1.0 ? 0 : feeRate * (1 - discount);
+    }
+
+    const fee = Math.ceil(betrag * feeRate);
+    const totalCost = betrag + fee;
+
+    // Guthaben prüfen
+    if (bankBalance < totalCost) {
+      return NextResponse.json({ 
+        error: 'Nicht genug Guthaben',
+        details: `Du benötigst ${totalCost.toLocaleString('de-DE')}€ (Betrag: ${betrag.toLocaleString('de-DE')}€ + Gebühr: ${fee.toLocaleString('de-DE')}€). Verfügbar: ${bankBalance.toLocaleString('de-DE')}€`
+      }, { status: 400 });
+    }
+
+    // Empfänger suchen
+    const { data: allUsers, error: allUsersError } = await supabaseAdmin
+      .from('user_data')
+      .select('discord_user_id, data');
+
+    if (allUsersError) {
+      console.error('Error fetching users:', allUsersError);
+      return NextResponse.json({ error: 'Fehler beim Suchen des Empfängers' }, { status: 500 });
+    }
+
+    let receiverDiscordId = null;
+    for (const u of allUsers) {
+      if (u.data?.bank?.accountNumber === kontonummer) {
+        receiverDiscordId = u.discord_user_id;
+        break;
+      }
+    }
+
+    if (!receiverDiscordId) {
+      return NextResponse.json({ 
+        error: 'Konto nicht gefunden',
+        details: `Kein Konto mit der Nummer ${kontonummer} gefunden.`
+      }, { status: 404 });
+    }
+
+    // Transfer in Supabase erstellen
+    const { data: transfer, error: transferError } = await supabaseAdmin
+      .from('pending_transfers')
+      .insert({
+        sender_discord_id: userId,
+        sender_account_number: senderAccountNumber,
+        receiver_discord_id: receiverDiscordId,
+        receiver_account_number: kontonummer,
+        amount: betrag,
+        fee: fee,
+        total_cost: totalCost,
+        sender_bank_id: bankId,
+        sender_vip_status: vipType || null,
+        fee_rate: feeRate,
+        status: 'pending',
+        initiated_from: 'website'
+      })
+      .select()
+      .single();
+
+    if (transferError) {
+      console.error('Transfer insert error:', transferError);
+      return NextResponse.json({ error: 'Fehler beim Erstellen der Überweisung' }, { status: 500 });
+    }
+
+    console.log(`[TRANSFER] Created pending transfer: ${transfer.id}`);
+    console.log(`[TRANSFER] From ${senderAccountNumber} to ${kontonummer}: ${betrag}€ (Fee: ${fee}€)`);
+
+    return NextResponse.json({ 
+      success: true,
+      transfer: {
+        id: transfer.id,
+        amount: betrag,
+        fee: fee,
+        total: totalCost,
+        receiver: kontonummer,
+        status: 'pending'
+      }
+    });
+
+  } catch (e) {
+    console.error('Transfer error:', e);
+    return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500 });
   }
 }
 
