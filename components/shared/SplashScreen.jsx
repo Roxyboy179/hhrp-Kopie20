@@ -28,16 +28,16 @@ export function SplashScreen({ onComplete }) {
       return;
     }
 
-    // Phase timing - 30 SEKUNDEN
-    const t1 = setTimeout(() => setPhase(1), 1000);    // Show title
-    const t2 = setTimeout(() => setPhase(2), 2500);    // Show subtitle
-    const t3 = setTimeout(() => setPhase(3), 4000);    // Start progress
-    const t4 = setTimeout(() => setPhase(4), 28000);   // Success animation (bei 28s)
-    const t5 = setTimeout(() => setPhase(5), 29000);   // Start fade (bei 29s)
+    // Phase timing - SCHNELL (3 Sekunden total)
+    const t1 = setTimeout(() => setPhase(1), 300);     // Show title
+    const t2 = setTimeout(() => setPhase(2), 800);     // Show subtitle
+    const t3 = setTimeout(() => setPhase(3), 1200);    // Start progress
+    const t4 = setTimeout(() => setPhase(4), 2500);    // Success animation
+    const t5 = setTimeout(() => setPhase(5), 2800);    // Start fade
     const t6 = setTimeout(() => {
       sessionStorage.setItem('hhrp-splash-shown', 'true');
       onComplete();
-    }, 30000); // 30 Sekunden
+    }, 3000); // 3 Sekunden total
 
     return () => { 
       clearTimeout(t1); 
@@ -53,25 +53,17 @@ export function SplashScreen({ onComplete }) {
   useEffect(() => {
     if (phase < 3) return;
     const start = Date.now();
-    const duration = 24500; // 24,5 Sekunden Progress (von 4s bis 28.5s)
+    const duration = 1300; // 1,3 Sekunden Progress (von 1.2s bis 2.5s)
     const animate = () => {
       const elapsed = Date.now() - start;
       const p = Math.min(100, (elapsed / duration) * 100);
       setProgress(p);
       
-      // Dynamische Loading-Texte - mehr Variationen für 30 Sekunden
-      if (p < 8) setLoadingText('Verbindung wird aufgebaut...');
-      else if (p < 15) setLoadingText('Server wird kontaktiert...');
-      else if (p < 22) setLoadingText('Authentifizierung läuft...');
-      else if (p < 30) setLoadingText('Benutzerdaten werden geladen...');
-      else if (p < 38) setLoadingText('Discord Sync wird geprüft...');
-      else if (p < 46) setLoadingText('Profildaten werden abgerufen...');
-      else if (p < 54) setLoadingText('Bewerbungen werden geladen...');
-      else if (p < 62) setLoadingText('Interface wird initialisiert...');
-      else if (p < 70) setLoadingText('Theme wird angewendet...');
-      else if (p < 78) setLoadingText('Komponenten werden geladen...');
-      else if (p < 86) setLoadingText('Letzte Vorbereitungen...');
-      else if (p < 94) setLoadingText('Fast fertig...');
+      // Schnelle Loading-Texte
+      if (p < 20) setLoadingText('Verbindung wird aufgebaut...');
+      else if (p < 40) setLoadingText('Daten werden geladen...');
+      else if (p < 60) setLoadingText('Interface wird initialisiert...');
+      else if (p < 80) setLoadingText('Fast fertig...');
       else setLoadingText('Willkommen bei HHRP!');
       
       if (p < 100) requestAnimationFrame(animate);
