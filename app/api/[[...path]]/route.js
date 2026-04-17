@@ -3224,13 +3224,32 @@ async function handleBotStatus(request) {
 // Beta Tester Feedback Handler
 async function handleCreateBetaFeedback(request) {
   try {
-    const user = getUserContext(request);
-    if (!user) {
+    // Get session from cookies
+    const cookieStore = request.cookies;
+    const sessionCookie = cookieStore.get('sb-access-token') || cookieStore.get('sb-refresh-token');
+    
+    if (!sessionCookie) {
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
     }
 
+    // Get user from session
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(sessionCookie.value);
+    
+    if (userError || !user) {
+      return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
+    }
+
+    // Get user data with roles
+    const { data: userData } = await supabaseAdmin
+      .from('user_data')
+      .select('data')
+      .eq('discord_user_id', user.id)
+      .single();
+
+    const userRoles = userData?.data?.roles || [];
+
     // Check if user is Beta Tester (Role ID: 1494434149623136276)
-    const isBetaTester = user.roles?.includes('1494434149623136276');
+    const isBetaTester = userRoles.includes('1494434149623136276');
     if (!isBetaTester) {
       return NextResponse.json({ error: 'Nur Beta Tester können Feedback einreichen' }, { status: 403 });
     }
@@ -3279,7 +3298,7 @@ async function handleCreateBetaFeedback(request) {
         { name: 'Typ', value: typeLabel[type], inline: true },
         { name: 'Priorität', value: priorityLabel[priority], inline: true },
         { name: 'Seite', value: page || 'Nicht angegeben', inline: true },
-        { name: 'Beta Tester', value: user.globalName || user.username, inline: true },
+        { name: 'Beta Tester', value: user.user_metadata?.full_name || user.email || 'Unbekannt', inline: true },
         { name: 'User ID', value: user.id, inline: true },
         { name: 'Gesendet am', value: new Date().toLocaleString('de-DE'), inline: true }
       ],
