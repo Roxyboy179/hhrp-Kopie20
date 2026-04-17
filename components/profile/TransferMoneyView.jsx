@@ -28,12 +28,12 @@ export function TransferMoneyView({ userData, onTransferComplete }) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   // Bank und VIP Status aus userData
-  const userBank = userData?.bank || {};
+  const userBank = userData?.data?.bank || {};
   const bankId = userBank.bankId || 'hamburg_horizon';
   const bank = BANKS[bankId] || BANKS['hamburg_horizon'];
   
   // VIP Status ermitteln
-  const vipStatus = userData?.vip?.type || null;
+  const vipStatus = userData?.data?.vip?.type || null;
   const vipDiscount = vipStatus && VIP_DISCOUNTS[vipStatus] 
     ? VIP_DISCOUNTS[vipStatus] 
     : null;
@@ -65,9 +65,16 @@ export function TransferMoneyView({ userData, onTransferComplete }) {
       return;
     }
 
-    if (betragNum <= 0) {
-      toast.error('Ungültiger Betrag', {
-        description: 'Der Betrag muss größer als 0 sein.'
+    if (betragNum < 1000) {
+      toast.error('Betrag zu niedrig', {
+        description: 'Der Mindestbetrag für eine Überweisung beträgt 1.000€.'
+      });
+      return;
+    }
+
+    if (betragNum > 1000000) {
+      toast.error('Betrag zu hoch', {
+        description: 'Der Maximalbetrag für eine Überweisung beträgt 1.000.000€.'
       });
       return;
     }
@@ -197,12 +204,16 @@ export function TransferMoneyView({ userData, onTransferComplete }) {
             type="number"
             value={betrag}
             onChange={(e) => setBetrag(e.target.value)}
-            placeholder="0"
-            min="1"
+            placeholder="Mindestens 1.000€"
+            min="1000"
+            max="1000000"
             step="1"
             className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/25 h-12 text-lg"
             required
           />
+          <p className="text-xs text-white/40 mt-1">
+            Limits: Min. 1.000€ - Max. 1.000.000€
+          </p>
         </div>
 
         {/* Berechnung */}
