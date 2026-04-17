@@ -2520,6 +2520,7 @@ export async function POST(request) {
     case 'daily-bonus': return handleDailyBonus(request);
     case 'check-daily': return handleCheckDaily(request);
     case 'bot/status': return handleBotStatus(request);
+    case 'beta/feedback': return handleCreateBetaFeedback(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
@@ -3197,6 +3198,123 @@ async function handleBotStatus(request) {
       } else {
         message = `Discord Bot ist online (Letzte Sync vor ${Math.round(minutesSinceUpdate)} Min.)`;
       }
+    } else {
+      message = `Discord Bot ist offline (Letzte Sync vor ${Math.round(minutesSinceUpdate)} Min.)`;
+    }
+    
+    return NextResponse.json({ 
+      isOnline,
+      status: isOnline ? 'online' : 'offline',
+      message,
+      lastUpdate: lastUpdate.toISOString(),
+      minutesSinceUpdate: Math.round(minutesSinceUpdate),
+      checkedAt: new Date().toISOString()
+    });
+  } catch (e) {
+    console.error('Bot status error:', e);
+    return NextResponse.json({ 
+      isOnline: false,
+      status: 'error',
+      message: 'Unbekannter Fehler',
+      checkedAt: new Date().toISOString()
+    }, { status: 500 });
+  }
+}
+
+// Beta Tester Feedback Handler
+async function handleCreateBetaFeedback(request) {
+  try {
+    const user = getUserContext(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
+    }
+
+    // Check if user is Beta Tester (Role ID: 1494434149623136276)
+    const isBetaTester = user.roles?.includes('1494434149623136276');
+    if (!isBetaTester) {
+      return NextResponse.json({ error: 'Nur Beta Tester können Feedback einreichen' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { type, title, description, priority, page } = body;
+
+    if (!type || !title || !description || !priority) {
+      return NextResponse.json({ error: 'Fehlende Felder' }, { status: 400 });
+    }
+
+    // Sende Discord Webhook
+    const webhookUrl = 'https://discord.com/api/webhooks/1494644222119383130/4QqLC8P_QGYwxNApmaEetihygaCPcO1y6do75zuze4RTXUeTjtsewtfhoYwhbPfkbFBb';
+    
+    const typeEmoji = {
+      'bug': '🐛',
+      'improvement': '💡',
+      'feedback': '💬'
+    };
+
+    const priorityColor = {
+      'low': 0x808080,
+      'medium': 0x3b82f6,
+      'high': 0xf97316,
+      'critical': 0xef4444
+    };
+
+    const typeLabel = {
+      'bug': 'Bug',
+      'improvement': 'Verbesserung',
+      'feedback': 'Feedback'
+    };
+
+    const priorityLabel = {
+      'low': 'Niedrig',
+      'medium': 'Mittel',
+      'high': 'Hoch',
+      'critical': 'Kritisch'
+    };
+
+    const embed = {
+      title: `${typeEmoji[type]} ${title}`,
+      description: description,
+      color: priorityColor[priority],
+      fields: [
+        { name: 'Typ', value: typeLabel[type], inline: true },
+        { name: 'Priorität', value: priorityLabel[priority], inline: true },
+        { name: 'Seite', value: page || 'Nicht angegeben', inline: true },
+        { name: 'Beta Tester', value: user.globalName || user.username, inline: true },
+        { name: 'User ID', value: user.id, inline: true },
+        { name: 'Gesendet am', value: new Date().toLocaleString('de-DE'), inline: true }
+      ],
+      footer: {
+        text: 'Beta Tester Feedback System'
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      const webhookResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ embeds: [embed] })
+      });
+
+      if (!webhookResponse.ok) {
+        throw new Error('Discord Webhook fehlgeschlagen');
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Feedback erfolgreich gesendet'
+      });
+
+    } catch (webhookError) {
+      console.error('Discord webhook error:', webhookError);
+      return NextResponse.json({ error: 'Fehler beim Senden des Feedbacks' }, { status: 500 });
+    }
+
+  } catch (e) {
+    console.error('Create beta feedback error:', e);
+    return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500 });
+  }
+}
     } else {
       message = `Discord Bot ist offline (Letzte Sync vor ${Math.round(minutesSinceUpdate)} Min.)`;
     }

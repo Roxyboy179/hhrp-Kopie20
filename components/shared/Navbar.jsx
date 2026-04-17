@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Shield, LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2, Bell, Users, ChevronDown
+  Shield, LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2, Bell, Users, ChevronDown, FlaskConical
 } from 'lucide-react';
 import { NotificationBell } from '@/components/shared/NotificationBell';
 import { LoginModal } from '@/components/LoginModal';
@@ -50,6 +50,7 @@ export function Navbar({ user, loading }) {
     { id: '/meine-bewerbungen', label: 'Meine Bewerbungen', icon: <Eye className="w-4 h-4" />, show: !!user },
     { id: '/faq', label: 'FAQ', icon: <FileText className="w-4 h-4" />, show: true },
     { id: '/team', label: 'Team', icon: <Users className="w-4 h-4" />, show: true },
+    { id: '/beta', label: 'Beta', icon: <FlaskConical className="w-4 h-4" />, show: user?.roles?.includes('1494434149623136276') },
     { id: '/admin', label: 'Admin', icon: <Settings className="w-4 h-4" />, show: user?.adminLevel > 0 },
   ];
 

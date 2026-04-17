@@ -12,6 +12,7 @@ import { InstallButton } from '@/components/shared/InstallButton';
 import { CookieBanner } from '@/components/shared/CookieBanner';
 import { WartungsBanner } from '@/components/shared/WartungsBanner';
 import { BetaNotice } from '@/components/shared/BetaNotice';
+import { BetaTesterRecruitmentModal } from '@/components/BetaTesterRecruitmentModal';
 import { Toaster } from 'sonner';
 import Link from 'next/link';
 import { Loader2, Sparkles, Zap } from 'lucide-react';
@@ -311,6 +312,7 @@ export default function RootClientLayout({ children }) {
           <LayoutContent>{children}</LayoutContent>
           <CookieBanner />
           <BetaNotice />
+          <BetaTesterRecruitmentModalWrapper />
           {!isProfilePage && !isLegalPage && <InstallPrompt />}
           {!isProfilePage && !isLegalPage && <InstallButton />}
           <Toaster 
@@ -482,6 +484,12 @@ function WartungsmodusSeite() {
       </div>
     </div>
   );
+}
+
+// Wrapper für Beta Tester Recruitment Modal mit Auth Context
+function BetaTesterRecruitmentModalWrapper() {
+  const { user } = useAuth();
+  return <BetaTesterRecruitmentModal user={user} />;
 }
 
 function Footer() {
