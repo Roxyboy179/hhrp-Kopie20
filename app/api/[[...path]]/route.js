@@ -2342,6 +2342,7 @@ export async function GET(request) {
     case 'admin/accounts': return handleAdminGetAccounts(request);
     case 'admin/settings': return handleAdminGetSettings(request);
     case 'team/members': return handleGetTeamMembers(request);
+    case 'shop/items': return handleGetShopItems(request);
     default: break;
   }
 
