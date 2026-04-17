@@ -105,15 +105,36 @@ export default function RootLayout({ children }) {
         
         {/* Script zum Ausblenden des Loaders nach dem Laden */}
         <script dangerouslySetInnerHTML={{__html: `
-          window.addEventListener('load', function() {
+          // Methode 1: React sendet "ready" Event
+          window.addEventListener('react-ready', function() {
             setTimeout(function() {
               const loader = document.getElementById('app-loader');
               if (loader) {
                 loader.classList.add('hidden');
                 setTimeout(function() { loader.remove(); }, 300);
               }
-            }, 100);
+            }, 200);
           });
+          
+          // Methode 2 (Fallback): Nach window.load mit Verzögerung
+          window.addEventListener('load', function() {
+            setTimeout(function() {
+              const loader = document.getElementById('app-loader');
+              if (loader && !loader.classList.contains('hidden')) {
+                loader.classList.add('hidden');
+                setTimeout(function() { loader.remove(); }, 300);
+              }
+            }, 2000); // 2s nach load event
+          });
+          
+          // Methode 3 (Safety): Spätestens nach 10 Sekunden
+          setTimeout(function() {
+            const loader = document.getElementById('app-loader');
+            if (loader && !loader.classList.contains('hidden')) {
+              loader.classList.add('hidden');
+              setTimeout(function() { loader.remove(); }, 300);
+            }
+          }, 10000);
         `}} />
       </body>
     </html>

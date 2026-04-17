@@ -36,10 +36,30 @@ export default function RootClientLayout({ children }) {
   const isProfilePage = pathname === '/profil';
   const handleSplashComplete = useCallback(() => {
     setSplashDone(true);
-    // Optimierte Verzögerung für schnelleres Laden (PWA-optimiert)
-    const loadDelay = localStorage.getItem('hhrp-schnellstart') === 'true' ? 100 : 200;
-    setTimeout(() => setPageLoading(false), loadDelay);
+    // NICHT sofort ausblenden - warten bis React gemountet ist!
   }, []);
+
+  // Loading Screen ausblenden sobald React bereit ist
+  useEffect(() => {
+    if (splashDone) {
+      // Warten bis DOM komplett geladen ist
+      const hideLoading = () => {
+        const delay = localStorage.getItem('hhrp-schnellstart') === 'true' ? 100 : 300;
+        setTimeout(() => {
+          setPageLoading(false);
+          // Signal an den inline Loader senden
+          window.dispatchEvent(new Event('react-ready'));
+        }, delay);
+      };
+
+      if (document.readyState === 'complete') {
+        hideLoading();
+      } else {
+        window.addEventListener('load', hideLoading);
+        return () => window.removeEventListener('load', hideLoading);
+      }
+    }
+  }, [splashDone]);
 
   // PWA Detection
   useEffect(() => {
