@@ -3647,6 +3647,7 @@ async function handleTransferMoney(request) {
     }
     const userId = decoded.userId;
     console.log('[TRANSFER] 🔐 User ID aus Token:', userId);
+    console.log('[TRANSFER] 🔐 Token Payload:', JSON.stringify(decoded));
 
     // Get user data
     const { data: userData, error: userError } = await supabaseAdmin
@@ -3657,12 +3658,24 @@ async function handleTransferMoney(request) {
 
     console.log('[TRANSFER] 📊 User Data gefunden:', !!userData);
     console.log('[TRANSFER] ❌ User Error:', userError?.message);
+    console.log('[TRANSFER] 🔍 Suche nach discord_user_id:', userId);
 
     if (userError || !userData) {
+      // Prüfe, welche User IDs überhaupt in der DB sind
+      const { data: allUserIds } = await supabaseAdmin
+        .from('user_data')
+        .select('discord_user_id');
+      
+      console.log('[TRANSFER] 👥 Alle discord_user_ids in DB:', allUserIds?.map(u => u.discord_user_id));
       console.log('[TRANSFER] ⚠️ FEHLER: Sender User nicht in Datenbank gefunden!');
+      
       return NextResponse.json({ 
         error: 'Dein Account nicht gefunden',
-        details: 'Dein Discord-Account hat noch keine Spieldaten. Verbinde dich mit dem Discord Bot.'
+        details: `Token User ID: ${userId}. Dein Discord-Account hat noch keine Spieldaten. Verbinde dich mit dem Discord Bot.`,
+        debug: {
+          tokenUserId: userId,
+          dbUserIds: allUserIds?.map(u => u.discord_user_id)
+        }
       }, { status: 404 });
     }
 
