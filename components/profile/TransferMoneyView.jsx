@@ -28,20 +28,37 @@ export function TransferMoneyView({ userData, onTransferComplete }) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   // Bank und VIP Status aus userData
-  // userData ist bereits das 'data' Objekt aus der API!
   console.log('[TRANSFER DEBUG] userData:', userData);
-  console.log('[TRANSFER DEBUG] userData.bank:', userData?.bank);
-  console.log('[TRANSFER DEBUG] userData.vip:', userData?.vip);
   
-  const userBank = userData?.bank || {};
-  const bankId = userBank.bankId || 'hamburg_horizon';
+  // Kontonummer und Bank-Info aus cards
+  const userCard = userData?.cards?.[0] || {};
+  const senderAccountNumber = userCard.cardNumber || null;
+  const bankId = userCard.bankId || 'hamburg_horizon';
   const bank = BANKS[bankId] || BANKS['hamburg_horizon'];
   
-  // VIP Status ermitteln
-  const vipStatus = userData?.vip?.type || null;
-  const vipDiscount = vipStatus && VIP_DISCOUNTS[vipStatus] 
-    ? VIP_DISCOUNTS[vipStatus] 
-    : null;
+  console.log('[TRANSFER DEBUG] userCard:', userCard);
+  console.log('[TRANSFER DEBUG] senderAccountNumber:', senderAccountNumber);
+  
+  // VIP Status aus licenses Array ermitteln
+  const licenses = userData?.licenses || [];
+  let vipStatus = null;
+  let vipDiscount = null;
+  
+  if (licenses.includes('vip_elite_plus')) {
+    vipStatus = 'elite_plus';
+    vipDiscount = VIP_DISCOUNTS['elite_plus'];
+  } else if (licenses.includes('vip_ultimate')) {
+    vipStatus = 'ultimate';
+    vipDiscount = VIP_DISCOUNTS['ultimate'];
+  } else if (licenses.includes('vip_platinum')) {
+    vipStatus = 'platinum';
+    vipDiscount = VIP_DISCOUNTS['platinum'];
+  } else if (licenses.includes('vip_premium')) {
+    vipStatus = 'premium';
+    vipDiscount = VIP_DISCOUNTS['premium'];
+  }
+  
+  console.log('[TRANSFER DEBUG] vipStatus:', vipStatus);
 
   // Gebühren berechnen
   const betragNum = parseFloat(betrag) || 0;
@@ -55,8 +72,9 @@ export function TransferMoneyView({ userData, onTransferComplete }) {
   const totalCost = betragNum + fee;
   const feePercent = (feeRate * 100).toFixed(1).replace('.', ',');
 
-  // Verfügbares Guthaben
-  const availableBalance = userBank.balance || 0;
+  // Verfügbares Guthaben aus money.bank
+  const availableBalance = userData?.money?.bank || 0;
+  console.log('[TRANSFER DEBUG] availableBalance:', availableBalance);
   const hasEnoughMoney = availableBalance >= totalCost;
 
   const handleSubmit = async (e) => {
