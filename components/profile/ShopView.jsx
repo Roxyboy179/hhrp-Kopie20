@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   ShoppingCart, CreditCard, TrendingUp, Check, X, Clock, 
   Sparkles, Shield, Car, Briefcase, Wrench, FileText, Lock,
@@ -174,15 +175,19 @@ export function ShopView({ user, userData, onRefresh }) {
   };
 
   const validatePin = async () => {
-    if (!pin || pin.length < 4) {
-      setPinError('PIN muss mindestens 4 Zeichen haben');
+    if (!pin || pin.length < 3) {
+      setPinError('PIN muss mindestens 3 Zeichen haben');
       return false;
     }
 
     // Validiere PIN gegen userData (aus Bot-Daten)
-    const userPin = userData?.bankAccount?.pin || '0000'; // Bank PIN aus Bot
+    // Prüfe erst cards[0].pin, dann bankAccount.pin
+    const userPin = userData?.cards?.[0]?.pin || 
+                    userData?.bankAccount?.pin || 
+                    '0000';
     
-    if (pin !== userPin) {
+    // Vergleiche als String (PIN kann Zahl oder String sein)
+    if (pin !== String(userPin)) {
       setPinError('Falsche PIN');
       return false;
     }
@@ -633,17 +638,18 @@ export function ShopView({ user, userData, onRefresh }) {
         </div>
       )}
 
-      {/* Warenkorb als ECHTES Popup/Modal */}
-      {showCart && (
+      {/* Warenkorb als ECHTES Popup/Modal - mit Portal */}
+      {showCart && createPortal(
         <>
           {/* Dunkler Overlay Hintergrund */}
           <div 
             className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[9998]"
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
             onClick={() => setShowCart(false)}
           />
           
           {/* Modal Content - ZENTRIERT */}
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
             <div 
               className="glass rounded-2xl p-6 border border-white/20 max-w-2xl w-full max-h-[90vh] overflow-y-auto pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
@@ -750,15 +756,17 @@ export function ShopView({ user, userData, onRefresh }) {
             )}
           </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
 
-      {/* PIN Modal als ECHTES Popup */}
-      {showPinModal && (
+      {/* PIN Modal als ECHTES Popup - mit Portal */}
+      {showPinModal && createPortal(
         <>
           {/* Dunkler Overlay Hintergrund */}
           <div 
             className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[9998]"
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
             onClick={() => {
               setShowPinModal(false);
               setPendingPurchase(null);
@@ -768,7 +776,7 @@ export function ShopView({ user, userData, onRefresh }) {
           />
           
           {/* Modal Content - ZENTRIERT */}
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
             <div 
               className="glass rounded-2xl p-6 border border-white/20 max-w-md w-full pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
@@ -805,7 +813,7 @@ export function ShopView({ user, userData, onRefresh }) {
             )}
 
             <div className="text-xs text-white/50 mb-6">
-              Standard-PIN: 0000 (Kann im Profil geändert werden)
+              Deine Karten-PIN (aus deinem Bot-Profil)
             </div>
 
             <div className="flex gap-3">
@@ -837,7 +845,8 @@ export function ShopView({ user, userData, onRefresh }) {
             </div>
           </div>
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   );
