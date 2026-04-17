@@ -21,7 +21,7 @@ import {
   CircleDollarSign, BellRing, AppWindow, Settings, ImagePlus, 
   Trash2, Upload, BellOff, ZoomIn, ZoomOut, PieChart, BarChart3,
   Lightbulb, Filter, Search, ArrowLeftRight, Target, Calculator,
-  TrendingUpIcon, BarChart2
+  TrendingUpIcon, BarChart2, Send
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -1076,6 +1076,7 @@ export default function ProfilPage() {
     ],
     finance: [
       { id: 'overview', label: 'Übersicht', icon: BarChart3 },
+      { id: 'transfer', label: 'Überweisung', icon: Send },
       { id: 'statistics', label: 'Statistiken', icon: BarChart2 },
       { id: 'transactions', label: 'Transaktionen', icon: ArrowLeftRight },
       { id: 'invoices', label: 'Rechnungen', icon: FileText },
@@ -1291,19 +1292,6 @@ export default function ProfilPage() {
     'Angenommen': 'bg-green-500/20 text-green-300 border-green-500/30',
     'Abgelehnt': 'bg-red-500/20 text-red-300 border-red-500/30'
   };
-
-  const tabs = [
-    { id: 'overview', label: 'Übersicht', icon: LayoutDashboard },
-    { id: 'transfer', label: 'Überweisung', icon: ArrowLeftRight },
-    { id: 'cards', label: 'Meine Dokumente', icon: IdCard },
-    { id: 'transactions', label: 'Transaktionen', icon: TrendingUp },
-    { id: 'invoices', label: 'Meine Rechnungen', icon: FileText },
-    { id: 'personalakte', label: 'Meine Personalakte', icon: Award },
-    { id: 'marketplace', label: 'Marktplatz', icon: ShoppingCart },
-    { id: 'savings', label: 'Sparkonto', icon: PiggyBank },
-    { id: 'tax', label: 'Steuer-Records', icon: Receipt },
-    { id: 'applications', label: 'Bewerbungen', icon: ClipboardList }
-  ];
 
   return (
     <div className="min-h-screen px-4 py-8 pt-24">
@@ -2720,7 +2708,7 @@ export default function ProfilPage() {
         )}
 
         {/* Überweisung Tab */}
-        {activeTab === 'transfer' && (
+        {activeTab === 'finance' && activeSubTab === 'transfer' && (
           <TransferMoneyView 
             userData={userData}
             onTransferComplete={() => {
