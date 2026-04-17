@@ -91,10 +91,16 @@ export default function HomePage() {
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
+    
+    // Priorität 1: Schnelle Stats sofort laden
     fetchStats();
-    fetchDiscordStats();
-    fetchTeamPreview();
     fetchWebsiteStats();
+    
+    // Priorität 2: Langsame Stats verzögert laden (nicht blockend)
+    setTimeout(() => {
+      fetchDiscordStats();
+      fetchTeamPreview();
+    }, 100);
   }, []);
 
   const fetchStats = async () => {

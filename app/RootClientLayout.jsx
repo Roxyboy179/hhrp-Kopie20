@@ -36,8 +36,8 @@ export default function RootClientLayout({ children }) {
   const isProfilePage = pathname === '/profil';
   const handleSplashComplete = useCallback(() => {
     setSplashDone(true);
-    // Bei Schnellstart sofort laden, sonst kurze Verzögerung für mobile Nutzer
-    const loadDelay = localStorage.getItem('hhrp-schnellstart') === 'true' ? 300 : 1200;
+    // Optimierte Verzögerung für schnelleres Laden (PWA-optimiert)
+    const loadDelay = localStorage.getItem('hhrp-schnellstart') === 'true' ? 100 : 200;
     setTimeout(() => setPageLoading(false), loadDelay);
   }, []);
 
@@ -189,11 +189,8 @@ export default function RootClientLayout({ children }) {
     };
   }, []);
 
-  // Register Service Worker (deaktiviert für Vercel)
+  // Register Service Worker für PWA Caching
   useEffect(() => {
-    // Service Worker auf Vercel deaktiviert wegen Deployment-Problemen
-    // Kann später wieder aktiviert werden wenn benötigt
-    /*
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
         .register('/sw.js')
@@ -204,7 +201,6 @@ export default function RootClientLayout({ children }) {
           console.log('❌ Service Worker registration failed:', error);
         });
     }
-    */
   }, []);
 
   const isLegalPage = ['/impressum', '/datenschutz', '/nutzungsbedingungen'].includes(pathname);
