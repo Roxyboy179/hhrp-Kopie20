@@ -108,6 +108,13 @@ export function ShopView({ user, userData, onRefresh }) {
     const item = shopItems[itemId];
     if (!item) return;
 
+    // Prüfe ob Item bereits im Warenkorb ist
+    const itemExists = cart.some(cartItem => cartItem.id === itemId);
+    if (itemExists) {
+      toast.warning(`${item.name} ist bereits im Warenkorb`);
+      return;
+    }
+
     const cartItem = {
       id: itemId,
       name: item.name,
@@ -146,8 +153,8 @@ export function ShopView({ user, userData, onRefresh }) {
       return false;
     }
 
-    // Validiere PIN (hier kannst du gegen userData.data.shopPin prüfen)
-    const userPin = userData?.data?.shopPin || '0000'; // Default PIN
+    // Validiere PIN gegen userData (aus Bot-Daten)
+    const userPin = userData?.bankAccount?.pin || '0000'; // Bank PIN aus Bot
     
     if (pin !== userPin) {
       setPinError('Falsche PIN');
@@ -573,22 +580,33 @@ export function ShopView({ user, userData, onRefresh }) {
         </div>
       )}
 
-      {/* Warenkorb Modal */}
+      {/* Warenkorb als ECHTES Popup/Modal */}
       {showCart && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
-          <div className="glass rounded-2xl p-6 border border-white/20 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold flex items-center gap-2">
-                <ShoppingBag className="w-6 h-6" />
-                Warenkorb ({cart.length})
-              </h3>
-              <button
-                onClick={() => setShowCart(false)}
-                className="p-2 hover:bg-white/10 rounded-lg transition-all"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        <>
+          {/* Dunkler Overlay Hintergrund */}
+          <div 
+            className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[9998]"
+            onClick={() => setShowCart(false)}
+          />
+          
+          {/* Modal Content - ZENTRIERT */}
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none">
+            <div 
+              className="glass rounded-2xl p-6 border border-white/20 max-w-2xl w-full max-h-[90vh] overflow-y-auto pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold flex items-center gap-2">
+                  <ShoppingBag className="w-6 h-6" />
+                  Warenkorb ({cart.length})
+                </h3>
+                <button
+                  onClick={() => setShowCart(false)}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-all"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
             {cart.length === 0 ? (
               <div className="text-center py-12 text-white/50">
@@ -646,13 +664,29 @@ export function ShopView({ user, userData, onRefresh }) {
               </>
             )}
           </div>
-        </div>
+        </>
       )}
 
-      {/* PIN Modal */}
+      {/* PIN Modal als ECHTES Popup */}
       {showPinModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
-          <div className="glass rounded-2xl p-6 border border-white/20 max-w-md w-full">
+        <>
+          {/* Dunkler Overlay Hintergrund */}
+          <div 
+            className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[9998]"
+            onClick={() => {
+              setShowPinModal(false);
+              setPendingPurchase(null);
+              setPin('');
+              setPinError('');
+            }}
+          />
+          
+          {/* Modal Content - ZENTRIERT */}
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none">
+            <div 
+              className="glass rounded-2xl p-6 border border-white/20 max-w-md w-full pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
             <div className="flex items-center gap-3 mb-6">
               <div className="p-3 rounded-xl bg-blue-500/20">
                 <KeyRound className="w-6 h-6 text-blue-400" />
@@ -716,7 +750,7 @@ export function ShopView({ user, userData, onRefresh }) {
               </button>
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
