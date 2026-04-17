@@ -19,7 +19,12 @@ export function ShopView({ user, userData, onRefresh }) {
   // Debug: Zeige userData
   useEffect(() => {
     console.log('[SHOP] userData prop:', userData);
-    console.log('[SHOP] userData.data:', userData?.data);
+    console.log('[SHOP] userData DIREKT:', {
+      bank: userData?.money?.bank,
+      credits: userData?.credits,
+      bankLimit: userData?.bankLimit,
+      licenses: userData?.licenses
+    });
   }, [userData]);
   
   // Warenkorb State
@@ -74,9 +79,9 @@ export function ShopView({ user, userData, onRefresh }) {
     // Debug: Log userData
     if (userData) {
       console.log('[SHOP] UserData:', {
-        bank: userData?.data?.money?.bank,
-        credits: userData?.data?.credits,
-        bankLimit: userData?.data?.bankLimit
+        bank: userData?.money?.bank,
+        credits: userData?.credits,
+        bankLimit: userData?.bankLimit
       });
     }
   }, [userData]);
@@ -234,13 +239,13 @@ export function ShopView({ user, userData, onRefresh }) {
     return item.category === selectedCategory;
   });
 
-  const userBalance = userData?.data?.money?.bank || 0;
-  const userCredits = userData?.data?.credits || 0;
-  const userBankLimit = userData?.data?.bankLimit || 1000000;
+  const userBalance = userData?.money?.bank || 0;
+  const userCredits = userData?.credits || 0;
+  const userBankLimit = userData?.bankLimit || 1000000;
   
   // VIP Status prüfen für Rabatte
   // Licenses ist ein ARRAY in Supabase!
-  const userLicensesArray = userData?.data?.licenses || [];
+  const userLicensesArray = userData?.licenses || [];
   const userLicenses = {};
   userLicensesArray.forEach(license => {
     userLicenses[license] = { active: true }; // Konvertiere zu Object für einfachere Prüfung
@@ -570,7 +575,7 @@ export function ShopView({ user, userData, onRefresh }) {
 
       {/* Warenkorb Modal */}
       {showCart && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
           <div className="glass rounded-2xl p-6 border border-white/20 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-2xl font-bold flex items-center gap-2">
@@ -646,7 +651,7 @@ export function ShopView({ user, userData, onRefresh }) {
 
       {/* PIN Modal */}
       {showPinModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9999] flex items-center justify-center p-4" style={{ zIndex: 9999 }}>
           <div className="glass rounded-2xl p-6 border border-white/20 max-w-md w-full">
             <div className="flex items-center gap-3 mb-6">
               <div className="p-3 rounded-xl bg-blue-500/20">
