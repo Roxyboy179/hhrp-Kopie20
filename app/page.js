@@ -15,7 +15,7 @@ import {
   Eye, Download, UserPlus, Activity, Smartphone
 } from 'lucide-react';
 
-function AnimatedCounter({ value, suffix = '', showDiff = false }) {
+function AnimatedCounter({ value, suffix = '', showDiff = false, format = false }) {
   const [count, setCount] = useState(0);
   const [prevCount, setPrevCount] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -47,9 +47,22 @@ function AnimatedCounter({ value, suffix = '', showDiff = false }) {
   
   const diff = count - prevCount;
   
+  // Formatierung für große Zahlen (1000 -> 1k, 1000000 -> 1M)
+  const formatNumber = (num) => {
+    if (!format) return num.toLocaleString('de-DE');
+    
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1).replace('.0', '') + 'M';
+    }
+    if (num >= 1000) {
+      return (num / 1000).toFixed(1).replace('.0', '') + 'k';
+    }
+    return num.toString();
+  };
+  
   return (
     <span className={`inline-block transition-all duration-300 ${isAnimating ? 'scale-110 text-green-400' : ''}`}>
-      {count.toLocaleString('de-DE')}
+      {formatNumber(count)}
       {suffix}
       {showDiff && diff > 0 && isAnimating && (
         <span className="ml-2 text-sm text-green-400 animate-bounce">
@@ -343,7 +356,7 @@ export default function HomePage() {
                     </div>
                     
                     <div className="text-3xl md:text-4xl lg:text-5xl font-bold text-white tabular-nums mb-2">
-                      <AnimatedCounter value={stat.value} showDiff={true} />
+                      <AnimatedCounter value={stat.value} showDiff={true} format={true} />
                     </div>
                     
                     <div className="text-xs md:text-sm tracking-wider uppercase font-medium text-white/40">
