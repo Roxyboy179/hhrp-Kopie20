@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useRouter } from 'next/navigation';
 import DailyBonusCard from '@/components/DailyBonusCard';
@@ -20,11 +20,20 @@ import {
   Timer, Lock, Gem, PartyPopper, Handshake, Monitor, BadgeCheck, 
   CircleDollarSign, BellRing, AppWindow, Settings, ImagePlus, 
   Trash2, Upload, BellOff, ZoomIn, ZoomOut, PieChart, BarChart3,
-  Lightbulb
+  Lightbulb, Filter, Search, ArrowLeftRight, Target, Calculator,
+  TrendingUpIcon, BarChart2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getDiscordAvatarUrl } from '@/lib/discord-utils';
+import { format, parseISO, subDays, isAfter, isBefore } from 'date-fns';
+import { de } from 'date-fns/locale';
+import { 
+  LineChart, Line, BarChart, Bar, PieChart as RechartsPie, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart
+} from 'recharts';
+import { KrediteDetailView, FinanzStatistikenView } from '@/components/profile/FinanceTabsContent';
+import { ErweiterteTransaktionenView, SparkontoManagementView } from '@/components/profile/FinanceTabsContent2';
 
 function SkeletonCard({ className = "" }) {
   return (
@@ -1001,6 +1010,18 @@ export default function ProfilPage() {
   const [claiming, setClaiming] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [activeSubTab, setActiveSubTab] = useState('transactions'); // Default Sub-Tab
+  
+  // Filter States für Transaktionen
+  const [transactionFilter, setTransactionFilter] = useState({
+    dateRange: 'all', // all, 7days, 30days, year, custom
+    type: 'all', // all, income, expense
+    searchTerm: '',
+    sortBy: 'date', // date, amount
+    sortOrder: 'desc' // asc, desc
+  });
+  
+  // Sparkonto Ziel
+  const [savingsGoal, setSavingsGoal] = useState(null);
   const [transactionsPage, setTransactionsPage] = useState(1);
   const [invoicesPage, setInvoicesPage] = useState(1);
   const [personalaktePage, setPersonalaktePage] = useState(1);
@@ -1054,7 +1075,8 @@ export default function ProfilPage() {
     ],
     finance: [
       { id: 'overview', label: 'Übersicht', icon: BarChart3 },
-      { id: 'transactions', label: 'Transaktionen', icon: TrendingUp },
+      { id: 'statistics', label: 'Statistiken', icon: BarChart2 },
+      { id: 'transactions', label: 'Transaktionen', icon: ArrowLeftRight },
       { id: 'invoices', label: 'Rechnungen', icon: FileText },
       { id: 'savings', label: 'Sparkonto', icon: PiggyBank },
       { id: 'kredite', label: 'Kredite', icon: CreditCard },
@@ -2695,165 +2717,18 @@ export default function ProfilPage() {
           </div>
         )}
 
+        {/* Statistiken Tab - NEU */}
+        {activeTab === 'finance' && activeSubTab === 'statistics' && (
+          <FinanzStatistikenView userData={userData} />
+        )}
+
         {/* Transaktionen Tab */}
         {activeTab === 'finance' && activeSubTab === 'transactions' && (
-          <div className="space-y-6">
-            {!botStatus.isOnline ? (
-              <BotStatusCard status={botStatus} onRetry={loadData} />
-            ) : loading ? (
-              <SkeletonCard />
-            ) : (
-              <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
-                <div className="flex items-center gap-3 mb-4 sm:mb-6">
-                  <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 text-white/60" />
-                  <h2 className="text-lg sm:text-xl font-bold text-white">Transaktionen</h2>
-                  {userData?.transactions?.length > 0 && (
-                    <span className="px-2 py-1 rounded-full bg-white/10 text-white/50 text-xs">
-                      {userData.transactions.length}
-                    </span>
-                  )}
-                </div>
-
-                {/* Search & Filter */}
-                <div className="mb-6 flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="text"
-                    placeholder="🔍 Suchen (Typ, Details, Betrag)..."
-                    value={transactionSearch}
-                    onChange={(e) => setTransactionSearch(e.target.value)}
-                    className="flex-1 px-4 py-2 rounded-lg bg-white/[0.05] border border-white/[0.1] text-white placeholder-white/40 focus:outline-none focus:border-white/30 transition-colors"
-                  />
-                  <select
-                    value={transactionTypeFilter}
-                    onChange={(e) => setTransactionTypeFilter(e.target.value)}
-                    className="px-4 py-2 rounded-lg bg-white/[0.05] border border-white/[0.1] text-white focus:outline-none focus:border-white/30 transition-colors cursor-pointer"
-                  >
-                    <option value="all">Alle Typen</option>
-                    <option value="COLLECT">Gehalt</option>
-                    <option value="TRANSFER_IN">Eingang</option>
-                    <option value="TRANSFER_OUT">Ausgang</option>
-                    <option value="CREDITS_BUY">Credits Kauf</option>
-                    <option value="LIMIT_UPGRADE">Limit Upgrade</option>
-                  </select>
-                </div>
-
-                {userData?.transactions && userData.transactions.length > 0 ? (
-                  <>
-                    <div className="space-y-3">
-                      {userData.transactions
-                        .filter(tx => {
-                          // Search filter
-                          if (transactionSearch) {
-                            const search = transactionSearch.toLowerCase();
-                            return (
-                              tx.type?.toLowerCase().includes(search) ||
-                              tx.details?.toLowerCase().includes(search) ||
-                              tx.amount?.toString().includes(search)
-                            );
-                          }
-                          return true;
-                        })
-                        .filter(tx => {
-                          // Type filter
-                          if (transactionTypeFilter === 'all') return true;
-                          return tx.type === transactionTypeFilter;
-                        })
-                        .slice((transactionsPage - 1) * itemsPerPage, transactionsPage * itemsPerPage)
-                        .map((transaction, index) => {
-                          const isNew = transaction.timestamp && 
-                            (new Date() - new Date(transaction.timestamp)) < 24 * 60 * 60 * 1000;
-                          const isIncome = transaction.amount > 0;
-                          
-                          return (
-                            <div 
-                              key={index}
-                              className={`p-4 sm:p-5 rounded-xl border transition-all ${
-                                isNew 
-                                  ? 'bg-blue-500/10 border-blue-500/30 animate-pulse-slow' 
-                                  : 'bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.05]'
-                              }`}
-                            >
-                              <div className="flex items-start gap-3 sm:gap-4">
-                                {/* Icon */}
-                                <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                                  isIncome 
-                                    ? 'bg-green-500/20' 
-                                    : 'bg-red-500/20'
-                                }`}>
-                                  {isIncome ? (
-                                    <ArrowDownRight className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
-                                  ) : (
-                                    <ArrowUpRight className="w-5 h-5 sm:w-6 sm:h-6 text-red-400" />
-                                  )}
-                                </div>
-
-                                {/* Content */}
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-start justify-between gap-2 mb-2">
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                        <span className={`text-lg sm:text-xl font-bold ${
-                                          isIncome ? 'text-green-400' : 'text-red-400'
-                                        }`}>
-                                          {transaction.amount > 0 ? '+' : ''}{transaction.amount?.toLocaleString?.() || transaction.amount}€
-                                        </span>
-                                        {isNew && (
-                                          <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-[10px] font-bold animate-bounce">
-                                            NEU
-                                          </span>
-                                        )}
-                                        {transaction.type && (
-                                          <span className="px-2 py-1 rounded-lg bg-white/10 text-white/70 text-[10px] font-medium uppercase">
-                                            {transaction.type}
-                                          </span>
-                                        )}
-                                      </div>
-                                      <p className="text-sm sm:text-base text-white font-semibold mb-1 break-words leading-relaxed">
-                                        {transaction.details || 'Keine Beschreibung'}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="flex flex-wrap items-center gap-3 text-xs sm:text-sm text-white/50">
-                                    {transaction.timestamp && (
-                                      <div className="flex items-center gap-1">
-                                        <Clock className="w-3 h-3" />
-                                        <span>{new Date(transaction.timestamp).toLocaleDateString('de-DE', {
-                                          day: '2-digit',
-                                          month: '2-digit',
-                                          year: 'numeric',
-                                          hour: '2-digit',
-                                          minute: '2-digit'
-                                        })}</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                    
-                    <Pagination 
-                      currentPage={transactionsPage}
-                      totalItems={userData.transactions.length}
-                      itemsPerPage={itemsPerPage}
-                      onPageChange={setTransactionsPage}
-                    />
-                  </>
-                ) : (
-                  <div className="text-center py-8 sm:py-12">
-                    <TrendingUp className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-white/20" />
-                    <h3 className="text-base sm:text-lg font-bold text-white mb-2">Keine Transaktionen</h3>
-                    <p className="text-sm text-white/40 max-w-md mx-auto">
-                      Hier werden deine Transaktionen vom Discord Bot angezeigt.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          <ErweiterteTransaktionenView 
+            userData={userData} 
+            filter={transactionFilter}
+            setFilter={setTransactionFilter}
+          />
         )}
 
         {/* Rechnungen Tab */}
@@ -3436,89 +3311,22 @@ export default function ProfilPage() {
           </div>
         )}
 
-        {/* Sparkonto Tab */}
+        {/* Sparkonto Tab - NEU */}
         {activeTab === 'finance' && activeSubTab === 'savings' && (
-          <div className="space-y-6">
-            {userData?.savingsAccount ? (
-              <>
-                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
-                  <div className="flex items-center gap-3 mb-6">
-                    <PiggyBank className="w-6 h-6 text-white/60" />
-                    <h2 className="text-xl font-bold text-white">Mein Sparkonto</h2>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20">
-                      <p className="text-sm text-white/60 mb-1">Guthaben</p>
-                      <p className="text-2xl font-bold text-white">
-                        {userData.savingsAccount.balance?.toLocaleString('de-DE')} €
-                      </p>
-                    </div>
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20">
-                      <p className="text-sm text-white/60 mb-1">Verdiente Zinsen (Gesamt)</p>
-                      <p className="text-2xl font-bold text-white">
-                        {userData.savingsAccount.gesamtZinsen?.toLocaleString('de-DE') || 0} €
-                      </p>
-                    </div>
-                  </div>
-                  
-                  {/* Info-Karten */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-                    {userData.savingsAccount.erstelltAm && (
-                      <div className="p-3 rounded-lg bg-white/[0.03]">
-                        <p className="text-xs text-white/50 mb-1">Erstellt am</p>
-                        <p className="text-sm font-medium text-white">
-                          {new Date(userData.savingsAccount.erstelltAm).toLocaleDateString('de-DE')}
-                        </p>
-                      </div>
-                    )}
-                    {userData.savingsAccount.letzteEinzahlung && (
-                      <div className="p-3 rounded-lg bg-white/[0.03]">
-                        <p className="text-xs text-white/50 mb-1">Letzte Einzahlung</p>
-                        <p className="text-sm font-medium text-white">
-                          {new Date(userData.savingsAccount.letzteEinzahlung).toLocaleDateString('de-DE')}
-                        </p>
-                      </div>
-                    )}
-                    {userData.savingsAccount.letzteZinsen && (
-                      <div className="p-3 rounded-lg bg-white/[0.03]">
-                        <p className="text-xs text-white/50 mb-1">Letzte Zinsen</p>
-                        <p className="text-sm font-medium text-white">
-                          {new Date(userData.savingsAccount.letzteZinsen).toLocaleDateString('de-DE')}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {userData.savingsAccount.gesamtGespendet > 0 && (
-                    <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                      <div className="flex items-center gap-2">
-                        <Heart className="w-5 h-5 text-blue-400" />
-                        <div>
-                          <p className="text-sm font-medium text-white">Gesamt gespendet</p>
-                          <p className="text-lg font-bold text-blue-400">
-                            {userData.savingsAccount.gesamtGespendet?.toLocaleString('de-DE')} €
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : (
-              <div className="glass rounded-2xl p-12 border border-white/[0.08] text-center">
-                <PiggyBank className="w-16 h-16 mx-auto mb-4 text-white/20" />
-                <h3 className="text-lg font-bold text-white mb-2">Kein Sparkonto</h3>
-                <p className="text-sm text-white/40">Du hast noch kein Sparkonto eröffnet.</p>
-              </div>
-            )}
-          </div>
+          <SparkontoManagementView 
+            userData={userData}
+            savingsGoal={savingsGoal}
+            setSavingsGoal={setSavingsGoal}
+          />
         )}
 
-        {/* Kredite Tab */}
+        {/* Kredite Tab - NEU */}
         {activeTab === 'finance' && activeSubTab === 'kredite' && (
-          <div className="space-y-6">
-            {/* Kredite Statistiken */}
-            {userData?.kredite && userData.kredite.length > 0 && (
+          <KrediteDetailView userData={userData} />
+        )}
+
+        {/* Steuer-Records Tab */}
+        {activeTab === 'finance' && activeSubTab === 'tax' && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="glass rounded-xl p-4 border border-white/[0.08]">
                   <div className="flex items-center gap-3 mb-2">
