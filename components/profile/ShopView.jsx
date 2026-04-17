@@ -16,6 +16,12 @@ export function ShopView({ user, userData, onRefresh }) {
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   
+  // Debug: Zeige userData
+  useEffect(() => {
+    console.log('[SHOP] userData prop:', userData);
+    console.log('[SHOP] userData.data:', userData?.data);
+  }, [userData]);
+  
   // Warenkorb State
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
