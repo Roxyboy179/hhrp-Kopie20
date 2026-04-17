@@ -28,12 +28,13 @@ export function TransferMoneyView({ userData, onTransferComplete }) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   // Bank und VIP Status aus userData
-  const userBank = userData?.data?.bank || {};
+  // userData ist bereits das 'data' Objekt aus der API!
+  const userBank = userData?.bank || {};
   const bankId = userBank.bankId || 'hamburg_horizon';
   const bank = BANKS[bankId] || BANKS['hamburg_horizon'];
   
   // VIP Status ermitteln
-  const vipStatus = userData?.data?.vip?.type || null;
+  const vipStatus = userData?.vip?.type || null;
   const vipDiscount = vipStatus && VIP_DISCOUNTS[vipStatus] 
     ? VIP_DISCOUNTS[vipStatus] 
     : null;
