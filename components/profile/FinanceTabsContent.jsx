@@ -266,6 +266,21 @@ export function FinanzStatistikenView({ userData }) {
     const totalIncome = income.reduce((sum, t) => sum + t.amount, 0);
     const totalExpenses = Math.abs(expenses.reduce((sum, t) => sum + t.amount, 0));
     
+    // Aktuelles Gesamtvermögen berechnen
+    const cash = userData?.money?.cash || 0;
+    const bank = userData?.money?.bank || 0;
+    const savings = userData?.money?.savings || 0;
+    const totalWealth = cash + bank + savings;
+    
+    // Schulden berechnen
+    const kredite = userData?.kredite || [];
+    const totalDebt = kredite
+      .filter(k => k.status === 'aktiv' || k.status === 'pending')
+      .reduce((sum, k) => sum + (k.rueckzahlungsBetrag || 0), 0);
+    
+    // Netto-Vermögen (nach Schulden)
+    const netWealth = totalWealth - totalDebt;
+    
     const largestIncome = income.length > 0 
       ? Math.max(...income.map(t => t.amount))
       : 0;
@@ -314,7 +329,9 @@ export function FinanzStatistikenView({ userData }) {
     return {
       totalIncome,
       totalExpenses,
-      balance: totalIncome - totalExpenses,
+      balance: netWealth, // Aktuelles Netto-Vermögen statt Transaktions-Bilanz
+      totalWealth, // Gesamt-Vermögen (Bargeld + Bank + Sparkonto)
+      totalDebt, // Gesamt-Schulden
       largestIncome,
       largestExpense,
       avgDaily: transactions.length > 0 ? (totalIncome - totalExpenses) / 30 : 0,
@@ -326,7 +343,7 @@ export function FinanzStatistikenView({ userData }) {
       })),
       last30Days
     };
-  }, [transactions]);
+  }, [transactions, userData]);
   
   const categoryData = stats.categories.sort((a, b) => b.total - a.total).slice(0, 5);
   
@@ -337,39 +354,74 @@ export function FinanzStatistikenView({ userData }) {
         <div className="glass rounded-2xl p-4 border border-white/[0.08]">
           <div className="flex items-center gap-2 mb-2">
             <TrendingUp className="w-4 h-4 text-green-400" />
-            <p className="text-xs text-white/50">Einnahmen</p>
+            <p className="text-xs text-white/50">Einnahmen (Gesamt)</p>
           </div>
           <p className="text-2xl font-bold text-green-400">{stats.totalIncome.toLocaleString('de-DE')} €</p>
+          <p className="text-xs text-white/30 mt-1">Aus Transaktionen</p>
         </div>
         
         <div className="glass rounded-2xl p-4 border border-white/[0.08]">
           <div className="flex items-center gap-2 mb-2">
             <TrendingDown className="w-4 h-4 text-red-400" />
-            <p className="text-xs text-white/50">Ausgaben</p>
+            <p className="text-xs text-white/50">Ausgaben (Gesamt)</p>
           </div>
           <p className="text-2xl font-bold text-red-400">{stats.totalExpenses.toLocaleString('de-DE')} €</p>
+          <p className="text-xs text-white/30 mt-1">Aus Transaktionen</p>
         </div>
         
-        <div className="glass rounded-2xl p-4 border border-white/[0.08]">
+        <div className="glass rounded-2xl p-4 border border-green-500/30 bg-green-500/5">
           <div className="flex items-center gap-2 mb-2">
-            <BarChart2 className="w-4 h-4 text-blue-400" />
-            <p className="text-xs text-white/50">Bilanz</p>
+            <BarChart2 className="w-4 h-4 text-green-400" />
+            <p className="text-xs text-white/50">Aktuelles Vermögen</p>
           </div>
           <p className={`text-2xl font-bold ${stats.balance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
             {stats.balance.toLocaleString('de-DE')} €
           </p>
+          <p className="text-xs text-green-400/60 mt-1">Bargeld + Bank + Sparkonto - Schulden</p>
         </div>
         
         <div className="glass rounded-2xl p-4 border border-white/[0.08]">
           <div className="flex items-center gap-2 mb-2">
             <Calendar className="w-4 h-4 text-purple-400" />
-            <p className="text-xs text-white/50">Ø Pro Tag</p>
+            <p className="text-xs text-white/50">Ø Pro Tag (30 Tage)</p>
           </div>
           <p className={`text-2xl font-bold ${stats.avgDaily >= 0 ? 'text-green-400' : 'text-red-400'}`}>
             {stats.avgDaily.toLocaleString('de-DE', { maximumFractionDigits: 0 })} €
           </p>
+          <p className="text-xs text-white/30 mt-1">Transaktions-Durchschnitt</p>
         </div>
       </div>
+      
+      {/* Zusätzliche Vermögens-Details */}
+      {stats.totalWealth > 0 && (
+        <div className="glass rounded-2xl p-6 border border-blue-500/20">
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-blue-400" />
+            Vermögens-Details
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="p-3 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+              <p className="text-xs text-white/50 mb-1">Gesamt-Vermögen</p>
+              <p className="text-xl font-bold text-white">{stats.totalWealth.toLocaleString('de-DE')} €</p>
+              <p className="text-xs text-white/40 mt-1">Bargeld + Bank + Sparkonto</p>
+            </div>
+            
+            {stats.totalDebt > 0 && (
+              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                <p className="text-xs text-red-400/60 mb-1">Offene Schulden</p>
+                <p className="text-xl font-bold text-red-400">-{stats.totalDebt.toLocaleString('de-DE')} €</p>
+                <p className="text-xs text-red-400/40 mt-1">Aktive Kredite</p>
+              </div>
+            )}
+            
+            <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+              <p className="text-xs text-green-400/60 mb-1">Netto-Vermögen</p>
+              <p className="text-xl font-bold text-green-400">{stats.balance.toLocaleString('de-DE')} €</p>
+              <p className="text-xs text-green-400/40 mt-1">Nach Abzug aller Schulden</p>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Einnahmen vs Ausgaben Chart */}
       <div className="glass rounded-2xl p-6 border border-white/[0.08]">
