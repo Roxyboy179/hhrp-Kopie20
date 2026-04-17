@@ -189,36 +189,22 @@ export default function RootClientLayout({ children }) {
     };
   }, []);
 
-  // Register Service Worker
+  // Register Service Worker (deaktiviert für Vercel)
   useEffect(() => {
+    // Service Worker auf Vercel deaktiviert wegen Deployment-Problemen
+    // Kann später wieder aktiviert werden wenn benötigt
+    /*
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker
         .register('/sw.js')
         .then((registration) => {
           console.log('✅ Service Worker registered:', registration);
-          
-          // Check for updates
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            console.log('🔄 New Service Worker found, installing...');
-            
-            newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                console.log('✨ New Service Worker installed and activated!');
-                // Keine Auto-Reload mehr - User kann App weiter nutzen
-              }
-            });
-          });
         })
         .catch((error) => {
           console.log('❌ Service Worker registration failed:', error);
         });
-
-      // Listen for controller change (new SW activated)
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('🔄 Service Worker controller changed');
-      });
     }
+    */
   }, []);
 
   const isLegalPage = ['/impressum', '/datenschutz', '/nutzungsbedingungen'].includes(pathname);

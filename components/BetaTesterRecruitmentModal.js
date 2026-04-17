@@ -19,6 +19,13 @@ export function BetaTesterRecruitmentModal({ user }) {
       const res = await fetch('/api/bewerbung-settings');
       const data = await res.json();
       
+      console.log('🔍 Beta Tester Popup Check:', {
+        betaTesterOpen: data.settings?.beta_tester_open,
+        user: !!user,
+        isBetaTester: user?.roles?.includes('1494434149623136276'),
+        hasSeenToday: localStorage.getItem('betaTesterPopupSeen') === new Date().toDateString()
+      });
+      
       // Zeige Popup nur wenn:
       // 1. Beta Tester Bewerbungen offen sind
       // 2. User eingeloggt ist
@@ -29,8 +36,11 @@ export function BetaTesterRecruitmentModal({ user }) {
       
       if (data.settings?.beta_tester_open && user && !isBetaTester && !hasSeenToday) {
         setBetaTesterOpen(true);
-        // Warte 2 Sekunden bevor Popup erscheint
-        setTimeout(() => setIsOpen(true), 2000);
+        console.log('✅ Beta Tester Popup wird angezeigt');
+        // Warte 3 Sekunden bevor Popup erscheint
+        setTimeout(() => setIsOpen(true), 3000);
+      } else {
+        console.log('❌ Beta Tester Popup wird NICHT angezeigt');
       }
     } catch (e) {
       console.error('Fehler beim Laden der Beta Tester Settings:', e);

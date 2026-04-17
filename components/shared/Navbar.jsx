@@ -86,7 +86,7 @@ export function Navbar({ user, loading }) {
                         e.preventDefault();
                         setLoginModalOpen(true);
                       }}
-                      className={`px-3 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                      className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
                         isActive
                           ? 'bg-white/[0.06] text-white/90 shadow-inner shadow-white/5'
                           : 'text-white/30 hover:text-white/60 hover:bg-white/[0.03]'
@@ -101,7 +101,7 @@ export function Navbar({ user, loading }) {
                   <Link
                     key={n.id}
                     href={n.id}
-                    className={`px-3 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                    className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
                       isActive
                         ? '' 
                         : 'text-white/40 hover:text-white/80 hover:bg-white/[0.04]'
