@@ -3315,27 +3315,4 @@ async function handleCreateBetaFeedback(request) {
     return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500 });
   }
 }
-    } else {
-      message = `Discord Bot ist offline (Letzte Sync vor ${Math.round(minutesSinceUpdate)} Min.)`;
-    }
-    
-    return NextResponse.json({ 
-      isOnline,
-      status: isOnline ? 'online' : 'offline',
-      message,
-      checkedAt: new Date().toISOString(),
-      lastSync: data[0].updated_at,
-      minutesSinceSync: Math.round(minutesSinceUpdate)
-    });
-  } catch (error) {
-    console.error('Bot status exception:', error);
-    return NextResponse.json({ 
-      isOnline: false,
-      status: 'error',
-      message: 'Fehler beim Prüfen des Bot-Status',
-      error: error.message 
-    }, { status: 500 });
-  }
-}
-
 
