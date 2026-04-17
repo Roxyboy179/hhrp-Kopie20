@@ -822,6 +822,7 @@ export function ShopView({ user, userData, onRefresh }) {
               </button>
             </div>
           </div>
+          </div>
         </>
       )}
     </div>
