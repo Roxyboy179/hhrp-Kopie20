@@ -32,11 +32,13 @@ export function TransferMoneyView({ userData, onTransferComplete }) {
   
   // Kontonummer und Bank-Info aus cards
   const userCard = userData?.cards?.[0] || {};
-  const senderAccountNumber = userCard.cardNumber || null;
-  const bankId = userCard.bankId || 'hamburg_horizon';
+  console.log('[TRANSFER DEBUG] userCard:', userCard);
+  console.log('[TRANSFER DEBUG] userCard keys:', Object.keys(userCard));
+  
+  const senderAccountNumber = userCard.cardNumber || userCard.accountNumber || userCard.number || null;
+  const bankId = userCard.bankId || userCard.bank || 'hamburg_horizon';
   const bank = BANKS[bankId] || BANKS['hamburg_horizon'];
   
-  console.log('[TRANSFER DEBUG] userCard:', userCard);
   console.log('[TRANSFER DEBUG] senderAccountNumber:', senderAccountNumber);
   
   // VIP Status aus licenses Array ermitteln
