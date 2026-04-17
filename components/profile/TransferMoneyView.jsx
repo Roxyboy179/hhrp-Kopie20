@@ -35,11 +35,13 @@ export function TransferMoneyView({ userData, onTransferComplete }) {
   console.log('[TRANSFER DEBUG] userCard:', userCard);
   console.log('[TRANSFER DEBUG] userCard keys:', Object.keys(userCard));
   
-  const senderAccountNumber = userCard.cardNumber || userCard.accountNumber || userCard.number || null;
-  const bankId = userCard.bankId || userCard.bank || 'hamburg_horizon';
+  // Die Kontonummer heißt 'accountNumber', nicht 'cardNumber'!
+  const senderAccountNumber = userCard.accountNumber || null;
+  const bankId = userCard.bankId || 'hamburg_horizon';
   const bank = BANKS[bankId] || BANKS['hamburg_horizon'];
   
   console.log('[TRANSFER DEBUG] senderAccountNumber:', senderAccountNumber);
+  console.log('[TRANSFER DEBUG] bankId:', bankId);
   
   // VIP Status aus licenses Array ermitteln
   const licenses = userData?.licenses || [];

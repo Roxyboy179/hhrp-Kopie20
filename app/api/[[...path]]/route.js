@@ -2478,6 +2478,9 @@ export async function GET(request) {
 export async function POST(request) {
   const url = new URL(request.url);
   const p = url.pathname.replace('/api/', '');
+  
+  console.log('[POST] Path:', p);
+  console.log('[POST] Full URL:', url.pathname);
 
   // ===== WEBSITE STATISTICS TRACKING =====
   
@@ -3622,9 +3625,9 @@ async function handleTransferMoney(request) {
     // User Bank Info - Daten sind in userData.data direkt!
     const userDataObj = userData.data || {};
     
-    // Kontonummer aus cards
+    // Kontonummer aus cards - heißt 'accountNumber', nicht 'cardNumber'!
     const userCard = userDataObj.cards?.[0] || {};
-    const senderAccountNumber = userCard.cardNumber;
+    const senderAccountNumber = userCard.accountNumber;
     const bankId = userCard.bankId || 'hamburg_horizon';
     
     // Guthaben aus money.bank
@@ -3711,9 +3714,9 @@ async function handleTransferMoney(request) {
 
     let receiverDiscordId = null;
     for (const u of allUsers) {
-      // Empfänger-Kontonummer aus cards
+      // Empfänger-Kontonummer aus cards - heißt 'accountNumber'!
       const receiverCard = u.data?.cards?.[0];
-      if (receiverCard && receiverCard.cardNumber === kontonummer) {
+      if (receiverCard && receiverCard.accountNumber === kontonummer) {
         receiverDiscordId = u.discord_user_id;
         break;
       }
