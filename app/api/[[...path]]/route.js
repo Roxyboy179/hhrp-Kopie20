@@ -1140,13 +1140,15 @@ async function handleAdminUpdateBewerbung(request, id) {
     const newStatus = updated.status;
 
     // Automatische Discord-Rollen-Vergabe für Beta Tester bei Annahme
-    if (newStatus === 'Angenommen' && updated.form_data?.bewerbungstyp === 'beta_tester') {
+    const formData = typeof updated.form_data === 'string' ? JSON.parse(updated.form_data) : updated.form_data;
+    if (newStatus === 'Angenommen' && formData?.bewerbungType === 'beta_tester') {
       try {
         console.log('[BETA TESTER] Vergebe Beta Tester Rolle...');
+        console.log('[BETA TESTER] Discord User ID:', updated.discord_user_id);
         await assignDiscordRole(updated.discord_user_id, '1494434149623136276');
-        console.log('[BETA TESTER] Rolle erfolgreich vergeben!');
+        console.log('[BETA TESTER] ✅ Rolle erfolgreich vergeben!');
       } catch (roleError) {
-        console.error('[BETA TESTER] Fehler beim Vergeben der Rolle:', roleError);
+        console.error('[BETA TESTER] ❌ Fehler beim Vergeben der Rolle:', roleError);
         // Weiter machen, auch wenn Rollen-Vergabe fehlschlägt
       }
     }

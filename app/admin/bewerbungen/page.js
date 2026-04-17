@@ -391,7 +391,7 @@ export default function AdminBewerbungenPage() {
                 Übernehmen
               </Button>
             )}
-            {selected.claimedBy === admin?.discordUserId && (
+            {selected.claimedBy === admin?.discordUserId && selected.status !== 'Angenommen' && selected.status !== 'Abgelehnt' && (
               <>
                 <Button 
                   onClick={() => handleAction(selected.id, 'unclaim')} 
