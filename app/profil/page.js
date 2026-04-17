@@ -1050,6 +1050,7 @@ export default function ProfilPage() {
       { id: 'transactions', label: 'Transaktionen', icon: TrendingUp },
       { id: 'invoices', label: 'Rechnungen', icon: FileText },
       { id: 'savings', label: 'Sparkonto', icon: PiggyBank },
+      { id: 'kredite', label: 'Kredite', icon: CreditCard },
       { id: 'tax', label: 'Steuer-Records', icon: Receipt }
     ],
     documents: [
@@ -3271,6 +3272,211 @@ export default function ProfilPage() {
                 <PiggyBank className="w-16 h-16 mx-auto mb-4 text-white/20" />
                 <h3 className="text-lg font-bold text-white mb-2">Kein Sparkonto</h3>
                 <p className="text-sm text-white/40">Du hast noch kein Sparkonto eröffnet.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Kredite Tab */}
+        {activeTab === 'finance' && activeSubTab === 'kredite' && (
+          <div className="space-y-6">
+            {/* Kredite Statistiken */}
+            {userData?.kredite && userData.kredite.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="glass rounded-xl p-4 border border-white/[0.08]">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                      <TrendingUp className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-white">
+                        {userData.kredite.filter(k => k.status === 'aktiv' || k.status === 'pending').length}
+                      </div>
+                      <div className="text-xs text-white/50">Aktiv</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass rounded-xl p-4 border border-white/[0.08]">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+                      <CheckCircle className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-white">
+                        {userData.kredite.filter(k => k.status === 'abgeschlossen').length}
+                      </div>
+                      <div className="text-xs text-white/50">Abgeschlossen</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass rounded-xl p-4 border border-white/[0.08]">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                      <DollarSign className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <div className="text-xl font-bold text-white">
+                        {userData.kredite
+                          .filter(k => k.status === 'aktiv' || k.status === 'pending')
+                          .reduce((sum, k) => sum + (k.rueckzahlungsBetrag || 0), 0)
+                          .toLocaleString('de-DE')} €
+                      </div>
+                      <div className="text-xs text-white/50">Offen</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="glass rounded-xl p-4 border border-white/[0.08]">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+                      <CreditCard className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-white">{userData.kredite.length}</div>
+                      <div className="text-xs text-white/50">Gesamt</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Aktive Kredite */}
+            {userData?.kredite && userData.kredite.filter(k => k.status === 'aktiv' || k.status === 'pending').length > 0 ? (
+              <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                <div className="flex items-center gap-3 mb-6">
+                  <CreditCard className="w-6 h-6 text-white/60" />
+                  <h2 className="text-xl font-bold text-white">Aktive Kredite</h2>
+                </div>
+
+                <div className="space-y-4">
+                  {userData.kredite
+                    .filter(k => k.status === 'aktiv' || k.status === 'pending')
+                    .sort((a, b) => new Date(a.rueckzahlungsDatum) - new Date(b.rueckzahlungsDatum))
+                    .map((kredit) => {
+                      const isOverdue = new Date(kredit.rueckzahlungsDatum) < new Date();
+                      return (
+                        <div key={kredit.kreditId} className={`p-5 rounded-xl border ${
+                          isOverdue 
+                            ? 'bg-gradient-to-br from-red-500/10 to-orange-500/10 border-red-500/30' 
+                            : 'bg-white/[0.02] border-white/[0.08]'
+                        }`}>
+                          <div className="flex flex-col md:flex-row md:items-center gap-4">
+                            <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${
+                              isOverdue ? 'from-red-500 to-orange-500' : 'from-blue-500 to-cyan-500'
+                            } flex items-center justify-center flex-shrink-0`}>
+                              {isOverdue ? <AlertCircle className="w-7 h-7 text-white" /> : <CreditCard className="w-7 h-7 text-white" />}
+                            </div>
+
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h3 className="text-lg font-semibold text-white">Kredit {kredit.kreditId}</h3>
+                                <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                                  kredit.status === 'pending'
+                                    ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                                    : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                }`}>
+                                  {kredit.status === 'pending' ? 'Ausstehend' : 'Aktiv'}
+                                </span>
+                                {isOverdue && (
+                                  <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-red-500/20 text-red-400 border border-red-500/30">
+                                    Überfällig
+                                  </span>
+                                )}
+                              </div>
+                              
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                <div>
+                                  <p className="text-white/40 mb-1">Betrag</p>
+                                  <p className="text-white font-semibold">{kredit.betrag?.toLocaleString('de-DE')} €</p>
+                                </div>
+                                <div>
+                                  <p className="text-white/40 mb-1">Gebühr (15%)</p>
+                                  <p className="text-orange-400 font-semibold">{kredit.gebuehr?.toLocaleString('de-DE')} €</p>
+                                </div>
+                                <div>
+                                  <p className="text-white/40 mb-1">Rückzahlung</p>
+                                  <p className="text-green-400 font-semibold">{kredit.rueckzahlungsBetrag?.toLocaleString('de-DE')} €</p>
+                                </div>
+                                <div>
+                                  <p className="text-white/40 mb-1">Fällig am</p>
+                                  <p className={`font-semibold ${isOverdue ? 'text-red-400' : 'text-white'}`}>
+                                    {new Date(kredit.rueckzahlungsDatum).toLocaleDateString('de-DE')}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {kredit.kontonummer && (
+                                <p className="text-white/30 text-xs mt-2">
+                                  Konto: {kredit.kontonummer}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Abgeschlossene Kredite */}
+            {userData?.kredite && userData.kredite.filter(k => k.status === 'abgeschlossen').length > 0 ? (
+              <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                <div className="flex items-center gap-3 mb-6">
+                  <CheckCircle className="w-6 h-6 text-green-400" />
+                  <h2 className="text-xl font-bold text-white">Abgeschlossene Kredite</h2>
+                </div>
+
+                <div className="space-y-3">
+                  {userData.kredite
+                    .filter(k => k.status === 'abgeschlossen')
+                    .sort((a, b) => new Date(b.abgeschlossenAm || b.genehmigtAm) - new Date(a.abgeschlossenAm || a.genehmigtAm))
+                    .slice(0, 5)
+                    .map((kredit) => (
+                      <div key={kredit.kreditId} className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08]">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
+                            <CheckCircle className="w-6 h-6 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-base font-semibold text-white">Kredit {kredit.kreditId}</h3>
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                                Abgeschlossen
+                              </span>
+                              {kredit.fruehRueckgezahlt && (
+                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                                  Früh zurückgezahlt
+                                </span>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-3 gap-3 text-xs">
+                              <div>
+                                <p className="text-white/40">Betrag: <span className="text-white/70">{kredit.betrag?.toLocaleString('de-DE')} €</span></p>
+                              </div>
+                              <div>
+                                <p className="text-white/40">Zurückgezahlt: <span className="text-green-400">{kredit.rueckzahlungsBetrag?.toLocaleString('de-DE')} €</span></p>
+                              </div>
+                              <div>
+                                <p className="text-white/40">Am: <span className="text-white/70">{kredit.abgeschlossenAm ? new Date(kredit.abgeschlossenAm).toLocaleDateString('de-DE') : '-'}</span></p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            ) : null}
+
+            {/* Empty State */}
+            {(!userData?.kredite || userData.kredite.length === 0) && (
+              <div className="glass rounded-2xl p-12 border border-white/[0.08] text-center">
+                <CreditCard className="w-16 h-16 text-white/20 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-white mb-2">Keine Kredite</h3>
+                <p className="text-white/50 text-sm">Du hast aktuell keine Kredite</p>
               </div>
             )}
           </div>
