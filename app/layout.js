@@ -49,9 +49,72 @@ export default function RootLayout({ children }) {
         {/* Preconnect für bessere Performance */}
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_BASE_URL || 'https://hamburg-horizon-rp320.vercel.app'} />
         <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_BASE_URL || 'https://hamburg-horizon-rp320.vercel.app'} />
+        {/* Preload kritische Assets */}
+        <link rel="preload" as="image" href="/logo.webp" />
+        
+        {/* Inline Styles für sofortigen Loading Screen */}
+        <style dangerouslySetInnerHTML={{__html: `
+          #app-loader {
+            position: fixed;
+            inset: 0;
+            background: #050505;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s ease-out;
+          }
+          #app-loader.hidden {
+            opacity: 0;
+            pointer-events: none;
+          }
+          .loader-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(255,255,255,0.1);
+            border-top-color: var(--theme-accent, #667eea);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+          }
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+          .loader-logo {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 24px;
+            border-radius: 24px;
+            animation: pulse 2s ease-in-out infinite;
+          }
+          @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(0.95); }
+          }
+        `}} />
       </head>
       <body className="min-h-screen bg-[#080808] text-white antialiased">
+        {/* Sofortiger Loading Screen - erscheint INSTANT */}
+        <div id="app-loader">
+          <div style={{ textAlign: 'center' }}>
+            <img src="/logo.webp" alt="HHRP" className="loader-logo" style={{ margin: '0 auto' }} />
+            <div className="loader-spinner" style={{ margin: '0 auto' }}></div>
+          </div>
+        </div>
+        
         <RootClientLayout>{children}</RootClientLayout>
+        
+        {/* Script zum Ausblenden des Loaders nach dem Laden */}
+        <script dangerouslySetInnerHTML={{__html: `
+          window.addEventListener('load', function() {
+            setTimeout(function() {
+              const loader = document.getElementById('app-loader');
+              if (loader) {
+                loader.classList.add('hidden');
+                setTimeout(function() { loader.remove(); }, 300);
+              }
+            }, 100);
+          });
+        `}} />
       </body>
     </html>
   );

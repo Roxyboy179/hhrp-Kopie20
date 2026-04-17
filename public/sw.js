@@ -1,272 +1,242 @@
-// Service Worker für HHRP PWA - Optimiert für Supabase
-const CACHE_NAME = 'hhrp-v4';
-const OFFLINE_CACHE = 'hhrp-offline-v4';
+// Service Worker für HHRP PWA - OPTIMIERT FÜR MOBILE PERFORMANCE 🚀
+const CACHE_NAME = 'hhrp-v5-fast';
+const RUNTIME_CACHE = 'hhrp-runtime-v5';
+const IMAGE_CACHE = 'hhrp-images-v5';
 
-// Statische Assets die gecacht werden sollen
-const STATIC_ASSETS = [
+// Kritische Assets für sofortiges Laden
+const CRITICAL_ASSETS = [
+  '/',
   '/icon-192.png',
   '/icon-512.png',
   '/logo.webp',
-  '/favicon.png',
-  '/offline.html',
+  '/favicon.png'
 ];
 
-// Install Event - Cache nur statische Assets und Offline-Seite
+// Install Event - Aggressive Caching
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing...');
+  console.log('[SW] 🚀 Fast Install...');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Caching static assets + offline.html');
-      return cache.addAll(STATIC_ASSETS).catch((error) => {
-        console.log('[SW] Cache assets error:', error);
+      return cache.addAll(CRITICAL_ASSETS).catch((err) => {
+        console.error('[SW] Cache error:', err);
       });
-    })
-  );
-  self.skipWait();
-});
-
-// Fetch Event - Intelligentes Caching
-self.addEventListener('fetch', (event) => {
-  // Nur GET-Requests cachen - POST, PUT, DELETE werden nicht gecached
-  if (event.request.method !== 'GET') {
-    return;
-  }
-
-  // Nur HTTP/HTTPS Requests
-  if (!event.request.url.startsWith('http')) {
-    return;
-  }
-
-  const url = new URL(event.request.url);
-  
-  // Ignoriere chrome-extension und andere Protokolle
-  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-    return;
-  }
-
-  // ⚠️ KRITISCH: API-Calls NIEMALS cachen (immer frische Daten von Supabase!)
-  if (url.pathname.startsWith('/api/')) {
-    console.log('[SW] API call - Network only:', url.pathname);
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        // Bei Netzwerkfehler für API-Calls: Keine gecachte Response zurückgeben
-        return new Response(JSON.stringify({ error: 'Offline - keine Verbindung' }), {
-          status: 503,
-          statusText: 'Service Unavailable',
-          headers: { 'Content-Type': 'application/json' }
-        });
-      })
-    );
-    return;
-  }
-
-  // Statische Assets: Cache-First
-  if (STATIC_ASSETS.includes(url.pathname) || url.pathname.match(/\.(png|jpg|jpeg|svg|webp|ico|css|js)$/)) {
-    event.respondWith(
-      caches.match(event.request).then((cached) => {
-        if (cached) {
-          return cached;
-        }
-        return fetch(event.request).then((response) => {
-          if (response && response.status === 200) {
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-          }
-          return response;
-        });
-      })
-    );
-    return;
-  }
-
-  // HTML-Seiten: Network-First, bei Offline → Offline-Seite
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Erfolgreiche Responses können gecacht werden (optional)
-        if (response && response.status === 200 && event.request.mode === 'navigate') {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-        }
-        return response;
-      })
-      .catch(() => {
-        console.log('[SW] Network failed, checking cache...');
-        // Versuche gecachte Version zu laden
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            console.log('[SW] Serving from cache');
-            return cachedResponse;
-          }
-          
-          // Wenn es eine Navigation ist und keine gecachte Version existiert → Offline-Seite
-          if (event.request.mode === 'navigate') {
-            console.log('[SW] Serving offline page');
-            return caches.match('/offline.html').then((offlinePage) => {
-              if (offlinePage) {
-                return offlinePage;
-              }
-              // Fallback: Einfache Offline-Nachricht
-              return new Response(`
-                <!DOCTYPE html>
-                <html>
-                <head><title>Offline</title></head>
-                <body style="font-family: sans-serif; text-align: center; padding: 50px;">
-                  <h1>Du bist offline</h1>
-                  <p>Keine Internetverbindung verfügbar.</p>
-                  <button onclick="window.location.reload()">Erneut versuchen</button>
-                </body>
-                </html>
-              `, {
-                headers: { 'Content-Type': 'text/html' }
-              });
-            });
-          }
-                <html lang="de">
-                <head>
-                  <meta charset="UTF-8">
-                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                  <title>Offline - HHRP</title>
-                  <style>
-                    body { margin: 0; padding: 0; background: #050505; color: white; font-family: system-ui; display: flex; align-items: center; justify-content: center; min-height: 100vh; text-align: center; }
-                    .container { max-width: 500px; padding: 2rem; }
-                    h1 { font-size: 2rem; margin-bottom: 1rem; }
-                    p { color: rgba(255,255,255,0.6); margin-bottom: 2rem; }
-                    button { background: #ef4444; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-size: 1rem; cursor: pointer; }
-                  </style>
-                </head>
-                <body>
-                  <div class="container">
-                    <h1>📵 Keine Verbindung</h1>
-                    <p>Du bist offline. Bitte überprüfe deine Internetverbindung.</p>
-                    <button onclick="location.reload()">Erneut versuchen</button>
-                  </div>
-                </body>
-                </html>
-              `, {
-                status: 200,
-                headers: { 'Content-Type': 'text/html' }
-              });
-            });
-          }
-          
-          // Für andere Ressourcen
-          return new Response('Offline', {
-            status: 503,
-            statusText: 'Service Unavailable',
-            headers: { 'Content-Type': 'text/plain' }
-          });
-        });
-      })
+    }).then(() => self.skipWaiting())
   );
 });
 
-// Activate Event - Alte Caches löschen
+// Activate Event - Sofort übernehmen
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating...');
+  console.log('[SW] ⚡ Fast Activate...');
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
+    caches.keys().then((keys) => {
       return Promise.all(
-        cacheNames.map((cacheName) => {
-          // Lösche alle Caches außer den aktuellen
-          if (cacheName !== CACHE_NAME && cacheName !== OFFLINE_CACHE) {
-            console.log('[SW] Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
+        keys.map((key) => {
+          if (key !== CACHE_NAME && key !== RUNTIME_CACHE && key !== IMAGE_CACHE) {
+            console.log('[SW] 🗑️ Delete old:', key);
+            return caches.delete(key);
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
-  // Übernehme sofort die Kontrolle über alle Clients
-  self.clients.claim();
-  console.log('[SW] Activated and ready!');
 });
 
-// Message Event - Ermöglicht manuelles Cache-Clearing vom Client
+// Fetch Event - Stale-While-Revalidate für beste Performance
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  const url = new URL(request.url);
+
+  // Nur GET & HTTP(S)
+  if (request.method !== 'GET' || !url.protocol.startsWith('http')) {
+    return;
+  }
+
+  // API Calls - Network Only (nie cachen!)
+  if (url.pathname.startsWith('/api/')) {
+    event.respondWith(
+      fetch(request).catch(() => 
+        new Response(JSON.stringify({ error: 'Offline' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      )
+    );
+    return;
+  }
+
+  // Images - Cache First + Background Update
+  if (request.destination === 'image' || url.pathname.match(/\.(png|jpg|jpeg|svg|webp|gif|ico)$/)) {
+    event.respondWith(
+      caches.open(IMAGE_CACHE).then((cache) => {
+        return cache.match(request).then((cached) => {
+          const fetchPromise = fetch(request).then((response) => {
+            if (response && response.ok) {
+              cache.put(request, response.clone());
+            }
+            return response;
+          }).catch(() => cached);
+          
+          return cached || fetchPromise; // Cache First
+        });
+      })
+    );
+    return;
+  }
+
+  // Static Assets (JS/CSS) - Stale-While-Revalidate
+  if (url.pathname.match(/\.(js|css|woff2?|ttf|eot)$/)) {
+    event.respondWith(
+      caches.open(RUNTIME_CACHE).then((cache) => {
+        return cache.match(request).then((cached) => {
+          const fetchPromise = fetch(request).then((response) => {
+            if (response && response.ok) {
+              cache.put(request, response.clone());
+            }
+            return response;
+          });
+          
+          // Sofort gecachte Version zurückgeben, Update im Hintergrund
+          return cached || fetchPromise;
+        });
+      })
+    );
+    return;
+  }
+
+  // HTML Pages - Network First mit schnellem Fallback
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      Promise.race([
+        fetch(request).then((response) => {
+          if (response && response.ok) {
+            const clone = response.clone();
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(request, clone);
+            });
+          }
+          return response;
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(), 3000)) // 3s Timeout
+      ]).catch(() => {
+        // Fallback zu Cache
+        return caches.match(request).then((cached) => {
+          if (cached) return cached;
+          
+          // Minimale Offline Response
+          return new Response(`
+            <!DOCTYPE html>
+            <html lang="de">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Offline - HHRP</title>
+              <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { 
+                  background: #050505; 
+                  color: white; 
+                  font-family: -apple-system, system-ui, sans-serif;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  min-height: 100vh;
+                  padding: 20px;
+                }
+                .container { text-align: center; max-width: 400px; }
+                h1 { font-size: 3rem; margin-bottom: 1rem; }
+                p { color: rgba(255,255,255,0.6); margin-bottom: 2rem; line-height: 1.6; }
+                button { 
+                  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                  color: white;
+                  border: none;
+                  padding: 1rem 2rem;
+                  border-radius: 12px;
+                  font-size: 1rem;
+                  font-weight: 600;
+                  cursor: pointer;
+                  transition: transform 0.2s;
+                }
+                button:active { transform: scale(0.95); }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <h1>📵</h1>
+                <p><strong>Keine Verbindung</strong><br>Bitte überprüfe deine Internetverbindung und versuche es erneut.</p>
+                <button onclick="location.reload()">🔄 Erneut versuchen</button>
+              </div>
+            </body>
+            </html>
+          `, {
+            headers: { 'Content-Type': 'text/html' }
+          });
+        });
+      })
+    );
+    return;
+  }
+
+  // Default: Network First
+  event.respondWith(
+    fetch(request).catch(() => caches.match(request))
+  );
+});
+
+// Message Event
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+  if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-  if (event.data && event.data.type === 'CLEAR_CACHE') {
+  if (event.data?.type === 'CLEAR_CACHE') {
     event.waitUntil(
-      caches.keys().then((cacheNames) => {
-        return Promise.all(
-          cacheNames.map((cacheName) => {
-            console.log('[SW] Clearing cache:', cacheName);
-            return caches.delete(cacheName);
-          })
-        );
-      })
+      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
     );
   }
 });
 
-// ═══════════════════════════════════════════════════════════════
-// PUSH NOTIFICATIONS für PWA
-// ═══════════════════════════════════════════════════════════════
-
-// Push Event - Empfange Push-Benachrichtigungen
+// Push Notifications
 self.addEventListener('push', (event) => {
-  console.log('[SW] Push notification received');
-  
   let data = {
     title: '🎮 Hamburg Horizon RP',
     body: 'Neue Benachrichtigung',
     icon: '/icon-512.png',
-    badge: '/icon-192.png',
-    tag: 'default'
+    badge: '/icon-192.png'
   };
 
   if (event.data) {
     try {
       data = event.data.json();
     } catch (e) {
-      console.error('[SW] Error parsing push data:', e);
+      console.error('[SW] Push parse error:', e);
     }
   }
 
-  const options = {
-    body: data.body,
-    icon: data.icon || '/icon-512.png',
-    badge: data.badge || '/icon-192.png',
-    vibrate: [200, 100, 200],
-    tag: data.tag || 'default',
-    requireInteraction: data.requireInteraction || false,
-    data: {
-      url: data.url || '/profil',
-      timestamp: Date.now(),
-      type: data.type
-    },
-    actions: data.actions || []
-  };
-
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: data.icon || '/icon-512.png',
+      badge: data.badge || '/icon-192.png',
+      vibrate: [200, 100, 200],
+      tag: data.tag || 'default',
+      data: { url: data.url || '/profil', timestamp: Date.now() }
+    })
   );
 });
 
-// Notification Click Event
+// Notification Click
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification clicked:', event.notification.tag);
   event.notification.close();
-
-  const urlToOpen = event.notification.data.url || '/profil';
-
+  const url = event.notification.data.url || '/profil';
+  
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Prüfe ob bereits ein Fenster offen ist
       for (const client of clientList) {
-        if (client.url.includes(urlToOpen) && 'focus' in client) {
+        if (client.url.includes(url) && 'focus' in client) {
           return client.focus();
         }
       }
-      // Öffne neues Fenster
       if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
+        return clients.openWindow(url);
       }
     })
   );
