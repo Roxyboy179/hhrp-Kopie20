@@ -19,7 +19,8 @@ import {
   Zap, Download, Crown, Sparkles, Rocket, Wifi, WifiOff, Globe, 
   Timer, Lock, Gem, PartyPopper, Handshake, Monitor, BadgeCheck, 
   CircleDollarSign, BellRing, AppWindow, Settings, ImagePlus, 
-  Trash2, Upload, BellOff, ZoomIn, ZoomOut, PieChart, BarChart3
+  Trash2, Upload, BellOff, ZoomIn, ZoomOut, PieChart, BarChart3,
+  Lightbulb
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
