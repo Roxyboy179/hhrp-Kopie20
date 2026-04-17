@@ -6,14 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { GlassCard } from '@/components/shared/GlassCard';
 import { toast } from 'sonner';
 import { 
   Bug, Lightbulb, MessageSquare, Send, Loader2, CheckCircle2, AlertCircle, Shield, ArrowLeft
 } from 'lucide-react';
 import Link from 'next/link';
 
-const inputClass = "bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-purple-500/40 focus:ring-purple-500/20 rounded-xl";
+const inputClass = "bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/25 focus:border-white/30 focus:ring-white/20 rounded-xl backdrop-blur-sm";
 
 export default function BetaFeedbackPage() {
   const router = useRouter();
@@ -103,15 +102,15 @@ export default function BetaFeedbackPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-white/40" />
       </div>
     );
   }
 
   const feedbackTypes = [
-    { value: 'bug', label: 'Bug melden', icon: <Bug className="w-5 h-5" />, gradient: 'from-red-500 to-orange-500' },
-    { value: 'improvement', label: 'Verbesserung', icon: <Lightbulb className="w-5 h-5" />, gradient: 'from-yellow-500 to-orange-500' },
-    { value: 'feedback', label: 'Feedback', icon: <MessageSquare className="w-5 h-5" />, gradient: 'from-blue-500 to-cyan-500' }
+    { value: 'bug', label: 'Bug melden', icon: <Bug className="w-5 h-5" /> },
+    { value: 'improvement', label: 'Verbesserung', icon: <Lightbulb className="w-5 h-5" /> },
+    { value: 'feedback', label: 'Feedback', icon: <MessageSquare className="w-5 h-5" /> }
   ];
 
   const priorities = [
@@ -126,8 +125,8 @@ export default function BetaFeedbackPage() {
       {/* Ambient Glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div 
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full blur-[150px] opacity-30"
-          style={{ background: 'linear-gradient(135deg, #ef4444 0%, #f97316 100%)' }}
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full blur-[150px] opacity-15"
+          style={{ background: 'radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%)' }}
         />
       </div>
 
@@ -146,7 +145,14 @@ export default function BetaFeedbackPage() {
           {/* Header */}
           <div className="mb-12 animate-fade-in-down">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center shadow-lg">
+              <div 
+                className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.3)'
+                }}
+              >
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -155,16 +161,30 @@ export default function BetaFeedbackPage() {
               </div>
             </div>
             
-            <GlassCard className="p-4">
-              <p className="text-sm text-purple-300/80 flex items-center gap-2">
+            <div 
+              className="p-4 rounded-xl border backdrop-blur-sm"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))',
+                borderColor: 'rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              <p className="text-sm text-white/70 flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                 Du bist als Beta Tester eingeloggt. Dein Feedback wird direkt an das Entwicklerteam gesendet.
               </p>
-            </GlassCard>
+            </div>
           </div>
 
           {/* Feedback Form */}
-          <GlassCard className="p-8 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
+          <div 
+            className="p-8 rounded-2xl border backdrop-blur-sm animate-fade-in-up" 
+            style={{ 
+              animationDelay: '0.1s',
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))',
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+            }}
+          >
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Feedback Type */}
               <div>
@@ -175,13 +195,20 @@ export default function BetaFeedbackPage() {
                       key={type.value}
                       type="button"
                       onClick={() => setFeedbackType(type.value)}
-                      className={`p-4 rounded-xl border-2 transition-all flex items-center gap-3 ${
-                        feedbackType === type.value
-                          ? 'border-purple-500 bg-purple-500/10 scale-105'
-                          : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] hover:border-white/[0.12]'
-                      }`}
+                      className="p-4 rounded-xl border-2 transition-all flex items-center gap-3"
+                      style={{
+                        borderColor: feedbackType === type.value ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.08)',
+                        background: feedbackType === type.value ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+                        transform: feedbackType === type.value ? 'scale(1.02)' : 'scale(1)'
+                      }}
                     >
-                      <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${type.gradient} flex items-center justify-center`}>
+                      <div 
+                        className="w-10 h-10 rounded-lg flex items-center justify-center"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06))',
+                          border: '1px solid rgba(255, 255, 255, 0.15)'
+                        }}
+                      >
                         {type.icon}
                       </div>
                       <span className="text-sm font-medium text-white">{type.label}</span>
@@ -250,33 +277,46 @@ export default function BetaFeedbackPage() {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-6 rounded-xl shadow-lg shadow-purple-500/30 transition-all hover:scale-105"
+                className="w-full py-6 rounded-xl font-semibold shadow-lg transition-all hover:scale-105"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.12))',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  color: '#fff',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
+                }}
               >
                 {submitting ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                    <Loader2 className="w-5 h-5 animate-spin mr-2 inline" />
                     Wird gesendet...
                   </>
                 ) : (
                   <>
-                    <Send className="w-5 h-5 mr-2" />
+                    <Send className="w-5 h-5 mr-2 inline" />
                     Feedback senden
                   </>
                 )}
               </Button>
             </form>
-          </GlassCard>
+          </div>
 
           {/* Info Box */}
-          <GlassCard className="mt-6 p-4 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-            <p className="text-sm text-blue-300/80 flex items-start gap-2">
+          <div 
+            className="mt-6 p-4 rounded-xl border backdrop-blur-sm animate-fade-in-up" 
+            style={{ 
+              animationDelay: '0.2s',
+              background: 'rgba(255, 255, 255, 0.02)',
+              borderColor: 'rgba(255, 255, 255, 0.08)'
+            }}
+          >
+            <p className="text-sm text-white/60 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <span>
                 Dein Feedback wird vertraulich behandelt und hilft uns, die Plattform kontinuierlich zu verbessern. 
                 Bei kritischen Bugs antworten wir innerhalb von 24 Stunden.
               </span>
             </p>
-          </GlassCard>
+          </div>
 
         </div>
       </div>

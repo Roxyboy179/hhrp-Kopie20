@@ -7,7 +7,6 @@ import {
   Loader2, FlaskConical, CheckCircle2, AlertCircle, ArrowLeft, 
   Sparkles, Zap, TrendingUp, Activity, Clock, Award
 } from 'lucide-react';
-import { GlassCard } from '@/components/shared/GlassCard';
 import { toast } from 'sonner';
 
 export default function BetaTestingPage() {
@@ -51,7 +50,7 @@ export default function BetaTestingPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-white/40" />
       </div>
     );
   }
@@ -66,7 +65,6 @@ export default function BetaTestingPage() {
         'Animationen und Übergänge',
         'Formular-Validierung'
       ],
-      gradient: 'from-blue-500 to-cyan-500',
       icon: <Sparkles className="w-5 h-5" />
     },
     {
@@ -78,7 +76,6 @@ export default function BetaTestingPage() {
         'Profil und Einstellungen',
         'Discord Integration'
       ],
-      gradient: 'from-purple-500 to-pink-500',
       icon: <Zap className="w-5 h-5" />
     },
     {
@@ -90,7 +87,6 @@ export default function BetaTestingPage() {
         'Große Datenmengen',
         'Gleichzeitige Aktionen'
       ],
-      gradient: 'from-orange-500 to-red-500',
       icon: <Activity className="w-5 h-5" />
     }
   ];
@@ -99,19 +95,19 @@ export default function BetaTestingPage() {
     {
       date: 'Heute',
       title: 'Beta Portal Redesign',
-      description: 'Neues Design im Stil der Startseite mit Animationen',
+      description: 'Neues Schwarz/Grau Glassmorphism Design',
       status: 'new'
     },
     {
       date: 'Heute',
-      title: 'Navbar Zentrierung',
-      description: 'Navigation ist jetzt perfekt zentriert',
+      title: 'PWA Loading Optimierung',
+      description: 'Ladezeiten um 90% reduziert',
       status: 'new'
     },
     {
       date: 'Heute',
-      title: 'Profil-Dropdown',
-      description: 'Neues Dropdown-Menü mit Animationen',
+      title: 'Zahlenformatierung',
+      description: 'Stats werden jetzt als 1k, 1M angezeigt',
       status: 'new'
     }
   ];
@@ -121,8 +117,8 @@ export default function BetaTestingPage() {
       {/* Ambient Glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div 
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full blur-[150px] opacity-30"
-          style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)' }}
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full blur-[150px] opacity-15"
+          style={{ background: 'radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%)' }}
         />
       </div>
 
@@ -141,7 +137,14 @@ export default function BetaTestingPage() {
           {/* Header */}
           <div className="mb-12 animate-fade-in-down">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg">
+              <div 
+                className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.3)'
+                }}
+              >
                 <FlaskConical className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -154,22 +157,33 @@ export default function BetaTestingPage() {
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-12">
             {[
-              { label: 'Dein Status', value: 'Beta Tester', icon: <Award className="w-5 h-5" />, color: 'from-purple-500 to-pink-500' },
-              { label: 'Verfügbar', value: 'Alle Features', icon: <CheckCircle2 className="w-5 h-5" />, color: 'from-green-500 to-emerald-500' },
-              { label: 'Updates', value: 'Täglich', icon: <Clock className="w-5 h-5" />, color: 'from-blue-500 to-cyan-500' },
-              { label: 'Priorität', value: 'Hoch', icon: <TrendingUp className="w-5 h-5" />, color: 'from-orange-500 to-red-500' }
+              { label: 'Dein Status', value: 'Beta Tester', icon: <Award className="w-5 h-5" /> },
+              { label: 'Verfügbar', value: 'Alle Features', icon: <CheckCircle2 className="w-5 h-5" /> },
+              { label: 'Updates', value: 'Täglich', icon: <Clock className="w-5 h-5" /> },
+              { label: 'Priorität', value: 'Hoch', icon: <TrendingUp className="w-5 h-5" /> }
             ].map((stat, index) => (
-              <GlassCard 
-                key={index} 
-                className="p-4 animate-fade-in-up"
-                style={{ animationDelay: `${0.1 + index * 0.05}s` }}
+              <div
+                key={index}
+                className="p-4 rounded-2xl border backdrop-blur-sm animate-fade-in-up"
+                style={{ 
+                  animationDelay: `${0.1 + index * 0.05}s`,
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))',
+                  borderColor: 'rgba(255, 255, 255, 0.1)',
+                  boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                }}
               >
-                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${stat.color} flex items-center justify-center mb-3`}>
+                <div 
+                  className="w-10 h-10 rounded-lg flex items-center justify-center mb-3"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06))',
+                    border: '1px solid rgba(255, 255, 255, 0.15)'
+                  }}
+                >
                   {stat.icon}
                 </div>
                 <div className="text-2xl font-bold text-white mb-1">{stat.value}</div>
                 <div className="text-xs text-white/50">{stat.label}</div>
-              </GlassCard>
+              </div>
             ))}
           </div>
 
@@ -180,12 +194,24 @@ export default function BetaTestingPage() {
             </h2>
             <div className="grid md:grid-cols-3 gap-6">
               {testCategories.map((category, index) => (
-                <GlassCard 
-                  key={index} 
-                  className="p-6 animate-fade-in-up hover:scale-105 transition-all"
-                  style={{ animationDelay: `${0.4 + index * 0.1}s` }}
+                <div
+                  key={index}
+                  className="p-6 rounded-2xl border backdrop-blur-sm animate-fade-in-up hover:scale-105 transition-all"
+                  style={{ 
+                    animationDelay: `${0.4 + index * 0.1}s`,
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                  }}
                 >
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${category.gradient} flex items-center justify-center mb-4`}>
+                  <div 
+                    className="w-12 h-12 rounded-xl flex items-center justify-center mb-4"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.3)'
+                    }}
+                  >
                     {category.icon}
                   </div>
                   <h3 className="text-xl font-bold text-white mb-2">{category.name}</h3>
@@ -193,12 +219,12 @@ export default function BetaTestingPage() {
                   <div className="space-y-2">
                     {category.features.map((feature, idx) => (
                       <div key={idx} className="flex items-center gap-2 text-sm text-white/50">
-                        <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0" />
+                        <CheckCircle2 className="w-4 h-4 text-white/40 flex-shrink-0" />
                         <span>{feature}</span>
                       </div>
                     ))}
                   </div>
-                </GlassCard>
+                </div>
               ))}
             </div>
           </div>
@@ -210,20 +236,38 @@ export default function BetaTestingPage() {
             </h2>
             <div className="space-y-4">
               {recentUpdates.map((update, index) => (
-                <GlassCard 
-                  key={index} 
-                  className="p-6 animate-fade-in-up"
-                  style={{ animationDelay: `${0.8 + index * 0.05}s` }}
+                <div
+                  key={index}
+                  className="p-6 rounded-2xl border backdrop-blur-sm animate-fade-in-up"
+                  style={{ 
+                    animationDelay: `${0.8 + index * 0.05}s`,
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                  }}
                 >
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center flex-shrink-0">
-                      <Sparkles className="w-5 h-5 text-white" />
+                    <div 
+                      className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06))',
+                        border: '1px solid rgba(255, 255, 255, 0.15)'
+                      }}
+                    >
+                      <Sparkles className="w-5 h-5 text-white/80" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h3 className="text-lg font-semibold text-white">{update.title}</h3>
                         {update.status === 'new' && (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                          <span 
+                            className="px-2 py-0.5 rounded-full text-xs font-medium"
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.1)',
+                              border: '1px solid rgba(255, 255, 255, 0.2)',
+                              color: 'rgba(255, 255, 255, 0.9)'
+                            }}
+                          >
                             Neu
                           </span>
                         )}
@@ -232,14 +276,29 @@ export default function BetaTestingPage() {
                       <p className="text-white/40 text-xs">{update.date}</p>
                     </div>
                   </div>
-                </GlassCard>
+                </div>
               ))}
             </div>
           </div>
 
           {/* CTA */}
-          <GlassCard className="p-8 text-center animate-fade-in-up" style={{ animationDelay: '1s' }}>
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center mx-auto mb-4">
+          <div 
+            className="p-8 text-center rounded-2xl border backdrop-blur-sm animate-fade-in-up" 
+            style={{ 
+              animationDelay: '1s',
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))',
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+            }}
+          >
+            <div 
+              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.3)'
+              }}
+            >
               <AlertCircle className="w-8 h-8 text-white" />
             </div>
             <h3 className="text-2xl font-semibold text-white mb-3">Bug oder Problem gefunden?</h3>
@@ -248,11 +307,17 @@ export default function BetaTestingPage() {
             </p>
             <Link
               href="/beta/feedback"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium transition-all hover:scale-105 shadow-lg shadow-purple-500/30"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all hover:scale-105"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.12))',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                color: '#fff',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
+              }}
             >
               Jetzt Feedback geben
             </Link>
-          </GlassCard>
+          </div>
 
         </div>
       </div>

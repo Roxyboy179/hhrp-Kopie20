@@ -12,7 +12,6 @@ export function BetaTesterRecruitmentModal({ user }) {
   const [checking, setChecking] = useState(false);
 
   useEffect(() => {
-    // Warte bis User geladen ist
     if (user && !checking) {
       setChecking(true);
       checkBetaTesterStatus();
@@ -27,39 +26,9 @@ export function BetaTesterRecruitmentModal({ user }) {
       const isBetaTester = user?.roles?.includes('1494434149623136276');
       const hasSeenToday = localStorage.getItem('betaTesterPopupSeen') === new Date().toDateString();
       
-      console.log('🔍 Beta Tester Popup Check:', {
-        betaTesterOpen: data.settings?.beta_tester_open,
-        userExists: !!user,
-        userName: user?.username || user?.globalName,
-        isBetaTester: isBetaTester,
-        hasSeenToday: hasSeenToday,
-        willShow: data.settings?.beta_tester_open && user && !isBetaTester && !hasSeenToday
-      });
-      
-      // Zeige Popup nur wenn:
-      // 1. Beta Tester Bewerbungen offen sind
-      // 2. User eingeloggt ist
-      // 3. User noch KEIN Beta Tester ist
-      // 4. User das Popup heute noch nicht geschlossen hat
       if (data.settings?.beta_tester_open && user && !isBetaTester && !hasSeenToday) {
         setBetaTesterOpen(true);
-        console.log('✅ Beta Tester Popup wird angezeigt in 3 Sekunden');
-        // Warte 3 Sekunden bevor Popup erscheint
         setTimeout(() => setIsOpen(true), 3000);
-      } else {
-        console.log('❌ Beta Tester Popup wird NICHT angezeigt');
-        if (!data.settings?.beta_tester_open) {
-          console.log('  → Grund: Beta Tester Bewerbungen sind GESCHLOSSEN');
-        }
-        if (!user) {
-          console.log('  → Grund: User ist NICHT eingeloggt');
-        }
-        if (isBetaTester) {
-          console.log('  → Grund: User ist BEREITS Beta Tester');
-        }
-        if (hasSeenToday) {
-          console.log('  → Grund: Popup wurde heute bereits gesehen');
-        }
       }
     } catch (e) {
       console.error('❌ Fehler beim Laden der Beta Tester Settings:', e);
@@ -68,7 +37,6 @@ export function BetaTesterRecruitmentModal({ user }) {
 
   const handleClose = () => {
     setIsOpen(false);
-    // Speichere dass User das Popup heute gesehen hat
     localStorage.setItem('betaTesterPopupSeen', new Date().toDateString());
   };
 
@@ -81,26 +49,68 @@ export function BetaTesterRecruitmentModal({ user }) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in-0 duration-300">
-      {/* Backdrop */}
+      {/* Enhanced Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm" 
+        className="absolute inset-0 backdrop-blur-xl" 
+        style={{ background: 'rgba(0, 0, 0, 0.85)' }}
         onClick={handleClose}
       />
+
+      {/* Floating particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(15)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-1 h-1 bg-white/20 rounded-full animate-float"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 5}s`,
+              animationDuration: `${5 + Math.random() * 10}s`
+            }}
+          />
+        ))}
+      </div>
       
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-gradient-to-br from-purple-900/40 to-black border border-purple-500/30 rounded-3xl p-8 shadow-2xl shadow-purple-500/20 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+      <div 
+        className="relative w-full max-w-md rounded-3xl border p-8 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
+        style={{
+          background: 'linear-gradient(135deg, rgba(40, 40, 40, 0.95) 0%, rgba(15, 15, 15, 0.98) 100%)',
+          borderColor: 'rgba(255, 255, 255, 0.15)',
+          boxShadow: '0 25px 100px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.15)',
+          backdropFilter: 'blur(20px)'
+        }}
+      >
         {/* Close Button */}
         <button
           onClick={handleClose}
-          className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
+          className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 group"
+          style={{
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}
         >
-          <X className="w-5 h-5" />
+          <X className="w-5 h-5 text-white/60 group-hover:text-white transition-colors" />
         </button>
 
-        {/* Icon */}
+        {/* Icon with glow */}
         <div className="flex justify-center mb-6">
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/50 animate-pulse">
-            <Sparkles className="w-10 h-10 text-white" />
+          <div className="relative">
+            <div 
+              className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg relative overflow-hidden"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent" />
+              <Sparkles className="w-10 h-10 text-white relative z-10 animate-pulse" />
+            </div>
+            {/* Pulse rings */}
+            <div className="absolute inset-[-4px] rounded-full border animate-pulse" style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }} />
+            <div className="absolute inset-[-8px] rounded-full border animate-pulse" style={{ borderColor: 'rgba(255, 255, 255, 0.08)', animationDelay: '0.5s' }} />
           </div>
         </div>
 
@@ -123,8 +133,15 @@ export function BetaTesterRecruitmentModal({ user }) {
             'Direkten Einfluss auf die Entwicklung',
             'Community-Events & Belohnungen'
           ].map((benefit, i) => (
-            <div key={i} className="flex items-center gap-3 text-sm text-white/80">
-              <CheckCircle2 className="w-5 h-5 text-purple-400 flex-shrink-0" />
+            <div 
+              key={i} 
+              className="flex items-center gap-3 text-sm text-white/80 p-3 rounded-lg transition-all hover:bg-white/5"
+              style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid rgba(255, 255, 255, 0.05)'
+              }}
+            >
+              <CheckCircle2 className="w-5 h-5 text-white/60 flex-shrink-0" />
               <span>{benefit}</span>
             </div>
           ))}
@@ -134,10 +151,16 @@ export function BetaTesterRecruitmentModal({ user }) {
         <div className="space-y-3">
           <Button
             onClick={handleApply}
-            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-6 rounded-xl text-base shadow-lg shadow-purple-500/30 transition-all hover:scale-105"
+            className="w-full py-6 rounded-xl text-base font-semibold shadow-lg transition-all hover:scale-105"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.12))',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: '#fff',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.4)'
+            }}
           >
             Jetzt als Beta Tester bewerben
-            <ArrowRight className="w-5 h-5 ml-2" />
+            <ArrowRight className="w-5 h-5 ml-2 inline" />
           </Button>
           
           <button
@@ -148,6 +171,18 @@ export function BetaTesterRecruitmentModal({ user }) {
           </button>
         </div>
       </div>
+
+      <style jsx global>{`
+        @keyframes float {
+          0%, 100% { transform: translate(0, 0); }
+          25% { transform: translate(10px, -10px); }
+          50% { transform: translate(-5px, 5px); }
+          75% { transform: translate(-10px, -5px); }
+        }
+        .animate-float {
+          animation: float linear infinite;
+        }
+      `}</style>
     </div>
   );
 }

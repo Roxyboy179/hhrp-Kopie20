@@ -48,7 +48,7 @@ export default function BetaHomePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-white/40" />
       </div>
     );
   }
@@ -58,35 +58,29 @@ export default function BetaHomePage() {
       title: 'Bug Reports & Feedback',
       description: 'Melde Bugs, schlage Verbesserungen vor oder teile allgemeines Feedback',
       icon: <Bug className="w-8 h-8" />,
-      href: '/beta/feedback',
-      gradient: 'from-red-500 via-orange-500 to-red-600',
-      accentColor: 'rgba(239, 68, 68, 0.15)'
+      href: '/beta/feedback'
     },
     {
       title: 'Test-Bereich',
       description: 'Teste neue Features und experimentelle Funktionen',
       icon: <FlaskConical className="w-8 h-8" />,
-      href: '/beta/testing',
-      gradient: 'from-blue-500 via-cyan-500 to-blue-600',
-      accentColor: 'rgba(59, 130, 246, 0.15)'
+      href: '/beta/testing'
     },
     {
       title: 'Dokumentation',
       description: 'Anleitungen und Informationen für Beta Tester',
       icon: <FileText className="w-8 h-8" />,
-      href: '/beta/docs',
-      gradient: 'from-green-500 via-emerald-500 to-green-600',
-      accentColor: 'rgba(34, 197, 94, 0.15)'
+      href: '/beta/docs'
     }
   ];
 
   return (
     <div className="min-h-screen relative">
-      {/* Ambient Glow */}
+      {/* Ambient Glow - Monochrome */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div 
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full blur-[150px] opacity-30"
-          style={{ background: 'linear-gradient(135deg, #a855f7 0%, #ec4899 100%)' }}
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] rounded-full blur-[150px] opacity-20"
+          style={{ background: 'radial-gradient(circle, rgba(255, 255, 255, 0.15) 0%, transparent 70%)' }}
         />
       </div>
 
@@ -96,16 +90,23 @@ export default function BetaHomePage() {
           
           {/* Badge */}
           <div className="flex justify-center mb-6 animate-fade-in-down">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/20 backdrop-blur-sm">
-              <Shield className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-medium text-purple-300">Beta Tester Portal</span>
+            <div 
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-sm"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))',
+                borderColor: 'rgba(255, 255, 255, 0.15)',
+                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              <Shield className="w-4 h-4 text-white/80" />
+              <span className="text-sm font-medium text-white/90">Beta Tester Portal</span>
             </div>
           </div>
 
           {/* Title */}
           <div className="text-center mb-12 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 leading-tight">
-              <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent">
                 Willkommen zurück
               </span>
               <br />
@@ -126,17 +127,31 @@ export default function BetaHomePage() {
                 className="group relative animate-fade-in-up"
                 style={{ animationDelay: `${0.2 + index * 0.1}s` }}
               >
-                <GlassCard className="h-full p-6 hover:scale-105 transition-all duration-300 overflow-hidden">
-                  {/* Gradient Background */}
+                <div 
+                  className="h-full p-6 rounded-2xl border backdrop-blur-sm transition-all duration-300 hover:scale-105 overflow-hidden relative"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))',
+                    borderColor: 'rgba(255, 255, 255, 0.1)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                  }}
+                >
+                  {/* Hover glow */}
                   <div 
-                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                    style={{ background: `linear-gradient(135deg, ${feature.accentColor}, transparent)` }}
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur-xl"
+                    style={{ background: 'radial-gradient(circle at center, rgba(255, 255, 255, 0.1), transparent 70%)' }}
                   />
                   
                   <div className="relative z-10">
                     {/* Icon */}
-                    <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                      {feature.icon}
+                    <div 
+                      className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-300"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.3)'
+                      }}
+                    >
+                      <div className="text-white">{feature.icon}</div>
                     </div>
                     
                     {/* Content */}
@@ -149,42 +164,49 @@ export default function BetaHomePage() {
                       <ChevronRight className="w-4 h-4" />
                     </div>
                   </div>
-                </GlassCard>
+                </div>
               </Link>
             ))}
           </div>
 
           {/* Info Cards */}
           <div className="grid md:grid-cols-3 gap-6 animate-fade-in-up" style={{ animationDelay: '0.5s' }}>
-            <GlassCard className="p-6 text-center">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-4">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
-              <div className="text-3xl font-bold text-white mb-2">Beta</div>
-              <p className="text-white/50 text-sm">Dein Status</p>
-            </GlassCard>
-            
-            <GlassCard className="p-6 text-center">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-6 h-6 text-white" />
-              </div>
-              <div className="text-3xl font-bold text-green-400 mb-2">Aktiv</div>
-              <p className="text-white/50 text-sm">Account Status</p>
-            </GlassCard>
-            
-            <GlassCard className="p-6 text-center">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center mx-auto mb-4">
-                <Target className="w-6 h-6 text-white" />
-              </div>
-              <div className="text-3xl font-bold text-blue-400 mb-2">Alle</div>
-              <p className="text-white/50 text-sm">Verfügbare Features</p>
-            </GlassCard>
+            {[
+              { icon: Sparkles, label: 'Beta', sublabel: 'Dein Status', value: 'Beta' },
+              { icon: Zap, label: 'Aktiv', sublabel: 'Account Status', value: 'Aktiv' },
+              { icon: Target, label: 'Alle', sublabel: 'Verfügbare Features', value: 'Alle' }
+            ].map((stat, i) => {
+              const Icon = stat.icon;
+              return (
+                <div 
+                  key={i}
+                  className="p-6 text-center rounded-2xl border backdrop-blur-sm"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02))',
+                    borderColor: 'rgba(255, 255, 255, 0.08)',
+                    boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.1)'
+                  }}
+                >
+                  <div 
+                    className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-4"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06))',
+                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+                    }}
+                  >
+                    <Icon className="w-6 h-6 text-white/80" />
+                  </div>
+                  <div className="text-3xl font-bold text-white mb-2">{stat.value}</div>
+                  <p className="text-white/50 text-sm">{stat.sublabel}</p>
+                </div>
+              );
+            })}
           </div>
 
         </div>
       </section>
 
-      {/* Add CSS animations */}
       <style jsx global>{`
         @keyframes fade-in-down {
           from {
