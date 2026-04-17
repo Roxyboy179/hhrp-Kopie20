@@ -3593,7 +3593,8 @@ async function handleTransferDebug(request) {
     if (!decoded) {
       return NextResponse.json({ error: 'Ungültiges Token' }, { status: 401 });
     }
-    const userId = decoded.userId;
+    // Token enthält 'id', nicht 'userId'!
+    const userId = decoded.id || decoded.userId;
 
     // Get user data
     const { data: userData, error: userError } = await supabaseAdmin
@@ -3645,7 +3646,8 @@ async function handleTransferMoney(request) {
     if (!decoded) {
       return NextResponse.json({ error: 'Ungültiges Token' }, { status: 401 });
     }
-    const userId = decoded.userId;
+    // Token enthält 'id', nicht 'userId'!
+    const userId = decoded.id || decoded.userId;
     console.log('[TRANSFER] 🔐 User ID aus Token:', userId);
     console.log('[TRANSFER] 🔐 Token Payload:', JSON.stringify(decoded));
 
