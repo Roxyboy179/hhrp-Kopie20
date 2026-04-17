@@ -8,7 +8,6 @@ import AnimatedValue from '@/components/AnimatedValue';
 import Pagination from '@/components/Pagination';
 import { Countdown } from '@/components/Countdown';
 import { PWANotifications } from '@/components/PWANotifications';
-import DecorationShop from '@/components/DecorationShop';
 import { 
   Wallet, CreditCard, Trophy, Gift, User, Award, Clock, TrendingUp, 
   Check, Loader2, FileText, Calendar, Mail, ExternalLink, LayoutDashboard, IdCard, ClipboardList,
@@ -1037,7 +1036,6 @@ export default function ProfilPage() {
     { id: 'benefits', label: 'Meine Vorteile', icon: Gift, hasSubTabs: true },
     { id: 'finance', label: 'Finanzen', icon: Wallet, hasSubTabs: true },
     { id: 'documents', label: 'Dokumente', icon: IdCard, hasSubTabs: true },
-    { id: 'decorations', label: 'Dekorationen', icon: Sparkles, hasSubTabs: true },
     { id: 'marketplace', label: 'Marktplatz', icon: ShoppingCart },
     { id: 'applications', label: 'Bewerbungen', icon: ClipboardList },
     { id: 'settings', label: 'Einstellungen', icon: Settings }
@@ -1057,11 +1055,6 @@ export default function ProfilPage() {
     documents: [
       { id: 'cards', label: 'Ausweise', icon: IdCard },
       { id: 'personalakte', label: 'Personalakte', icon: Award }
-    ],
-    decorations: [
-      { id: 'profile-frames', label: 'Profil Rahmen', icon: ImagePlus },
-      ...(user?.roles?.includes('1494434149623136276') ? [{ id: 'beta-frames', label: 'Beta Tester Rahmen', icon: Shield }] : []),
-      { id: 'profile-effects', label: 'Profil Effekte', icon: Zap }
     ]
   };
 
@@ -3508,58 +3501,6 @@ export default function ProfilPage() {
                 </Button>
               </div>
             )}
-          </div>
-        )}
-
-        {/* DEKORATIONEN TAB */}
-        {activeTab === 'decorations' && (
-          <div className="space-y-6">
-            
-            {/* Profil Rahmen */}
-            {activeSubTab === 'profile-frames' && (
-              <div className="glass rounded-2xl p-6 border border-white/[0.08]">
-                <div className="flex items-center gap-3 mb-6">
-                  <ImagePlus className="w-6 h-6 text-purple-400" />
-                  <div>
-                    <h2 className="text-xl font-bold text-white">Profil Rahmen</h2>
-                    <p className="text-xs text-white/35">Wähle einen Rahmen für dein Profilbild</p>
-                  </div>
-                </div>
-
-                <DecorationShop category="profile-frames" user={user} />
-              </div>
-            )}
-
-            {/* Beta Tester Rahmen */}
-            {activeSubTab === 'beta-frames' && user?.roles?.includes('1494434149623136276') && (
-              <div className="glass rounded-2xl p-6 border border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-pink-500/5">
-                <div className="flex items-center gap-3 mb-6">
-                  <Shield className="w-6 h-6 text-purple-400" />
-                  <div>
-                    <h2 className="text-xl font-bold text-white">Beta Tester Rahmen</h2>
-                    <p className="text-xs text-white/35">Exklusive Rahmen nur für Beta Tester</p>
-                  </div>
-                </div>
-
-                <DecorationShop category="beta-frames" user={user} />
-              </div>
-            )}
-
-            {/* Profil Effekte */}
-            {activeSubTab === 'profile-effects' && (
-              <div className="glass rounded-2xl p-6 border border-white/[0.08]">
-                <div className="flex items-center gap-3 mb-6">
-                  <Zap className="w-6 h-6 text-yellow-400" />
-                  <div>
-                    <h2 className="text-xl font-bold text-white">Profil Effekte</h2>
-                    <p className="text-xs text-white/35">Animationen und Effekte für dein Profil</p>
-                  </div>
-                </div>
-
-                <DecorationShop category="profile-effects" user={user} />
-              </div>
-            )}
-
           </div>
         )}
 
