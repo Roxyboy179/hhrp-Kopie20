@@ -9,21 +9,31 @@ export function BetaTesterRecruitmentModal({ user }) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [betaTesterOpen, setBetaTesterOpen] = useState(false);
+  const [checking, setChecking] = useState(false);
 
   useEffect(() => {
-    checkBetaTesterStatus();
-  }, []);
+    // Warte bis User geladen ist
+    if (user && !checking) {
+      setChecking(true);
+      checkBetaTesterStatus();
+    }
+  }, [user]);
 
   const checkBetaTesterStatus = async () => {
     try {
       const res = await fetch('/api/bewerbung-settings');
       const data = await res.json();
       
+      const isBetaTester = user?.roles?.includes('1494434149623136276');
+      const hasSeenToday = localStorage.getItem('betaTesterPopupSeen') === new Date().toDateString();
+      
       console.log('🔍 Beta Tester Popup Check:', {
         betaTesterOpen: data.settings?.beta_tester_open,
-        user: !!user,
-        isBetaTester: user?.roles?.includes('1494434149623136276'),
-        hasSeenToday: localStorage.getItem('betaTesterPopupSeen') === new Date().toDateString()
+        userExists: !!user,
+        userName: user?.username || user?.globalName,
+        isBetaTester: isBetaTester,
+        hasSeenToday: hasSeenToday,
+        willShow: data.settings?.beta_tester_open && user && !isBetaTester && !hasSeenToday
       });
       
       // Zeige Popup nur wenn:
@@ -31,19 +41,28 @@ export function BetaTesterRecruitmentModal({ user }) {
       // 2. User eingeloggt ist
       // 3. User noch KEIN Beta Tester ist
       // 4. User das Popup heute noch nicht geschlossen hat
-      const isBetaTester = user?.roles?.includes('1494434149623136276');
-      const hasSeenToday = localStorage.getItem('betaTesterPopupSeen') === new Date().toDateString();
-      
       if (data.settings?.beta_tester_open && user && !isBetaTester && !hasSeenToday) {
         setBetaTesterOpen(true);
-        console.log('✅ Beta Tester Popup wird angezeigt');
+        console.log('✅ Beta Tester Popup wird angezeigt in 3 Sekunden');
         // Warte 3 Sekunden bevor Popup erscheint
         setTimeout(() => setIsOpen(true), 3000);
       } else {
         console.log('❌ Beta Tester Popup wird NICHT angezeigt');
+        if (!data.settings?.beta_tester_open) {
+          console.log('  → Grund: Beta Tester Bewerbungen sind GESCHLOSSEN');
+        }
+        if (!user) {
+          console.log('  → Grund: User ist NICHT eingeloggt');
+        }
+        if (isBetaTester) {
+          console.log('  → Grund: User ist BEREITS Beta Tester');
+        }
+        if (hasSeenToday) {
+          console.log('  → Grund: Popup wurde heute bereits gesehen');
+        }
       }
     } catch (e) {
-      console.error('Fehler beim Laden der Beta Tester Settings:', e);
+      console.error('❌ Fehler beim Laden der Beta Tester Settings:', e);
     }
   };
 
