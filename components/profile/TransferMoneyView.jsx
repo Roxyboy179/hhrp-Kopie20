@@ -29,6 +29,10 @@ export function TransferMoneyView({ userData, onTransferComplete }) {
 
   // Bank und VIP Status aus userData
   // userData ist bereits das 'data' Objekt aus der API!
+  console.log('[TRANSFER DEBUG] userData:', userData);
+  console.log('[TRANSFER DEBUG] userData.bank:', userData?.bank);
+  console.log('[TRANSFER DEBUG] userData.vip:', userData?.vip);
+  
   const userBank = userData?.bank || {};
   const bankId = userBank.bankId || 'hamburg_horizon';
   const bank = BANKS[bankId] || BANKS['hamburg_horizon'];
