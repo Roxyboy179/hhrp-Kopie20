@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import webpush from 'web-push';
 import { supabaseAdmin } from '@/lib/supabase';
+import { readStats, writeStats, incrementStat } from '@/lib/stats-file';
 import { 
   createBewerbung, 
   getUserBewerbungen, 
@@ -1530,63 +1531,77 @@ export async function GET(request) {
   // GET /api/stats - Website Statistiken abrufen (öffentlich)
   if (p === 'stats') {
     try {
-      // Prüfe ob Tabelle existiert, wenn nicht, gib Default-Werte zurück
-      const { data, error } = await supabaseAdmin
-        .from('website_stats')
-        .select('*');
-      
       let stats = {
         totalVisits: 0,
         uniqueVisitors: 0,
         appInstalls: 0,
-        pwaUsers: 0
+        pwaUsers: 0,
+        registeredUsers: 0
       };
       
-      if (!error && data) {
-        data?.forEach(stat => {
-          const value = parseInt(stat.metric_value);
-          if (stat.metric_name === 'total_visits') stats.totalVisits = value;
-          if (stat.metric_name === 'unique_visitors') stats.uniqueVisitors = value;
-          if (stat.metric_name === 'app_installs') stats.appInstalls = value;
-          if (stat.metric_name === 'pwa_users') stats.pwaUsers = value;
-        });
+      let source = 'file'; // Default
+      
+      // Versuche ZUERST Supabase
+      try {
+        const { data, error } = await supabaseAdmin
+          .from('website_stats')
+          .select('*');
+        
+        if (!error && data && data.length > 0) {
+          // Supabase funktioniert! Verwende diese Daten
+          data.forEach(stat => {
+            const value = parseInt(stat.metric_value);
+            if (stat.metric_name === 'total_visits') stats.totalVisits = value;
+            if (stat.metric_name === 'unique_visitors') stats.uniqueVisitors = value;
+            if (stat.metric_name === 'app_installs') stats.appInstalls = value;
+            if (stat.metric_name === 'pwa_users') stats.pwaUsers = value;
+          });
+          
+          source = 'supabase';
+          console.log('[Stats] 📊 Daten aus Supabase geladen');
+        } else {
+          throw new Error('Supabase table not found or empty');
+        }
+      } catch (supabaseError) {
+        // Fallback zu File
+        console.log('[Stats] ⚠️ Supabase nicht verfügbar, verwende File');
+        const fileStats = readStats();
+        stats.totalVisits = fileStats.total_visits || 0;
+        stats.uniqueVisitors = fileStats.unique_visitors || 0;
+        stats.appInstalls = fileStats.app_installs || 0;
+        stats.pwaUsers = fileStats.pwa_users || 0;
       }
       
-      // Zähle registrierte User aus user_data Tabelle
-      const { count: registeredUsers } = await supabaseAdmin
-        .from('user_data')
-        .select('*', { count: 'exact', head: true });
-      
-      stats.registeredUsers = registeredUsers || 0;
-      
-      // Optional: Zähle PWA-User auch aus unique_visitors Tabelle
-      const { count: pwaUsersFromTable } = await supabaseAdmin
-        .from('unique_visitors')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_pwa_user', true)
-        .catch(() => ({ count: 0 }));
-      
-      // Verwende den höheren Wert
-      if (pwaUsersFromTable > stats.pwaUsers) {
-        stats.pwaUsers = pwaUsersFromTable;
+      // Registrierte User IMMER aus user_data Tabelle
+      try {
+        const result = await supabaseAdmin
+          .from('user_data')
+          .select('*', { count: 'exact', head: true });
+        
+        stats.registeredUsers = result.count || 0;
+      } catch (e) {
+        console.error('[Stats] User count error:', e);
       }
       
       return NextResponse.json({
         success: true,
-        stats
+        stats,
+        source // Zeigt an, woher die Daten kommen
       });
     } catch (e) {
       console.error('[Stats] Exception:', e);
-      // Fallback bei Fehler
+      // Letzter Fallback: Nur File-Daten
+      const fileStats = readStats();
       return NextResponse.json({
         success: true,
         stats: {
-          totalVisits: 0,
-          uniqueVisitors: 0,
-          appInstalls: 0,
-          pwaUsers: 0,
+          totalVisits: fileStats.total_visits || 0,
+          uniqueVisitors: fileStats.unique_visitors || 0,
+          appInstalls: fileStats.app_installs || 0,
+          pwaUsers: fileStats.pwa_users || 0,
           registeredUsers: 0
-        }
+        },
+        source: 'file'
       });
     }
   }
@@ -2469,81 +2484,115 @@ export async function POST(request) {
       const { visitorId } = body;
       const userAgent = request.headers.get('user-agent') || 'unknown';
       
-      // Track Visitor in unique_visitors Tabelle
-      if (visitorId) {
-        await supabaseAdmin.rpc('track_visitor', {
-          visitor_uuid: visitorId,
-          user_agent_string: userAgent
-        }).catch(err => console.error('[Stats] track_visitor error:', err));
+      // Versuche ZUERST Supabase
+      try {
+        // Track Visitor in unique_visitors Tabelle
+        if (visitorId) {
+          await supabaseAdmin.rpc('track_visitor', {
+            visitor_uuid: visitorId,
+            user_agent_string: userAgent
+          });
+        }
+        
+        // Increment total_visits
+        await supabaseAdmin.rpc('increment_stat', {
+          stat_name: 'total_visits',
+          increment_by: 1
+        });
+        
+        console.log('[Stats] ✅ Visit getrackt (Supabase)');
+        return NextResponse.json({ success: true, source: 'supabase' });
+      } catch (supabaseError) {
+        // Fallback zu File wenn Supabase fehlschlägt
+        console.log('[Stats] ⚠️ Supabase failed, using File fallback');
+        incrementStat('total_visits', 1);
+        console.log('[Stats] ✅ Visit getrackt (File Fallback)');
+        return NextResponse.json({ success: true, source: 'file' });
       }
-      
-      // Increment total_visits
-      await supabaseAdmin.rpc('increment_stat', {
-        stat_name: 'total_visits',
-        increment_by: 1
-      }).catch(err => console.error('[Stats] increment_stat error:', err));
-      
-      return NextResponse.json({ success: true });
     } catch (e) {
       console.error('[Stats] Visit exception:', e);
-      return NextResponse.json({ success: true }); // Silent fail
+      return NextResponse.json({ success: true });
     }
   }
   
   // POST /api/stats/unique-visitor - Track unique visitor
   if (p === 'stats/unique-visitor') {
     try {
-      // Increment unique_visitors counter
-      await supabaseAdmin.rpc('increment_stat', {
-        stat_name: 'unique_visitors',
-        increment_by: 1
-      }).catch(err => console.error('[Stats] increment error:', err));
-      
-      return NextResponse.json({ success: true });
+      // Versuche ZUERST Supabase
+      try {
+        await supabaseAdmin.rpc('increment_stat', {
+          stat_name: 'unique_visitors',
+          increment_by: 1
+        });
+        
+        console.log('[Stats] ✅ Unique Visitor getrackt (Supabase)');
+        return NextResponse.json({ success: true, source: 'supabase' });
+      } catch (supabaseError) {
+        // Fallback zu File
+        incrementStat('unique_visitors', 1);
+        console.log('[Stats] ✅ Unique Visitor getrackt (File Fallback)');
+        return NextResponse.json({ success: true, source: 'file' });
+      }
     } catch (e) {
       console.error('[Stats] Unique visitor exception:', e);
-      return NextResponse.json({ success: true }); // Silent fail
+      return NextResponse.json({ success: true });
     }
   }
   
-  // POST /api/stats/pwa-session - Track PWA user session (NEU!)
+  // POST /api/stats/pwa-session - Track PWA user session
   if (p === 'stats/pwa-session') {
     try {
       const body = await request.json();
       const { visitorId } = body;
       
-      // Markiere User als PWA-User
-      if (visitorId) {
-        await supabaseAdmin.rpc('mark_as_pwa_user', {
-          visitor_uuid: visitorId
-        }).catch(err => console.error('[Stats] mark_as_pwa_user error:', err));
+      // Versuche ZUERST Supabase
+      try {
+        if (visitorId) {
+          await supabaseAdmin.rpc('mark_as_pwa_user', {
+            visitor_uuid: visitorId
+          });
+        }
+        
+        await supabaseAdmin.rpc('increment_stat', {
+          stat_name: 'pwa_users',
+          increment_by: 1
+        });
+        
+        console.log('[Stats] ✅ PWA-Session getrackt (Supabase)');
+        return NextResponse.json({ success: true, source: 'supabase' });
+      } catch (supabaseError) {
+        // Fallback zu File
+        incrementStat('pwa_users', 1);
+        console.log('[Stats] ✅ PWA-Session getrackt (File Fallback)');
+        return NextResponse.json({ success: true, source: 'file' });
       }
-      
-      // Increment pwa_users counter
-      await supabaseAdmin.rpc('increment_stat', {
-        stat_name: 'pwa_users',
-        increment_by: 1
-      }).catch(err => console.error('[Stats] increment error:', err));
-      
-      return NextResponse.json({ success: true });
     } catch (e) {
       console.error('[Stats] PWA session exception:', e);
-      return NextResponse.json({ success: true }); // Silent fail
+      return NextResponse.json({ success: true });
     }
   }
   
   // POST /api/stats/app-install - Track PWA installation
   if (p === 'stats/app-install') {
     try {
-      await supabaseAdmin.rpc('increment_stat', {
-        stat_name: 'app_installs',
-        increment_by: 1
-      }).catch(err => console.error('[Stats] increment error:', err));
-      
-      return NextResponse.json({ success: true });
+      // Versuche ZUERST Supabase
+      try {
+        await supabaseAdmin.rpc('increment_stat', {
+          stat_name: 'app_installs',
+          increment_by: 1
+        });
+        
+        console.log('[Stats] ✅ App Install getrackt (Supabase)');
+        return NextResponse.json({ success: true, source: 'supabase' });
+      } catch (supabaseError) {
+        // Fallback zu File
+        incrementStat('app_installs', 1);
+        console.log('[Stats] ✅ App Install getrackt (File Fallback)');
+        return NextResponse.json({ success: true, source: 'file' });
+      }
     } catch (e) {
       console.error('[Stats] App install exception:', e);
-      return NextResponse.json({ success: true }); // Silent fail
+      return NextResponse.json({ success: true });
     }
   }
 
