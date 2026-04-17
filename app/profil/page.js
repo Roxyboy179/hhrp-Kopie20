@@ -34,6 +34,7 @@ import {
 } from 'recharts';
 import { KrediteDetailView, FinanzStatistikenView } from '@/components/profile/FinanceTabsContent';
 import { ErweiterteTransaktionenView, SparkontoManagementView } from '@/components/profile/FinanceTabsContent2';
+import { TransferMoneyView } from '@/components/profile/TransferMoneyView';
 
 function SkeletonCard({ className = "" }) {
   return (
@@ -1293,6 +1294,7 @@ export default function ProfilPage() {
 
   const tabs = [
     { id: 'overview', label: 'Übersicht', icon: LayoutDashboard },
+    { id: 'transfer', label: 'Überweisung', icon: ArrowLeftRight },
     { id: 'cards', label: 'Meine Dokumente', icon: IdCard },
     { id: 'transactions', label: 'Transaktionen', icon: TrendingUp },
     { id: 'invoices', label: 'Meine Rechnungen', icon: FileText },
@@ -2715,6 +2717,17 @@ export default function ProfilPage() {
               );
             })()}
           </div>
+        )}
+
+        {/* Überweisung Tab */}
+        {activeTab === 'transfer' && (
+          <TransferMoneyView 
+            userData={userData}
+            onTransferComplete={() => {
+              // Reload data nach erfolgreicher Überweisung
+              loadData();
+            }}
+          />
         )}
 
         {/* Statistiken Tab - NEU */}
