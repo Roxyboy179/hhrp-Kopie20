@@ -37,6 +37,20 @@ export function ShopView({ user, userData, onRefresh }) {
   const [pinError, setPinError] = useState('');
   const [pendingPurchase, setPendingPurchase] = useState(null);
 
+  // Deaktiviere Body Scroll wenn Modal offen ist
+  useEffect(() => {
+    if (showCart || showPinModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    // Cleanup
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showCart, showPinModal]);
+
   // Icon Mapping für Items
   const itemIcons = {
     'führerschein_pkw': Car,
