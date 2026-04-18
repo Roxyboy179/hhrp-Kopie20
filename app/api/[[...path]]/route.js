@@ -2741,6 +2741,7 @@ export async function POST(request) {
     case 'shop/purchase': return handleShopPurchase(request);
     case 'shop/purchase-credits': return handlePurchaseCredits(request);
     case 'shop/upgrade-bank-limit': return handleUpgradeBankLimit(request);
+    case 'shop/gift': return handleGiftItem(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
@@ -4135,4 +4136,107 @@ async function handleUpgradeBankLimit(request) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
+
+// POST /api/shop/gift - Item an anderen User verschenken
+async function handleGiftItem(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const { itemId, recipientUsername, price } = await request.json();
+
+    if (!itemId || !recipientUsername || !price) {
+      return NextResponse.json({ error: 'Fehlende Daten' }, { status: 400 });
+    }
+
+    const item = SHOP_ITEMS[itemId];
+    if (!item) {
+      return NextResponse.json({ error: 'Item nicht gefunden' }, { status: 404 });
+    }
+
+    // Hole Sender User Data
+    const { data: senderData, error: senderFetchError } = await supabaseAdmin
+      .from('user_data')
+      .select('*')
+      .eq('discord_user_id', user.id)
+      .single();
+
+    if (senderFetchError || !senderData) {
+      return NextResponse.json({ error: 'User nicht gefunden' }, { status: 404 });
+    }
+
+    const senderDataObj = typeof senderData.data === 'string' 
+      ? JSON.parse(senderData.data) 
+      : senderData.data;
+
+    const senderBalance = senderDataObj?.money?.bank || 0;
+
+    // Prüfe Guthaben
+    if (senderBalance < price) {
+      return NextResponse.json({ 
+        error: 'Nicht genug Guthaben',
+        required: price,
+        current: senderBalance
+      }, { status: 400 });
+    }
+
+    // Finde Empfänger anhand Username
+    const { data: recipientData, error: recipientFetchError } = await supabaseAdmin
+      .from('user_data')
+      .select('*')
+      .ilike('discord_username', recipientUsername.trim());
+
+    if (recipientFetchError || !recipientData || recipientData.length === 0) {
+      return NextResponse.json({ error: `Benutzer "${recipientUsername}" nicht gefunden` }, { status: 404 });
+    }
+
+    const recipient = recipientData[0];
+
+    // Prüfe ob man sich selbst etwas schenken will
+    if (recipient.discord_user_id === user.id) {
+      return NextResponse.json({ error: 'Du kannst dir nicht selbst etwas schenken' }, { status: 400 });
+    }
+
+    // Erstelle Geschenk-Kauf (buyer ist der Schenker, aber recipient_id wird gesetzt)
+    const { data: purchase, error: insertError } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .insert({
+        buyer_discord_id: user.id, // Der Zahler
+        recipient_discord_id: recipient.discord_user_id, // Der Empfänger
+        item_id: itemId,
+        item_name: item.name,
+        item_category: item.category,
+        price: price,
+        status: 'pending',
+        initiated_from: 'website',
+        is_gift: true
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Gift insert error:', insertError);
+      return NextResponse.json({ error: 'Fehler beim Erstellen des Geschenks' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `${item.name} wird an ${recipientUsername} verschenkt...`,
+      purchase: {
+        id: purchase.id,
+        itemName: item.name,
+        recipient: recipientUsername,
+        price: price,
+        status: 'pending'
+      }
+    });
+
+  } catch (e) {
+    console.error('Gift item error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
 

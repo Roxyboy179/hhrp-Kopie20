@@ -30,9 +30,15 @@ export function ShopView({ user, userData, onRefresh }) {
   const [pinError, setPinError] = useState('');
   const [pendingPurchase, setPendingPurchase] = useState(null);
 
+  // Verschenken Modal State
+  const [showGiftModal, setShowGiftModal] = useState(false);
+  const [giftItemId, setGiftItemId] = useState(null);
+  const [giftUsername, setGiftUsername] = useState('');
+  const [giftUsernameError, setGiftUsernameError] = useState('');
+
   // Deaktiviere Body Scroll wenn Modal offen ist
   useEffect(() => {
-    if (showCart || showPinModal) {
+    if (showCart || showPinModal || showGiftModal) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -237,6 +243,63 @@ export function ShopView({ user, userData, onRefresh }) {
     } finally {
       setPurchasing(false);
       setPendingPurchase(null);
+    }
+  };
+
+  // Verschenken-Funktionen
+  const openGiftModal = (itemId) => {
+    setGiftItemId(itemId);
+    setGiftUsername('');
+    setGiftUsernameError('');
+    setShowGiftModal(true);
+  };
+
+  const executeGift = async () => {
+    if (!giftUsername || giftUsername.trim().length < 3) {
+      setGiftUsernameError('Benutzername muss mindestens 3 Zeichen haben');
+      return;
+    }
+
+    // PIN validieren
+    const isValid = await validatePin();
+    if (!isValid) return;
+
+    setPurchasing(true);
+    setShowPinModal(false);
+    setShowGiftModal(false);
+
+    try {
+      const item = shopItems[giftItemId];
+      const itemPrice = calculatePrice(item.price, giftItemId);
+
+      const res = await fetch('/api/shop/gift', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          itemId: giftItemId,
+          recipientUsername: giftUsername.trim(),
+          price: itemPrice
+        })
+      });
+
+      const data = await res.json();
+      
+      if (res.ok) {
+        toast.success(`${item.name} an ${giftUsername} verschenkt!`);
+        setGiftItemId(null);
+        setGiftUsername('');
+        
+        setTimeout(() => {
+          if (onRefresh) onRefresh();
+        }, 2000);
+      } else {
+        toast.error(data.error || 'Fehler beim Verschenken');
+      }
+    } catch (e) {
+      console.error('[GIFT] Error:', e);
+      toast.error('Fehler beim Verschenken');
+    } finally {
+      setPurchasing(false);
     }
   };
 
@@ -555,37 +618,56 @@ export function ShopView({ user, userData, onRefresh }) {
                       <span className="text-white font-bold">{originalPrice.toLocaleString('de-DE')}€</span>
                     )}
                   </div>
-                  <Button
-                    onClick={() => addToCart(id)}
-                    disabled={hasItem || isLowerVIP}
-                    size="sm"
-                    className="rounded-lg"
-                    style={{
-                      background: (hasItem || isLowerVIP)
-                        ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.3), rgba(80, 80, 80, 0.2))'
-                        : 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      color: (hasItem || isLowerVIP) ? 'rgba(255, 255, 255, 0.4)' : '#fff',
-                      cursor: (hasItem || isLowerVIP) ? 'not-allowed' : 'pointer'
-                    }}
-                  >
-                    {hasItem ? (
-                      <>
-                        <Check className="w-4 h-4 mr-1" />
-                        Gekauft
-                      </>
-                    ) : isLowerVIP ? (
-                      <>
-                        <Lock className="w-4 h-4 mr-1" />
-                        Gesperrt
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="w-4 h-4 mr-1" />
-                        Hinzufügen
-                      </>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => addToCart(id)}
+                      disabled={hasItem || isLowerVIP}
+                      size="sm"
+                      className="rounded-lg"
+                      style={{
+                        background: (hasItem || isLowerVIP)
+                          ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.3), rgba(80, 80, 80, 0.2))'
+                          : 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        color: (hasItem || isLowerVIP) ? 'rgba(255, 255, 255, 0.4)' : '#fff',
+                        cursor: (hasItem || isLowerVIP) ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {hasItem ? (
+                        <>
+                          <Check className="w-4 h-4 mr-1" />
+                          Gekauft
+                        </>
+                      ) : isLowerVIP ? (
+                        <>
+                          <Lock className="w-4 h-4 mr-1" />
+                          Gesperrt
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4 mr-1" />
+                          Warenkorb
+                        </>
+                      )}
+                    </Button>
+                    
+                    {/* Verschenken Button */}
+                    {!hasItem && !isLowerVIP && (
+                      <Button
+                        onClick={() => openGiftModal(id)}
+                        size="sm"
+                        className="rounded-lg"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(126, 34, 206, 0.3))',
+                          border: '1px solid rgba(147, 51, 234, 0.4)',
+                          color: '#fff'
+                        }}
+                        title="Item verschenken"
+                      >
+                        <Heart className="w-4 h-4" />
+                      </Button>
                     )}
-                  </Button>
+                  </div>
                 </div>
               </div>
             );
@@ -782,26 +864,139 @@ export function ShopView({ user, userData, onRefresh }) {
                   Abbrechen
                 </Button>
                 <Button
-                  onClick={executePurchase}
+                  onClick={pendingPurchase?.type === 'gift' ? executeGift : executePurchase}
                   disabled={purchasing || !pin}
                   className="flex-1 rounded-xl"
                   style={{
-                    background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.3))',
-                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                    background: pendingPurchase?.type === 'gift'
+                      ? 'linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(126, 34, 206, 0.3))'
+                      : 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.3))',
+                    border: pendingPurchase?.type === 'gift'
+                      ? '1px solid rgba(147, 51, 234, 0.4)'
+                      : '1px solid rgba(34, 197, 94, 0.3)',
                     color: '#fff'
                   }}
                 >
                   {purchasing ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Kaufe...
+                      {pendingPurchase?.type === 'gift' ? 'Verschenke...' : 'Kaufe...'}
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 className="w-4 h-4 mr-2" />
-                      Bestätigen
+                      {pendingPurchase?.type === 'gift' ? (
+                        <>
+                          <Heart className="w-4 h-4 mr-2" />
+                          Verschenken
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                          Bestätigen
+                        </>
+                      )}
                     </>
                   )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Verschenken Modal - Überweisung-Stil mit Portal */}
+      {showGiftModal && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div 
+            className="w-full max-w-md rounded-2xl border p-6 shadow-2xl"
+            style={{
+              background: 'linear-gradient(135deg, rgba(40, 40, 40, 0.95), rgba(20, 20, 20, 0.98))',
+              borderColor: 'rgba(255, 255, 255, 0.15)'
+            }}
+          >
+            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <Heart className="w-5 h-5 text-purple-400" />
+              Item verschenken
+            </h3>
+            
+            <p className="text-sm text-white/60 mb-6">
+              Gib den Benutzernamen des Empfängers ein. Der Preis wird von deinem Konto abgezogen.
+            </p>
+
+            <div className="space-y-4">
+              {/* Item Info */}
+              {giftItemId && shopItems[giftItemId] && (
+                <div 
+                  className="p-3 rounded-xl border"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
+                    borderColor: 'rgba(255, 255, 255, 0.08)'
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-white font-medium">{shopItems[giftItemId].name}</span>
+                    <span className="text-green-400 font-bold">
+                      {calculatePrice(shopItems[giftItemId].price, giftItemId).toLocaleString('de-DE')}€
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <Label className="text-white/70 mb-2 block">Benutzername des Empfängers</Label>
+                <Input
+                  type="text"
+                  value={giftUsername}
+                  onChange={(e) => {
+                    setGiftUsername(e.target.value);
+                    setGiftUsernameError('');
+                  }}
+                  placeholder="z.B. MaxMustermann"
+                  className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/25 h-12"
+                  autoFocus
+                />
+                {giftUsernameError && (
+                  <div className="flex items-center gap-2 text-red-400 text-sm mt-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>{giftUsernameError}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => {
+                    setShowGiftModal(false);
+                    setGiftItemId(null);
+                    setGiftUsername('');
+                    setGiftUsernameError('');
+                  }}
+                  variant="outline"
+                  className="flex-1 rounded-xl"
+                  disabled={purchasing}
+                >
+                  Abbrechen
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (!giftUsername || giftUsername.trim().length < 3) {
+                      setGiftUsernameError('Benutzername muss mindestens 3 Zeichen haben');
+                      return;
+                    }
+                    setShowGiftModal(false);
+                    openPinModal({ type: 'gift' });
+                  }}
+                  disabled={purchasing || !giftUsername}
+                  className="flex-1 rounded-xl"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(126, 34, 206, 0.3))',
+                    border: '1px solid rgba(147, 51, 234, 0.4)',
+                    color: '#fff'
+                  }}
+                >
+                  <Heart className="w-4 h-4 mr-2" />
+                  Weiter
                 </Button>
               </div>
             </div>
