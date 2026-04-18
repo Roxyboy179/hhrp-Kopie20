@@ -2,146 +2,127 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { GlassCard } from '@/components/shared/GlassCard';
+import { AdminCard, AdminCardHeader } from '@/components/admin/AdminCard';
+import { AdminStatCard } from '@/components/admin/AdminStatCard';
+import { AdminTable, AdminTableHeader, AdminTableBody, AdminTableRow, AdminTableHead, AdminTableCell } from '@/components/admin/AdminTable';
+import { AdminModal } from '@/components/admin/AdminModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
+import { useAdminAuth } from '@/components/providers/AdminAuthProvider';
 import { 
-  Loader2, UserPlus, Trash2, RefreshCw, Shield, AlertTriangle,
-  Search, CheckCircle2, XCircle, Eye, EyeOff, Ban, CheckCheck
+  Users, UserPlus, RefreshCw, Loader2, Shield, 
+  Search, Trash2, AlertCircle, CheckCircle, Eye, EyeOff
 } from 'lucide-react';
+import { toast } from 'sonner';
 
-const inputClass = "bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-blue-500/40 focus:ring-blue-500/20 rounded-xl";
-
-function formatDate(dateStr) {
-  if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-}
+const inputClass = "bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-blue-500/40 rounded-xl";
 
 function getRoleBadgeColor(roleName) {
-  switch (roleName) {
-    case 'Projektinhaber': return 'bg-red-500/20 text-red-300 border-red-500/30';
-    case 'Stl. Projektinhaber': return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
-    case 'Teamkoordination': return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
-    case 'Qualitätsmanagement': return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
-    case 'Teamvertretung': return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-    case 'Teamleitung': return 'bg-green-500/20 text-green-300 border-green-500/30';
-    case 'Stl. Teamleitung': return 'bg-teal-500/20 text-teal-300 border-teal-500/30';
-    default: return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
-  }
+  const colors = {
+    'Projektinhaber': 'bg-red-500/20 text-red-300 border-red-500/30',
+    'Stl. Projektinhaber': 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+    'Teamkoordination': 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+    'Qualitätsmanagement': 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+    'Teamvertretung': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    'Teamleitung': 'bg-green-500/20 text-green-300 border-green-500/30',
+    'Stl. Teamleitung': 'bg-teal-500/20 text-teal-300 border-teal-500/30',
+  };
+  return colors[roleName] || 'bg-gray-500/20 text-gray-300 border-gray-500/30';
 }
 
-export default function AdminAccountsPage() {
+export default function AccountsPage() {
   const router = useRouter();
-  const [admin, setAdmin] = useState(null);
+  const { admin, loading } = useAdminAuth();
   const [accounts, setAccounts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [filtered, setFiltered] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Create Modal
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [formData, setFormData] = useState({
     discordUserId: '',
     mitarbeiterNummer: '',
     email: '',
     password: ''
   });
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
-  
-  // Discord-Rolle prüfen State
+  const [showPassword, setShowPassword] = useState(false);
   const [checkingRole, setCheckingRole] = useState(false);
   const [detectedUser, setDetectedUser] = useState(null);
-  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch('/api/admin/me');
-        const data = await res.json();
-        if (!data.admin) {
-          router.push('/admin');
-          return;
-        }
-        // Nur Projektinhaber und Stl. Projektinhaber dürfen Accounts sehen
-        if (!data.admin.canCreateAccounts && data.admin.roleLevel < 3) {
-          toast.error('Keine Berechtigung', { 
-            description: 'Du hast keine Berechtigung, Accounts zu verwalten.' 
-          });
-          router.push('/admin');
-          return;
-        }
-        setAdmin(data.admin);
-        await fetchAccounts();
-      } catch (e) {
-        console.error(e);
-        setLoading(false);
-      }
-    })();
-  }, []);
+    if (!loading && !admin) {
+      router.push('/admin');
+      return;
+    }
+    if (!admin?.canSeeAll && admin?.roleLevel < 3) {
+      toast.error('Keine Berechtigung', { description: 'Mindestens Level 3 erforderlich' });
+      router.push('/admin');
+      return;
+    }
+  }, [admin, loading, router]);
 
   const fetchAccounts = async () => {
-    setLoading(true);
+    setIsLoading(true);
     try {
       const res = await fetch('/api/admin/accounts');
       const data = await res.json();
-      // Nach Rang sortieren (höchster zuerst)
-      const roleOrder = {
-        'Projektinhaber': 1,
-        'Stl. Projektinhaber': 2,
-        'Teamkoordination': 3,
-        'Qualitätsmanagement': 4,
-        'Teamvertretung': 5,
-        'Teamleitung': 6,
-        'Stl. Teamleitung': 7,
-      };
-      const sorted = (data.accounts || []).sort((a, b) => {
-        const orderA = roleOrder[a.roleName] || 99;
-        const orderB = roleOrder[b.roleName] || 99;
-        return orderA - orderB;
-      });
-      setAccounts(sorted);
+      setAccounts(data.accounts || []);
+      setFiltered(data.accounts || []);
     } catch (e) {
       console.error(e);
+      toast.error('Fehler beim Laden der Accounts');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  // Discord User ID eingeben -> Rolle automatisch prüfen
-  const checkDiscordRole = async (userId) => {
-    if (!userId || userId.length < 15) {
-      setDetectedUser(null);
+  useEffect(() => {
+    if (admin && (admin.canSeeAll || admin.roleLevel >= 3)) {
+      fetchAccounts();
+    }
+  }, [admin]);
+
+  useEffect(() => {
+    if (!searchTerm) {
+      setFiltered(accounts);
       return;
     }
+    const filtered = accounts.filter(acc => 
+      acc.discordUsername?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      acc.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      acc.mitarbeiterNummer?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFiltered(filtered);
+  }, [searchTerm, accounts]);
+
+  const checkDiscordRole = async (userId) => {
+    if (!userId || userId.length < 15) return;
     
     setCheckingRole(true);
     try {
-      const res = await fetch('/api/admin/check-role', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ discordUserId: userId })
-      });
+      const res = await fetch(`/api/admin/check-discord-role?userId=${userId}`);
       const data = await res.json();
       
-      if (data.found) {
-        setDetectedUser(data);
-        if (data.hasTeamRole) {
-          toast.success('Discord-Benutzer gefunden', {
-            description: `${data.globalName} - Rolle: ${data.role.name}`,
+      if (res.ok) {
+        setDetectedUser(data.user);
+        if (data.user.hasTeamRole) {
+          toast.success('Benutzer gefunden!', { 
+            description: `${data.user.username} - ${data.user.roleName}` 
           });
         } else {
-          toast.error('Keine Team-Rolle', {
-            description: `${data.globalName} hat keine Team-Rolle auf dem Discord-Server.`,
+          toast.warning('Keine Team-Rolle', { 
+            description: 'Dieser Benutzer hat keine Team-Rolle' 
           });
         }
       } else {
+        toast.error('Fehler', { description: data.error });
         setDetectedUser(null);
-        toast.error('Nicht gefunden', {
-          description: 'Benutzer nicht auf dem Discord-Server gefunden.',
-        });
       }
     } catch (e) {
-      console.error(e);
+      toast.error('Fehler', { description: 'Konnte Discord-Rolle nicht prüfen' });
       setDetectedUser(null);
     } finally {
       setCheckingRole(false);
@@ -152,425 +133,391 @@ export default function AdminAccountsPage() {
     e.preventDefault();
     
     if (!detectedUser?.hasTeamRole) {
-      toast.error('Keine Team-Rolle', {
-        description: 'Der Benutzer muss eine Team-Rolle auf dem Discord-Server haben.',
-      });
+      toast.error('Fehler', { description: 'Benutzer muss eine Team-Rolle haben' });
       return;
     }
-    
-    setSubmitting(true);
-    setError('');
+
+    setCreating(true);
     try {
-      const res = await fetch('/api/admin/accounts', {
+      const res = await fetch('/api/admin/create-account', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          roleId: detectedUser.roleId,
+          roleName: detectedUser.roleName,
+          roleLevel: detectedUser.roleLevel,
+          discordUsername: detectedUser.username,
+          avatar: detectedUser.avatar
+        })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      
-      toast.success('Account erstellt', {
-        description: `${detectedUser.globalName} (${data.detectedRole}) wurde erfolgreich angelegt.`,
-      });
-      
-      await fetchAccounts();
-      setShowForm(false);
-      setFormData({ discordUserId: '', mitarbeiterNummer: '', email: '', password: '' });
-      setDetectedUser(null);
-    } catch (e) {
-      setError(e.message);
-      toast.error('Fehler', { description: e.message });
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
-  const handleDelete = async (id, name) => {
-    setDeleteConfirm(null);
-    try {
-      const res = await fetch(`/api/admin/accounts/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+
       if (res.ok) {
-        toast.success('Account gelöscht', {
-          description: `${name} wurde erfolgreich gelöscht.`,
+        toast.success('Account erstellt!', { 
+          description: `${formData.mitarbeiterNummer} wurde angelegt` 
         });
-        await fetchAccounts();
+        setShowCreateModal(false);
+        setFormData({ discordUserId: '', mitarbeiterNummer: '', email: '', password: '' });
+        setDetectedUser(null);
+        fetchAccounts();
       } else {
-        toast.error('Fehler', { description: 'Account konnte nicht gelöscht werden.' });
+        throw new Error(data.error || 'Fehler beim Erstellen');
       }
     } catch (e) {
-      console.error(e);
-      toast.error('Fehler', { description: 'Account konnte nicht gelöscht werden.' });
+      toast.error('Fehler', { description: e.message });
+    } finally {
+      setCreating(false);
     }
   };
-  
-  const handleToggleStatus = async (id, currentStatus, name) => {
-    const newStatus = !currentStatus;
+
+  const handleDelete = async (accountId, username) => {
+    if (!confirm(`Account "${username}" wirklich löschen?`)) return;
+
     try {
-      const res = await fetch(`/api/admin/accounts/${id}/toggle-status`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isActive: newStatus })
+      const res = await fetch(`/api/admin/accounts/${accountId}`, {
+        method: 'DELETE'
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      
-      toast.success(
-        newStatus ? 'Account aktiviert' : 'Account deaktiviert',
-        { description: newStatus 
-          ? `${name} wurde aktiviert.` 
-          : `${name} wurde deaktiviert und wird automatisch abgemeldet.` 
-        }
-      );
-      
-      await fetchAccounts();
+
+      if (res.ok) {
+        toast.success('Account gelöscht');
+        fetchAccounts();
+      } else {
+        throw new Error('Fehler beim Löschen');
+      }
     } catch (e) {
       toast.error('Fehler', { description: e.message });
     }
   };
 
-  if (loading) {
+  if (loading || !admin) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex items-center justify-center h-screen">
         <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
       </div>
     );
   }
 
+  const canCreate = admin.canCreateAccounts;
+  const stats = {
+    total: accounts.length,
+    level4: accounts.filter(a => a.roleLevel === 4).length,
+    level3: accounts.filter(a => a.roleLevel === 3).length,
+    level2: accounts.filter(a => a.roleLevel === 2).length,
+    level1: accounts.filter(a => a.roleLevel === 1).length
+  };
+
   return (
     <div className="p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Admin Accounts</h1>
-          <p className="text-white/40 text-sm mt-1">
-            {accounts.length} Accounts insgesamt
-            {admin?.canCreateAccounts && (
-              <span className="ml-2 text-green-400">| Du kannst Accounts erstellen</span>
-            )}
-          </p>
+          <h1 className="text-3xl font-bold text-white">Admin Accounts</h1>
+          <p className="text-white/60 text-sm mt-1">{filtered.length} von {accounts.length} Accounts</p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={fetchAccounts} 
+          <Button
+            variant="outline"
+            onClick={fetchAccounts}
+            disabled={isLoading}
             className="gap-2 rounded-xl border-white/10"
           >
-            <RefreshCw className="w-4 h-4" /> Aktualisieren
+            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Aktualisieren
           </Button>
-          {admin?.canCreateAccounts && (
-            <Button 
-              onClick={() => { setShowForm(!showForm); setDetectedUser(null); setError(''); }} 
+          {canCreate && (
+            <Button
+              onClick={() => setShowCreateModal(true)}
               className="bg-blue-600 hover:bg-blue-700 rounded-xl gap-2"
             >
-              <UserPlus className="w-4 h-4" /> Account erstellen
+              <UserPlus className="w-4 h-4" />
+              Account erstellen
             </Button>
           )}
         </div>
       </div>
 
-      {/* Rechte-Info */}
-      <GlassCard className="p-4">
-        <h4 className="text-sm font-semibold text-blue-300 mb-2">Rollen & Berechtigungen</h4>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-red-400"></span>
-            <span className="text-white/60">Projektinhaber (Lv.4) - Vollzugriff</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-orange-400"></span>
-            <span className="text-white/60">Stl. Projektinhaber (Lv.3) - Alles sehen</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-yellow-400"></span>
-            <span className="text-white/60">Teamkoordination (Lv.2) - Alles sehen</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-400"></span>
-            <span className="text-white/60">Teamleitung (Lv.1) - Eingeschränkt</span>
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <AdminStatCard icon={Users} label="Gesamt" value={stats.total} color="blue" />
+        <AdminStatCard icon={Shield} label="Level 4" value={stats.level4} color="red" />
+        <AdminStatCard icon={Shield} label="Level 3" value={stats.level3} color="orange" />
+        <AdminStatCard icon={Shield} label="Level 2" value={stats.level2} color="yellow" />
+        <AdminStatCard icon={Shield} label="Level 1" value={stats.level1} color="green" />
+      </div>
+
+      {/* Info Card */}
+      <AdminCard className="p-4">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="text-white/80 font-medium mb-1">Rollen & Berechtigungen</p>
+            <p className="text-white/60">
+              Level 4 (Projektinhaber) = Vollzugriff • Level 3 (Stl. Projektinhaber) = Alles sehen • 
+              Level 2 (Teamkoordination) = Alles sehen • Level 1 (Teamleitung) = Eingeschränkt
+            </p>
           </div>
         </div>
-      </GlassCard>
+      </AdminCard>
 
-      {/* Account-Erstellung mit Auto-Rollen-Erkennung */}
-      {showForm && admin?.canCreateAccounts && (
-        <GlassCard className="p-6">
-          <h3 className="text-lg font-bold mb-4">Neuen Admin Account erstellen</h3>
-          <p className="text-white/40 text-sm mb-4">
-            Die Discord-Rolle wird automatisch erkannt. Nur Benutzer mit einer Team-Rolle können einen Account erhalten.
-          </p>
-          
-          <form onSubmit={handleCreate} className="space-y-5">
-            {/* Discord User ID mit Rollenprüfung */}
-            <div className="space-y-2">
-              <Label className="text-white/60 text-sm">Discord User ID</Label>
-              <div className="flex gap-2">
-                <Input 
-                  value={formData.discordUserId} 
-                  onChange={e => {
-                    setFormData({...formData, discordUserId: e.target.value});
-                    setDetectedUser(null);
-                  }} 
-                  placeholder="123456789012345678" 
-                  className={`${inputClass} flex-1`} 
-                  required 
-                />
-                <Button 
-                  type="button"
-                  onClick={() => checkDiscordRole(formData.discordUserId)}
-                  disabled={checkingRole || !formData.discordUserId || formData.discordUserId.length < 15}
-                  className="bg-[#5865F2] hover:bg-[#4752C4] rounded-xl shrink-0"
-                >
-                  {checkingRole ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Search className="w-4 h-4 mr-1" /> Prüfen
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
+      {/* Search */}
+      <AdminCard className="p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+          <Input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Nach Username, Email oder MA-Nummer suchen..."
+            className={`pl-10 ${inputClass}`}
+          />
+        </div>
+      </AdminCard>
 
-            {/* Erkannter Benutzer */}
-            {detectedUser && (
-              <div className={`p-4 rounded-xl border ${detectedUser.hasTeamRole 
-                ? 'bg-green-500/10 border-green-500/20' 
-                : 'bg-red-500/10 border-red-500/20'}`}
-              >
+      {/* Table */}
+      <AdminTable>
+        <AdminTableHeader>
+          <AdminTableRow>
+            <AdminTableHead>Benutzer</AdminTableHead>
+            <AdminTableHead>MA-Nummer</AdminTableHead>
+            <AdminTableHead>Rolle</AdminTableHead>
+            <AdminTableHead>Level</AdminTableHead>
+            <AdminTableHead>Berechtigungen</AdminTableHead>
+            {canCreate && <AdminTableHead>Aktionen</AdminTableHead>}
+          </AdminTableRow>
+        </AdminTableHeader>
+        <AdminTableBody>
+          {filtered.map((acc) => (
+            <AdminTableRow key={acc.id}>
+              <AdminTableCell>
                 <div className="flex items-center gap-3">
-                  {detectedUser.avatar ? (
+                  {acc.avatar ? (
                     <img 
-                      src={`https://cdn.discordapp.com/avatars/${formData.discordUserId}/${detectedUser.avatar}.png?size=64`} 
-                      alt="" 
-                      className="w-10 h-10 rounded-full ring-2 ring-white/20" 
+                      src={`https://cdn.discordapp.com/avatars/${acc.discordUserId}/${acc.avatar}.png?size=64`}
+                      alt=""
+                      className="w-8 h-8 rounded-full ring-2 ring-white/10"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-[#5865F2] flex items-center justify-center">
-                      <Shield className="w-5 h-5 text-white" />
+                    <div className="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center">
+                      <Users className="w-4 h-4 text-blue-400" />
                     </div>
                   )}
                   <div>
-                    <p className="font-semibold text-sm">{detectedUser.globalName}</p>
-                    <p className="text-white/40 text-xs">@{detectedUser.username}</p>
-                  </div>
-                  <div className="ml-auto">
-                    {detectedUser.hasTeamRole ? (
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-green-400" />
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${getRoleBadgeColor(detectedUser.role.name)}`}>
-                          {detectedUser.role.name} (Lv.{detectedUser.role.level})
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <XCircle className="w-4 h-4 text-red-400" />
-                        <span className="text-red-300 text-xs">Keine Team-Rolle</span>
-                      </div>
-                    )}
+                    <div className="font-medium text-white">{acc.discordUsername}</div>
+                    <div className="text-xs text-white/60">{acc.email}</div>
                   </div>
                 </div>
-                {detectedUser.hasTeamRole && (
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-white/50">
-                    <div>Accounts erstellen: {detectedUser.role.canCreateAccounts ? '✅ Ja' : '❌ Nein'}</div>
-                    <div>Alles sehen: {detectedUser.role.canSeeAll ? '✅ Ja' : '❌ Nein'}</div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-white/60 text-sm">Mitarbeiter Nummer</Label>
-                <Input 
-                  value={formData.mitarbeiterNummer} 
-                  onChange={e => setFormData({...formData, mitarbeiterNummer: e.target.value})} 
-                  placeholder="MA-002" 
-                  className={inputClass} 
-                  required 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-white/60 text-sm">E-Mail</Label>
-                <Input 
-                  type="email"
-                  value={formData.email} 
-                  onChange={e => setFormData({...formData, email: e.target.value})} 
-                  placeholder="email@example.com" 
-                  className={inputClass} 
-                  required 
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label className="text-white/60 text-sm">Passwort</Label>
-                <div className="relative">
-                  <Input 
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password} 
-                    onChange={e => setFormData({...formData, password: e.target.value})} 
-                    placeholder="Sicheres Passwort eingeben" 
-                    className={`${inputClass} pr-10`} 
-                    required 
-                  />
-                  <button 
-                    type="button" 
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+              </AdminTableCell>
+              <AdminTableCell>
+                <div className="font-mono text-sm text-white/80">{acc.mitarbeiterNummer}</div>
+              </AdminTableCell>
+              <AdminTableCell>
+                <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${getRoleBadgeColor(acc.roleName)}`}>
+                  {acc.roleName}
+                </span>
+              </AdminTableCell>
+              <AdminTableCell>
+                <div className="text-white/80">Level {acc.roleLevel}</div>
+              </AdminTableCell>
+              <AdminTableCell>
+                <div className="flex flex-wrap gap-1">
+                  {acc.canSeeAll && (
+                    <span className="px-2 py-0.5 rounded text-xs bg-green-500/20 text-green-300">
+                      Alle sehen
+                    </span>
+                  )}
+                  {acc.canCreateAccounts && (
+                    <span className="px-2 py-0.5 rounded text-xs bg-purple-500/20 text-purple-300">
+                      Accounts erstellen
+                    </span>
+                  )}
+                </div>
+              </AdminTableCell>
+              {canCreate && (
+                <AdminTableCell>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleDelete(acc.id, acc.discordUsername)}
+                    className="gap-2 text-red-400 hover:text-red-300 hover:bg-red-500/10"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                    <Trash2 className="w-3 h-3" />
+                    Löschen
+                  </Button>
+                </AdminTableCell>
+              )}
+            </AdminTableRow>
+          ))}
+          {filtered.length === 0 && (
+            <AdminTableRow>
+              <AdminTableCell colSpan={canCreate ? 6 : 5}>
+                <div className="text-center py-12 text-white/40">
+                  <Users className="w-16 h-16 mx-auto mb-3 opacity-20" />
+                  <p className="text-lg mb-1">Keine Accounts gefunden</p>
+                  <p className="text-sm">Ändere die Suche oder erstelle einen neuen Account</p>
                 </div>
-              </div>
-            </div>
-            
-            {error && (
-              <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-300 text-sm flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4" />
-                {error}
-              </div>
-            )}
+              </AdminTableCell>
+            </AdminTableRow>
+          )}
+        </AdminTableBody>
+      </AdminTable>
 
-            <div className="flex gap-2 justify-end">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => { setShowForm(false); setError(''); setDetectedUser(null); }} 
-                className="rounded-xl border-white/10"
+      {/* Create Modal */}
+      <AdminModal
+        isOpen={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          setFormData({ discordUserId: '', mitarbeiterNummer: '', email: '', password: '' });
+          setDetectedUser(null);
+        }}
+        title="Neuen Admin Account erstellen"
+        size="lg"
+      >
+        <form onSubmit={handleCreate} className="space-y-5">
+          {/* Discord User ID */}
+          <div className="space-y-2">
+            <Label className="text-white/60">Discord User ID</Label>
+            <div className="flex gap-2">
+              <Input
+                value={formData.discordUserId}
+                onChange={(e) => {
+                  setFormData({...formData, discordUserId: e.target.value});
+                  setDetectedUser(null);
+                }}
+                placeholder="123456789012345678"
+                className={`${inputClass} flex-1`}
+                required
+              />
+              <Button
+                type="button"
+                onClick={() => checkDiscordRole(formData.discordUserId)}
+                disabled={checkingRole || !formData.discordUserId || formData.discordUserId.length < 15}
+                className="bg-[#5865F2] hover:bg-[#4752C4] rounded-xl"
               >
-                Abbrechen
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={submitting || !detectedUser?.hasTeamRole} 
-                className="bg-blue-600 hover:bg-blue-700 rounded-xl"
-              >
-                {submitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <UserPlus className="w-4 h-4 mr-2" />}
-                Account erstellen
-              </Button>
-            </div>
-          </form>
-        </GlassCard>
-      )}
-
-      {/* Lösch-Bestätigung */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <GlassCard className="p-6 max-w-md w-full animate-scale-in">
-            <h3 className="text-lg font-bold mb-2">Account löschen?</h3>
-            <p className="text-white/50 text-sm mb-6">
-              Möchtest du den Account <strong className="text-white">{deleteConfirm.name}</strong> ({deleteConfirm.ma}) wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button 
-                variant="outline" 
-                onClick={() => setDeleteConfirm(null)} 
-                className="rounded-xl border-white/10"
-              >
-                Abbrechen
-              </Button>
-              <Button 
-                onClick={() => handleDelete(deleteConfirm.id, deleteConfirm.name)} 
-                className="bg-red-600 hover:bg-red-700 rounded-xl"
-              >
-                <Trash2 className="w-4 h-4 mr-2" /> Löschen
+                {checkingRole ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Search className="w-4 h-4 mr-1" />
+                    Prüfen
+                  </>
+                )}
               </Button>
             </div>
-          </GlassCard>
-        </div>
-      )}
+          </div>
 
-      {/* Account-Liste */}
-      <div className="grid gap-4">
-        {accounts.length === 0 ? (
-          <GlassCard className="p-12 text-center">
-            <UserPlus className="w-12 h-12 text-white/20 mx-auto mb-4" />
-            <p className="text-white/40">Keine Accounts vorhanden</p>
-          </GlassCard>
-        ) : (
-          accounts.map(account => (
-            <GlassCard key={account.id} className="p-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-                    <Shield className="w-6 h-6 text-blue-400" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-1 flex-wrap">
-                      <span className="font-semibold">{account.mitarbeiterNummer}</span>
-                      <span className="text-white/60 text-sm">{account.email}</span>
-                      {account.roleName && (
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${getRoleBadgeColor(account.roleName)}`}>
-                          {account.roleName}
-                        </span>
-                      )}
-                      {/* Status Badge */}
-                      {account.isActive === false && (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium border bg-red-500/20 text-red-300 border-red-500/30">
-                          <Ban className="w-3 h-3 inline mr-1" />
-                          Deaktiviert
-                        </span>
-                      )}
-                      {account.isActive === true && (
-                        <span className="px-2.5 py-0.5 rounded-full text-xs font-medium border bg-green-500/20 text-green-300 border-green-500/30">
-                          <CheckCheck className="w-3 h-3 inline mr-1" />
-                          Aktiv
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 text-xs text-white/30">
-                      {account.discordUsername && <span>Discord: @{account.discordUsername}</span>}
-                      <span>Erstellt: {formatDate(account.createdAt)}</span>
-                      {account.createdBy && <span>Von: {account.createdBy}</span>}
-                    </div>
-                  </div>
-                </div>
-                {admin?.canCreateAccounts && (
-                  <div className="flex items-center gap-2">
-                    {/* Toggle Status Button */}
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => handleToggleStatus(
-                        account.id, 
-                        account.isActive, 
-                        account.discordUsername || account.email
-                      )}
-                      className={`rounded-xl text-xs ${
-                        account.isActive === false 
-                          ? 'text-green-400/70 hover:text-green-300 hover:bg-green-500/10' 
-                          : 'text-orange-400/70 hover:text-orange-300 hover:bg-orange-500/10'
-                      }`}
-                    >
-                      {account.isActive === false ? (
-                        <>
-                          <CheckCheck className="w-4 h-4 mr-1" />
-                          Aktivieren
-                        </>
-                      ) : (
-                        <>
-                          <Ban className="w-4 h-4 mr-1" />
-                          Deaktivieren
-                        </>
-                      )}
-                    </Button>
-                    {/* Delete Button */}
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={() => setDeleteConfirm({ 
-                        id: account.id, 
-                        name: account.discordUsername || account.email,
-                        ma: account.mitarbeiterNummer 
-                      })} 
-                      className="text-red-400/70 hover:text-red-300 hover:bg-red-500/10 rounded-xl"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+          {/* Detected User */}
+          {detectedUser && (
+            <div className={`p-4 rounded-xl border ${detectedUser.hasTeamRole 
+              ? 'bg-green-500/10 border-green-500/20' 
+              : 'bg-red-500/10 border-red-500/20'}`}
+            >
+              <div className="flex items-center gap-3">
+                {detectedUser.avatar ? (
+                  <img 
+                    src={`https://cdn.discordapp.com/avatars/${formData.discordUserId}/${detectedUser.avatar}.png?size=64`}
+                    alt=""
+                    className="w-10 h-10 rounded-full ring-2 ring-white/20"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-[#5865F2] flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-white" />
                   </div>
                 )}
+                <div className="flex-1">
+                  <div className="font-medium text-white">{detectedUser.username}</div>
+                  {detectedUser.hasTeamRole ? (
+                    <div className="text-sm text-green-300 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      {detectedUser.roleName} (Level {detectedUser.roleLevel})
+                    </div>
+                  ) : (
+                    <div className="text-sm text-red-300 flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      Keine Team-Rolle
+                    </div>
+                  )}
+                </div>
               </div>
-            </GlassCard>
-          ))
-        )}
-      </div>
+            </div>
+          )}
+
+          {/* MA Nummer */}
+          <div className="space-y-2">
+            <Label className="text-white/60">Mitarbeiter Nummer</Label>
+            <Input
+              value={formData.mitarbeiterNummer}
+              onChange={(e) => setFormData({...formData, mitarbeiterNummer: e.target.value})}
+              placeholder="MA001"
+              className={inputClass}
+              required
+            />
+          </div>
+
+          {/* Email */}
+          <div className="space-y-2">
+            <Label className="text-white/60">Email</Label>
+            <Input
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              placeholder="admin@example.com"
+              className={inputClass}
+              required
+            />
+          </div>
+
+          {/* Password */}
+          <div className="space-y-2">
+            <Label className="text-white/60">Passwort</Label>
+            <div className="relative">
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={(e) => setFormData({...formData, password: e.target.value})}
+                placeholder="••••••••"
+                className={`${inputClass} pr-10`}
+                required
+                minLength={8}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+            <p className="text-xs text-white/40">Mindestens 8 Zeichen</p>
+          </div>
+
+          {/* Submit */}
+          <div className="flex gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowCreateModal(false)}
+              className="flex-1 rounded-xl border-white/10"
+            >
+              Abbrechen
+            </Button>
+            <Button
+              type="submit"
+              disabled={creating || !detectedUser?.hasTeamRole}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 rounded-xl"
+            >
+              {creating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Erstelle...
+                </>
+              ) : (
+                'Account erstellen'
+              )}
+            </Button>
+          </div>
+        </form>
+      </AdminModal>
     </div>
   );
 }
