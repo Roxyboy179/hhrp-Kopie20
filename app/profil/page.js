@@ -1283,8 +1283,12 @@ export default function ProfilPage() {
   
   // licenses und cards sind bereits Arrays von der Sync-Funktion
   // WICHTIG: Filtere Credits-Käufe raus (credits_5, credits_25, etc.)
+  // Licenses sind jetzt Objekte mit Details (expiresAt, autoRenew, etc.)
   const licenses = Array.isArray(userData?.licenses) 
-    ? userData.licenses.filter(l => !l.startsWith('credits_') && !l.startsWith('credit_'))
+    ? userData.licenses.filter(l => {
+        const name = typeof l === 'string' ? l : l.name || l.id;
+        return name && !name.startsWith('credits_') && !name.startsWith('credit_');
+      })
     : [];
   const cards = Array.isArray(userData?.cards) ? userData.cards : [];
   const stats = userData?.stats || {};
@@ -1600,7 +1604,9 @@ export default function ProfilPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {Object.entries(userData.cooldowns).map(([key, timestamp]) => {
                     // VIP-Status prüfen für dynamische Cooldown-Zeiten
-                    const licenses = (userData?.licenses || []).filter(l => !l.startsWith('credits_') && !l.startsWith('credit_'));
+                    const licenses = (userData?.licenses || [])
+                      .map(l => typeof l === 'string' ? l : (l.name || l.id))
+                      .filter(l => l && !l.startsWith('credits_') && !l.startsWith('credit_'));
                     const hasVipElitePlus = licenses.includes('vip_elite_plus');
                     const hasVipUltimate = licenses.includes('vip_ultimate');
                     const hasVipPlatinum = licenses.includes('vip_platinum');
@@ -1764,7 +1770,7 @@ export default function ProfilPage() {
               ) : null}
             </div>
 
-            {/* Licenses */}
+            {/* Licenses - Detaillierte Ansicht mit Ablaufdaten */}
             {licenses.length > 0 && (
               <div className="glass rounded-2xl p-6 border border-white/[0.08]">
                 <div className="flex items-center gap-3 mb-4">
@@ -1774,15 +1780,115 @@ export default function ProfilPage() {
                     {licenses.length}
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {licenses.map((license, i) => (
-                    <span 
-                      key={i}
-                      className="px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300 text-sm"
-                    >
-                      {license.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                    </span>
-                  ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {licenses.map((license, i) => {
+                    // Unterstützung für alte (String) und neue (Object) Formate
+                    const isObject = typeof license === 'object';
+                    const licenseName = isObject ? (license.name || license.id) : license;
+                    const expiresAt = isObject ? license.expiresAt : 0;
+                    const autoRenew = isObject ? license.autoRenew : false;
+                    const purchasedAt = isObject ? license.purchasedAt : null;
+                    const giftedBy = isObject ? license.giftedBy : null;
+                    
+                    // Status berechnen
+                    const now = Date.now();
+                    const isExpired = expiresAt > 0 && expiresAt < now;
+                    const isExpiringSoon = expiresAt > 0 && expiresAt > now && (expiresAt - now) < (7 * 24 * 60 * 60 * 1000); // 7 Tage
+                    const neverExpires = expiresAt === 0;
+                    
+                    // Zeitberechnung
+                    const timeLeft = expiresAt > 0 ? expiresAt - now : 0;
+                    const daysLeft = Math.floor(timeLeft / (24 * 60 * 60 * 1000));
+                    const hoursLeft = Math.floor((timeLeft % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+                    
+                    // Name formatieren
+                    const displayName = licenseName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    
+                    // Status-Farben
+                    let statusColor = 'bg-green-500/10 border-green-500/20 text-green-300';
+                    let statusIcon = '✅';
+                    let statusText = 'Aktiv';
+                    
+                    if (isExpired) {
+                      statusColor = 'bg-red-500/10 border-red-500/20 text-red-300';
+                      statusIcon = '❌';
+                      statusText = 'Abgelaufen';
+                    } else if (isExpiringSoon) {
+                      statusColor = 'bg-yellow-500/10 border-yellow-500/20 text-yellow-300';
+                      statusIcon = '⚠️';
+                      statusText = 'Läuft bald ab';
+                    } else if (neverExpires) {
+                      statusColor = 'bg-blue-500/10 border-blue-500/20 text-blue-300';
+                      statusIcon = '♾️';
+                      statusText = 'Unbegrenzt';
+                    }
+                    
+                    return (
+                      <div 
+                        key={i}
+                        className={`p-4 rounded-xl border ${statusColor} transition-all hover:scale-[1.02]`}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-white text-sm">{displayName}</h3>
+                            {giftedBy && (
+                              <p className="text-xs text-white/40 mt-0.5">🎁 Geschenk</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm">{statusIcon}</span>
+                            {autoRenew && !isExpired && (
+                              <span className="text-xs" title="Automatische Verlängerung aktiv">🔄</span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-white/50">Status:</span>
+                            <span className="font-medium">{statusText}</span>
+                          </div>
+                          
+                          {!neverExpires && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-white/50">Ablauf:</span>
+                              <span className="font-medium">
+                                {isExpired ? (
+                                  'Abgelaufen'
+                                ) : (
+                                  <>
+                                    {daysLeft > 0 && `${daysLeft}d `}
+                                    {hoursLeft}h
+                                  </>
+                                )}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {!neverExpires && expiresAt > 0 && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-white/50">Datum:</span>
+                              <span className="font-medium text-xs">
+                                {new Date(expiresAt).toLocaleDateString('de-DE', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric'
+                                })}
+                              </span>
+                            </div>
+                          )}
+                          
+                          {autoRenew && !isExpired && (
+                            <div className="pt-1.5 border-t border-white/[0.06]">
+                              <span className="text-white/40 text-xs">
+                                🔄 Verlängert sich automatisch
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -2091,7 +2197,9 @@ export default function ProfilPage() {
                   </div>
 
                   {(() => {
-                    const licenses = (userData?.licenses || []).filter(l => !l.startsWith('credits_') && !l.startsWith('credit_'));
+                    const licenses = (userData?.licenses || [])
+                      .map(l => typeof l === 'string' ? l : (l.name || l.id))
+                      .filter(l => l && !l.startsWith('credits_') && !l.startsWith('credit_'));
                     const hasVipElitePlus = licenses.includes('vip_elite_plus');
                     const hasVipUltimate = licenses.includes('vip_ultimate');
                     const hasVipPlatinum = licenses.includes('vip_platinum');
@@ -2258,7 +2366,9 @@ export default function ProfilPage() {
 
                     {/* VIP Vorteile */}
                     {(() => {
-                      const licenses = (userData?.licenses || []).filter(l => !l.startsWith('credits_') && !l.startsWith('credit_'));
+                      const licenses = (userData?.licenses || [])
+                        .map(l => typeof l === 'string' ? l : (l.name || l.id))
+                        .filter(l => l && !l.startsWith('credits_') && !l.startsWith('credit_'));
                       const hasVip = licenses.some(l => l.startsWith('vip_'));
                       return (
                         <div className={`group p-4 rounded-xl border transition-all ${hasVip ? 'border-yellow-500/20 bg-yellow-500/5 hover:bg-yellow-500/8' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}>
@@ -3745,7 +3855,9 @@ export default function ProfilPage() {
 
             {/* === HINTERGRUNDBILD === */}
             {(() => {
-              const licenses = (userData?.licenses || []).filter(l => !l.startsWith('credits_') && !l.startsWith('credit_'));
+              const licenses = (userData?.licenses || [])
+                .map(l => typeof l === 'string' ? l : (l.name || l.id))
+                .filter(l => l && !l.startsWith('credits_') && !l.startsWith('credit_'));
               const hasVipForCustomBg = licenses.includes('vip_platinum') || licenses.includes('vip_ultimate') || licenses.includes('vip_elite_plus');
               const isStandardBgActive = customBg === 'standard';
               const isPresetBg = customBg && customBg.startsWith('preset:');
