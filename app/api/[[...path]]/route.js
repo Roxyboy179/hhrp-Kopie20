@@ -4186,8 +4186,9 @@ async function handleCheckRecipient(request) {
     });
 
   } catch (e) {
-    console.error('Check recipient error:', e);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    console.error('[CHECK RECIPIENT ERROR]', e);
+    console.error('[CHECK RECIPIENT ERROR STACK]', e.stack);
+    return NextResponse.json({ error: `Server error: ${e.message}` }, { status: 500 });
   }
 }
 

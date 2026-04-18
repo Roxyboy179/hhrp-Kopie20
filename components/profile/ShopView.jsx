@@ -704,8 +704,8 @@ export function ShopView({ user, userData, onRefresh }) {
                       )}
                     </Button>
                     
-                    {/* Verschenken Button */}
-                    {!hasItem && !isLowerVIP && (
+                    {/* Verschenken Button - IMMER anzeigen außer bei VIP-Hierarchie-Problem */}
+                    {!isLowerVIP && (
                       <Button
                         onClick={() => openGiftModal(id)}
                         size="sm"
