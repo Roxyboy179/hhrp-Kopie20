@@ -116,7 +116,7 @@ export function ShopView({ user, userData, onRefresh }) {
     }
 
     const originalPrice = item.price;
-    const discountedPrice = calculatePrice(originalPrice);
+    const discountedPrice = calculatePrice(originalPrice, itemId); // ItemId mitgeben!
 
     const cartItem = {
       id: itemId,
@@ -283,7 +283,12 @@ export function ShopView({ user, userData, onRefresh }) {
   else if (hasVIPUltimate) vipDiscount = 0.20; // 20%
   else if (hasVIPPlatinum) vipDiscount = 0.10; // 10%
   
-  const calculatePrice = (basePrice) => {
+  const calculatePrice = (basePrice, itemId = null) => {
+    // VIP-Items bekommen KEINEN VIP-Rabatt!
+    if (itemId && itemId.startsWith('vip_')) {
+      return basePrice;
+    }
+    
     if (vipDiscount > 0) {
       return Math.floor(basePrice * (1 - vipDiscount));
     }
@@ -484,7 +489,7 @@ export function ShopView({ user, userData, onRefresh }) {
             const isLowerVIP = isVIPItem && !canBuyThisVIP && !hasItem;
             
             const originalPrice = item.price;
-            const discountedPrice = calculatePrice(originalPrice);
+            const discountedPrice = calculatePrice(originalPrice, id); // ItemId mitgeben!
             const hasDiscount = discountedPrice < originalPrice;
             
             return (
@@ -492,32 +497,54 @@ export function ShopView({ user, userData, onRefresh }) {
                 key={id}
                 className="p-4 rounded-xl border relative"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
-                  borderColor: 'rgba(255, 255, 255, 0.08)',
-                  opacity: (hasItem || isLowerVIP) ? 0.6 : 1
+                  background: (hasItem || isLowerVIP)
+                    ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.15), rgba(80, 80, 80, 0.1))' // Grauer für gesperrt
+                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
+                  borderColor: (hasItem || isLowerVIP)
+                    ? 'rgba(150, 150, 150, 0.2)' // Grauer Border für gesperrt
+                    : 'rgba(255, 255, 255, 0.08)',
+                  opacity: (hasItem || isLowerVIP) ? 0.7 : 1,
+                  position: 'relative'
                 }}
               >
+                {/* Sperr-Overlay für besseren visuellen Effekt */}
+                {(hasItem || isLowerVIP) && (
+                  <div 
+                    className="absolute inset-0 rounded-xl pointer-events-none"
+                    style={{
+                      background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.05) 10px, rgba(0,0,0,0.05) 20px)'
+                    }}
+                  />
+                )}
+                
+                {/* Badges */}
                 {hasItem && (
-                  <div className="absolute top-2 right-2 bg-green-500/20 border border-green-500/50 rounded-lg px-2 py-1">
-                    <span className="text-xs text-green-300 font-medium">✓ Besitzt du</span>
+                  <div className="absolute top-2 right-2 bg-green-500/20 border border-green-500/50 rounded-lg px-2 py-1 z-10">
+                    <span className="text-xs text-green-300 font-medium flex items-center gap-1">
+                      <Check className="w-3 h-3" />
+                      Besitzt du
+                    </span>
                   </div>
                 )}
                 {isLowerVIP && (
-                  <div className="absolute top-2 right-2 bg-red-500/20 border border-red-500/50 rounded-lg px-2 py-1">
-                    <span className="text-xs text-red-300 font-medium">Nicht verfügbar</span>
+                  <div className="absolute top-2 right-2 bg-red-500/20 border border-red-500/50 rounded-lg px-2 py-1 z-10">
+                    <span className="text-xs text-red-300 font-medium flex items-center gap-1">
+                      <X className="w-3 h-3" />
+                      Nicht verfügbar
+                    </span>
                   </div>
                 )}
                 
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start justify-between mb-3 relative z-10">
                   <div className="flex items-center gap-2">
                     <ItemIcon className="w-5 h-5 text-white/70" />
                     <h3 className="font-semibold text-white">{item.name}</h3>
                   </div>
                 </div>
                 {item.description && (
-                  <p className="text-sm text-white/50 mb-3">{item.description}</p>
+                  <p className="text-sm text-white/50 mb-3 relative z-10">{item.description}</p>
                 )}
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between relative z-10">
                   <div>
                     {hasDiscount ? (
                       <div className="flex items-center gap-2">
@@ -534,13 +561,30 @@ export function ShopView({ user, userData, onRefresh }) {
                     size="sm"
                     className="rounded-lg"
                     style={{
-                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
+                      background: (hasItem || isLowerVIP)
+                        ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.3), rgba(80, 80, 80, 0.2))'
+                        : 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
                       border: '1px solid rgba(255, 255, 255, 0.2)',
-                      color: '#fff'
+                      color: (hasItem || isLowerVIP) ? 'rgba(255, 255, 255, 0.4)' : '#fff',
+                      cursor: (hasItem || isLowerVIP) ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    <Plus className="w-4 h-4 mr-1" />
-                    Hinzufügen
+                    {hasItem ? (
+                      <>
+                        <Check className="w-4 h-4 mr-1" />
+                        Gekauft
+                      </>
+                    ) : isLowerVIP ? (
+                      <>
+                        <Lock className="w-4 h-4 mr-1" />
+                        Gesperrt
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4 mr-1" />
+                        Hinzufügen
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
