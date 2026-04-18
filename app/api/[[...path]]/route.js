@@ -3785,13 +3785,23 @@ async function handleTransferMoney(request) {
     const licenses = userDataObj.licenses || [];
     let vipType = null;
     
-    if (licenses.includes('vip_elite_plus')) {
+    // Hilfsfunktion: Prüfe ob User eine Lizenz hat (unterstützt String UND Object Format)
+    const hasLicense = (licenseId) => {
+      return licenses.some(l => {
+        if (!l) return false;
+        if (typeof l === 'string') return l === licenseId;
+        if (typeof l === 'object') return (l.name === licenseId || l.id === licenseId);
+        return false;
+      });
+    };
+    
+    if (hasLicense('vip_elite_plus')) {
       vipType = 'elite_plus';
-    } else if (licenses.includes('vip_ultimate')) {
+    } else if (hasLicense('vip_ultimate')) {
       vipType = 'ultimate';
-    } else if (licenses.includes('vip_platinum')) {
+    } else if (hasLicense('vip_platinum')) {
       vipType = 'platinum';
-    } else if (licenses.includes('vip_premium')) {
+    } else if (hasLicense('vip_premium')) {
       vipType = 'premium';
     }
     
