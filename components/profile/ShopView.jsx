@@ -33,8 +33,11 @@ export function ShopView({ user, userData, onRefresh }) {
   // Verschenken Modal State
   const [showGiftModal, setShowGiftModal] = useState(false);
   const [giftItemId, setGiftItemId] = useState(null);
-  const [giftUsername, setGiftUsername] = useState('');
-  const [giftUsernameError, setGiftUsernameError] = useState('');
+  const [giftFirstName, setGiftFirstName] = useState('');
+  const [giftLastName, setGiftLastName] = useState('');
+  const [giftRecipient, setGiftRecipient] = useState(null); // Empfänger-Daten nach Prüfung
+  const [giftError, setGiftError] = useState('');
+  const [checkingRecipient, setCheckingRecipient] = useState(false);
 
   // Deaktiviere Body Scroll wenn Modal offen ist
   useEffect(() => {
@@ -249,14 +252,62 @@ export function ShopView({ user, userData, onRefresh }) {
   // Verschenken-Funktionen
   const openGiftModal = (itemId) => {
     setGiftItemId(itemId);
-    setGiftUsername('');
-    setGiftUsernameError('');
+    setGiftFirstName('');
+    setGiftLastName('');
+    setGiftRecipient(null);
+    setGiftError('');
     setShowGiftModal(true);
   };
 
+  const checkRecipient = async () => {
+    if (!giftFirstName.trim() || !giftLastName.trim()) {
+      setGiftError('Bitte Vor- und Nachname eingeben');
+      return;
+    }
+
+    setCheckingRecipient(true);
+    setGiftError('');
+
+    try {
+      const res = await fetch('/api/shop/check-recipient', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: giftFirstName.trim(),
+          lastName: giftLastName.trim()
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.recipient) {
+        // Prüfe ob Empfänger das Item bereits hat
+        const recipientLicenses = data.recipient.licenses || [];
+        const hasItem = recipientLicenses.includes(giftItemId);
+
+        if (hasItem) {
+          setGiftError(`${data.recipient.displayName} besitzt dieses Item bereits!`);
+          setGiftRecipient(null);
+        } else {
+          setGiftRecipient(data.recipient);
+          toast.success(`Empfänger gefunden: ${data.recipient.displayName}`);
+        }
+      } else {
+        setGiftError(data.error || 'Empfänger nicht gefunden');
+        setGiftRecipient(null);
+      }
+    } catch (e) {
+      console.error('[CHECK RECIPIENT] Error:', e);
+      setGiftError('Fehler bei der Prüfung');
+      setGiftRecipient(null);
+    } finally {
+      setCheckingRecipient(false);
+    }
+  };
+
   const executeGift = async () => {
-    if (!giftUsername || giftUsername.trim().length < 3) {
-      setGiftUsernameError('Benutzername muss mindestens 3 Zeichen haben');
+    if (!giftRecipient) {
+      setGiftError('Bitte zuerst Empfänger prüfen');
       return;
     }
 
@@ -277,7 +328,7 @@ export function ShopView({ user, userData, onRefresh }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           itemId: giftItemId,
-          recipientUsername: giftUsername.trim(),
+          recipientId: giftRecipient.id,
           price: itemPrice
         })
       });
@@ -285,9 +336,11 @@ export function ShopView({ user, userData, onRefresh }) {
       const data = await res.json();
       
       if (res.ok) {
-        toast.success(`${item.name} an ${giftUsername} verschenkt!`);
+        toast.success(`${item.name} an ${giftRecipient.displayName} verschenkt!`);
         setGiftItemId(null);
-        setGiftUsername('');
+        setGiftFirstName('');
+        setGiftLastName('');
+        setGiftRecipient(null);
         
         setTimeout(() => {
           if (onRefresh) onRefresh();
@@ -921,7 +974,7 @@ export function ShopView({ user, userData, onRefresh }) {
             </h3>
             
             <p className="text-sm text-white/60 mb-6">
-              Gib den Benutzernamen des Empfängers ein. Der Preis wird von deinem Konto abgezogen.
+              Gib Vor- und Nachname des Empfängers ein. Wir prüfen ob das Item verschenkt werden kann.
             </p>
 
             <div className="space-y-4">
@@ -943,34 +996,98 @@ export function ShopView({ user, userData, onRefresh }) {
                 </div>
               )}
 
-              <div>
-                <Label className="text-white/70 mb-2 block">Benutzername des Empfängers</Label>
-                <Input
-                  type="text"
-                  value={giftUsername}
-                  onChange={(e) => {
-                    setGiftUsername(e.target.value);
-                    setGiftUsernameError('');
-                  }}
-                  placeholder="z.B. MaxMustermann"
-                  className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/25 h-12"
-                  autoFocus
-                />
-                {giftUsernameError && (
-                  <div className="flex items-center gap-2 text-red-400 text-sm mt-2">
-                    <AlertTriangle className="w-4 h-4" />
-                    <span>{giftUsernameError}</span>
-                  </div>
-                )}
+              {/* Vor- und Nachname Eingabe */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-white/70 mb-2 block">Vorname</Label>
+                  <Input
+                    type="text"
+                    value={giftFirstName}
+                    onChange={(e) => {
+                      setGiftFirstName(e.target.value);
+                      setGiftError('');
+                      setGiftRecipient(null);
+                    }}
+                    placeholder="Max"
+                    className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/25 h-12"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <Label className="text-white/70 mb-2 block">Nachname</Label>
+                  <Input
+                    type="text"
+                    value={giftLastName}
+                    onChange={(e) => {
+                      setGiftLastName(e.target.value);
+                      setGiftError('');
+                      setGiftRecipient(null);
+                    }}
+                    placeholder="Mustermann"
+                    className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/25 h-12"
+                  />
+                </div>
               </div>
+
+              {/* Prüfen Button */}
+              <Button
+                onClick={checkRecipient}
+                disabled={checkingRecipient || !giftFirstName.trim() || !giftLastName.trim()}
+                className="w-full rounded-xl h-11"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.3))',
+                  border: '1px solid rgba(59, 130, 246, 0.4)',
+                  color: '#fff'
+                }}
+              >
+                {checkingRecipient ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Prüfe...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Empfänger prüfen
+                  </>
+                )}
+              </Button>
+
+              {/* Empfänger gefunden */}
+              {giftRecipient && (
+                <div 
+                  className="p-4 rounded-xl border"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(22, 163, 74, 0.05))',
+                    borderColor: 'rgba(34, 197, 94, 0.3)'
+                  }}
+                >
+                  <div className="flex items-center gap-2 text-green-400 mb-2">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span className="font-semibold">Empfänger gefunden</span>
+                  </div>
+                  <p className="text-white text-sm">{giftRecipient.displayName}</p>
+                  <p className="text-white/50 text-xs mt-1">Besitzt das Item noch nicht ✓</p>
+                </div>
+              )}
+
+              {/* Fehler */}
+              {giftError && (
+                <div className="flex items-center gap-2 text-red-400 text-sm p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                  <span>{giftError}</span>
+                </div>
+              )}
 
               <div className="flex gap-3">
                 <Button
                   onClick={() => {
                     setShowGiftModal(false);
                     setGiftItemId(null);
-                    setGiftUsername('');
-                    setGiftUsernameError('');
+                    setGiftFirstName('');
+                    setGiftLastName('');
+                    setGiftRecipient(null);
+                    setGiftError('');
                   }}
                   variant="outline"
                   className="flex-1 rounded-xl"
@@ -980,14 +1097,14 @@ export function ShopView({ user, userData, onRefresh }) {
                 </Button>
                 <Button
                   onClick={() => {
-                    if (!giftUsername || giftUsername.trim().length < 3) {
-                      setGiftUsernameError('Benutzername muss mindestens 3 Zeichen haben');
+                    if (!giftRecipient) {
+                      setGiftError('Bitte zuerst Empfänger prüfen');
                       return;
                     }
                     setShowGiftModal(false);
                     openPinModal({ type: 'gift' });
                   }}
-                  disabled={purchasing || !giftUsername}
+                  disabled={purchasing || !giftRecipient}
                   className="flex-1 rounded-xl"
                   style={{
                     background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(126, 34, 206, 0.3))',

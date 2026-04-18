@@ -2741,6 +2741,7 @@ export async function POST(request) {
     case 'shop/purchase': return handleShopPurchase(request);
     case 'shop/purchase-credits': return handlePurchaseCredits(request);
     case 'shop/upgrade-bank-limit': return handleUpgradeBankLimit(request);
+    case 'shop/check-recipient': return handleCheckRecipient(request);
     case 'shop/gift': return handleGiftItem(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
@@ -4135,6 +4136,61 @@ async function handleUpgradeBankLimit(request) {
     console.error('Upgrade bank limit error:', e);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
+
+// POST /api/shop/check-recipient - Prüfe Empfänger anhand Vor- und Nachname
+async function handleCheckRecipient(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const { firstName, lastName } = await request.json();
+
+    if (!firstName || !lastName) {
+      return NextResponse.json({ error: 'Vor- und Nachname erforderlich' }, { status: 400 });
+    }
+
+    // Suche User anhand Display Name (Format: "Vorname Nachname")
+    const searchName = `${firstName.trim()} ${lastName.trim()}`;
+    
+    const { data: recipientData, error: recipientFetchError } = await supabaseAdmin
+      .from('user_data')
+      .select('*')
+      .ilike('discord_display_name', searchName);
+
+    if (recipientFetchError || !recipientData || recipientData.length === 0) {
+      return NextResponse.json({ error: `Empfänger "${searchName}" nicht gefunden` }, { status: 404 });
+    }
+
+    const recipient = recipientData[0];
+
+    // Prüfe ob man sich selbst prüft
+    if (recipient.discord_user_id === user.id) {
+      return NextResponse.json({ error: 'Du kannst dir nicht selbst etwas schenken' }, { status: 400 });
+    }
+
+    // Parse recipient data
+    const recipientDataObj = typeof recipient.data === 'string' 
+      ? JSON.parse(recipient.data) 
+      : recipient.data;
+
+    return NextResponse.json({
+      success: true,
+      recipient: {
+        id: recipient.discord_user_id,
+        displayName: recipient.discord_display_name,
+        username: recipient.discord_username,
+        licenses: recipientDataObj?.licenses || []
+      }
+    });
+
+  } catch (e) {
+    console.error('Check recipient error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
 }
 
 // POST /api/shop/gift - Item an anderen User verschenken
@@ -4145,9 +4201,9 @@ async function handleGiftItem(request) {
       return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
     }
 
-    const { itemId, recipientUsername, price } = await request.json();
+    const { itemId, recipientId, price } = await request.json();
 
-    if (!itemId || !recipientUsername || !price) {
+    if (!itemId || !recipientId || !price) {
       return NextResponse.json({ error: 'Fehlende Daten' }, { status: 400 });
     }
 
@@ -4182,29 +4238,28 @@ async function handleGiftItem(request) {
       }, { status: 400 });
     }
 
-    // Finde Empfänger anhand Username
+    // Hole Empfänger-Daten
     const { data: recipientData, error: recipientFetchError } = await supabaseAdmin
       .from('user_data')
       .select('*')
-      .ilike('discord_username', recipientUsername.trim());
+      .eq('discord_user_id', recipientId)
+      .single();
 
-    if (recipientFetchError || !recipientData || recipientData.length === 0) {
-      return NextResponse.json({ error: `Benutzer "${recipientUsername}" nicht gefunden` }, { status: 404 });
+    if (recipientFetchError || !recipientData) {
+      return NextResponse.json({ error: 'Empfänger nicht gefunden' }, { status: 404 });
     }
 
-    const recipient = recipientData[0];
-
     // Prüfe ob man sich selbst etwas schenken will
-    if (recipient.discord_user_id === user.id) {
+    if (recipientId === user.id) {
       return NextResponse.json({ error: 'Du kannst dir nicht selbst etwas schenken' }, { status: 400 });
     }
 
-    // Erstelle Geschenk-Kauf (buyer ist der Schenker, aber recipient_id wird gesetzt)
+    // Erstelle Geschenk-Kauf
     const { data: purchase, error: insertError } = await supabaseAdmin
       .from('pending_shop_purchases')
       .insert({
         buyer_discord_id: user.id, // Der Zahler
-        recipient_discord_id: recipient.discord_user_id, // Der Empfänger
+        recipient_discord_id: recipientId, // Der Empfänger
         item_id: itemId,
         item_name: item.name,
         item_category: item.category,
@@ -4223,11 +4278,11 @@ async function handleGiftItem(request) {
 
     return NextResponse.json({
       success: true,
-      message: `${item.name} wird an ${recipientUsername} verschenkt...`,
+      message: `${item.name} wird an ${recipientData.discord_display_name} verschenkt...`,
       purchase: {
         id: purchase.id,
         itemName: item.name,
-        recipient: recipientUsername,
+        recipient: recipientData.discord_display_name,
         price: price,
         status: 'pending'
       }
