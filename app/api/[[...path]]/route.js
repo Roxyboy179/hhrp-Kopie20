@@ -2741,7 +2741,9 @@ export async function POST(request) {
     case 'shop/purchase': return handleShopPurchase(request);
     case 'shop/purchase-credits': return handlePurchaseCredits(request);
     case 'shop/upgrade-bank-limit': return handleUpgradeBankLimit(request);
-    case 'shop/check-recipient': return handleCheckRecipient(request);
+    case 'shop/check-recipient': 
+      console.log('[DEBUG] check-recipient route hit!');
+      return handleCheckRecipient(request);
     case 'shop/gift': return handleGiftItem(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
@@ -4136,6 +4138,7 @@ async function handleUpgradeBankLimit(request) {
     console.error('Upgrade bank limit error:', e);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
+}
 
 // POST /api/shop/check-recipient - Prüfe Empfänger anhand Vor- und Nachname
 async function handleCheckRecipient(request) {
@@ -4190,8 +4193,6 @@ async function handleCheckRecipient(request) {
     console.error('[CHECK RECIPIENT ERROR STACK]', e.stack);
     return NextResponse.json({ error: `Server error: ${e.message}` }, { status: 500 });
   }
-}
-
 }
 
 // POST /api/shop/gift - Item an anderen User verschenken
