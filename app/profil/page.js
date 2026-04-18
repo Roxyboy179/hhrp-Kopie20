@@ -1618,10 +1618,10 @@ export default function ProfilPage() {
                   {Object.entries(userData.cooldowns).map(([key, timestamp]) => {
                     // VIP-Status prüfen für dynamische Cooldown-Zeiten
                     const licenses = (userData?.licenses || [])
-                      .filter(l => l)
-                      .map(l => typeof l === 'string' ? l : (l.name || l.id))
-                      .filter(l => l && typeof l === 'string')
-                      .filter(l => l && !l.startsWith('credits_') && !l.startsWith('credit_'));
+                      .filter(l => l) // Filtere null/undefined
+                      .map(l => typeof l === 'string' ? l : (l.name || l.id)) // Extrahiere Name
+                      .filter(l => l && typeof l === 'string') // Nur Strings behalten
+                      .filter(l => !l.startsWith('credits_') && !l.startsWith('credit_')); // Keine Credits
                     const hasVipElitePlus = licenses.includes('vip_elite_plus');
                     const hasVipUltimate = licenses.includes('vip_ultimate');
                     const hasVipPlatinum = licenses.includes('vip_platinum');
