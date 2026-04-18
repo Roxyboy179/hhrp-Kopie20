@@ -375,10 +375,18 @@ export function ShopView({ user, userData, onRefresh }) {
   // VIP Status prüfen für Rabatte
   const userLicensesArray = userData?.licenses || [];
   
-  const hasVIPPremium = userLicensesArray.includes('vip_premium');
-  const hasVIPPlatinum = userLicensesArray.includes('vip_platinum');
-  const hasVIPUltimate = userLicensesArray.includes('vip_ultimate');
-  const hasVIPElitePlus = userLicensesArray.includes('vip_elite_plus');
+  // Hilfsfunktion: Prüfe ob User eine Lizenz hat (unterstützt String und Object Format)
+  const hasLicense = (licenseId) => {
+    return userLicensesArray.some(l => {
+      if (typeof l === 'string') return l === licenseId;
+      return (l.name === licenseId || l.id === licenseId);
+    });
+  };
+  
+  const hasVIPPremium = hasLicense('vip_premium');
+  const hasVIPPlatinum = hasLicense('vip_platinum');
+  const hasVIPUltimate = hasLicense('vip_ultimate');
+  const hasVIPElitePlus = hasLicense('vip_elite_plus');
   
   // VIP Hierarchie
   const vipHierarchy = {
@@ -645,13 +653,16 @@ export function ShopView({ user, userData, onRefresh }) {
           {filteredItems.map(([id, item]) => {
             const ItemIcon = itemIcons[id] || ShoppingBag;
             
-            const hasItem = userLicensesArray.includes(id);
+            const hasItem = hasLicense(id); // Verwende die neue Hilfsfunktion
             const isVIPItem = id.startsWith('vip_');
             const canBuyThisVIP = canPurchaseVIP(id);
             const isLowerVIP = isVIPItem && !canBuyThisVIP && !hasItem;
             
-            // Im Verschenken-Modus: Prüfe ob Empfänger Item hat
-            const recipientHasItem = giftMode && giftRecipient?.licenses?.includes(id);
+            // Im Verschenken-Modus: Prüfe ob Empfänger Item hat (unterstützt String und Object Format)
+            const recipientHasItem = giftMode && giftRecipient?.licenses?.some(l => {
+              if (typeof l === 'string') return l === id;
+              return (l.name === id || l.id === id);
+            });
             const isDisabledInGiftMode = giftMode && recipientHasItem;
             
             const originalPrice = item.price;

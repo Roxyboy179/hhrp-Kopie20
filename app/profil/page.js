@@ -1292,6 +1292,15 @@ export default function ProfilPage() {
     : [];
   const cards = Array.isArray(userData?.cards) ? userData.cards : [];
   const stats = userData?.stats || {};
+  
+  // Globale Hilfsfunktion für Lizenz-Checks (String und Object Format)
+  const userHasLicense = (licenseId) => {
+    if (!userData?.licenses) return false;
+    return userData.licenses.some(l => {
+      if (typeof l === 'string') return l === licenseId;
+      return (l.name === licenseId || l.id === licenseId);
+    });
+  };
 
   const totalMoney = (money.cash || 0) + (money.bank || 0) + (money.savings || 0);
 
@@ -2269,21 +2278,21 @@ export default function ProfilPage() {
                 </div>
 
                 {/* Server Booster Status - vom Bot geprüft */}
-                <div className={`glass rounded-2xl p-6 border ${userData?.licenses?.includes('server_booster') ? 'border-pink-500/20 bg-gradient-to-br from-pink-500/10 to-purple-500/10' : 'border-white/[0.08]'}`}>
+                <div className={`glass rounded-2xl p-6 border ${userHasLicense('server_booster') ? 'border-pink-500/20 bg-gradient-to-br from-pink-500/10 to-purple-500/10' : 'border-white/[0.08]'}`}>
                   <div className="flex items-start gap-4">
-                    <div className={`w-16 h-16 rounded-2xl ${userData?.licenses?.includes('server_booster') ? 'bg-pink-500/20' : 'bg-white/[0.04]'} flex items-center justify-center flex-shrink-0`}>
-                      <Rocket className={`w-8 h-8 ${userData?.licenses?.includes('server_booster') ? 'text-pink-400' : 'text-white/20'}`} />
+                    <div className={`w-16 h-16 rounded-2xl ${userHasLicense('server_booster') ? 'bg-pink-500/20' : 'bg-white/[0.04]'} flex items-center justify-center flex-shrink-0`}>
+                      <Rocket className={`w-8 h-8 ${userHasLicense('server_booster') ? 'text-pink-400' : 'text-white/20'}`} />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className={`text-xl font-bold ${userData?.licenses?.includes('server_booster') ? 'text-pink-400' : 'text-white/40'}`}>Server Booster</h3>
-                        {userData?.licenses?.includes('server_booster') ? (
+                        <h3 className={`text-xl font-bold ${userHasLicense('server_booster') ? 'text-pink-400' : 'text-white/40'}`}>Server Booster</h3>
+                        {userHasLicense('server_booster') ? (
                           <BadgeCheck className="w-5 h-5 text-pink-400" />
                         ) : (
                           <span className="px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.08] text-[10px] font-bold text-white/30 uppercase tracking-wider">Inaktiv</span>
                         )}
                       </div>
-                      {userData?.licenses?.includes('server_booster') ? (
+                      {userHasLicense('server_booster') ? (
                         <>
                           <p className="text-white/60 mb-3">Danke, dass du unseren Server boostest! Deine Vorteile sind aktiv.</p>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2403,16 +2412,16 @@ export default function ProfilPage() {
                     })()}
 
                     {/* Server Booster Bonus */}
-                    <div className={`group p-4 rounded-xl border transition-all ${userData?.licenses?.includes('server_booster') ? 'border-pink-500/20 bg-pink-500/5 hover:bg-pink-500/8' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}>
+                    <div className={`group p-4 rounded-xl border transition-all ${userHasLicense('server_booster') ? 'border-pink-500/20 bg-pink-500/5 hover:bg-pink-500/8' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}>
                       <div className="flex items-start gap-3">
-                        <div className={`w-10 h-10 rounded-lg ${userData?.licenses?.includes('server_booster') ? 'bg-pink-500/15' : 'bg-white/[0.06]'} flex items-center justify-center flex-shrink-0`}>
-                          <Rocket className={`w-5 h-5 ${userData?.licenses?.includes('server_booster') ? 'text-pink-400' : 'text-white/30'}`} />
+                        <div className={`w-10 h-10 rounded-lg ${userHasLicense('server_booster') ? 'bg-pink-500/15' : 'bg-white/[0.06]'} flex items-center justify-center flex-shrink-0`}>
+                          <Rocket className={`w-5 h-5 ${userHasLicense('server_booster') ? 'text-pink-400' : 'text-white/30'}`} />
                         </div>
                         <div className="flex-1">
                           <h3 className="font-semibold text-white text-sm">Booster Bonus</h3>
                           <p className="text-xs text-white/50 mt-0.5">+5.000 bei jedem /collect als Server Booster</p>
                           <div className="flex items-center gap-1 mt-2">
-                            {userData?.licenses?.includes('server_booster') ? (
+                            {userHasLicense('server_booster') ? (
                               <>
                                 <BadgeCheck className="w-3.5 h-3.5 text-pink-400" />
                                 <span className="text-[11px] text-pink-400 font-medium">Aktiv</span>
@@ -2429,16 +2438,16 @@ export default function ProfilPage() {
                     </div>
 
                     {/* Elite+ Daily */}
-                    <div className={`group p-4 rounded-xl border transition-all ${userData?.licenses?.includes('vip_elite_plus') ? 'border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/8' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}>
+                    <div className={`group p-4 rounded-xl border transition-all ${userHasLicense('vip_elite_plus') ? 'border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/8' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}>
                       <div className="flex items-start gap-3">
-                        <div className={`w-10 h-10 rounded-lg ${userData?.licenses?.includes('vip_elite_plus') ? 'bg-purple-500/15' : 'bg-white/[0.06]'} flex items-center justify-center flex-shrink-0`}>
-                          <Gem className={`w-5 h-5 ${userData?.licenses?.includes('vip_elite_plus') ? 'text-purple-400' : 'text-white/30'}`} />
+                        <div className={`w-10 h-10 rounded-lg ${userHasLicense('vip_elite_plus') ? 'bg-purple-500/15' : 'bg-white/[0.06]'} flex items-center justify-center flex-shrink-0`}>
+                          <Gem className={`w-5 h-5 ${userHasLicense('vip_elite_plus') ? 'text-purple-400' : 'text-white/30'}`} />
                         </div>
                         <div className="flex-1">
                           <h3 className="font-semibold text-white text-sm">Elite+ Daily Bonus</h3>
                           <p className="text-xs text-white/50 mt-0.5">+2.000 täglich als VIP Elite+ Mitglied</p>
                           <div className="flex items-center gap-1 mt-2">
-                            {userData?.licenses?.includes('vip_elite_plus') ? (
+                            {userHasLicense('vip_elite_plus') ? (
                               <>
                                 <BadgeCheck className="w-3.5 h-3.5 text-purple-400" />
                                 <span className="text-[11px] text-purple-400 font-medium">Aktiv</span>

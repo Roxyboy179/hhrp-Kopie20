@@ -149,10 +149,19 @@ export function Navbar({ user, loading }) {
                         <span className="text-sm text-white/70 group-hover:text-white/90 transition-colors max-w-[120px] truncate">{user.globalName || user.username}</span>
                         {(() => {
                           const licenses = user?.licenses || [];
-                          const hasVipElitePlus = licenses.includes('vip_elite_plus');
-                          const hasVipUltimate = licenses.includes('vip_ultimate');
-                          const hasVipPlatinum = licenses.includes('vip_platinum');
-                          const hasVipPremium = licenses.includes('vip_premium');
+                          
+                          // Hilfsfunktion: Prüfe ob User eine Lizenz hat (unterstützt String und Object Format)
+                          const hasLicense = (licenseId) => {
+                            return licenses.some(l => {
+                              if (typeof l === 'string') return l === licenseId;
+                              return (l.name === licenseId || l.id === licenseId);
+                            });
+                          };
+                          
+                          const hasVipElitePlus = hasLicense('vip_elite_plus');
+                          const hasVipUltimate = hasLicense('vip_ultimate');
+                          const hasVipPlatinum = hasLicense('vip_platinum');
+                          const hasVipPremium = hasLicense('vip_premium');
                           const hasBetaTester = user.roles?.includes('1494434149623136276');
                           
                           let vipStatus = '';

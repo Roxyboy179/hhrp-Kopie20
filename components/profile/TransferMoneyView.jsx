@@ -45,19 +45,28 @@ export function TransferMoneyView({ userData, onTransferComplete }) {
   
   // VIP Status aus licenses Array ermitteln
   const licenses = userData?.licenses || [];
+  
+  // Hilfsfunktion: Prüfe ob User eine Lizenz hat (unterstützt String und Object Format)
+  const hasLicense = (licenseId) => {
+    return licenses.some(l => {
+      if (typeof l === 'string') return l === licenseId;
+      return (l.name === licenseId || l.id === licenseId);
+    });
+  };
+  
   let vipStatus = null;
   let vipDiscount = null;
   
-  if (licenses.includes('vip_elite_plus')) {
+  if (hasLicense('vip_elite_plus')) {
     vipStatus = 'elite_plus';
     vipDiscount = VIP_DISCOUNTS['elite_plus'];
-  } else if (licenses.includes('vip_ultimate')) {
+  } else if (hasLicense('vip_ultimate')) {
     vipStatus = 'ultimate';
     vipDiscount = VIP_DISCOUNTS['ultimate'];
-  } else if (licenses.includes('vip_platinum')) {
+  } else if (hasLicense('vip_platinum')) {
     vipStatus = 'platinum';
     vipDiscount = VIP_DISCOUNTS['platinum'];
-  } else if (licenses.includes('vip_premium')) {
+  } else if (hasLicense('vip_premium')) {
     vipStatus = 'premium';
     vipDiscount = VIP_DISCOUNTS['premium'];
   }
