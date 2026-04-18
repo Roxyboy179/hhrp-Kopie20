@@ -17,11 +17,12 @@ import { Label } from '@/components/ui/label';
 
 const VIP_HIERARCHY = ['vip_premium', 'vip_platinum', 'vip_ultimate', 'vip_elite_plus'];
 
+// Rabatte wie bei der Überweisung
 const VIP_DISCOUNTS = {
-  'vip_premium': { label: 'VIP Premium', discount: 0.05, emoji: '⭐' },
-  'vip_platinum': { label: 'VIP Platinum', discount: 0.10, emoji: '💎' },
-  'vip_ultimate': { label: 'VIP Ultimate', discount: 0.15, emoji: '⚡' },
-  'vip_elite_plus': { label: 'VIP ELITE PLUS', discount: 0.20, emoji: '🏆' }
+  'vip_premium': { label: 'VIP Premium', discount: 0.10, emoji: '⭐' },      // 10% Rabatt
+  'vip_platinum': { label: 'VIP Platinum', discount: 0.20, emoji: '💎' },   // 20% Rabatt  
+  'vip_ultimate': { label: 'VIP Ultimate', discount: 0.35, emoji: '⚡' },    // 35% Rabatt
+  'vip_elite_plus': { label: 'VIP ELITE PLUS', discount: 0.35, emoji: '🏆' } // 35% Rabatt
 };
 
 export function ShopView({ user, userData, onRefresh }) {
@@ -104,7 +105,20 @@ export function ShopView({ user, userData, onRefresh }) {
       const data = await res.json();
       
       if (data.items) {
-        setShopItems(data.items);
+        // Die API gibt ein flaches Objekt zurück - wir gruppieren nach Kategorien
+        const itemsObj = data.items;
+        const grouped = {};
+        
+        Object.values(itemsObj).forEach(item => {
+          const category = item.category || 'all';
+          if (!grouped[category]) {
+            grouped[category] = [];
+          }
+          grouped[category].push(item);
+        });
+        
+        console.log('[SHOP] Gruppierte Items:', grouped);
+        setShopItems(grouped);
         
         // Credit Options umformen
         const credits = (data.creditOptions || []).map((opt, idx) => ({
