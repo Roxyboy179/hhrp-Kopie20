@@ -3057,22 +3057,48 @@ async function handleGetUserData(request) {
         if (userData && userData.data) {
           const isBooster = member.roles.includes(BOOSTER_ROLE_ID);
           const licenses = userData.data.licenses || [];
+          
+          // Hilfsfunktion: Prüfe ob User eine Lizenz hat (unterstützt String UND Object Format)
+          const hasLicense = (licenseId) => {
+            return licenses.some(l => {
+              if (!l) return false;
+              if (typeof l === 'string') return l === licenseId;
+              if (typeof l === 'object') return (l.name === licenseId || l.id === licenseId);
+              return false;
+            });
+          };
+          
+          const hasServerBooster = hasLicense('server_booster');
 
-          if (isBooster && !licenses.includes('server_booster')) {
+          if (isBooster && !hasServerBooster) {
+            // Füge server_booster als Objekt hinzu (konsistent mit neuem Format)
             userData = {
               ...userData,
               data: {
                 ...userData.data,
-                licenses: [...licenses, 'server_booster']
+                licenses: [...licenses, {
+                  id: 'server_booster',
+                  name: 'server_booster',
+                  purchasedAt: new Date().toISOString(),
+                  expiresAt: 0,
+                  autoRenew: false,
+                  owner: user.username || user.display_name
+                }]
               }
             };
             console.log(`[UserData] Added server_booster for user ${user.id}`);
-          } else if (!isBooster && licenses.includes('server_booster')) {
+          } else if (!isBooster && hasServerBooster) {
+            // Entferne server_booster (funktioniert mit String UND Object)
             userData = {
               ...userData,
               data: {
                 ...userData.data,
-                licenses: licenses.filter(l => l !== 'server_booster')
+                licenses: licenses.filter(l => {
+                  if (!l) return false;
+                  if (typeof l === 'string') return l !== 'server_booster';
+                  if (typeof l === 'object') return l.name !== 'server_booster' && l.id !== 'server_booster';
+                  return true;
+                })
               }
             };
             console.log(`[UserData] Removed server_booster for user ${user.id}`);
