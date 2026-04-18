@@ -4260,23 +4260,31 @@ async function handleCheckRecipient(request) {
 // POST /api/shop/gift - Item an anderen User verschenken
 async function handleGiftItem(request) {
   try {
+    console.log('[GIFT] 🎁 Gift request received');
     const user = await getUserFromRequest(request);
     if (!user) {
+      console.log('[GIFT] ❌ User not authenticated');
       return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
     }
+    console.log('[GIFT] ✅ User:', user.id, user.username);
 
     const { itemId, recipientId, price } = await request.json();
+    console.log('[GIFT] 📦 Request data:', { itemId, recipientId, price });
 
     if (!itemId || !recipientId || !price) {
+      console.log('[GIFT] ❌ Missing data');
       return NextResponse.json({ error: 'Fehlende Daten' }, { status: 400 });
     }
 
     const item = SHOP_ITEMS[itemId];
     if (!item) {
+      console.log('[GIFT] ❌ Item not found:', itemId);
       return NextResponse.json({ error: 'Item nicht gefunden' }, { status: 404 });
     }
+    console.log('[GIFT] ✅ Item found:', item.name);
 
     // Hole Sender User Data
+    console.log('[GIFT] 📊 Fetching sender data...');
     const { data: senderData, error: senderFetchError } = await supabaseAdmin
       .from('user_data')
       .select('*')
@@ -4284,17 +4292,21 @@ async function handleGiftItem(request) {
       .single();
 
     if (senderFetchError || !senderData) {
+      console.log('[GIFT] ❌ Sender not found:', senderFetchError);
       return NextResponse.json({ error: 'User nicht gefunden' }, { status: 404 });
     }
+    console.log('[GIFT] ✅ Sender data found');
 
     const senderDataObj = typeof senderData.data === 'string' 
       ? JSON.parse(senderData.data) 
       : senderData.data;
 
     const senderBalance = senderDataObj?.money?.bank || 0;
+    console.log('[GIFT] 💰 Sender balance:', senderBalance, 'Required:', price);
 
     // Prüfe Guthaben
     if (senderBalance < price) {
+      console.log('[GIFT] ❌ Insufficient funds');
       return NextResponse.json({ 
         error: 'Nicht genug Guthaben',
         required: price,
@@ -4303,6 +4315,7 @@ async function handleGiftItem(request) {
     }
 
     // Hole Empfänger-Daten
+    console.log('[GIFT] 👤 Fetching recipient data...');
     const { data: recipientData, error: recipientFetchError } = await supabaseAdmin
       .from('user_data')
       .select('*')
@@ -4310,15 +4323,19 @@ async function handleGiftItem(request) {
       .single();
 
     if (recipientFetchError || !recipientData) {
+      console.log('[GIFT] ❌ Recipient not found:', recipientFetchError);
       return NextResponse.json({ error: 'Empfänger nicht gefunden' }, { status: 404 });
     }
+    console.log('[GIFT] ✅ Recipient data found');
 
     // Prüfe ob man sich selbst etwas schenken will
     if (recipientId === user.id) {
+      console.log('[GIFT] ❌ Cannot gift to self');
       return NextResponse.json({ error: 'Du kannst dir nicht selbst etwas schenken' }, { status: 400 });
     }
 
     // Erstelle Geschenk-Kauf
+    console.log('[GIFT] 💾 Inserting gift purchase...');
     const { data: purchase, error: insertError } = await supabaseAdmin
       .from('pending_shop_purchases')
       .insert({
@@ -4336,10 +4353,11 @@ async function handleGiftItem(request) {
       .single();
 
     if (insertError) {
-      console.error('Gift insert error:', insertError);
-      return NextResponse.json({ error: 'Fehler beim Erstellen des Geschenks' }, { status: 500 });
+      console.error('[GIFT] ❌ Insert error:', insertError);
+      return NextResponse.json({ error: 'Fehler beim Erstellen des Geschenks', details: insertError.message }, { status: 500 });
     }
 
+    console.log('[GIFT] ✅ Gift purchase created:', purchase.id);
     return NextResponse.json({
       success: true,
       message: `${item.name} wird an ${recipientData.discord_display_name} verschenkt...`,
@@ -4353,8 +4371,9 @@ async function handleGiftItem(request) {
     });
 
   } catch (e) {
-    console.error('Gift item error:', e);
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    console.error('[GIFT] ❌ Gift item error:', e);
+    console.error('[GIFT] Stack:', e.stack);
+    return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
   }
 }
 
