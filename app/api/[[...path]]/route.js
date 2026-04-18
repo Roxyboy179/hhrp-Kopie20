@@ -4154,59 +4154,40 @@ async function handleCheckRecipient(request) {
       return NextResponse.json({ error: 'Vor- und Nachname erforderlich' }, { status: 400 });
     }
 
-    // Suche User anhand Display Name (Format: "Vorname Nachname")
+    // Suche User anhand Name im character-Objekt
     const searchName = `${firstName.trim()} ${lastName.trim()}`;
     
     console.log('[CHECK RECIPIENT] Searching for:', searchName);
     
-    // Suche in mehreren Feldern (display_name und username)
-    let recipientData = null;
-    let recipientFetchError = null;
-    
-    // Versuch 1: Display Name mit Leerzeichen
-    const { data: data1, error: error1 } = await supabaseAdmin
+    // Hole alle User und filtere im Code (weil name in JSONB data->character->name ist)
+    const { data: allUsers, error: fetchError } = await supabaseAdmin
       .from('user_data')
-      .select('*')
-      .ilike('discord_display_name', searchName);
+      .select('*');
     
-    if (data1 && data1.length > 0) {
-      recipientData = data1;
-      console.log('[CHECK RECIPIENT] Found via display_name:', data1[0].discord_display_name);
-    } else {
-      // Versuch 2: Display Name mit Wildcard (falls Reihenfolge anders ist)
-      const { data: data2, error: error2 } = await supabaseAdmin
-        .from('user_data')
-        .select('*')
-        .or(`discord_display_name.ilike.%${firstName.trim()}%,discord_display_name.ilike.%${lastName.trim()}%`);
-      
-      if (data2 && data2.length > 0) {
-        // Filtere die die BEIDE Namen enthalten
-        const filtered = data2.filter(u => {
-          const displayName = u.discord_display_name || '';
-          return displayName.toLowerCase().includes(firstName.trim().toLowerCase()) 
-              && displayName.toLowerCase().includes(lastName.trim().toLowerCase());
-        });
-        
-        if (filtered.length > 0) {
-          recipientData = filtered;
-          console.log('[CHECK RECIPIENT] Found via wildcard:', filtered[0].discord_display_name);
-        }
-      }
-      
-      if (!recipientData || recipientData.length === 0) {
-        // Versuch 3: Username durchsuchen
-        const searchUsername = `${firstName.trim()}${lastName.trim()}`.toLowerCase();
-        const { data: data3, error: error3 } = await supabaseAdmin
-          .from('user_data')
-          .select('*')
-          .ilike('discord_username', `%${searchUsername}%`);
-        
-        if (data3 && data3.length > 0) {
-          recipientData = data3;
-          console.log('[CHECK RECIPIENT] Found via username:', data3[0].discord_username);
-        }
-      }
+    if (fetchError) {
+      console.error('[CHECK RECIPIENT] Fetch error:', fetchError);
+      return NextResponse.json({ error: 'Datenbankfehler' }, { status: 500 });
     }
+    
+    // Filtere nach character.name
+    const recipientData = allUsers.filter(u => {
+      try {
+        const userData = typeof u.data === 'string' ? JSON.parse(u.data) : u.data;
+        const characterName = userData?.character?.name || '';
+        const vorname = userData?.character?.vorname || '';
+        const nachname = userData?.character?.nachname || '';
+        
+        // Prüfe verschiedene Kombinationen
+        const fullName = characterName.toLowerCase();
+        const searchLower = searchName.toLowerCase();
+        const vornameMatch = vorname.toLowerCase() === firstName.trim().toLowerCase();
+        const nachnameMatch = nachname.toLowerCase() === lastName.trim().toLowerCase();
+        
+        return fullName === searchLower || (vornameMatch && nachnameMatch);
+      } catch (e) {
+        return false;
+      }
+    });
 
     if (!recipientData || recipientData.length === 0) {
       console.log('[CHECK RECIPIENT] Not found:', searchName);
@@ -4214,24 +4195,22 @@ async function handleCheckRecipient(request) {
     }
 
     const recipient = recipientData[0];
+    const recipientUserData = typeof recipient.data === 'string' ? JSON.parse(recipient.data) : recipient.data;
+    
+    console.log('[CHECK RECIPIENT] Found:', recipientUserData?.character?.name);
 
     // Prüfe ob man sich selbst prüft
     if (recipient.discord_user_id === user.id) {
       return NextResponse.json({ error: 'Du kannst dir nicht selbst etwas schenken' }, { status: 400 });
     }
 
-    // Parse recipient data
-    const recipientDataObj = typeof recipient.data === 'string' 
-      ? JSON.parse(recipient.data) 
-      : recipient.data;
-
     return NextResponse.json({
       success: true,
       recipient: {
         id: recipient.discord_user_id,
-        displayName: recipient.discord_display_name,
-        username: recipient.discord_username,
-        licenses: recipientDataObj?.licenses || []
+        displayName: recipientUserData?.character?.name || 'Unbekannt',
+        username: recipient.discord_username || '',
+        licenses: recipientUserData?.licenses || []
       }
     });
 

@@ -32,6 +32,7 @@ export function ShopView({ user, userData, onRefresh }) {
 
   // Verschenken Modal State
   const [showGiftModal, setShowGiftModal] = useState(false);
+  const [giftMode, setGiftMode] = useState(false); // Verschenken-Modus aktiv
   const [giftItemId, setGiftItemId] = useState(null);
   const [giftFirstName, setGiftFirstName] = useState('');
   const [giftLastName, setGiftLastName] = useState('');
@@ -250,13 +251,13 @@ export function ShopView({ user, userData, onRefresh }) {
   };
 
   // Verschenken-Funktionen
-  const openGiftModal = (itemId) => {
-    setGiftItemId(itemId);
+  const openGiftMode = () => {
+    setShowGiftModal(true);
     setGiftFirstName('');
     setGiftLastName('');
     setGiftRecipient(null);
     setGiftError('');
-    setShowGiftModal(true);
+    setGiftMode(false);
   };
 
   const checkRecipient = async () => {
@@ -281,17 +282,10 @@ export function ShopView({ user, userData, onRefresh }) {
       const data = await res.json();
 
       if (res.ok && data.recipient) {
-        // Prüfe ob Empfänger das Item bereits hat
-        const recipientLicenses = data.recipient.licenses || [];
-        const hasItem = recipientLicenses.includes(giftItemId);
-
-        if (hasItem) {
-          setGiftError(`${data.recipient.displayName} besitzt dieses Item bereits!`);
-          setGiftRecipient(null);
-        } else {
-          setGiftRecipient(data.recipient);
-          toast.success(`Empfänger gefunden: ${data.recipient.displayName}`);
-        }
+        setGiftRecipient(data.recipient);
+        setGiftMode(true); // Aktiviere Verschenken-Modus
+        setShowGiftModal(false); // Schließe Modal
+        toast.success(`Verschenken-Modus aktiviert für: ${data.recipient.displayName}`);
       } else {
         setGiftError(data.error || 'Empfänger nicht gefunden');
         setGiftRecipient(null);
@@ -303,6 +297,19 @@ export function ShopView({ user, userData, onRefresh }) {
     } finally {
       setCheckingRecipient(false);
     }
+  };
+
+  const cancelGiftMode = () => {
+    setGiftMode(false);
+    setGiftRecipient(null);
+    setGiftFirstName('');
+    setGiftLastName('');
+    toast.info('Verschenken-Modus beendet');
+  };
+
+  const giftItem = (itemId) => {
+    setGiftItemId(itemId);
+    openPinModal({ type: 'gift' });
   };
 
   const executeGift = async () => {
@@ -468,8 +475,47 @@ export function ShopView({ user, userData, onRefresh }) {
         )}
       </div>
 
-      {/* Warenkorb Button */}
-      <div className="flex justify-end">
+      {/* Warenkorb & Verschenken Buttons */}
+      <div className="flex justify-end gap-3">
+        {/* Verschenken-Modus Button */}
+        {giftMode ? (
+          <div className="flex items-center gap-3">
+            <div 
+              className="px-4 py-2 rounded-xl border"
+              style={{
+                background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.1), rgba(126, 34, 206, 0.05))',
+                borderColor: 'rgba(147, 51, 234, 0.3)'
+              }}
+            >
+              <p className="text-sm text-purple-300">
+                <Heart className="w-4 h-4 inline mr-2" />
+                Verschenken an: <span className="font-bold">{giftRecipient?.displayName}</span>
+              </p>
+            </div>
+            <Button
+              onClick={cancelGiftMode}
+              variant="outline"
+              className="rounded-xl h-12 px-4"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Beenden
+            </Button>
+          </div>
+        ) : (
+          <Button
+            onClick={openGiftMode}
+            className="rounded-xl h-12 px-6"
+            style={{
+              background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(126, 34, 206, 0.3))',
+              border: '1px solid rgba(147, 51, 234, 0.4)',
+              color: '#fff'
+            }}
+          >
+            <Heart className="w-5 h-5 mr-2" />
+            Verschenken
+          </Button>
+        )}
+        
         <Button
           onClick={() => setShowCart(true)}
           className="rounded-xl h-12 px-6"
@@ -604,8 +650,12 @@ export function ShopView({ user, userData, onRefresh }) {
             const canBuyThisVIP = canPurchaseVIP(id);
             const isLowerVIP = isVIPItem && !canBuyThisVIP && !hasItem;
             
+            // Im Verschenken-Modus: Prüfe ob Empfänger Item hat
+            const recipientHasItem = giftMode && giftRecipient?.licenses?.includes(id);
+            const isDisabledInGiftMode = giftMode && recipientHasItem;
+            
             const originalPrice = item.price;
-            const discountedPrice = calculatePrice(originalPrice, id); // ItemId mitgeben!
+            const discountedPrice = calculatePrice(originalPrice, id);
             const hasDiscount = discountedPrice < originalPrice;
             
             return (
@@ -613,18 +663,18 @@ export function ShopView({ user, userData, onRefresh }) {
                 key={id}
                 className="p-4 rounded-xl border relative"
                 style={{
-                  background: (hasItem || isLowerVIP)
-                    ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.15), rgba(80, 80, 80, 0.1))' // Grauer für gesperrt
+                  background: (hasItem || isLowerVIP || isDisabledInGiftMode)
+                    ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.15), rgba(80, 80, 80, 0.1))'
                     : 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
-                  borderColor: (hasItem || isLowerVIP)
-                    ? 'rgba(150, 150, 150, 0.2)' // Grauer Border für gesperrt
+                  borderColor: (hasItem || isLowerVIP || isDisabledInGiftMode)
+                    ? 'rgba(150, 150, 150, 0.2)'
                     : 'rgba(255, 255, 255, 0.08)',
-                  opacity: (hasItem || isLowerVIP) ? 0.7 : 1,
+                  opacity: (hasItem || isLowerVIP || isDisabledInGiftMode) ? 0.7 : 1,
                   position: 'relative'
                 }}
               >
-                {/* Sperr-Overlay für besseren visuellen Effekt */}
-                {(hasItem || isLowerVIP) && (
+                {/* Sperr-Overlay */}
+                {(hasItem || isLowerVIP || isDisabledInGiftMode) && (
                   <div 
                     className="absolute inset-0 rounded-xl pointer-events-none"
                     style={{
@@ -634,11 +684,19 @@ export function ShopView({ user, userData, onRefresh }) {
                 )}
                 
                 {/* Badges */}
-                {hasItem && (
+                {hasItem && !giftMode && (
                   <div className="absolute top-2 right-2 bg-green-500/20 border border-green-500/50 rounded-lg px-2 py-1 z-10">
                     <span className="text-xs text-green-300 font-medium flex items-center gap-1">
                       <Check className="w-3 h-3" />
                       Besitzt du
+                    </span>
+                  </div>
+                )}
+                {recipientHasItem && giftMode && (
+                  <div className="absolute top-2 right-2 bg-orange-500/20 border border-orange-500/50 rounded-lg px-2 py-1 z-10">
+                    <span className="text-xs text-orange-300 font-medium flex items-center gap-1">
+                      <Check className="w-3 h-3" />
+                      Hat Empfänger
                     </span>
                   </div>
                 )}
@@ -672,52 +730,56 @@ export function ShopView({ user, userData, onRefresh }) {
                     )}
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      onClick={() => addToCart(id)}
-                      disabled={hasItem || isLowerVIP}
-                      size="sm"
-                      className="rounded-lg"
-                      style={{
-                        background: (hasItem || isLowerVIP)
-                          ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.3), rgba(80, 80, 80, 0.2))'
-                          : 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        color: (hasItem || isLowerVIP) ? 'rgba(255, 255, 255, 0.4)' : '#fff',
-                        cursor: (hasItem || isLowerVIP) ? 'not-allowed' : 'pointer'
-                      }}
-                    >
-                      {hasItem ? (
-                        <>
-                          <Check className="w-4 h-4 mr-1" />
-                          Gekauft
-                        </>
-                      ) : isLowerVIP ? (
-                        <>
-                          <Lock className="w-4 h-4 mr-1" />
-                          Gesperrt
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-4 h-4 mr-1" />
-                          Warenkorb
-                        </>
-                      )}
-                    </Button>
-                    
-                    {/* Verschenken Button - IMMER anzeigen außer bei VIP-Hierarchie-Problem */}
-                    {!isLowerVIP && (
+                    {/* Im Verschenken-Modus: Verschenken-Button, sonst Warenkorb-Button */}
+                    {giftMode ? (
                       <Button
-                        onClick={() => openGiftModal(id)}
+                        onClick={() => giftItem(id)}
+                        disabled={isDisabledInGiftMode || isLowerVIP}
                         size="sm"
                         className="rounded-lg"
                         style={{
-                          background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(126, 34, 206, 0.3))',
+                          background: (isDisabledInGiftMode || isLowerVIP)
+                            ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.3), rgba(80, 80, 80, 0.2))'
+                            : 'linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(126, 34, 206, 0.3))',
                           border: '1px solid rgba(147, 51, 234, 0.4)',
-                          color: '#fff'
+                          color: (isDisabledInGiftMode || isLowerVIP) ? 'rgba(255, 255, 255, 0.4)' : '#fff',
+                          cursor: (isDisabledInGiftMode || isLowerVIP) ? 'not-allowed' : 'pointer'
                         }}
-                        title="Item verschenken"
                       >
-                        <Heart className="w-4 h-4" />
+                        <Heart className="w-4 h-4 mr-1" />
+                        Verschenken
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => addToCart(id)}
+                        disabled={hasItem || isLowerVIP}
+                        size="sm"
+                        className="rounded-lg"
+                        style={{
+                          background: (hasItem || isLowerVIP)
+                            ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.3), rgba(80, 80, 80, 0.2))'
+                            : 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          color: (hasItem || isLowerVIP) ? 'rgba(255, 255, 255, 0.4)' : '#fff',
+                          cursor: (hasItem || isLowerVIP) ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        {hasItem ? (
+                          <>
+                            <Check className="w-4 h-4 mr-1" />
+                            Gekauft
+                          </>
+                        ) : isLowerVIP ? (
+                          <>
+                            <Lock className="w-4 h-4 mr-1" />
+                            Gesperrt
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4 mr-1" />
+                            Warenkorb
+                          </>
+                        )}
                       </Button>
                     )}
                   </div>
@@ -974,28 +1036,10 @@ export function ShopView({ user, userData, onRefresh }) {
             </h3>
             
             <p className="text-sm text-white/60 mb-6">
-              Gib Vor- und Nachname des Empfängers ein. Wir prüfen ob das Item verschenkt werden kann.
+              Gib Vor- und Nachname des Empfängers ein. Nach der Prüfung kannst du Items an diese Person verschenken.
             </p>
 
             <div className="space-y-4">
-              {/* Item Info */}
-              {giftItemId && shopItems[giftItemId] && (
-                <div 
-                  className="p-3 rounded-xl border"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
-                    borderColor: 'rgba(255, 255, 255, 0.08)'
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-white font-medium">{shopItems[giftItemId].name}</span>
-                    <span className="text-green-400 font-bold">
-                      {calculatePrice(shopItems[giftItemId].price, giftItemId).toLocaleString('de-DE')}€
-                    </span>
-                  </div>
-                </div>
-              )}
-
               {/* Vor- und Nachname Eingabe */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -1101,8 +1145,10 @@ export function ShopView({ user, userData, onRefresh }) {
                       setGiftError('Bitte zuerst Empfänger prüfen');
                       return;
                     }
+                    // Aktiviere Verschenken-Modus und schließe Modal
+                    setGiftMode(true);
                     setShowGiftModal(false);
-                    openPinModal({ type: 'gift' });
+                    toast.success(`Verschenken-Modus aktiviert für: ${giftRecipient.displayName}`);
                   }}
                   disabled={purchasing || !giftRecipient}
                   className="flex-1 rounded-xl"
@@ -1112,8 +1158,8 @@ export function ShopView({ user, userData, onRefresh }) {
                     color: '#fff'
                   }}
                 >
-                  <Heart className="w-4 h-4 mr-2" />
-                  Weiter
+                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                  Verschenken aktivieren
                 </Button>
               </div>
             </div>
