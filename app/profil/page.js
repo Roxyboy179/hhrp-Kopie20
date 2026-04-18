@@ -128,10 +128,20 @@ function BotStatusCard({ status, onRetry }) {
 function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
   const [isFlipped, setIsFlipped] = useState(false);
   
+  // Hilfsfunktion: Prüfe ob User eine Lizenz hat (unterstützt String und Object Format)
+  const hasLicense = (licenseId) => {
+    return licenses.some(l => {
+      if (!l) return false;
+      if (typeof l === 'string') return l === licenseId || l.includes(licenseId);
+      if (typeof l === 'object') return (l.name === licenseId || l.id === licenseId || l.name?.includes(licenseId) || l.id?.includes(licenseId));
+      return false;
+    });
+  };
+  
   // Prüfe welche Führerscheine vorhanden sind
-  const hasPKW = licenses.some(l => l.includes('führerschein_pkw'));
-  const hasMotorrad = licenses.some(l => l.includes('führerschein_motorrad') || l.includes('motorradschein'));
-  const hasLKW = licenses.some(l => l.includes('führerschein_lkw') || l.includes('lkw'));
+  const hasPKW = hasLicense('führerschein_pkw');
+  const hasMotorrad = hasLicense('führerschein_motorrad') || hasLicense('motorradschein');
+  const hasLKW = hasLicense('führerschein_lkw') || hasLicense('lkw');
   
   const hasAnyLicense = hasPKW || hasMotorrad || hasLKW;
   
@@ -332,9 +342,19 @@ function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
 function WeaponsLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
   const [isFlipped, setIsFlipped] = useState(false);
   
+  // Hilfsfunktion: Prüfe ob User eine Lizenz hat (unterstützt String und Object Format)
+  const hasLicense = (licenseId) => {
+    return licenses.some(l => {
+      if (!l) return false;
+      if (typeof l === 'string') return l === licenseId || l.includes(licenseId);
+      if (typeof l === 'object') return (l.name === licenseId || l.id === licenseId || l.name?.includes(licenseId) || l.id?.includes(licenseId));
+      return false;
+    });
+  };
+  
   // Prüfe welche Waffenscheine vorhanden sind
-  const hasWaffenschein = licenses.some(l => l.includes('waffenschein'));
-  const hasJagdschein = licenses.some(l => l.includes('jagdschein'));
+  const hasWaffenschein = hasLicense('waffenschein');
+  const hasJagdschein = hasLicense('jagdschein');
   
   const hasAnyLicense = hasWaffenschein || hasJagdschein;
   
