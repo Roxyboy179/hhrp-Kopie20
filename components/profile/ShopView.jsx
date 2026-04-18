@@ -20,17 +20,6 @@ export function ShopView({ user, userData, onRefresh }) {
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   
-  // Debug: Zeige userData
-  useEffect(() => {
-    console.log('[SHOP] userData prop:', userData);
-    console.log('[SHOP] userData DIREKT:', {
-      bank: userData?.money?.bank,
-      credits: userData?.credits,
-      bankLimit: userData?.bankLimit,
-      licenses: userData?.licenses
-    });
-  }, [userData]);
-  
   // Warenkorb State
   const [cart, setCart] = useState([]);
   const [showCart, setShowCart] = useState(false);
@@ -49,7 +38,6 @@ export function ShopView({ user, userData, onRefresh }) {
       document.body.style.overflow = 'unset';
     }
     
-    // Cleanup
     return () => {
       document.body.style.overflow = 'unset';
     };
@@ -81,32 +69,23 @@ export function ShopView({ user, userData, onRefresh }) {
   };
 
   const categories = {
-    'all': { name: 'Alle Items', icon: ShoppingCart, color: 'blue' },
-    'führerscheine': { name: 'Führerscheine', icon: Car, color: 'green' },
-    'waffen': { name: 'Waffenscheine', icon: Shield, color: 'red' },
-    'versicherungen': { name: 'Versicherungen', icon: Briefcase, color: 'blue' },
-    'vip_premiums': { name: 'VIP', icon: Sparkles, color: 'purple' },
-    'werkzeuge': { name: 'Werkzeuge', icon: Wrench, color: 'yellow' },
-    'schutzbriefe': { name: 'Schutzbriefe', icon: FileText, color: 'orange' }
+    'all': { name: 'Alle Items', icon: ShoppingCart },
+    'führerscheine': { name: 'Führerscheine', icon: Car },
+    'waffen': { name: 'Waffenscheine', icon: Shield },
+    'versicherungen': { name: 'Versicherungen', icon: Briefcase },
+    'vip_premiums': { name: 'VIP', icon: Sparkles },
+    'werkzeuge': { name: 'Werkzeuge', icon: Wrench },
+    'schutzbriefe': { name: 'Schutzbriefe', icon: FileText }
   };
 
-  // Separate Kategorie für Credits & Upgrades
   const specialCategories = {
-    'credits': { name: 'Credits kaufen', icon: CreditCard, color: 'emerald' },
-    'bank_limit': { name: 'Bank Limit', icon: TrendingUp, color: 'cyan' }
+    'credits': { name: 'Credits kaufen', icon: CreditCard },
+    'bank_limit': { name: 'Bank Limit', icon: TrendingUp }
   };
 
   useEffect(() => {
     loadShopData();
-    // Debug: Log userData
-    if (userData) {
-      console.log('[SHOP] UserData:', {
-        bank: userData?.money?.bank,
-        credits: userData?.credits,
-        bankLimit: userData?.bankLimit
-      });
-    }
-  }, [userData]);
+  }, []);
 
   const loadShopData = async () => {
     try {
@@ -126,18 +105,16 @@ export function ShopView({ user, userData, onRefresh }) {
   };
 
   // Warenkorb Funktionen
-  const addToCart = (itemId, itemType = 'item') => {
+  const addToCart = (itemId) => {
     const item = shopItems[itemId];
     if (!item) return;
 
-    // Prüfe ob Item bereits im Warenkorb ist
     const itemExists = cart.some(cartItem => cartItem.id === itemId);
     if (itemExists) {
       toast.warning(`${item.name} ist bereits im Warenkorb`);
       return;
     }
 
-    // Berechne Preis mit VIP-Rabatt
     const originalPrice = item.price;
     const discountedPrice = calculatePrice(originalPrice);
 
@@ -145,9 +122,9 @@ export function ShopView({ user, userData, onRefresh }) {
       id: itemId,
       name: item.name,
       originalPrice: originalPrice,
-      price: discountedPrice, // Mit Rabatt!
+      price: discountedPrice,
       hasDiscount: discountedPrice < originalPrice,
-      type: itemType,
+      type: 'item',
       icon: itemIcons[itemId]
     };
 
@@ -183,13 +160,11 @@ export function ShopView({ user, userData, onRefresh }) {
       return false;
     }
 
-    // Validiere PIN gegen userData (aus Bot-Daten)
-    // Prüfe erst cards[0].code (NICHT .pin!), dann bankAccount.pin
+    // PIN-FIX: Verwende .code statt .pin!
     const userPin = userData?.cards?.[0]?.code || 
                     userData?.bankAccount?.pin || 
                     '0000';
     
-    // Vergleiche als String (PIN kann Zahl oder String sein)
     const userPinStr = String(userPin);
     const pinStr = String(pin);
     
@@ -226,19 +201,6 @@ export function ShopView({ user, userData, onRefresh }) {
         toast.success(`${cart.length} Item(s) gekauft!`);
         clearCart();
         setShowCart(false);
-      } else if (pendingPurchase.type === 'item') {
-        const res = await fetch('/api/shop/purchase', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ itemId: pendingPurchase.itemId })
-        });
-
-        const data = await res.json();
-        if (res.ok) {
-          toast.success(data.message);
-        } else {
-          toast.error(data.error);
-        }
       } else if (pendingPurchase.type === 'credits') {
         const res = await fetch('/api/shop/purchase-credits', {
           method: 'POST',
@@ -268,7 +230,7 @@ export function ShopView({ user, userData, onRefresh }) {
       }
 
       setTimeout(() => {
-        onRefresh();
+        if (onRefresh) onRefresh();
       }, 2000);
     } catch (e) {
       toast.error('Fehler beim Kauf');
@@ -288,19 +250,14 @@ export function ShopView({ user, userData, onRefresh }) {
   const userBankLimit = userData?.bankLimit || 1000000;
   
   // VIP Status prüfen für Rabatte
-  // Licenses ist ein ARRAY in Supabase!
   const userLicensesArray = userData?.licenses || [];
-  const userLicenses = {};
-  userLicensesArray.forEach(license => {
-    userLicenses[license] = { active: true }; // Konvertiere zu Object für einfachere Prüfung
-  });
   
   const hasVIPPremium = userLicensesArray.includes('vip_premium');
   const hasVIPPlatinum = userLicensesArray.includes('vip_platinum');
   const hasVIPUltimate = userLicensesArray.includes('vip_ultimate');
   const hasVIPElitePlus = userLicensesArray.includes('vip_elite_plus');
   
-  // VIP Hierarchie (0 = niedrigste, 3 = höchste)
+  // VIP Hierarchie
   const vipHierarchy = {
     'vip_premium': 0,
     'vip_platinum': 1,
@@ -308,27 +265,24 @@ export function ShopView({ user, userData, onRefresh }) {
     'vip_elite_plus': 3
   };
   
-  // Finde höchstes VIP des Users
   let userHighestVIP = -1;
   if (hasVIPElitePlus) userHighestVIP = 3;
   else if (hasVIPUltimate) userHighestVIP = 2;
   else if (hasVIPPlatinum) userHighestVIP = 1;
   else if (hasVIPPremium) userHighestVIP = 0;
   
-  // Funktion: Prüfe ob User dieses VIP kaufen kann
   const canPurchaseVIP = (vipId) => {
     const vipLevel = vipHierarchy[vipId];
-    if (vipLevel === undefined) return true; // Kein VIP Item
-    return vipLevel > userHighestVIP; // Nur höhere VIPs kaufbar
+    if (vipLevel === undefined) return true;
+    return vipLevel > userHighestVIP;
   };
   
-  // Berechne VIP-Rabatt
+  // VIP-Rabatte (korrekte Werte!)
   let vipDiscount = 0;
   if (hasVIPElitePlus) vipDiscount = 0.35; // 35%
   else if (hasVIPUltimate) vipDiscount = 0.20; // 20%
   else if (hasVIPPlatinum) vipDiscount = 0.10; // 10%
   
-  // Funktion: Berechne Preis mit VIP-Rabatt
   const calculatePrice = (basePrice) => {
     if (vipDiscount > 0) {
       return Math.floor(basePrice * (1 - vipDiscount));
@@ -338,8 +292,8 @@ export function ShopView({ user, userData, onRefresh }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-white/70">Lade Shop...</div>
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 text-white/50 animate-spin" />
       </div>
     );
   }
@@ -384,25 +338,16 @@ export function ShopView({ user, userData, onRefresh }) {
         {vipDiscount > 0 && (
           <div className="mt-3 pt-3 border-t border-white/10">
             <p className="text-sm text-white/70">
-              {hasVIPElitePlus && '🏆'}
-              {hasVIPUltimate && !hasVIPElitePlus && '⚡'}
-              {hasVIPPlatinum && !hasVIPUltimate && !hasVIPElitePlus && '💎'}
-              {hasVIPPremium && !hasVIPPlatinum && !hasVIPUltimate && !hasVIPElitePlus && '⭐'}
-              {' '}
-              <span className="font-medium">
-                {hasVIPElitePlus && 'VIP ELITE PLUS'}
-                {hasVIPUltimate && !hasVIPElitePlus && 'VIP Ultimate'}
-                {hasVIPPlatinum && !hasVIPUltimate && !hasVIPElitePlus && 'VIP Platinum'}
-                {hasVIPPremium && !hasVIPPlatinum && !hasVIPUltimate && !hasVIPElitePlus && 'VIP Premium'}
-              </span>
+              {hasVIPElitePlus && '🏆 VIP ELITE PLUS'}
+              {hasVIPUltimate && !hasVIPElitePlus && '⚡ VIP Ultimate'}
+              {hasVIPPlatinum && !hasVIPUltimate && !hasVIPElitePlus && '💎 VIP Platinum'}
               <span className="text-green-400 ml-2">-{(vipDiscount * 100).toFixed(0)}% auf alle Käufe</span>
             </p>
           </div>
         )}
       </div>
 
-
-      {/* Warenkorb Button - Überweisung-Stil */}
+      {/* Warenkorb Button */}
       <div className="flex justify-end">
         <Button
           onClick={() => setShowCart(true)}
@@ -447,431 +392,377 @@ export function ShopView({ user, userData, onRefresh }) {
 
       {/* Credits kaufen */}
       {selectedCategory === 'credits' && (
-        <div>
-          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <CreditCard className="w-5 h-5" />
-            Credits kaufen
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {creditOptions.map((option, index) => (
-              <div key={index} className="glass rounded-xl p-6 border border-emerald-500/30 hover:border-emerald-400/50 transition-all">
-                <div className="text-center mb-4">
-                  <CreditCard className="w-12 h-12 mx-auto mb-3 text-cyan-400" />
-                  <div className="text-3xl font-bold text-cyan-400">{option.credits}</div>
-                  <div className="text-sm text-white/50">Credits</div>
-                  {option.discount > 0 && (
-                    <div className="mt-2 inline-block bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs font-bold">
-                      -{option.discount}% Rabatt
-                    </div>
-                  )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {creditOptions.map((option, index) => (
+            <div
+              key={index}
+              className="p-4 rounded-xl border"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
+                borderColor: 'rgba(255, 255, 255, 0.08)'
+              }}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Coins className="w-5 h-5 text-emerald-400" />
+                  <h3 className="font-semibold text-white">{option.label}</h3>
                 </div>
-                <div className="text-center mb-4">
-                  <div className="text-2xl font-bold text-white">
-                    {option.cost.toLocaleString('de-DE')}€
-                  </div>
-                </div>
-                <button
+              </div>
+              <p className="text-2xl font-bold text-white mb-4">{option.credits} Credits</p>
+              <div className="flex items-center justify-between">
+                <span className="text-white/60 text-sm">{option.cost.toLocaleString('de-DE')}€</span>
+                <Button
                   onClick={() => openPinModal({ type: 'credits', optionIndex: index })}
                   disabled={purchasing || userBalance < option.cost}
-                  className="w-full bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold py-2 rounded-lg transition-all disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+                  size="sm"
+                  className="rounded-lg"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#fff'
+                  }}
                 >
-                  <Lock className="w-4 h-4" />
-                  {userBalance < option.cost ? 'Zu wenig Geld' : 'Mit PIN kaufen'}
-                </button>
+                  <ShoppingBag className="w-4 h-4 mr-1" />
+                  Kaufen
+                </Button>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       )}
 
       {/* Bank Limit Upgrades */}
       {selectedCategory === 'bank_limit' && (
-        <div>
-          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5" />
-            Bank Limit erhöhen
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {bankLimitUpgrades.map((upgrade, index) => (
-              <div key={index} className="glass rounded-xl p-6 border border-blue-500/30 hover:border-blue-400/50 transition-all">
-                <div className="text-center mb-4">
-                  <TrendingUp className="w-12 h-12 mx-auto mb-3 text-cyan-400" />
-                  <div className="text-2xl font-bold text-cyan-400">
-                    +{upgrade.addLimit.toLocaleString('de-DE')}€
-                  </div>
-                  <div className="text-sm text-white/50">Limit Erhöhung</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {bankLimitUpgrades.map((upgrade, index) => (
+            <div
+              key={index}
+              className="p-4 rounded-xl border"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
+                borderColor: 'rgba(255, 255, 255, 0.08)'
+              }}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-cyan-400" />
+                  <h3 className="font-semibold text-white">{upgrade.label}</h3>
                 </div>
-                <div className="text-center mb-4">
-                  <div className="text-lg font-bold text-white">
-                    {upgrade.creditCost.toLocaleString('de-DE')} Credits
-                  </div>
-                </div>
-                <button
+              </div>
+              <p className="text-sm text-white/60 mb-3">{upgrade.description}</p>
+              <div className="flex items-center justify-between">
+                <span className="text-white/60 text-sm">{upgrade.creditCost} Credits</span>
+                <Button
                   onClick={() => openPinModal({ type: 'bank_limit', upgradeIndex: index })}
                   disabled={purchasing || userCredits < upgrade.creditCost}
-                  className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold py-2 rounded-lg transition-all disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+                  size="sm"
+                  className="rounded-lg"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#fff'
+                  }}
                 >
-                  <Lock className="w-4 h-4" />
-                  {userCredits < upgrade.creditCost ? 'Zu wenig Credits' : 'Mit PIN kaufen'}
-                </button>
+                  <ShoppingBag className="w-4 h-4 mr-1" />
+                  Kaufen
+                </Button>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       )}
 
       {/* Shop Items */}
       {selectedCategory !== 'credits' && selectedCategory !== 'bank_limit' && (
-        <div>
-          <h3 className="text-xl font-bold mb-4">
-            {categories[selectedCategory].name}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredItems.map(([id, item]) => {
-              const ItemIcon = itemIcons[id] || ShoppingCart;
-              
-              // Prüfe ob User dieses Item bereits hat (licenses ist Array in Supabase!)
-              const hasItem = userLicensesArray.includes(id);
-              const isActive = hasItem;
-              const expiresAt = null; // TODO: Ablaufdatum
-              const isExpired = false;
-              
-              // Prüfe VIP-Hierarchie
-              const isVIPItem = id.startsWith('vip_');
-              const canBuyThisVIP = canPurchaseVIP(id);
-              const isLowerVIP = isVIPItem && !canBuyThisVIP && !hasItem;
-              
-              // Berechne Preis mit VIP-Rabatt
-              const originalPrice = item.price;
-              const discountedPrice = calculatePrice(originalPrice);
-              const hasDiscount = discountedPrice < originalPrice;
-              
-              return (
-                <div key={id} className="glass rounded-xl p-6 border border-white/[0.08] hover:border-white/20 transition-all relative">
-                  {/* Bereits gekauft Badge */}
-                  {hasItem && !isExpired && (
-                    <div className="absolute top-3 right-3 bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                      <Check className="w-3 h-3" />
-                      Besitzt du
-                    </div>
-                  )}
-                  
-                  {isExpired && (
-                    <div className="absolute top-3 right-3 bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      Abgelaufen
-                    </div>
-                  )}
-                  
-                  {isLowerVIP && (
-                    <div className="absolute top-3 right-3 bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                      <X className="w-3 h-3" />
-                      Niedrigeres VIP
-                    </div>
-                  )}
-                  
-                  <div className="flex items-start gap-3 mb-4">
-                    <div className="p-3 rounded-xl bg-blue-500/20">
-                      <ItemIcon className="w-8 h-8 text-blue-400" />
-                    </div>
-                    <div className="flex-1">
-                      <h4 className="font-bold text-white mb-1">{item.name}</h4>
-                      <p className="text-sm text-white/50 line-clamp-2">{item.description}</p>
-                    </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredItems.map(([id, item]) => {
+            const ItemIcon = itemIcons[id] || ShoppingBag;
+            
+            const hasItem = userLicensesArray.includes(id);
+            const isVIPItem = id.startsWith('vip_');
+            const canBuyThisVIP = canPurchaseVIP(id);
+            const isLowerVIP = isVIPItem && !canBuyThisVIP && !hasItem;
+            
+            const originalPrice = item.price;
+            const discountedPrice = calculatePrice(originalPrice);
+            const hasDiscount = discountedPrice < originalPrice;
+            
+            return (
+              <div
+                key={id}
+                className="p-4 rounded-xl border relative"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
+                  borderColor: 'rgba(255, 255, 255, 0.08)',
+                  opacity: (hasItem || isLowerVIP) ? 0.6 : 1
+                }}
+              >
+                {hasItem && (
+                  <div className="absolute top-2 right-2 bg-green-500/20 border border-green-500/50 rounded-lg px-2 py-1">
+                    <span className="text-xs text-green-300 font-medium">✓ Besitzt du</span>
                   </div>
-                  
-                  {/* Detaillierte Info */}
-                  <div className="space-y-2 mb-4 p-3 rounded-lg bg-white/5">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-white/50">Preis:</span>
-                      <div className="flex items-center gap-2">
-                        {hasDiscount && (
-                          <span className="text-white/30 line-through text-xs">
-                            {originalPrice.toLocaleString('de-DE')}€
-                          </span>
-                        )}
-                        <span className="font-bold text-green-400">
-                          {discountedPrice.toLocaleString('de-DE')}€
-                        </span>
-                        {hasDiscount && (
-                          <span className="bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded text-xs font-bold">
-                            -{Math.round(vipDiscount * 100)}% VIP
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    {item.duration > 0 && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-white/50">Laufzeit:</span>
-                        <span className="text-white flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {item.duration} Tage
-                        </span>
-                      </div>
-                    )}
-                    {expiresAt && !isExpired && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-white/50">Läuft ab:</span>
-                        <span className="text-yellow-400 text-xs">
-                          {expiresAt.toLocaleDateString('de-DE')}
-                        </span>
-                      </div>
-                    )}
-                    {item.isSchutzbrief && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-white/50">Nutzungen:</span>
-                        <span className="text-yellow-400 font-bold">
-                          {hasItem?.nutzungen || item.maxNutzungen}/{item.maxNutzungen}x
-                        </span>
-                      </div>
-                    )}
-                    {item.autoRenewable && (
-                      <div className="flex items-center gap-1 text-xs text-blue-400">
-                        <Info className="w-3 h-3" />
-                        Automatisch verlängerbar
-                      </div>
-                    )}
+                )}
+                {isLowerVIP && (
+                  <div className="absolute top-2 right-2 bg-red-500/20 border border-red-500/50 rounded-lg px-2 py-1">
+                    <span className="text-xs text-red-300 font-medium">Nicht verfügbar</span>
                   </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => addToCart(id)}
-                      disabled={hasItem && !isExpired || isLowerVIP}
-                      className="flex-1 glass border border-white/10 hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-2 rounded-lg transition-all flex items-center justify-center gap-2 text-sm"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Warenkorb
-                    </button>
-                    <button
-                      onClick={() => openPinModal({ type: 'item', itemId: id })}
-                      disabled={purchasing || userBalance < discountedPrice || (hasItem && !isExpired) || isLowerVIP}
-                      className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold py-2 rounded-lg transition-all disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
-                    >
-                      <Lock className="w-4 h-4" />
-                      {isLowerVIP ? 'Niedrigeres VIP' : hasItem && !isExpired ? 'Besitzt du' : isExpired ? 'Erneuern' : 'Kaufen'}
-                    </button>
+                )}
+                
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <ItemIcon className="w-5 h-5 text-white/70" />
+                    <h3 className="font-semibold text-white">{item.name}</h3>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+                {item.description && (
+                  <p className="text-sm text-white/50 mb-3">{item.description}</p>
+                )}
+                <div className="flex items-center justify-between">
+                  <div>
+                    {hasDiscount ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-white/40 line-through text-sm">{originalPrice.toLocaleString('de-DE')}€</span>
+                        <span className="text-green-400 font-bold">{discountedPrice.toLocaleString('de-DE')}€</span>
+                      </div>
+                    ) : (
+                      <span className="text-white font-bold">{originalPrice.toLocaleString('de-DE')}€</span>
+                    )}
+                  </div>
+                  <Button
+                    onClick={() => addToCart(id)}
+                    disabled={hasItem || isLowerVIP}
+                    size="sm"
+                    className="rounded-lg"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      color: '#fff'
+                    }}
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Hinzufügen
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {filteredItems.length === 0 && selectedCategory !== 'credits' && selectedCategory !== 'bank_limit' && (
-        <div className="text-center py-12 text-white/50">
-          Keine Items in dieser Kategorie
-        </div>
-      )}
-
-      {/* Warenkorb als ECHTES Popup/Modal - mit Portal */}
+      {/* Warenkorb Modal - Überweisung-Stil mit Portal */}
       {showCart && createPortal(
-        <>
-          {/* Dunkler Overlay Hintergrund */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div 
-            className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[9998]"
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
-            onClick={() => setShowCart(false)}
-          />
-          
-          {/* Modal Content - ZENTRIERT */}
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
-            <div 
-              className="glass rounded-2xl p-6 border border-white/20 max-w-2xl w-full max-h-[90vh] overflow-y-auto pointer-events-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold flex items-center gap-2">
-                  <ShoppingBag className="w-6 h-6" />
-                  Warenkorb ({cart.length})
-                </h3>
-                <button
-                  onClick={() => setShowCart(false)}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-all"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+            className="w-full max-w-2xl rounded-2xl border shadow-2xl max-h-[80vh] flex flex-col"
+            style={{
+              background: 'linear-gradient(135deg, rgba(40, 40, 40, 0.95), rgba(20, 20, 20, 0.98))',
+              borderColor: 'rgba(255, 255, 255, 0.15)'
+            }}
+          >
+            {/* Header */}
+            <div className="p-6 border-b border-white/10 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <ShoppingCart className="w-6 h-6 text-white" />
+                <h3 className="text-xl font-bold text-white">Warenkorb ({cart.length})</h3>
               </div>
+              <button
+                onClick={() => setShowCart(false)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-white/60" />
+              </button>
+            </div>
 
-            {cart.length === 0 ? (
-              <div className="text-center py-12 text-white/50">
-                Warenkorb ist leer
-              </div>
-            ) : (
-              <>
-                {/* Scrollbarer Items-Bereich */}
-                <div className="space-y-3 mb-6 max-h-[50vh] overflow-y-auto pr-2">
-                  {cart.map((item, index) => {
-                    const ItemIcon = item.icon || ShoppingCart;
-                    return (
-                      <div key={index} className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10">
-                        <ItemIcon className="w-6 h-6 text-blue-400" />
+            {/* Cart Items */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-3">
+              {cart.length === 0 ? (
+                <div className="text-center py-12">
+                  <ShoppingCart className="w-16 h-16 text-white/20 mx-auto mb-4" />
+                  <p className="text-white/50">Dein Warenkorb ist leer</p>
+                </div>
+              ) : (
+                cart.map((item, index) => {
+                  const Icon = item.icon || ShoppingBag;
+                  return (
+                    <div
+                      key={index}
+                      className="p-4 rounded-xl border"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02))',
+                        borderColor: 'rgba(255, 255, 255, 0.1)'
+                      }}
+                    >
+                      <div className="flex items-start gap-3">
+                        <Icon className="w-5 h-5 text-white/70 flex-shrink-0 mt-1" />
                         <div className="flex-1">
-                          <div className="font-bold text-white">{item.name}</div>
-                          <div className="flex items-center gap-2 text-sm">
-                            {item.hasDiscount && (
-                              <>
-                                <span className="text-white/30 line-through">
-                                  {item.originalPrice.toLocaleString('de-DE')}€
-                                </span>
-                                <span className="text-green-400 font-bold">
-                                  {item.price.toLocaleString('de-DE')}€
-                                </span>
-                                <span className="bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded text-xs font-bold">
-                                  -{Math.round(vipDiscount * 100)}% VIP
-                                </span>
-                              </>
-                            )}
-                            {!item.hasDiscount && (
-                              <span className="text-green-400 font-bold">
-                                {item.price.toLocaleString('de-DE')}€
-                              </span>
-                            )}
-                          </div>
+                          <h4 className="font-medium text-white mb-1">{item.name}</h4>
+                          {item.hasDiscount && (
+                            <div className="flex items-center gap-2 text-sm mb-1">
+                              <span className="text-white/40 line-through">{item.originalPrice.toLocaleString('de-DE')}€</span>
+                              <span className="text-green-400 font-medium">{item.price.toLocaleString('de-DE')}€</span>
+                            </div>
+                          )}
+                          {!item.hasDiscount && (
+                            <p className="text-sm text-white/50">{item.price.toLocaleString('de-DE')}€</p>
+                          )}
                         </div>
                         <button
                           onClick={() => removeFromCart(index)}
-                          className="p-2 hover:bg-red-500/20 rounded-lg transition-all text-red-400"
+                          className="p-1 hover:bg-red-500/20 rounded transition-colors"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-4 h-4 text-red-400" />
                         </button>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
 
-                <div className="p-4 rounded-xl bg-blue-500/20 border border-blue-500/30 mb-6">
+            {/* Footer mit Summe */}
+            {cart.length > 0 && (
+              <div className="p-6 border-t border-white/10 space-y-4">
+                <div 
+                  className="p-4 rounded-xl border space-y-2"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02))',
+                    borderColor: 'rgba(255, 255, 255, 0.15)'
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calculator className="w-4 h-4 text-white/60" />
+                    <p className="text-sm font-medium text-white">Berechnung</p>
+                  </div>
                   {cartSavings > 0 && (
-                    <div className="flex items-center justify-between text-sm mb-2 text-white/70">
-                      <span>Original:</span>
-                      <span className="line-through">{cartOriginalTotal.toLocaleString('de-DE')}€</span>
-                    </div>
+                    <>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-white/60">Ursprünglich</span>
+                        <span className="text-white/60">{cartOriginalTotal.toLocaleString('de-DE')}€</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-white/60">VIP Rabatt</span>
+                        <span className="text-green-400 font-medium">-{cartSavings.toLocaleString('de-DE')}€</span>
+                      </div>
+                      <div className="h-px bg-white/10 my-2" />
+                    </>
                   )}
-                  {cartSavings > 0 && (
-                    <div className="flex items-center justify-between text-sm mb-2 text-green-400">
-                      <span>Ersparnis:</span>
-                      <span className="font-bold">-{cartSavings.toLocaleString('de-DE')}€</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between text-lg font-bold">
-                    <span>Gesamt:</span>
-                    <span className="text-green-400">{cartTotal.toLocaleString('de-DE')}€</span>
+                  <div className="flex justify-between">
+                    <span className="text-white font-semibold">Gesamt</span>
+                    <span className="text-white font-bold text-lg">{cartTotal.toLocaleString('de-DE')}€</span>
                   </div>
                 </div>
 
-                <div className="flex gap-3">
-                  <button
-                    onClick={clearCart}
-                    className="flex-1 glass border border-white/10 hover:bg-white/10 text-white font-bold py-3 rounded-lg transition-all"
-                  >
-                    Leeren
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowCart(false);
-                      openPinModal({ type: 'cart' });
-                    }}
-                    disabled={userBalance < cartTotal}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold py-3 rounded-lg transition-all disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    <Lock className="w-5 h-5" />
-                    {userBalance < cartTotal ? 'Zu wenig Guthaben' : 'Mit PIN kaufen'}
-                  </button>
-                </div>
-              </>
+                <Button
+                  onClick={() => {
+                    setShowCart(false);
+                    openPinModal({ type: 'cart' });
+                  }}
+                  disabled={purchasing || cart.length === 0 || userBalance < cartTotal}
+                  className="w-full h-12 text-base font-semibold rounded-xl"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.3))',
+                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                    color: '#fff'
+                  }}
+                >
+                  <CheckCircle2 className="w-5 h-5 mr-2" />
+                  Jetzt kaufen
+                </Button>
+                
+                {userBalance < cartTotal && (
+                  <div className="flex items-center gap-2 text-red-400 text-sm justify-center">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>Nicht genug Guthaben</span>
+                  </div>
+                )}
+              </div>
             )}
           </div>
-          </div>
-        </>,
+        </div>,
         document.body
       )}
 
-      {/* PIN Modal als ECHTES Popup - mit Portal */}
+      {/* PIN Modal - Überweisung-Stil mit Portal */}
       {showPinModal && createPortal(
-        <>
-          {/* Dunkler Overlay Hintergrund */}
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div 
-            className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[9998]"
-            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
-            onClick={() => {
-              setShowPinModal(false);
-              setPendingPurchase(null);
-              setPin('');
-              setPinError('');
+            className="w-full max-w-md rounded-2xl border p-6 shadow-2xl"
+            style={{
+              background: 'linear-gradient(135deg, rgba(40, 40, 40, 0.95), rgba(20, 20, 20, 0.98))',
+              borderColor: 'rgba(255, 255, 255, 0.15)'
             }}
-          />
-          
-          {/* Modal Content - ZENTRIERT */}
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
-            <div 
-              className="glass rounded-2xl p-6 border border-white/20 max-w-md w-full pointer-events-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 rounded-xl bg-blue-500/20">
-                <KeyRound className="w-6 h-6 text-blue-400" />
-              </div>
-              <h3 className="text-2xl font-bold">PIN eingeben</h3>
-            </div>
-
-            <p className="text-white/70 mb-6">
-              Bitte gib deine Shop-PIN ein um den Kauf zu bestätigen.
+          >
+            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <KeyRound className="w-5 h-5" />
+              Bank-PIN eingeben
+            </h3>
+            
+            <p className="text-sm text-white/60 mb-6">
+              Bitte gib deine Bank-PIN ein, um den Kauf zu bestätigen.
             </p>
 
-            <input
-              type="password"
-              value={pin}
-              onChange={(e) => {
-                setPin(e.target.value);
-                setPinError('');
-              }}
-              placeholder="PIN eingeben"
-              maxLength={6}
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-blue-500 mb-2"
-              autoFocus
-            />
-
-            {pinError && (
-              <div className="flex items-center gap-2 text-red-400 text-sm mb-4">
-                <AlertTriangle className="w-4 h-4" />
-                {pinError}
-              </div>
-            )}
-
-            <div className="text-xs text-white/50 mb-6">
-              Deine Karten-PIN (aus deinem Bot-Profil)
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowPinModal(false);
-                  setPendingPurchase(null);
-                  setPin('');
-                  setPinError('');
-                }}
-                className="flex-1 glass border border-white/10 hover:bg-white/10 text-white font-bold py-3 rounded-lg transition-all"
-              >
-                Abbrechen
-              </button>
-              <button
-                onClick={executePurchase}
-                disabled={!pin || purchasing}
-                className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold py-3 rounded-lg transition-all disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {purchasing ? (
-                  <>Wird gekauft...</>
-                ) : (
-                  <>
-                    <Check className="w-5 h-5" />
-                    Bestätigen
-                  </>
+            <div className="space-y-4">
+              <div>
+                <Label className="text-white/70 mb-2 block">Bank-PIN</Label>
+                <Input
+                  type="password"
+                  value={pin}
+                  onChange={(e) => {
+                    setPin(e.target.value);
+                    setPinError('');
+                  }}
+                  placeholder="•••"
+                  maxLength={4}
+                  className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/25 h-12 text-lg text-center tracking-widest"
+                  autoFocus
+                />
+                {pinError && (
+                  <div className="flex items-center gap-2 text-red-400 text-sm mt-2">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>{pinError}</span>
+                  </div>
                 )}
-              </button>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={() => {
+                    setShowPinModal(false);
+                    setPin('');
+                    setPinError('');
+                  }}
+                  variant="outline"
+                  className="flex-1 rounded-xl"
+                  disabled={purchasing}
+                >
+                  Abbrechen
+                </Button>
+                <Button
+                  onClick={executePurchase}
+                  disabled={purchasing || !pin}
+                  className="flex-1 rounded-xl"
+                  style={{
+                    background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.3))',
+                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                    color: '#fff'
+                  }}
+                >
+                  {purchasing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Kaufe...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Bestätigen
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
-          </div>
-        </>,
+        </div>,
         document.body
       )}
     </div>
