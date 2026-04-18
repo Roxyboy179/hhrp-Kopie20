@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react';
 import { Power, AlertTriangle, Clock, Save, RefreshCw, ShieldAlert, Calendar, Flag, MessageSquare, Monitor } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAdminAuth } from '@/components/providers/AdminAuthProvider';
-import { AdminCard, AdminCardHeader } from '@/components/admin/AdminCard';
-import { Button } from '@/components/ui/button';
 
 export default function SystemStatusPage() {
   const { admin } = useAdminAuth();
@@ -136,21 +134,21 @@ export default function SystemStatusPage() {
       {/* Header mit Speichern Button */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white">System-Status & Wartungen</h1>
-          <p className="text-white/60 text-sm mt-1">Wartungsmodus und geplante Wartungen verwalten</p>
+          <h1 className="text-3xl font-bold">System-Status & Wartungen</h1>
+          <p className="text-white/40 text-sm mt-1">Wartungsmodus und geplante Wartungen verwalten</p>
         </div>
-        <Button
+        <button
           onClick={handleSave}
           disabled={saving}
-          className="gap-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/20"
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
         >
           {saving ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
           {saving ? 'Speichern...' : 'Änderungen speichern'}
-        </Button>
+        </button>
       </div>
 
       {/* Wartungsmodus Card */}
-      <AdminCard>
+      <div className="glass rounded-2xl p-6 border border-white/[0.08]">
         <div className="flex items-start gap-5">
           <div 
             className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
@@ -192,10 +190,10 @@ export default function SystemStatusPage() {
             )}
           </div>
         </div>
-      </AdminCard>
+      </div>
 
       {/* Geplante Wartung Card */}
-      <AdminCard>
+      <div className="glass rounded-2xl p-6 border border-white/[0.08]">
         <div className="flex items-start gap-5">
           <div 
             className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
@@ -316,10 +314,10 @@ export default function SystemStatusPage() {
             )}
           </div>
         </div>
-      </AdminCard>
+      </div>
 
       {/* Info Box */}
-      <AdminCard className="border-blue-500/20 bg-blue-500/5">
+      <div className="glass rounded-xl p-5 border border-blue-500/20 bg-blue-500/5">
         <div className="flex items-start gap-3">
           <ShieldAlert className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
           <div className="text-sm text-blue-300/90 leading-relaxed">
@@ -327,7 +325,7 @@ export default function SystemStatusPage() {
             auf die gesamte Seite zugreifen. Das Wartungs-Banner wird für Admins nicht angezeigt.
           </div>
         </div>
-      </AdminCard>
+      </div>
     </div>
   );
 }
