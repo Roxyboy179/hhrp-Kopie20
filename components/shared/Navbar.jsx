@@ -152,9 +152,12 @@ export function Navbar({ user, loading }) {
                           
                           // Hilfsfunktion: Prüfe ob User eine Lizenz hat (unterstützt String und Object Format)
                           const hasLicense = (licenseId) => {
+                            if (!licenseId) return false;
                             return licenses.some(l => {
+                              if (!l) return false; // Sicherheitscheck
                               if (typeof l === 'string') return l === licenseId;
-                              return (l.name === licenseId || l.id === licenseId);
+                              if (typeof l === 'object') return (l.name === licenseId || l.id === licenseId);
+                              return false;
                             });
                           };
                           

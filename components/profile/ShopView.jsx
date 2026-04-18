@@ -377,9 +377,12 @@ export function ShopView({ user, userData, onRefresh }) {
   
   // Hilfsfunktion: Prüfe ob User eine Lizenz hat (unterstützt String und Object Format)
   const hasLicense = (licenseId) => {
+    if (!licenseId) return false;
     return userLicensesArray.some(l => {
+      if (!l) return false; // Sicherheitscheck für null/undefined
       if (typeof l === 'string') return l === licenseId;
-      return (l.name === licenseId || l.id === licenseId);
+      if (typeof l === 'object') return (l.name === licenseId || l.id === licenseId);
+      return false;
     });
   };
   
@@ -660,8 +663,10 @@ export function ShopView({ user, userData, onRefresh }) {
             
             // Im Verschenken-Modus: Prüfe ob Empfänger Item hat (unterstützt String und Object Format)
             const recipientHasItem = giftMode && giftRecipient?.licenses?.some(l => {
+              if (!l) return false; // Sicherheitscheck
               if (typeof l === 'string') return l === id;
-              return (l.name === id || l.id === id);
+              if (typeof l === 'object') return (l.name === id || l.id === id);
+              return false;
             });
             const isDisabledInGiftMode = giftMode && recipientHasItem;
             

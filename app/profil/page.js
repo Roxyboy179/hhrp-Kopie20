@@ -1286,7 +1286,8 @@ export default function ProfilPage() {
   // Licenses sind jetzt Objekte mit Details (expiresAt, autoRenew, etc.)
   const licenses = Array.isArray(userData?.licenses) 
     ? userData.licenses.filter(l => {
-        const name = typeof l === 'string' ? l : l.name || l.id;
+        if (!l) return false; // Filtere null/undefined raus
+        const name = typeof l === 'string' ? l : (l.name || l.id);
         return name && !name.startsWith('credits_') && !name.startsWith('credit_');
       })
     : [];
@@ -1295,10 +1296,12 @@ export default function ProfilPage() {
   
   // Globale Hilfsfunktion für Lizenz-Checks (String und Object Format)
   const userHasLicense = (licenseId) => {
-    if (!userData?.licenses) return false;
+    if (!userData?.licenses || !licenseId) return false;
     return userData.licenses.some(l => {
+      if (!l) return false; // Sicherheitscheck
       if (typeof l === 'string') return l === licenseId;
-      return (l.name === licenseId || l.id === licenseId);
+      if (typeof l === 'object') return (l.name === licenseId || l.id === licenseId);
+      return false;
     });
   };
 
