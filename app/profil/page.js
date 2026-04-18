@@ -1288,7 +1288,8 @@ export default function ProfilPage() {
     ? userData.licenses.filter(l => {
         if (!l) return false; // Filtere null/undefined raus
         const name = typeof l === 'string' ? l : (l.name || l.id);
-        return name && !name.startsWith('credits_') && !name.startsWith('credit_');
+        if (!name || typeof name !== 'string') return false; // Sicherheitscheck: name muss String sein!
+        return !name.startsWith('credits_') && !name.startsWith('credit_');
       })
     : [];
   const cards = Array.isArray(userData?.cards) ? userData.cards : [];
@@ -1617,7 +1618,9 @@ export default function ProfilPage() {
                   {Object.entries(userData.cooldowns).map(([key, timestamp]) => {
                     // VIP-Status prüfen für dynamische Cooldown-Zeiten
                     const licenses = (userData?.licenses || [])
+                      .filter(l => l)
                       .map(l => typeof l === 'string' ? l : (l.name || l.id))
+                      .filter(l => l && typeof l === 'string')
                       .filter(l => l && !l.startsWith('credits_') && !l.startsWith('credit_'));
                     const hasVipElitePlus = licenses.includes('vip_elite_plus');
                     const hasVipUltimate = licenses.includes('vip_ultimate');
@@ -2214,7 +2217,9 @@ export default function ProfilPage() {
 
                   {(() => {
                     const licenses = (userData?.licenses || [])
+                      .filter(l => l)
                       .map(l => typeof l === 'string' ? l : (l.name || l.id))
+                      .filter(l => l && typeof l === 'string')
                       .filter(l => l && !l.startsWith('credits_') && !l.startsWith('credit_'));
                     const hasVipElitePlus = licenses.includes('vip_elite_plus');
                     const hasVipUltimate = licenses.includes('vip_ultimate');
@@ -2383,7 +2388,9 @@ export default function ProfilPage() {
                     {/* VIP Vorteile */}
                     {(() => {
                       const licenses = (userData?.licenses || [])
-                        .map(l => typeof l === 'string' ? l : (l.name || l.id))
+                        .filter(l => l)
+                      .map(l => typeof l === 'string' ? l : (l.name || l.id))
+                      .filter(l => l && typeof l === 'string')
                         .filter(l => l && !l.startsWith('credits_') && !l.startsWith('credit_'));
                       const hasVip = licenses.some(l => l.startsWith('vip_'));
                       return (
@@ -3872,7 +3879,9 @@ export default function ProfilPage() {
             {/* === HINTERGRUNDBILD === */}
             {(() => {
               const licenses = (userData?.licenses || [])
-                .map(l => typeof l === 'string' ? l : (l.name || l.id))
+                .filter(l => l)
+                      .map(l => typeof l === 'string' ? l : (l.name || l.id))
+                      .filter(l => l && typeof l === 'string')
                 .filter(l => l && !l.startsWith('credits_') && !l.startsWith('credit_'));
               const hasVipForCustomBg = licenses.includes('vip_platinum') || licenses.includes('vip_ultimate') || licenses.includes('vip_elite_plus');
               const isStandardBgActive = customBg === 'standard';
