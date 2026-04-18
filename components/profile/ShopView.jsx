@@ -105,8 +105,25 @@ export function ShopView({ user, userData, onRefresh }) {
       
       if (data.items) {
         setShopItems(data.items);
-        setCreditOptions(data.credits || []);
-        setBankLimitUpgrades(data.bankLimits || []);
+        
+        // Credit Options umformen
+        const credits = (data.creditOptions || []).map((opt, idx) => ({
+          id: `credit_${idx}`,
+          name: opt.label,
+          amount: opt.credits,
+          price: opt.cost
+        }));
+        setCreditOptions(credits);
+        
+        // Bank Limits umformen  
+        const bankLimits = (data.bankLimitUpgrades || []).map((upgrade, idx) => ({
+          id: `banklimit_${idx}`,
+          name: upgrade.label,
+          newLimit: upgrade.addLimit,
+          cost: upgrade.creditCost,
+          description: upgrade.description
+        }));
+        setBankLimitUpgrades(bankLimits);
       }
     } catch (error) {
       console.error('[SHOP] Fehler beim Laden:', error);
@@ -309,11 +326,15 @@ export function ShopView({ user, userData, onRefresh }) {
     if (selectedCategory === 'credits') return [];
     if (selectedCategory === 'bank_limit') return [];
     if (selectedCategory === 'all') {
-      return Object.entries(shopItems).flatMap(([cat, items]) => 
-        items.map(item => ({ ...item, category: cat }))
-      );
+      return Object.entries(shopItems).flatMap(([cat, items]) => {
+        // Sicherstellen dass items ein Array ist
+        if (!Array.isArray(items)) return [];
+        return items.map(item => ({ ...item, category: cat }));
+      });
     }
-    return (shopItems[selectedCategory] || []).map(item => ({ ...item, category: selectedCategory }));
+    const categoryItems = shopItems[selectedCategory];
+    if (!Array.isArray(categoryItems)) return [];
+    return categoryItems.map(item => ({ ...item, category: selectedCategory }));
   };
 
   const filteredItems = getFilteredItems();
