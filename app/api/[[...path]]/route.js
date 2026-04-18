@@ -4157,12 +4157,59 @@ async function handleCheckRecipient(request) {
     // Suche User anhand Display Name (Format: "Vorname Nachname")
     const searchName = `${firstName.trim()} ${lastName.trim()}`;
     
-    const { data: recipientData, error: recipientFetchError } = await supabaseAdmin
+    console.log('[CHECK RECIPIENT] Searching for:', searchName);
+    
+    // Suche in mehreren Feldern (display_name und username)
+    let recipientData = null;
+    let recipientFetchError = null;
+    
+    // Versuch 1: Display Name mit Leerzeichen
+    const { data: data1, error: error1 } = await supabaseAdmin
       .from('user_data')
       .select('*')
       .ilike('discord_display_name', searchName);
+    
+    if (data1 && data1.length > 0) {
+      recipientData = data1;
+      console.log('[CHECK RECIPIENT] Found via display_name:', data1[0].discord_display_name);
+    } else {
+      // Versuch 2: Display Name mit Wildcard (falls Reihenfolge anders ist)
+      const { data: data2, error: error2 } = await supabaseAdmin
+        .from('user_data')
+        .select('*')
+        .or(`discord_display_name.ilike.%${firstName.trim()}%,discord_display_name.ilike.%${lastName.trim()}%`);
+      
+      if (data2 && data2.length > 0) {
+        // Filtere die die BEIDE Namen enthalten
+        const filtered = data2.filter(u => {
+          const displayName = u.discord_display_name || '';
+          return displayName.toLowerCase().includes(firstName.trim().toLowerCase()) 
+              && displayName.toLowerCase().includes(lastName.trim().toLowerCase());
+        });
+        
+        if (filtered.length > 0) {
+          recipientData = filtered;
+          console.log('[CHECK RECIPIENT] Found via wildcard:', filtered[0].discord_display_name);
+        }
+      }
+      
+      if (!recipientData || recipientData.length === 0) {
+        // Versuch 3: Username durchsuchen
+        const searchUsername = `${firstName.trim()}${lastName.trim()}`.toLowerCase();
+        const { data: data3, error: error3 } = await supabaseAdmin
+          .from('user_data')
+          .select('*')
+          .ilike('discord_username', `%${searchUsername}%`);
+        
+        if (data3 && data3.length > 0) {
+          recipientData = data3;
+          console.log('[CHECK RECIPIENT] Found via username:', data3[0].discord_username);
+        }
+      }
+    }
 
-    if (recipientFetchError || !recipientData || recipientData.length === 0) {
+    if (!recipientData || recipientData.length === 0) {
+      console.log('[CHECK RECIPIENT] Not found:', searchName);
       return NextResponse.json({ error: `Empfänger "${searchName}" nicht gefunden` }, { status: 404 });
     }
 
