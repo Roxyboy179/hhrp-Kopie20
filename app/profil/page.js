@@ -21,7 +21,7 @@ import {
   CircleDollarSign, BellRing, AppWindow, Settings, ImagePlus, 
   Trash2, Upload, BellOff, ZoomIn, ZoomOut, PieChart, BarChart3,
   Lightbulb, Filter, Search, ArrowLeftRight, Target, Calculator,
-  TrendingUpIcon, BarChart2, Send
+  TrendingUpIcon, BarChart2, Send, XCircle, Infinity
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -1804,22 +1804,22 @@ export default function ProfilPage() {
                     // Name formatieren
                     const displayName = licenseName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                     
-                    // Status-Farben
+                    // Status-Farben & Icons
                     let statusColor = 'bg-green-500/10 border-green-500/20 text-green-300';
-                    let statusIcon = '✅';
+                    let StatusIcon = CheckCircle;
                     let statusText = 'Aktiv';
                     
                     if (isExpired) {
                       statusColor = 'bg-red-500/10 border-red-500/20 text-red-300';
-                      statusIcon = '❌';
+                      StatusIcon = XCircle;
                       statusText = 'Abgelaufen';
                     } else if (isExpiringSoon) {
                       statusColor = 'bg-yellow-500/10 border-yellow-500/20 text-yellow-300';
-                      statusIcon = '⚠️';
+                      StatusIcon = AlertTriangle;
                       statusText = 'Läuft bald ab';
                     } else if (neverExpires) {
                       statusColor = 'bg-blue-500/10 border-blue-500/20 text-blue-300';
-                      statusIcon = '♾️';
+                      StatusIcon = Infinity;
                       statusText = 'Unbegrenzt';
                     }
                     
@@ -1832,13 +1832,16 @@ export default function ProfilPage() {
                           <div className="flex-1">
                             <h3 className="font-semibold text-white text-sm">{displayName}</h3>
                             {giftedBy && (
-                              <p className="text-xs text-white/40 mt-0.5">🎁 Geschenk</p>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <Gift className="w-3 h-3 text-white/40" />
+                                <p className="text-xs text-white/40">Geschenk</p>
+                              </div>
                             )}
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm">{statusIcon}</span>
+                            <StatusIcon className="w-4 h-4" />
                             {autoRenew && !isExpired && (
-                              <span className="text-xs" title="Automatische Verlängerung aktiv">🔄</span>
+                              <RefreshCw className="w-3.5 h-3.5" title="Automatische Verlängerung aktiv" />
                             )}
                           </div>
                         </div>
@@ -1879,9 +1882,10 @@ export default function ProfilPage() {
                           )}
                           
                           {autoRenew && !isExpired && (
-                            <div className="pt-1.5 border-t border-white/[0.06]">
+                            <div className="pt-1.5 border-t border-white/[0.06] flex items-center gap-1.5">
+                              <RefreshCw className="w-3 h-3 text-white/40" />
                               <span className="text-white/40 text-xs">
-                                🔄 Verlängert sich automatisch
+                                Verlängert sich automatisch
                               </span>
                             </div>
                           )}
