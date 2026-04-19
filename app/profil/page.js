@@ -860,6 +860,20 @@ function BankCard({ card, userName, userData }) {
                 </div>
               </div>
               <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Bank-PIN</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-white font-mono">{card.pin || '•••'}</span>
+                  {card.pin && (
+                    <button
+                      onClick={() => copyToClipboard(card.pin, 'Bank-PIN')}
+                      className="p-1 hover:bg-white/10 rounded"
+                    >
+                      <Copy className="w-3.5 h-3.5 text-white/40" />
+                    </button>
+                  )}
+                </div>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
                 <span className="text-white/50">Limit</span>
                 <span className="text-white font-medium">{(card.limit || 1000000).toLocaleString('de-DE')}€</span>
               </div>
