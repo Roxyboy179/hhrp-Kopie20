@@ -68,6 +68,10 @@ export default function AdminBewerbungenPage() {
   const [search, setSearch] = useState('');
   const [actionConfirm, setActionConfirm] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [userWarnings, setUserWarnings] = useState(null);
+  const [loadingWarnings, setLoadingWarnings] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [showRejectModal, setShowRejectModal] = useState(false);
   const intervalRef = useRef(null);
   const initialLoadDone = useRef(false);
 
@@ -128,11 +132,38 @@ export default function AdminBewerbungenPage() {
   // Aktuelle ausgewählte Bewerbung aus der Liste
   const selected = bewerbungen.find(b => b.id === selectedId) || null;
 
-  const handleAction = async (id, action, status) => {
+  // Verwarnungen laden wenn eine Bewerbung ausgewählt wird
+  useEffect(() => {
+    if (selected && selected.discordUserId) {
+      fetchUserWarnings(selected.discordUserId);
+    } else {
+      setUserWarnings(null);
+    }
+  }, [selectedId]);
+
+  const fetchUserWarnings = async (discordUserId) => {
+    setLoadingWarnings(true);
+    try {
+      const res = await fetch(`/api/hh/user-warnings?userId=${discordUserId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setUserWarnings(data);
+      } else {
+        setUserWarnings({ warnings: [], total: 0 });
+      }
+    } catch (e) {
+      console.error('Error loading warnings:', e);
+      setUserWarnings({ warnings: [], total: 0 });
+    } finally {
+      setLoadingWarnings(false);
+    }
+  };
+
+  const handleAction = async (id, action, status, reason = null) => {
     setActionConfirm(null);
     setActionLoading(true);
     try {
-      const body = action ? { action } : { status };
+      const body = action ? { action } : { status, reason };
       const res = await fetch(`/api/admin/bewerbungen/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -377,6 +408,65 @@ export default function AdminBewerbungenPage() {
             </div>
           </div>
 
+          {/* Verwarnungen Anzeige */}
+          {loadingWarnings && (
+            <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-yellow-400" />
+                <span className="text-sm text-yellow-300">Lade Verwarnungen...</span>
+              </div>
+            </div>
+          )}
+          
+          {!loadingWarnings && userWarnings && (
+            <div className={`p-4 border rounded-xl ${
+              userWarnings.total === 0 
+                ? 'bg-green-500/10 border-green-500/20' 
+                : userWarnings.total >= 3 
+                  ? 'bg-red-500/10 border-red-500/20'
+                  : 'bg-yellow-500/10 border-yellow-500/20'
+            }`}>
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className={`w-4 h-4 ${
+                  userWarnings.total === 0 
+                    ? 'text-green-400' 
+                    : userWarnings.total >= 3 
+                      ? 'text-red-400'
+                      : 'text-yellow-400'
+                }`} />
+                <h4 className="text-sm font-semibold text-white">
+                  Server Verwarnungen: {userWarnings.total}
+                </h4>
+              </div>
+              {userWarnings.total > 0 && (
+                <>
+                  {userWarnings.total >= 3 && (
+                    <p className="text-xs text-red-300 mb-2">
+                      ⚠️ ACHTUNG: {userWarnings.total} Verwarnungen! Bewerbung mit Vorsicht annehmen.
+                    </p>
+                  )}
+                  <div className="space-y-2 mt-2">
+                    {userWarnings.warnings.slice(0, 3).map((warn, idx) => (
+                      <div key={idx} className="text-xs bg-black/20 p-2 rounded">
+                        <div className="text-white/60">{new Date(warn.date).toLocaleDateString('de-DE')}</div>
+                        <div className="text-white/80">{warn.reason}</div>
+                        <div className="text-white/40">Von: {warn.admin}</div>
+                      </div>
+                    ))}
+                    {userWarnings.total > 3 && (
+                      <div className="text-xs text-white/40 text-center">
+                        + {userWarnings.total - 3} weitere Verwarnungen
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+              {userWarnings.total === 0 && (
+                <p className="text-xs text-green-300">Keine Verwarnungen vorhanden ✓</p>
+              )}
+            </div>
+          )}
+
           <Separator className="bg-white/[0.06]" />
 
           {/* Aktionen */}
@@ -416,13 +506,10 @@ export default function AdminBewerbungenPage() {
                 </Button>
                 <Button 
                   disabled={actionLoading}
-                  onClick={() => setActionConfirm({
-                    id: selected.id,
-                    action: null,
-                    status: 'Abgelehnt',
-                    title: 'Bewerbung ablehnen?',
-                    description: `Möchtest du die Bewerbung von ${selected.username} wirklich ablehnen? Der Bewerber wird per Discord benachrichtigt.`
-                  })} 
+                  onClick={() => {
+                    setShowRejectModal(true);
+                    setRejectReason('');
+                  }} 
                   className="bg-red-600 hover:bg-red-700 rounded-xl"
                 >
                   <XCircle className="w-4 h-4 mr-2" /> Ablehnen
@@ -448,6 +535,75 @@ export default function AdminBewerbungenPage() {
   return (
     <div className="p-6 space-y-6">
       <ConfirmDialog />
+      
+      {/* Reject Modal mit Pflicht-Grund */}
+      {showRejectModal && selected && (
+        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4">
+          <div className="bg-[#0A0B0F] border border-red-500/20 rounded-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-500/10 rounded-lg">
+                <XCircle className="w-6 h-6 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-white">Bewerbung ablehnen</h3>
+                <p className="text-sm text-white/40">Von: {selected.username}</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm text-white/60">Ablehnungsgrund *</label>
+              <textarea
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Bitte gib einen Grund für die Ablehnung an (wird dem Bewerber mitgeteilt)..."
+                className="w-full min-h-[100px] px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-red-500/50 resize-none"
+              />
+              <p className="text-xs text-white/30">Mindestens 10 Zeichen</p>
+            </div>
+
+            {userWarnings && userWarnings.total >= 3 && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+                <p className="text-xs text-red-300 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  Bewerber hat {userWarnings.total} Verwarnungen
+                </p>
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowRejectModal(false);
+                  setRejectReason('');
+                }}
+                className="flex-1 rounded-xl border-white/10"
+                disabled={actionLoading}
+              >
+                Abbrechen
+              </Button>
+              <Button
+                onClick={() => {
+                  if (rejectReason.trim().length < 10) {
+                    toast.error('Ablehnungsgrund zu kurz', {
+                      description: 'Bitte gib mindestens 10 Zeichen ein.'
+                    });
+                    return;
+                  }
+                  setShowRejectModal(false);
+                  handleAction(selected.id, null, 'Abgelehnt', rejectReason.trim());
+                  setRejectReason('');
+                }}
+                className="flex-1 bg-red-600 hover:bg-red-700 rounded-xl"
+                disabled={actionLoading || rejectReason.trim().length < 10}
+              >
+                {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+                Bewerbung ablehnen
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>

@@ -1135,6 +1135,10 @@ async function handleAdminUpdateBewerbung(request, id) {
       };
     } else if (body.status) {
       updates = { status: body.status };
+      // Ablehnungsgrund speichern
+      if (body.status === 'Abgelehnt' && body.reason) {
+        updates.rejection_reason = body.reason;
+      }
     }
 
     const updated = await updateBewerbung(id, updates);
@@ -1160,14 +1164,17 @@ async function handleAdminUpdateBewerbung(request, id) {
         updated.discord_user_id,  // userId
         updated.username,          // username
         newStatus,                 // neuer Status
-        admin.discordUsername      // bearbeitet von
+        admin.discordUsername,     // bearbeitet von
+        body.reason || null        // Ablehnungsgrund (nur bei Abgelehnt)
       );
       
       // In-App Benachrichtigung erstellen
       const statusMessages = {
         'In Bearbeitung': 'Deine Bewerbung wird jetzt bearbeitet!',
         'Angenommen': 'Herzlichen Glückwunsch! Deine Bewerbung wurde angenommen!',
-        'Abgelehnt': 'Deine Bewerbung wurde leider abgelehnt.',
+        'Abgelehnt': body.reason 
+          ? `Deine Bewerbung wurde abgelehnt. Grund: ${body.reason}` 
+          : 'Deine Bewerbung wurde leider abgelehnt.',
         'Eingereicht': 'Deine Bewerbung wurde zurückgesetzt.',
       };
       const statusTitles = {
@@ -2496,6 +2503,9 @@ export async function GET(request) {
   }
   if (p === 'hh/my-warnings') {
     return handleHHMyWarnings(request);
+  }
+  if (p === 'hh/user-warnings') {
+    return handleHHUserWarnings(request);
   }
   if (p === 'hh/tickets') {
     return handleHHTickets(request);
@@ -5301,6 +5311,72 @@ async function handleHHMyWarnings(request) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
+
+// Admin: Verwarnungen eines bestimmten Users abrufen
+async function handleHHUserWarnings(request) {
+  try {
+    // Nur Admins dürfen diese Route nutzen
+    const admin = getAdminContext(request);
+    if (!admin) {
+      return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 });
+    }
+
+    const url = new URL(request.url);
+    const userId = url.searchParams.get('userId');
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'userId Parameter fehlt' }, { status: 400 });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('user_data')
+      .select('data')
+      .eq('discord_user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('[HH] UserWarnings DB error:', error);
+      return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
+    }
+
+    let parsed = data?.data || {};
+    if (typeof parsed === 'string') {
+      try { parsed = JSON.parse(parsed); } catch { parsed = {}; }
+    }
+
+    const rawWarns = Array.isArray(parsed?.warns) ? parsed.warns : [];
+    const now = Date.now();
+
+    // Nur aktive Warns für Admin-Ansicht
+    const warnings = rawWarns
+      .filter(w => {
+        if (w.removed) return false;
+        const createdTs = w.createdAt ? new Date(w.createdAt).getTime() : 0;
+        const isExpired = createdTs > 0 && (now - createdTs) >= WARN_ACTIVE_WINDOW_MS;
+        return !isExpired;
+      })
+      .map(w => ({
+        date: w.createdAt || null,
+        reason: w.reason || '',
+        admin: w.moderatorTag || w.moderator || 'Unbekannt'
+      }))
+      .sort((a, b) => {
+        const ta = a.date ? new Date(a.date).getTime() : 0;
+        const tb = b.date ? new Date(b.date).getTime() : 0;
+        return tb - ta;
+      });
+
+    return NextResponse.json({
+      success: true,
+      warnings,
+      total: warnings.length
+    });
+  } catch (e) {
+    console.error('[HH] UserWarnings error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
 async function handleSearchRecipients(request) {
   try {
     const user = getUserFromRequest(request);
@@ -5542,7 +5618,3 @@ ${ticket.closedAt ? ` • Geschlossen: ${_escapeHtml(new Date(ticket.closedAt).t
 ${msgs || '<p style="color:#71717a">Keine Nachrichten gespeichert.</p>'}
 </body></html>`;
 }
-
-
-
-
