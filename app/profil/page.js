@@ -291,8 +291,9 @@ function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
   const hasPKW = hasLicense('führerschein_pkw');
   const hasMotorrad = hasLicense('führerschein_motorrad') || hasLicense('motorradschein');
   const hasLKW = hasLicense('führerschein_lkw') || hasLicense('lkw');
+  const hasBus = hasLicense('führerschein_bus') || hasLicense('bus');
   
-  const hasAnyLicense = hasPKW || hasMotorrad || hasLKW;
+  const hasAnyLicense = hasPKW || hasMotorrad || hasLKW || hasBus;
   
   const calculateBirthDate = (age, userId) => {
     if (!age) return 'N/A';
@@ -466,6 +467,7 @@ function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
                   {hasPKW && <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-semibold border border-green-500/30">B - PKW</span>}
                   {hasMotorrad && <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-semibold border border-blue-500/30">A - Motorrad</span>}
                   {hasLKW && <span className="px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 text-xs font-semibold border border-orange-500/30">C - LKW</span>}
+                  {hasBus && <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-400 text-xs font-semibold border border-purple-500/30">D - Bus</span>}
                 </div>
               </div>
             </div>
