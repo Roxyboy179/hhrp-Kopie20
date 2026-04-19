@@ -142,7 +142,7 @@ function IDCard({ character, avatarUrl, userId }) {
 
   const birthDate = calculateBirthDate(character?.age, userId);
   const issueDate = '15.04.2020';
-  const expiryDate = '15.04.2030';
+  const expiryDate = 'Unbegrenzt gültig';
 
   return (
     <div className="w-full max-w-md mx-auto">
@@ -165,7 +165,7 @@ function IDCard({ character, avatarUrl, userId }) {
               <p className="text-xs text-white/50 uppercase tracking-wider">Bundesrepublik HHRP</p>
               <p className="text-sm font-bold text-white">PERSONALAUSWEIS</p>
             </div>
-            <div className="text-2xl">🪪</div>
+            <IdCard className="w-6 h-6 text-white/60" />
           </div>
 
           <div className="flex gap-4 mb-6">
@@ -200,18 +200,16 @@ function IDCard({ character, avatarUrl, userId }) {
 
           <div className="pt-4 border-t border-white/10">
             <p className="text-[10px] text-white/40 text-center">
-              Klicke für Details • Gültig bis {expiryDate}
+              Klicke für Details • {expiryDate}
             </p>
           </div>
         </div>
 
-        <div 
-          className="absolute bottom-4 right-4 w-12 h-12 rounded-lg opacity-20 pointer-events-none"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1))',
-            border: '1px solid rgba(255, 255, 255, 0.3)'
-          }}
-        />
+        {/* Server Logo */}
+        <div className="absolute bottom-4 right-4 w-12 h-12 rounded-lg overflow-hidden opacity-50 pointer-events-none">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icon-192.png" alt="HHRP" className="w-full h-full object-contain" />
+        </div>
 
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl" style={{ background: 'rgba(255, 255, 255, 0.02)' }} />
       </div>
@@ -732,7 +730,7 @@ function BankCard({ card, userName, userData }) {
           {/* Bank Name & Logo */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
-              <div className="text-2xl">🏦</div>
+              <Building2 className="w-6 h-6 text-white/60" />
               <div>
                 <p className="text-xs text-white/50 uppercase tracking-wider">Bank</p>
                 <p className="text-sm font-bold text-white">{bankName}</p>
@@ -794,14 +792,11 @@ function BankCard({ card, userName, userData }) {
           </div>
         </div>
 
-        {/* Chip Decoration */}
-        <div 
-          className="absolute bottom-4 right-4 w-12 h-12 rounded-lg opacity-20 pointer-events-none"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1))',
-            border: '1px solid rgba(255, 255, 255, 0.3)'
-          }}
-        />
+        {/* Server Logo statt Chip Decoration */}
+        <div className="absolute bottom-4 right-4 w-12 h-12 rounded-lg overflow-hidden opacity-50 pointer-events-none">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icon-192.png" alt="HHRP" className="w-full h-full object-contain" />
+        </div>
 
         {/* Hover Effect */}
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl" style={{ background: 'rgba(255, 255, 255, 0.02)' }} />
