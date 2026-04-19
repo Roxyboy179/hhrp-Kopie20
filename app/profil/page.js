@@ -36,6 +36,7 @@ import { KrediteDetailView, FinanzStatistikenView } from '@/components/profile/F
 import { ErweiterteTransaktionenView, SparkontoManagementView } from '@/components/profile/FinanceTabsContent2';
 import { TransferMoneyView } from '@/components/profile/TransferMoneyView';
 import { ShopView } from '@/components/profile/ShopView';
+import HamburgHorizonTab from '@/components/profile/HamburgHorizonTab';
 
 function SkeletonCard({ className = "" }) {
   return (
@@ -1086,7 +1087,7 @@ export default function ProfilPage() {
     { id: 'finance', label: 'Finanzen', icon: Wallet, hasSubTabs: true },
     { id: 'documents', label: 'Dokumente', icon: IdCard, hasSubTabs: true },
     { id: 'shop', label: 'Shop', icon: ShoppingCart },
-    { id: 'marketplace', label: 'Marktplatz', icon: Trophy },
+    { id: 'hamburg-horizon', label: 'Hamburg Horizon', icon: Sparkles },
     { id: 'applications', label: 'Bewerbungen', icon: ClipboardList },
     { id: 'settings', label: 'Einstellungen', icon: Settings }
   ];
@@ -3421,68 +3422,10 @@ export default function ProfilPage() {
         )}
 
         {/* Marktplatz Tab */}
-        {activeTab === 'marketplace' && (
-          <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
-            <div className="flex items-center gap-3 mb-6">
-              <ShoppingCart className="w-6 h-6 text-white/60" />
-              <h2 className="text-lg sm:text-xl font-bold text-white">Marktplatz</h2>
-              {userData?.marketplace?.length > 0 && (
-                <span className="px-2 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold">
-                  {userData.marketplace.length}
-                </span>
-              )}
-            </div>
-            {userData?.marketplace && userData.marketplace.length > 0 ? (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {userData.marketplace
-                    .slice((marketplacePage - 1) * itemsPerPage, marketplacePage * itemsPerPage)
-                    .map((item, index) => (
-                    <div key={index} className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h3 className="text-base font-bold text-white mb-1">{item.itemName || 'Item'}</h3>
-                          {item.description && (
-                            <p className="text-sm text-white/60">{item.description}</p>
-                          )}
-                        </div>
-                        <span className="text-lg font-bold text-green-400 ml-2">
-                          {item.price?.toLocaleString('de-DE')} €
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-white/50">
-                        {item.quantity && (
-                          <span>Anzahl: {item.quantity}</span>
-                        )}
-                        {item.createdAt && (
-                          <span>{new Date(item.createdAt).toLocaleDateString('de-DE')}</span>
-                        )}
-                        {item.status && (
-                          <span className={`px-2 py-0.5 rounded-full ${
-                            item.status === 'sold' ? 'bg-green-500/20 text-green-300' : 'bg-blue-500/20 text-blue-300'
-                          }`}>
-                            {item.status === 'sold' ? 'Verkauft' : 'Verfügbar'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <Pagination 
-                  currentPage={marketplacePage}
-                  totalItems={userData.marketplace.length}
-                  itemsPerPage={itemsPerPage}
-                  onPageChange={setMarketplacePage}
-                />
-              </>
-            ) : (
-              <div className="text-center py-12">
-                <ShoppingCart className="w-16 h-16 mx-auto mb-4 text-white/20" />
-                <h3 className="text-lg font-bold text-white mb-2">Keine Listings</h3>
-                <p className="text-sm text-white/40">Du hast keine aktiven Listings im Marktplatz.</p>
-              </div>
-            )}
-          </div>
+        {activeTab === 'hamburg-horizon' && (
+          <HamburgHorizonTab currentUser={user} />
+        )}
+
         )}
 
         {/* Sparkonto Tab - NEU */}

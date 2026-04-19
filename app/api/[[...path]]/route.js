@@ -2474,6 +2474,27 @@ export async function GET(request) {
     return handleGetDiscordStats(request);
   }
 
+  // === Hamburg Horizon Bot Features (Level/Marktplatz/Charakter/Profil) ===
+  if (p === 'hh/leaderboard') {
+    return handleHHLeaderboard(request);
+  }
+  if (p === 'hh/my-level') {
+    return handleHHMyLevel(request);
+  }
+  if (p === 'hh/marketplace') {
+    return handleHHMarketplace(request);
+  }
+  if (p && p.startsWith('hh/character/')) {
+    const userId = p.replace('hh/character/', '');
+    return handleHHCharacter(request, userId);
+  }
+  if (p === 'hh/character-search') {
+    return handleHHCharacterSearch(request);
+  }
+  if (p === 'hh/my-profile') {
+    return handleHHMyProfile(request);
+  }
+
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
 
@@ -4376,5 +4397,408 @@ async function handleGiftItem(request) {
     return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
   }
 }
+
+// =============================================================
+// ===== HAMBURG HORIZON - Bot-Features auf der Webseite =====
+// =============================================================
+// Lesen aus der Supabase user_data-Tabelle (vom Bot befüllt)
+// Alles read-only – Schreibaktionen laufen weiterhin über den Bot
+
+// Helper: Lade alle user_data aus Supabase (mit Cache)
+let _hhCache = { data: null, ts: 0 };
+async function _loadAllUserData(forceRefresh = false) {
+  const now = Date.now();
+  // 30 Sekunden Cache
+  if (!forceRefresh && _hhCache.data && (now - _hhCache.ts) < 30000) {
+    return _hhCache.data;
+  }
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('user_data')
+      .select('discord_user_id, data, last_sync');
+    if (error) {
+      console.error('[HH] Load all user_data error:', error);
+      return [];
+    }
+    // Parse data wenn string
+    const parsed = (data || []).map(row => {
+      let d = row.data;
+      if (typeof d === 'string') {
+        try { d = JSON.parse(d); } catch { d = {}; }
+      }
+      return {
+        discord_user_id: row.discord_user_id,
+        data: d || {},
+        last_sync: row.last_sync
+      };
+    });
+    _hhCache = { data: parsed, ts: now };
+    return parsed;
+  } catch (e) {
+    console.error('[HH] Load error:', e);
+    return [];
+  }
+}
+
+// XP-Tabelle wie im Bot – kumulative XP für Level
+function _xpForLevel(level) {
+  // Bot nutzt quadratische Formel: 100 * level^1.5 pro Level grob
+  // Wir rechnen mit: xp_needed_for_level = 100 * level^2 (einfache Variante)
+  return Math.floor(100 * Math.pow(level, 2));
+}
+function _progressToNextLevel(level, xp) {
+  // xp = XP innerhalb des aktuellen Levels (wie in levels.json xp-Feld)
+  const needed = _xpForLevel(level);
+  const pct = Math.min(100, Math.max(0, Math.floor((xp / needed) * 100)));
+  return { needed, pct };
+}
+
+// GET /api/hh/leaderboard?limit=50
+async function handleHHLeaderboard(request) {
+  try {
+    const url = new URL(request.url);
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
+
+    const all = await _loadAllUserData();
+    const entries = all
+      .map(row => {
+        const s = row.data?.stats || {};
+        const c = row.data?.character || {};
+        return {
+          discord_user_id: row.discord_user_id,
+          level: s.level || 1,
+          xp: s.xp || 0,
+          totalXp: s.totalXp || 0,
+          messages: s.messages || 0,
+          username: s.username || null,
+          character: {
+            name: c.name || (c.vorname && c.nachname ? `${c.vorname} ${c.nachname}` : null),
+            vorname: c.vorname || null,
+            nachname: c.nachname || null,
+            faction: c.faction || null,
+            job: c.job || null,
+          }
+        };
+      })
+      .filter(e => (e.level > 0 || e.xp > 0 || e.totalXp > 0))
+      .sort((a, b) => {
+        if (b.level !== a.level) return b.level - a.level;
+        if (b.totalXp !== a.totalXp) return b.totalXp - a.totalXp;
+        return b.xp - a.xp;
+      });
+
+    // Rang setzen
+    entries.forEach((e, i) => { e.rank = i + 1; });
+
+    // Eigenen Rang finden
+    const currentUser = getUserFromRequest(request);
+    let myEntry = null;
+    if (currentUser) {
+      myEntry = entries.find(e => e.discord_user_id === currentUser.id) || null;
+    }
+
+    return NextResponse.json({
+      success: true,
+      total: entries.length,
+      leaderboard: entries.slice(0, limit),
+      me: myEntry
+    });
+  } catch (e) {
+    console.error('[HH] Leaderboard error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+// GET /api/hh/my-level  – Level-Details + Rang für eingeloggten User
+async function handleHHMyLevel(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+
+    const all = await _loadAllUserData();
+    const sorted = all
+      .map(row => ({
+        id: row.discord_user_id,
+        level: row.data?.stats?.level || 1,
+        xp: row.data?.stats?.xp || 0,
+      }))
+      .sort((a, b) => (b.level !== a.level ? b.level - a.level : b.xp - a.xp));
+
+    const idx = sorted.findIndex(s => s.id === user.id);
+    const rank = idx >= 0 ? idx + 1 : null;
+
+    const mine = all.find(r => r.discord_user_id === user.id);
+    const stats = mine?.data?.stats || { level: 1, xp: 0, messages: 0 };
+    const prog = _progressToNextLevel(stats.level || 1, stats.xp || 0);
+
+    return NextResponse.json({
+      success: true,
+      level: stats.level || 1,
+      xp: stats.xp || 0,
+      messages: stats.messages || 0,
+      rank,
+      totalUsers: sorted.length,
+      xpNeeded: prog.needed,
+      progressPct: prog.pct
+    });
+  } catch (e) {
+    console.error('[HH] MyLevel error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+// GET /api/hh/marketplace?search=&page=1&pageSize=24
+async function handleHHMarketplace(request) {
+  try {
+    const url = new URL(request.url);
+    const search = (url.searchParams.get('search') || '').toLowerCase().trim();
+    const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
+    const pageSize = Math.min(100, parseInt(url.searchParams.get('pageSize') || '24'));
+
+    const all = await _loadAllUserData();
+
+    // Alle aktiven Listings aus allen Usern zusammenführen
+    const listings = [];
+    for (const row of all) {
+      const userListings = row.data?.marketplace || [];
+      if (!Array.isArray(userListings)) continue;
+      const char = row.data?.character || {};
+      const sellerName = char.name || (char.vorname && char.nachname
+        ? `${char.vorname} ${char.nachname}` : null);
+
+      for (const l of userListings) {
+        if (!l || l.status !== 'active') continue;
+        // Abgelaufene Listings überspringen
+        if (l.expiresAt && new Date(l.expiresAt).getTime() < Date.now()) continue;
+        listings.push({
+          id: l.id,
+          itemId: l.itemId,
+          itemName: l.itemName,
+          itemEmoji: l.itemEmoji,
+          price: l.price,
+          allowOffers: l.allowOffers,
+          createdAt: l.createdAt,
+          expiresAt: l.expiresAt,
+          seller: {
+            discord_user_id: row.discord_user_id,
+            characterName: sellerName,
+          }
+        });
+      }
+    }
+
+    // Search-Filter
+    const filtered = search
+      ? listings.filter(l =>
+          (l.itemName || '').toLowerCase().includes(search) ||
+          (l.seller.characterName || '').toLowerCase().includes(search))
+      : listings;
+
+    // Sortieren nach createdAt DESC
+    filtered.sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tb - ta;
+    });
+
+    const total = filtered.length;
+    const start = (page - 1) * pageSize;
+    const paged = filtered.slice(start, start + pageSize);
+
+    return NextResponse.json({
+      success: true,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      listings: paged
+    });
+  } catch (e) {
+    console.error('[HH] Marketplace error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+// GET /api/hh/character/:userId – öffentliches Charakterprofil
+async function handleHHCharacter(request, userId) {
+  try {
+    if (!userId) return NextResponse.json({ error: 'userId fehlt' }, { status: 400 });
+
+    const { data, error } = await supabaseAdmin
+      .from('user_data')
+      .select('discord_user_id, data, last_sync')
+      .eq('discord_user_id', userId)
+      .single();
+
+    if (error || !data) {
+      return NextResponse.json({ error: 'Charakter nicht gefunden' }, { status: 404 });
+    }
+    let parsed = data.data;
+    if (typeof parsed === 'string') {
+      try { parsed = JSON.parse(parsed); } catch { parsed = {}; }
+    }
+
+    const c = parsed?.character || null;
+    if (!c) return NextResponse.json({ error: 'Kein Charakter erstellt' }, { status: 404 });
+
+    const s = parsed?.stats || {};
+    // Anzahl Listings des Users als öffentliche Info
+    const listings = (parsed?.marketplace || []).filter(l => l?.status === 'active').length;
+    const licenses = (parsed?.licenses || []).filter(l => l && !(l.name || '').startsWith('credits_'));
+
+    return NextResponse.json({
+      success: true,
+      character: {
+        name: c.name || (c.vorname && c.nachname ? `${c.vorname} ${c.nachname}` : null),
+        vorname: c.vorname || null,
+        nachname: c.nachname || null,
+        age: c.age || c.alter || null,
+        herkunft: c.herkunft || null,
+        geschlecht: c.geschlecht || null,
+        job: c.job || null,
+        faction: c.faction || null,
+      },
+      stats: {
+        level: s.level || 1,
+        xp: s.xp || 0,
+        messages: s.messages || 0,
+      },
+      activeListings: listings,
+      licensesCount: licenses.length,
+      discord_user_id: data.discord_user_id,
+      last_sync: data.last_sync
+    });
+  } catch (e) {
+    console.error('[HH] Character error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+// GET /api/hh/character-search?q=Name
+async function handleHHCharacterSearch(request) {
+  try {
+    const url = new URL(request.url);
+    const q = (url.searchParams.get('q') || '').toLowerCase().trim();
+    if (q.length < 2) {
+      return NextResponse.json({ success: true, results: [] });
+    }
+
+    const all = await _loadAllUserData();
+    const results = [];
+    for (const row of all) {
+      const c = row.data?.character;
+      if (!c) continue;
+      const name = (c.name || (c.vorname && c.nachname ? `${c.vorname} ${c.nachname}` : '') || '').toLowerCase();
+      const vn = (c.vorname || '').toLowerCase();
+      const nn = (c.nachname || '').toLowerCase();
+      if (name.includes(q) || vn.includes(q) || nn.includes(q)) {
+        results.push({
+          discord_user_id: row.discord_user_id,
+          name: c.name || `${c.vorname || ''} ${c.nachname || ''}`.trim(),
+          faction: c.faction || null,
+          job: c.job || null,
+          level: row.data?.stats?.level || 1
+        });
+      }
+      if (results.length >= 25) break;
+    }
+
+    return NextResponse.json({ success: true, results });
+  } catch (e) {
+    console.error('[HH] Character search error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+// GET /api/hh/my-profile – Zentrale Statistik-Seite
+async function handleHHMyProfile(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+
+    const { data, error } = await supabaseAdmin
+      .from('user_data')
+      .select('discord_user_id, data, last_sync')
+      .eq('discord_user_id', user.id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('[HH] MyProfile DB error:', error);
+      return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
+    }
+
+    let parsed = data?.data || {};
+    if (typeof parsed === 'string') {
+      try { parsed = JSON.parse(parsed); } catch { parsed = {}; }
+    }
+
+    const stats = parsed.stats || { level: 1, xp: 0, messages: 0 };
+    const money = parsed.money || { cash: 0, bank: 0, savings: 0 };
+    const prog = _progressToNextLevel(stats.level || 1, stats.xp || 0);
+
+    // Rang im Leaderboard
+    const all = await _loadAllUserData();
+    const sorted = all
+      .map(r => ({ id: r.discord_user_id, lvl: r.data?.stats?.level || 1, xp: r.data?.stats?.xp || 0 }))
+      .sort((a, b) => (b.lvl !== a.lvl ? b.lvl - a.lvl : b.xp - a.xp));
+    const idx = sorted.findIndex(s => s.id === user.id);
+    const rank = idx >= 0 ? idx + 1 : null;
+
+    // Lizenzen ohne credits_*
+    const licenses = (parsed.licenses || []).filter(l => {
+      const n = typeof l === 'string' ? l : (l?.name || '');
+      return n && !n.startsWith('credits_') && !n.startsWith('credit_');
+    });
+
+    // Achievements: einfache Meilensteine basierend auf Daten
+    const achievements = [];
+    if ((stats.level || 1) >= 5) achievements.push({ id: 'lvl5', name: 'Erfahrener Spieler', desc: 'Level 5 erreicht', icon: '⭐' });
+    if ((stats.level || 1) >= 10) achievements.push({ id: 'lvl10', name: 'Veteran', desc: 'Level 10 erreicht', icon: '🌟' });
+    if ((stats.level || 1) >= 25) achievements.push({ id: 'lvl25', name: 'Elite', desc: 'Level 25 erreicht', icon: '💫' });
+    if ((stats.level || 1) >= 50) achievements.push({ id: 'lvl50', name: 'Legende', desc: 'Level 50 erreicht', icon: '👑' });
+    if ((stats.messages || 0) >= 1000) achievements.push({ id: 'msg1k', name: 'Plauderer', desc: '1.000+ Nachrichten', icon: '💬' });
+    if ((stats.messages || 0) >= 10000) achievements.push({ id: 'msg10k', name: 'Quasselstrippe', desc: '10.000+ Nachrichten', icon: '📢' });
+    if (parsed.character) achievements.push({ id: 'char', name: 'Rollenspieler', desc: 'Charakter erstellt', icon: '🎭' });
+    if (licenses.length >= 3) achievements.push({ id: 'lic3', name: 'Sammler', desc: '3+ Lizenzen besessen', icon: '📜' });
+    if ((money.bank || 0) >= 100000) achievements.push({ id: 'money100k', name: 'Wohlhabend', desc: '100k+ auf der Bank', icon: '💰' });
+    if ((money.bank || 0) >= 1000000) achievements.push({ id: 'millionär', name: 'Millionär', desc: '1M+ auf der Bank', icon: '💎' });
+    if ((parsed.marketplace || []).some(m => m?.status === 'active')) achievements.push({ id: 'seller', name: 'Händler', desc: 'Aktives Listing im Marktplatz', icon: '🛒' });
+    if (rank && rank <= 10) achievements.push({ id: 'top10', name: 'Top 10', desc: `Rang ${rank} im Leaderboard`, icon: '🏆' });
+    if (rank === 1) achievements.push({ id: 'top1', name: 'Nummer 1', desc: '#1 im Leaderboard', icon: '👑' });
+
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: user.id,
+        username: user.username || user.display_name,
+      },
+      stats: {
+        ...stats,
+        rank,
+        totalUsers: sorted.length,
+        xpNeeded: prog.needed,
+        progressPct: prog.pct
+      },
+      money,
+      credits: parsed.credits || 0,
+      bankLimit: parsed.bankLimit || 1000000,
+      character: parsed.character || null,
+      licenses,
+      licensesCount: licenses.length,
+      marketplaceActive: (parsed.marketplace || []).filter(m => m?.status === 'active').length,
+      marketplaceSold: (parsed.marketplace || []).filter(m => m?.status === 'sold').length,
+      transactions: (parsed.transactions || []).length,
+      invoices: (parsed.invoices || []).length,
+      personalakte: (parsed.personalakte || []).length,
+      kredite: (parsed.kredite || []).length,
+      achievements,
+      lastSync: data?.last_sync || null
+    });
+  } catch (e) {
+    console.error('[HH] MyProfile error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
 
 
