@@ -4226,6 +4226,8 @@ async function handleUpgradeBankLimit(request) {
 }
 
 // POST /api/shop/spend-credits - Credit-Extra kaufen (Custom Kontonummer, Boosts, etc.)
+// PRE-CHECKS (wie der Discord Bot): Aktive Buffs blockieren Kauf, dynamischer Preis,
+// Kontonummer-Uniqueness werden VOR Credit-Abzug geprüft.
 async function handleSpendCredits(request) {
   try {
     const user = await getUserFromRequest(request);
@@ -4254,25 +4256,111 @@ async function handleSpendCredits(request) {
 
     const userDataObj = typeof userData.data === 'string' ? JSON.parse(userData.data) : userData.data;
     const currentCredits = userDataObj?.credits || 0;
+    const buffs = userDataObj?.activeBuffs || {};
+    const now = Date.now();
 
-    if (currentCredits < item.creditCost) {
-      return NextResponse.json({
-        error: 'Nicht genug Credits',
-        required: item.creditCost,
-        current: currentCredits
-      }, { status: 400 });
+    // ── Dynamischer Preis (wie Bot: base * 1.10^purchases) ──
+    const purchases = buffs?.creditPurchases?.[item.id] || 0;
+    const dynamicPrice = Math.ceil(item.creditCost * Math.pow(1.10, purchases));
+
+    // ── Pre-Check: Ist der Buff bereits aktiv? (= kein doppelter Kauf) ──
+    const activeFlagMap = {
+      double_xp:            { key: 'doubleXpUntil',        label: 'Double XP Boost' },
+      collect_boost:        { key: 'collectBoostUntil',    label: 'Collect Boost' },
+      gehaltsbonus:         { key: 'gehaltsbonusUntil',    label: 'Gehaltsbonus' },
+      steuerbefreiung:      { key: 'steuerfreiUntil',      label: 'Steuerbefreiung' },
+      premium_badge:        { key: 'premiumBadgeUntil',    label: 'Premium Badge' },
+      ueberweisungs_bypass: { key: 'gebuehrenBypassUntil', label: 'Gebühren-Bypass' },
+      konto_schutz:         { key: 'kontoSchutzUntil',     label: 'Konto-Schutz' },
+      zinsen_boost:         { key: 'zinsenBoostUntil',     label: 'Zinsen-Boost' },
+      exklusiver_titel:     { key: 'customTitleUntil',     label: 'Custom Titel' }
+    };
+    const af = activeFlagMap[item.id];
+    if (af) {
+      const until = buffs?.[af.key] || 0;
+      if (until && until > now) {
+        return NextResponse.json({
+          error: `${af.label} ist bereits aktiv`,
+          activeUntil: until,
+          hoursLeft: Math.ceil((until - now) / (60 * 60 * 1000))
+        }, { status: 409 });
+      }
     }
 
-    // Extra-Validierung: Custom Kontonummer braucht zusätzlichen Wert
-    const meta = {};
+    // Einmal-Flag: gehalt_multiplikator (darf nicht doppelt gekauft werden, solange nicht eingelöst)
+    if (item.id === 'gehalt_multiplikator' && buffs?.gehaltMultiplikatorNext) {
+      return NextResponse.json({
+        error: 'Du hast bereits einen ungenutzten Gehalt-x2 – löse ihn erst mit /collect ein.'
+      }, { status: 409 });
+    }
+
+    // Cooldown-Items
     if (item.id === 'custom_kontonummer') {
+      const last = buffs?.lastKontonummerChange || 0;
+      const cd = 48 * 60 * 60 * 1000;
+      if (last && now - last < cd) {
+        const left = cd - (now - last);
+        return NextResponse.json({
+          error: 'Kontonummer-Änderung hat noch 48h Cooldown',
+          cooldownUntil: last + cd,
+          hoursLeft: Math.ceil(left / (60 * 60 * 1000))
+        }, { status: 409 });
+      }
+      // Custom Input validieren
       const nr = String(customValue || '').trim();
       if (!/^[0-9]{9}$/.test(nr)) {
         return NextResponse.json({
           error: 'Kontonummer ungültig – bitte genau 9 Ziffern angeben'
         }, { status: 400 });
       }
-      meta.customKontonummer = nr;
+      // Uniqueness-Check gegen alle anderen User
+      try {
+        const { data: allUsers } = await supabaseAdmin
+          .from('user_data')
+          .select('discord_user_id, data');
+        const taken = (allUsers || []).some(u => {
+          if (u.discord_user_id === user.id) return false;
+          const d = typeof u.data === 'string' ? (() => { try { return JSON.parse(u.data); } catch { return {}; } })() : (u.data || {});
+          // Prüfe beide mögliche Speicherorte der Kontonummer
+          const existingAccountNumber = d?.activeBuffs?.accountNumber || d?.bankAccount?.accountNumber;
+          return existingAccountNumber === nr;
+        });
+        if (taken) {
+          return NextResponse.json({
+            error: `Die Kontonummer ${nr} ist bereits vergeben`
+          }, { status: 409 });
+        }
+      } catch (e) {
+        console.warn('[spend-credits] Uniqueness check failed, bot will re-check:', e.message);
+      }
+    }
+
+    if (item.id === 'cooldown_reset') {
+      const last = buffs?.lastCooldownReset || 0;
+      const cd = 24 * 60 * 60 * 1000;
+      if (last && now - last < cd) {
+        const left = cd - (now - last);
+        return NextResponse.json({
+          error: 'Cooldown-Reset: nur 1x pro 24h',
+          cooldownUntil: last + cd,
+          hoursLeft: Math.ceil(left / (60 * 60 * 1000))
+        }, { status: 409 });
+      }
+    }
+
+    // Credits-Check (mit dynamischem Preis)
+    if (currentCredits < dynamicPrice) {
+      return NextResponse.json({
+        error: 'Nicht genug Credits',
+        required: dynamicPrice,
+        current: currentCredits
+      }, { status: 400 });
+    }
+
+    // Custom Title-Validierung
+    const meta = { price: dynamicPrice };
+    if (item.id === 'custom_kontonummer') {
+      meta.customKontonummer = String(customValue).trim();
     } else if (item.id === 'exklusiver_titel') {
       const t = String(customValue || '').trim();
       if (t.length < 2 || t.length > 20) {
@@ -4283,6 +4371,17 @@ async function handleSpendCredits(request) {
       meta.customTitle = t;
     }
 
+    // Schutzbrief-Upgrade: User muss einen haben
+    if (item.id === 'schutzbrief_upgrade') {
+      const sb = Object.keys(userDataObj?.licenses || {}).find(k => k.startsWith('schutzbrief_'));
+      if (!sb) {
+        return NextResponse.json({
+          error: 'Du besitzt keinen Schutzbrief zum Upgraden'
+        }, { status: 400 });
+      }
+      meta.targetLicense = sb;
+    }
+
     const { data: purchase, error: insertError } = await supabaseAdmin
       .from('pending_shop_purchases')
       .insert({
@@ -4290,10 +4389,10 @@ async function handleSpendCredits(request) {
         item_id: `spend_${item.id}`,
         item_name: item.label,
         item_category: 'credit_spend',
-        price: 0, // Kosten in Credits
+        price: 0,
         status: 'pending',
         initiated_from: 'website',
-        metadata: Object.keys(meta).length ? meta : null
+        metadata: meta
       })
       .select()
       .single();
@@ -4309,7 +4408,7 @@ async function handleSpendCredits(request) {
       purchase: {
         id: purchase.id,
         item: item.label,
-        creditCost: item.creditCost,
+        creditCost: dynamicPrice,
         status: 'pending'
       }
     });
@@ -5425,3 +5524,7 @@ ${ticket.closedAt ? ` • Geschlossen: ${_escapeHtml(new Date(ticket.closedAt).t
 ${msgs || '<p style="color:#71717a">Keine Nachrichten gespeichert.</p>'}
 </body></html>`;
 }
+
+
+
+

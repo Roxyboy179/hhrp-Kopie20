@@ -154,7 +154,13 @@ export function ShopView({ user, userData, onRefresh }) {
   };
 
   // Credit-Extra kaufen (Boost / Custom Kontonummer / Glücksrad etc.)
-  const handleSpendCredit = async (item, customValue = null) => {
+  const handleSpendCredit = (item, customValue = null) => {
+    setSpendModal(null); // Schließe Spend-Modal zuerst
+    openPinModal({ type: 'spend', item, customValue });
+  };
+
+  // Interne Funktion: Führt den Credit-Spend Kauf aus (nach PIN-Validierung)
+  const _executeSpendCredit = async (item, customValue = null) => {
     if (purchasing) return;
     setPurchasing(true);
     try {
@@ -168,7 +174,6 @@ export function ShopView({ user, userData, onRefresh }) {
         toast.error(data.error || 'Kauf fehlgeschlagen');
       } else {
         toast.success(`${item.label} wird aktiviert!`);
-        setSpendModal(null);
         onRefresh?.();
       }
     } catch (e) {
@@ -178,10 +183,14 @@ export function ShopView({ user, userData, onRefresh }) {
     }
   };
 
-  // Mystery Box öffnen
-  const handleOpenCrate = async (crate) => {
+  // Mystery Box öffnen (öffnet PIN-Modal)
+  const handleOpenCrate = (crate) => {
+    openPinModal({ type: 'crate', crate });
+  };
+
+  // Interne Funktion: Führt das Mystery Box Öffnen aus (nach PIN-Validierung)
+  const _executeOpenCrate = async (crate) => {
     if (purchasing) return;
-    if (!confirm(`${crate.name} für ${crate.creditCost} Credits öffnen?`)) return;
     setPurchasing(true);
     try {
       const res = await fetch('/api/shop/open-crate', {
@@ -326,6 +335,12 @@ export function ShopView({ user, userData, onRefresh }) {
         } else {
           toast.error(data.error);
         }
+      } else if (pendingPurchase.type === 'spend') {
+        // Credit-Spend Items (Boosts, Custom Kontonummer, etc.)
+        await _executeSpendCredit(pendingPurchase.item, pendingPurchase.customValue);
+      } else if (pendingPurchase.type === 'crate') {
+        // Mystery Box öffnen
+        await _executeOpenCrate(pendingPurchase.crate);
       }
 
       setTimeout(() => {
