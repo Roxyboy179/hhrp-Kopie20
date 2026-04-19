@@ -37,6 +37,7 @@ import { ErweiterteTransaktionenView, SparkontoManagementView } from '@/componen
 import { TransferMoneyView } from '@/components/profile/TransferMoneyView';
 import { ShopView } from '@/components/profile/ShopView';
 import HamburgHorizonTab from '@/components/profile/HamburgHorizonTab';
+import { ModernBankCard } from '@/components/profile/ModernBankCard';
 
 function SkeletonCard({ className = "" }) {
   return (
@@ -750,17 +751,35 @@ function IDCard({ character, avatarUrl, userId }) {
   );
 }
 
-function BankCard({ card, userName }) {
+function BankCard({ card, userName, userData }) {
   const [isFlipped, setIsFlipped] = useState(false);
   
   const bankNames = {
     'elite_federal': 'Elite Federal Bank',
     'hamburg_horizon': 'Hamburg Horizon Bank',
     'deutsche_bank': 'Deutsche Bank',
-    'sparkasse': 'Sparkasse Hamburg'
+    'sparkasse': 'Sparkasse Hamburg',
+    'nordic_capital': 'Nordic Capital Bank',
+    'metrova_trust': 'Metrova Trust Bank'
+  };
+
+  const bankColors = {
+    'elite_federal': 'from-yellow-500/20 to-orange-500/20',
+    'hamburg_horizon': 'from-blue-500/20 to-cyan-500/20',
+    'deutsche_bank': 'from-blue-600/20 to-indigo-600/20',
+    'sparkasse': 'from-red-500/20 to-pink-500/20',
+    'nordic_capital': 'from-purple-500/20 to-pink-500/20',
+    'metrova_trust': 'from-green-500/20 to-emerald-500/20'
   };
 
   const bankName = bankNames[card.bankId] || 'Hamburg Bank';
+  const bankColor = bankColors[card.bankId] || 'from-blue-500/20 to-cyan-500/20';
+  
+  // Guthaben aus userData
+  const totalBalance = (userData?.data?.money?.bank || 0) + (userData?.data?.money?.cash || 0) + (userData?.data?.money?.savings || 0);
+  const bankBalance = userData?.data?.money?.bank || 0;
+  const cashBalance = userData?.data?.money?.cash || 0;
+  const savingsBalance = userData?.data?.money?.savings || 0;
 
   const formatCardNumber = (num) => {
     if (!num) return '0000 0000 0000 0000';
@@ -1978,9 +1997,10 @@ export default function ProfilPage() {
                         </h3>
                         <div className="max-w-md">
                           {cards.length > 0 ? (
-                            <BankCard 
+                            <ModernBankCard 
                               card={cards[0]} 
                               userName={character?.name || user.username}
+                              userData={userData}
                             />
                           ) : (
                             <div className="glass rounded-2xl p-8 text-center border border-white/[0.08]">
