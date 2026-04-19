@@ -758,7 +758,7 @@ export function ShopView({ user, userData, onRefresh }) {
       {selectedCategory === 'credit_spend' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {creditSpendItems.map((item) => {
-            const needsInput = item.id === 'custom_kontonummer' || item.id === 'exklusiver_titel';
+            const needsInput = item.id === 'custom_kontonummer' || item.id === 'exklusiver_titel' || item.id === 'bank_pin_change';
             const buffs = userData?.activeBuffs || {};
             const now = Date.now();
 
