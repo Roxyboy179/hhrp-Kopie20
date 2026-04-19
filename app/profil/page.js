@@ -862,10 +862,10 @@ function BankCard({ card, userName, userData }) {
               <div className="flex justify-between py-2 border-b border-white/10">
                 <span className="text-white/50">Bank-PIN</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-white font-mono">{card.pin || '•••'}</span>
-                  {card.pin && (
+                  <span className="text-white font-mono">{card.code || card.pin || '•••'}</span>
+                  {(card.code || card.pin) && (
                     <button
-                      onClick={() => copyToClipboard(card.pin, 'Bank-PIN')}
+                      onClick={() => copyToClipboard(card.code || card.pin, 'Bank-PIN')}
                       className="p-1 hover:bg-white/10 rounded"
                     >
                       <Copy className="w-3.5 h-3.5 text-white/40" />
