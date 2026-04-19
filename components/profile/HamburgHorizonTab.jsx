@@ -420,10 +420,12 @@ function MarktplatzView() {
 function CharakterView({ currentUser }) {
   const [q, setQ] = useState('');
   const [results, setResults] = useState([]);
+  const [hasSearched, setHasSearched] = useState(false);
   const [selected, setSelected] = useState(null);
   const [detail, setDetail] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [focused, setFocused] = useState(false);
 
   useEffect(() => {
     if (currentUser?.id && !selected) {
@@ -433,13 +435,19 @@ function CharakterView({ currentUser }) {
   }, [currentUser?.id]);
 
   useEffect(() => {
-    if (q.length < 2) { setResults([]); return; }
+    if (q.length < 2) {
+      setResults([]);
+      setHasSearched(false);
+      setSearching(false);
+      return;
+    }
     setSearching(true);
     const t = setTimeout(async () => {
       try {
         const r = await fetch(`/api/hh/character-search?q=${encodeURIComponent(q)}`, { cache: 'no-store' });
         const j = await r.json();
         setResults(j.results || []);
+        setHasSearched(true);
       } catch (e) { console.error(e); }
       finally { setSearching(false); }
     }, 300);
@@ -461,44 +469,126 @@ function CharakterView({ currentUser }) {
     }
   };
 
+  const showDropdown = focused && q.length >= 2;
+
   return (
     <div className="space-y-4">
       {/* Search */}
-      <div className="p-4 rounded-xl border" style={CARD_STYLE_SUBTLE}>
+      <div className="p-4 rounded-xl border relative" style={CARD_STYLE_SUBTLE}>
         <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+          <Search
+            className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${
+              searching ? 'text-white/80 animate-pulse' : 'text-white/40'
+            }`}
+          />
           <input
             type="text"
             value={q}
             onChange={e => setQ(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setTimeout(() => setFocused(false), 200)}
             placeholder="Charakter oder Discord-Name suchen (mind. 2 Zeichen)..."
-            className="w-full pl-10 pr-10 py-2.5 bg-white/[0.04] border border-white/10 rounded-lg text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 focus:bg-white/[0.06] transition-all"
+            className="w-full pl-10 pr-10 py-2.5 bg-white/[0.04] border border-white/10 rounded-lg text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/25 focus:bg-white/[0.06] transition-all"
           />
-          {searching && (
-            <Loader2 className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-white/40 animate-spin" />
-          )}
-        </div>
-        {results.length > 0 && (
-          <div className="mt-3 space-y-1 max-h-72 overflow-y-auto">
-            {results.map(r => (
+          {/* Animated indicator */}
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            {searching ? (
+              <div className="flex items-center gap-1">
+                <span className="w-1 h-1 rounded-full bg-white/60 animate-hh-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1 h-1 rounded-full bg-white/60 animate-hh-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1 h-1 rounded-full bg-white/60 animate-hh-bounce" style={{ animationDelay: '300ms' }} />
+              </div>
+            ) : q.length >= 2 && hasSearched ? (
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] text-white/60 border border-white/10 font-mono">
+                {results.length}
+              </span>
+            ) : q.length > 0 ? (
               <button
-                key={r.discord_user_id}
-                onClick={() => { loadCharacter(r.discord_user_id); setResults([]); setQ(''); }}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left hover:bg-white/[0.05] border border-transparent hover:border-white/10"
+                onClick={() => setQ('')}
+                className="text-white/40 hover:text-white/80 text-lg leading-none"
+                tabIndex={-1}
               >
-                <Avatar src={r.avatar} name={r.name} size={36} />
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-semibold text-white truncate">{r.name}</div>
-                  <div className="text-xs text-white/50 truncate">
-                    {r.discordUsername && <span>@{r.discordUsername} • </span>}
-                    {r.faction && <span>{r.faction} • </span>}
-                    Level {r.level}
+                ×
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Results dropdown – animated */}
+        <div
+          className={`overflow-hidden transition-all duration-300 ease-out ${
+            showDropdown ? 'max-h-96 mt-3 opacity-100' : 'max-h-0 mt-0 opacity-0'
+          }`}
+        >
+          {searching && results.length === 0 ? (
+            // Skeleton loader
+            <div className="space-y-2">
+              {[0, 1, 2].map(i => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.02] animate-pulse"
+                  style={{ animationDelay: `${i * 100}ms` }}
+                >
+                  <div className="w-9 h-9 rounded-full bg-white/[0.06]" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3 bg-white/[0.08] rounded w-1/2" />
+                    <div className="h-2 bg-white/[0.05] rounded w-1/3" />
                   </div>
                 </div>
-              </button>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          ) : hasSearched && results.length === 0 ? (
+            <div className="flex flex-col items-center py-6 text-center animate-hh-fade-in">
+              <Search className="w-8 h-8 text-white/20 mb-2" />
+              <p className="text-sm text-white/60 font-medium">Keine Treffer</p>
+              <p className="text-xs text-white/40 mt-1">Für &quot;{q}&quot; wurde nichts gefunden</p>
+            </div>
+          ) : results.length > 0 ? (
+            <div className="space-y-1 max-h-80 overflow-y-auto hh-scroll">
+              {results.map((r, i) => (
+                <button
+                  key={r.discord_user_id}
+                  onClick={() => {
+                    loadCharacter(r.discord_user_id);
+                    setResults([]);
+                    setQ('');
+                    setFocused(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left hover:bg-white/[0.06] border border-transparent hover:border-white/10 transition-all animate-hh-slide-in opacity-0"
+                  style={{
+                    animationDelay: `${Math.min(i * 35, 400)}ms`,
+                    animationFillMode: 'forwards'
+                  }}
+                >
+                  <Avatar src={r.avatar} name={r.name} size={36} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-white truncate flex items-center gap-2">
+                      {highlightMatch(r.name, q)}
+                      {r.discord_user_id === currentUser?.id && (
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-white/80 font-semibold border border-white/10">
+                          DU
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-white/50 truncate">
+                      {r.discordUsername && <span>@{r.discordUsername}</span>}
+                      {r.discordUsername && (r.faction || r.level) && <span> • </span>}
+                      {r.faction && <span>{r.faction}</span>}
+                      {r.faction && r.level && <span> • </span>}
+                      <span>Lvl {r.level}</span>
+                    </div>
+                  </div>
+                  <svg
+                    className="w-4 h-4 text-white/30 group-hover:text-white/60 flex-shrink-0"
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {loading && <LoadingCard />}
@@ -511,6 +601,24 @@ function CharakterView({ currentUser }) {
       )}
       {!loading && detail?.success && <CharakterCard detail={detail} isSelf={currentUser?.id === selected} />}
     </div>
+  );
+}
+
+// Helper: Hervorhebung des Suchbegriffs im Namen
+function highlightMatch(text, query) {
+  if (!text || !query) return text;
+  const q = query.trim();
+  if (q.length < 2) return text;
+  const idx = text.toLowerCase().indexOf(q.toLowerCase());
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <span className="bg-white/15 text-white rounded px-0.5">
+        {text.slice(idx, idx + q.length)}
+      </span>
+      {text.slice(idx + q.length)}
+    </>
   );
 }
 

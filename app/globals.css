@@ -524,3 +524,44 @@ input, textarea, select, button, a, [role="button"] {
 .snap-center {
   scroll-snap-align: center;
 }
+
+/* === Hamburg Horizon Tab - Search Animations === */
+@keyframes hh-bounce {
+  0%, 100% { transform: translateY(0); opacity: 0.4; }
+  50%      { transform: translateY(-4px); opacity: 1; }
+}
+.animate-hh-bounce {
+  animation: hh-bounce 0.9s ease-in-out infinite;
+}
+
+@keyframes hh-fade-in {
+  0%   { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-hh-fade-in {
+  animation: hh-fade-in 0.25s ease-out forwards;
+}
+
+@keyframes hh-slide-in {
+  0%   { opacity: 0; transform: translateX(-8px) scale(0.98); }
+  100% { opacity: 1; transform: translateX(0)    scale(1); }
+}
+.animate-hh-slide-in {
+  animation: hh-slide-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Schöne Scrollbar für Suchergebnisse */
+.hh-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.hh-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.hh-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+.hh-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
