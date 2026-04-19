@@ -4503,16 +4503,22 @@ async function _loadDiscordMembers(forceRefresh = false) {
   }
 }
 
-// XP-Tabelle wie im Bot – kumulative XP für Level
+// XP-Tabelle wie im Discord Bot (src/index.js):
+//   LEVEL_CONFIG.getXpForLevel: (level) => level * 100
+// XP, die benötigt werden um vom aktuellen Level auf das nächste zu kommen.
 function _xpForLevel(level) {
-  // Bot nutzt quadratische Formel: 100 * level^1.5 pro Level grob
-  // Wir rechnen mit: xp_needed_for_level = 100 * level^2 (einfache Variante)
-  return Math.floor(100 * Math.pow(level, 2));
+  // Discord-Bot-Formel: xp_needed = current_level * 100
+  // (z.B. Level 14 -> Level 15 benötigt 14 * 100 = 1400 XP)
+  const lvl = Math.max(1, parseInt(level) || 1);
+  return lvl * 100;
 }
 function _progressToNextLevel(level, xp) {
-  // xp = XP innerhalb des aktuellen Levels (wie in levels.json xp-Feld)
+  // xp = XP innerhalb des aktuellen Levels (wie im Bot: levels[userId].xp)
   const needed = _xpForLevel(level);
-  const pct = Math.min(100, Math.max(0, Math.floor((xp / needed) * 100)));
+  const safeXp = Math.max(0, parseInt(xp) || 0);
+  const pct = needed > 0
+    ? Math.min(100, Math.max(0, Math.floor((safeXp / needed) * 100)))
+    : 0;
   return { needed, pct };
 }
 
