@@ -126,6 +126,156 @@ function BotStatusCard({ status, onRetry }) {
   return null;
 }
 
+
+function IDCard({ character, avatarUrl, userId }) {
+  const [showDetails, setShowDetails] = useState(false);
+  
+  const calculateBirthDate = (age, userId) => {
+    if (!age) return 'N/A';
+    const currentYear = new Date().getFullYear();
+    const birthYear = currentYear - age;
+    const seed = parseInt(userId?.slice(0, 8) || '12345678', 10);
+    const day = (seed % 28) + 1;
+    const month = (seed % 12) + 1;
+    return `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.${birthYear}`;
+  };
+
+  const birthDate = calculateBirthDate(character?.age, userId);
+  const issueDate = '15.04.2020';
+  const expiryDate = '15.04.2030';
+
+  return (
+    <div className="w-full max-w-md mx-auto">
+      <div 
+        className="relative p-6 rounded-2xl border overflow-hidden cursor-pointer group transition-all hover:scale-[1.02]"
+        style={{
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
+        }}
+        onClick={() => setShowDetails(true)}
+      >
+        <div 
+          className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 opacity-40"
+          style={{ mixBlendMode: 'overlay' }}
+        />
+        
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <p className="text-xs text-white/50 uppercase tracking-wider">Bundesrepublik HHRP</p>
+              <p className="text-sm font-bold text-white">PERSONALAUSWEIS</p>
+            </div>
+            <div className="text-2xl">🪪</div>
+          </div>
+
+          <div className="flex gap-4 mb-6">
+            <div className="w-20 h-24 rounded-lg overflow-hidden border-2 border-white/20 flex-shrink-0">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="Photo" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-white/10 flex items-center justify-center">
+                  <User className="w-10 h-10 text-white/40" />
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 space-y-2">
+              <div>
+                <p className="text-[10px] text-white/50 uppercase">Name</p>
+                <p className="text-lg font-bold text-white">{character?.vorname} {character?.nachname}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <p className="text-[10px] text-white/50">Geboren</p>
+                  <p className="text-white font-medium">{birthDate}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-white/50">Alter</p>
+                  <p className="text-white font-medium">{character?.age || 'N/A'} Jahre</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-white/10">
+            <p className="text-[10px] text-white/40 text-center">
+              Klicke für Details • Gültig bis {expiryDate}
+            </p>
+          </div>
+        </div>
+
+        <div 
+          className="absolute bottom-4 right-4 w-12 h-12 rounded-lg opacity-20 pointer-events-none"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1))',
+            border: '1px solid rgba(255, 255, 255, 0.3)'
+          }}
+        />
+
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl" style={{ background: 'rgba(255, 255, 255, 0.02)' }} />
+      </div>
+
+      {showDetails && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowDetails(false)}
+        >
+          <div 
+            className="w-full max-w-md p-6 rounded-2xl border"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))',
+              borderColor: 'rgba(255, 255, 255, 0.15)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">Personalausweis</h3>
+              <button 
+                onClick={() => setShowDetails(false)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-all"
+              >
+                <XCircle className="w-5 h-5 text-white/60" />
+              </button>
+            </div>
+            
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Vorname</span>
+                <span className="text-white font-medium">{character?.vorname || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Nachname</span>
+                <span className="text-white font-medium">{character?.nachname || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Geburtsdatum</span>
+                <span className="text-white font-medium">{birthDate}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Alter</span>
+                <span className="text-white font-medium">{character?.age || 'N/A'} Jahre</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Geschlecht</span>
+                <span className="text-white font-medium">{character?.geschlecht || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Ausgestellt</span>
+                <span className="text-white font-medium">{issueDate}</span>
+              </div>
+              <div className="flex justify-between py-2">
+                <span className="text-white/50">Gültig bis</span>
+                <span className="text-green-400 font-medium">{expiryDate}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
   const [showDetails, setShowDetails] = useState(false);
   
@@ -516,170 +666,6 @@ function WeaponsLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
 }
 
 function BankCard({ card, userName, userData }) {
-      if (typeof l === 'object') return (l.name === licenseId || l.id === licenseId || l.name?.includes(licenseId) || l.id?.includes(licenseId));
-  const [showDetails, setShowDetails] = useState(false);
-  
-  // Berechne Geburtsdatum aus Alter - FEST basierend auf User-ID
-  const calculateBirthDate = (age, userId) => {
-    if (!age) return 'N/A';
-    const currentYear = new Date().getFullYear();
-    const birthYear = currentYear - age;
-    
-    // Verwende User-ID als Seed für konsistente "zufällige" Werte
-    const seed = parseInt(userId?.slice(0, 8) || '12345678', 10);
-    const day = (seed % 28) + 1; // Tag zwischen 1-28
-    const month = (seed % 12) + 1; // Monat zwischen 1-12
-    
-    return `${String(day).padStart(2, '0')}.${String(month).padStart(2, '0')}.${birthYear}`;
-  };
-
-  const birthDate = calculateBirthDate(character?.age, userId);
-  const issueDate = '15.04.2020';
-  const expiryDate = '15.04.2030';
-
-  return (
-    <div className="w-full max-w-md mx-auto">
-      {/* Moderne ID Card - Glasmorphism Style */}
-      <div 
-        className="relative p-6 rounded-2xl border overflow-hidden cursor-pointer group transition-all hover:scale-[1.02]"
-        style={{
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))',
-          borderColor: 'rgba(255, 255, 255, 0.15)'
-        }}
-        onClick={() => setShowDetails(true)}
-      >
-        {/* Gradient Overlay */}
-        <div 
-          className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 opacity-40"
-          style={{ mixBlendMode: 'overlay' }}
-        />
-        
-        {/* Card Content */}
-        <div className="relative z-10">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <p className="text-xs text-white/50 uppercase tracking-wider">Bundesrepublik HHRP</p>
-              <p className="text-sm font-bold text-white">PERSONALAUSWEIS</p>
-            </div>
-            <div className="text-2xl">🪪</div>
-          </div>
-
-          {/* Main Info */}
-          <div className="flex gap-4 mb-6">
-            {/* Avatar */}
-            <div className="w-20 h-24 rounded-lg overflow-hidden border-2 border-white/20 flex-shrink-0">
-              {avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarUrl} alt="Photo" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-white/10 flex items-center justify-center">
-                  <User className="w-10 h-10 text-white/40" />
-                </div>
-              )}
-            </div>
-
-            {/* Info */}
-            <div className="flex-1 space-y-2">
-              <div>
-                <p className="text-[10px] text-white/50 uppercase">Name</p>
-                <p className="text-lg font-bold text-white">{character?.vorname} {character?.nachname}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <p className="text-[10px] text-white/50">Geboren</p>
-                  <p className="text-white font-medium">{birthDate}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-white/50">Alter</p>
-                  <p className="text-white font-medium">{character?.age || 'N/A'} Jahre</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Hint */}
-          <div className="pt-4 border-t border-white/10">
-            <p className="text-[10px] text-white/40 text-center">
-              Klicke für Details • Gültig bis {expiryDate}
-            </p>
-          </div>
-        </div>
-
-        {/* Chip Decoration */}
-        <div 
-          className="absolute bottom-4 right-4 w-12 h-12 rounded-lg opacity-20 pointer-events-none"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1))',
-            border: '1px solid rgba(255, 255, 255, 0.3)'
-          }}
-        />
-
-        {/* Hover Effect */}
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl" style={{ background: 'rgba(255, 255, 255, 0.02)' }} />
-      </div>
-
-      {/* Detail Modal */}
-      {showDetails && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
-          onClick={() => setShowDetails(false)}
-        >
-          <div 
-            className="w-full max-w-md p-6 rounded-2xl border"
-            style={{
-              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))',
-              borderColor: 'rgba(255, 255, 255, 0.15)'
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-white">Personalausweis</h3>
-              <button 
-                onClick={() => setShowDetails(false)}
-                className="p-2 hover:bg-white/10 rounded-lg transition-all"
-              >
-                <XCircle className="w-5 h-5 text-white/60" />
-              </button>
-            </div>
-            
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between py-2 border-b border-white/10">
-                <span className="text-white/50">Vorname</span>
-                <span className="text-white font-medium">{character?.vorname || 'N/A'}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-white/10">
-                <span className="text-white/50">Nachname</span>
-                <span className="text-white font-medium">{character?.nachname || 'N/A'}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-white/10">
-                <span className="text-white/50">Geburtsdatum</span>
-                <span className="text-white font-medium">{birthDate}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-white/10">
-                <span className="text-white/50">Alter</span>
-                <span className="text-white font-medium">{character?.age || 'N/A'} Jahre</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-white/10">
-                <span className="text-white/50">Geschlecht</span>
-                <span className="text-white font-medium">{character?.geschlecht || 'N/A'}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-white/10">
-                <span className="text-white/50">Ausgestellt</span>
-                <span className="text-white font-medium">{issueDate}</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-white/50">Gültig bis</span>
-                <span className="text-green-400 font-medium">{expiryDate}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
   const [showDetails, setShowDetails] = useState(false);
   
   const bankNames = {
