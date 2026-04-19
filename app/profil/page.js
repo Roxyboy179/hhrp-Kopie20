@@ -37,7 +37,6 @@ import { ErweiterteTransaktionenView, SparkontoManagementView } from '@/componen
 import { TransferMoneyView } from '@/components/profile/TransferMoneyView';
 import { ShopView } from '@/components/profile/ShopView';
 import HamburgHorizonTab from '@/components/profile/HamburgHorizonTab';
-import { ModernBankCard } from '@/components/profile/ModernBankCard';
 
 function SkeletonCard({ className = "" }) {
   return (
