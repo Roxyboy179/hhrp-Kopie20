@@ -4440,6 +4440,57 @@ async function _loadAllUserData(forceRefresh = false) {
   }
 }
 
+// Discord Member Cache - für Avatare & Usernames (gilt für ganze Guild)
+let _hhMembersCache = { map: null, ts: 0 };
+async function _loadDiscordMembers(forceRefresh = false) {
+  const now = Date.now();
+  // 5 Minuten Cache
+  if (!forceRefresh && _hhMembersCache.map && (now - _hhMembersCache.ts) < 300000) {
+    return _hhMembersCache.map;
+  }
+  try {
+    const allMembers = {};
+    let after = '0';
+    let fetched = 0;
+    // Paginate bis alle Member geholt sind (max 10 Pages = 10.000 Member, safety)
+    for (let i = 0; i < 10; i++) {
+      const res = await fetch(
+        `https://discord.com/api/v10/guilds/${DISCORD_GUILD_ID}/members?limit=1000&after=${after}`,
+        { headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` } }
+      );
+      if (!res.ok) {
+        console.error('[HH] Discord members fetch failed:', res.status);
+        break;
+      }
+      const members = await res.json();
+      if (!Array.isArray(members) || members.length === 0) break;
+
+      for (const m of members) {
+        if (!m.user?.id) continue;
+        const uid = m.user.id;
+        allMembers[uid] = {
+          id: uid,
+          username: m.user.global_name || m.user.username,
+          discordUsername: m.user.username,
+          avatar: m.user.avatar
+            ? `https://cdn.discordapp.com/avatars/${uid}/${m.user.avatar}${m.user.avatar.startsWith('a_') ? '.gif' : '.png'}?size=128`
+            : `https://cdn.discordapp.com/embed/avatars/${(parseInt(uid) >> 22) % 6}.png`,
+          nick: m.nick || null,
+        };
+        fetched++;
+      }
+      after = members[members.length - 1].user.id;
+      if (members.length < 1000) break; // Letzte Page
+    }
+    console.log(`[HH] Cached ${fetched} Discord members`);
+    _hhMembersCache = { map: allMembers, ts: now };
+    return allMembers;
+  } catch (e) {
+    console.error('[HH] Load Discord members error:', e);
+    return _hhMembersCache.map || {};
+  }
+}
+
 // XP-Tabelle wie im Bot – kumulative XP für Level
 function _xpForLevel(level) {
   // Bot nutzt quadratische Formel: 100 * level^1.5 pro Level grob
@@ -4459,18 +4510,24 @@ async function handleHHLeaderboard(request) {
     const url = new URL(request.url);
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
 
-    const all = await _loadAllUserData();
+    const [all, members] = await Promise.all([
+      _loadAllUserData(),
+      _loadDiscordMembers()
+    ]);
     const entries = all
       .map(row => {
         const s = row.data?.stats || {};
         const c = row.data?.character || {};
+        const m = members[row.discord_user_id] || null;
         return {
           discord_user_id: row.discord_user_id,
           level: s.level || 1,
           xp: s.xp || 0,
           totalXp: s.totalXp || 0,
           messages: s.messages || 0,
-          username: s.username || null,
+          username: s.username || m?.username || null,
+          avatar: m?.avatar || null,
+          displayName: m?.nick || m?.username || null,
           character: {
             name: c.name || (c.vorname && c.nachname ? `${c.vorname} ${c.nachname}` : null),
             vorname: c.vorname || null,
@@ -4555,7 +4612,10 @@ async function handleHHMarketplace(request) {
     const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
     const pageSize = Math.min(100, parseInt(url.searchParams.get('pageSize') || '24'));
 
-    const all = await _loadAllUserData();
+    const [all, members] = await Promise.all([
+      _loadAllUserData(),
+      _loadDiscordMembers()
+    ]);
 
     // Alle aktiven Listings aus allen Usern zusammenführen
     const listings = [];
@@ -4563,6 +4623,7 @@ async function handleHHMarketplace(request) {
       const userListings = row.data?.marketplace || [];
       if (!Array.isArray(userListings)) continue;
       const char = row.data?.character || {};
+      const m = members[row.discord_user_id] || null;
       const sellerName = char.name || (char.vorname && char.nachname
         ? `${char.vorname} ${char.nachname}` : null);
 
@@ -4582,6 +4643,8 @@ async function handleHHMarketplace(request) {
           seller: {
             discord_user_id: row.discord_user_id,
             characterName: sellerName,
+            discordUsername: m?.username || null,
+            avatar: m?.avatar || null,
           }
         });
       }
@@ -4591,7 +4654,8 @@ async function handleHHMarketplace(request) {
     const filtered = search
       ? listings.filter(l =>
           (l.itemName || '').toLowerCase().includes(search) ||
-          (l.seller.characterName || '').toLowerCase().includes(search))
+          (l.seller.characterName || '').toLowerCase().includes(search) ||
+          (l.seller.discordUsername || '').toLowerCase().includes(search))
       : listings;
 
     // Sortieren nach createdAt DESC
@@ -4642,6 +4706,10 @@ async function handleHHCharacter(request, userId) {
     if (!c) return NextResponse.json({ error: 'Kein Charakter erstellt' }, { status: 404 });
 
     const s = parsed?.stats || {};
+    // Discord-Info laden
+    const members = await _loadDiscordMembers();
+    const m = members[userId] || null;
+
     // Anzahl Listings des Users als öffentliche Info
     const listings = (parsed?.marketplace || []).filter(l => l?.status === 'active').length;
     const licenses = (parsed?.licenses || []).filter(l => l && !(l.name || '').startsWith('credits_'));
@@ -4658,9 +4726,16 @@ async function handleHHCharacter(request, userId) {
         job: c.job || null,
         faction: c.faction || null,
       },
+      discord: m ? {
+        username: m.username,
+        discordUsername: m.discordUsername,
+        avatar: m.avatar,
+        nick: m.nick,
+      } : null,
       stats: {
         level: s.level || 1,
         xp: s.xp || 0,
+        totalXp: s.totalXp || 0,
         messages: s.messages || 0,
       },
       activeListings: listings,
@@ -4683,21 +4758,33 @@ async function handleHHCharacterSearch(request) {
       return NextResponse.json({ success: true, results: [] });
     }
 
-    const all = await _loadAllUserData();
+    const [all, members] = await Promise.all([
+      _loadAllUserData(),
+      _loadDiscordMembers()
+    ]);
     const results = [];
     for (const row of all) {
       const c = row.data?.character;
-      if (!c) continue;
-      const name = (c.name || (c.vorname && c.nachname ? `${c.vorname} ${c.nachname}` : '') || '').toLowerCase();
-      const vn = (c.vorname || '').toLowerCase();
-      const nn = (c.nachname || '').toLowerCase();
-      if (name.includes(q) || vn.includes(q) || nn.includes(q)) {
+      const m = members[row.discord_user_id] || null;
+      // Matching auf Char-Name UND Discord-Username
+      const charName = c ? (c.name || (c.vorname && c.nachname ? `${c.vorname} ${c.nachname}` : '') || '').toLowerCase() : '';
+      const charVn = (c?.vorname || '').toLowerCase();
+      const charNn = (c?.nachname || '').toLowerCase();
+      const discUser = (m?.username || '').toLowerCase();
+      const discReal = (m?.discordUsername || '').toLowerCase();
+
+      if (!c && !m) continue;
+      if (charName.includes(q) || charVn.includes(q) || charNn.includes(q)
+          || discUser.includes(q) || discReal.includes(q)) {
+        if (!c) continue; // Nur mit Charakter zeigen
         results.push({
           discord_user_id: row.discord_user_id,
           name: c.name || `${c.vorname || ''} ${c.nachname || ''}`.trim(),
           faction: c.faction || null,
           job: c.job || null,
-          level: row.data?.stats?.level || 1
+          level: row.data?.stats?.level || 1,
+          avatar: m?.avatar || null,
+          discordUsername: m?.username || null,
         });
       }
       if (results.length >= 25) break;
@@ -4771,6 +4858,9 @@ async function handleHHMyProfile(request) {
       user: {
         id: user.id,
         username: user.username || user.display_name,
+        avatar: user.avatar
+          ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}${user.avatar.startsWith('a_') ? '.gif' : '.png'}?size=128`
+          : `https://cdn.discordapp.com/embed/avatars/${(parseInt(user.id) >> 22) % 6}.png`,
       },
       stats: {
         ...stats,

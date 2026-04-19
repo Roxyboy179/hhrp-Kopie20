@@ -2,52 +2,70 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import {
-  Trophy, Medal, Crown, Store, User as UserIcon, BarChart3,
+  Trophy, Store, User as UserIcon, BarChart3,
   Search, Loader2, Sparkles, Award, TrendingUp, MessageCircle,
-  Briefcase, MapPin, Cake, UserCircle2, ShoppingCart, RefreshCw,
+  Briefcase, MapPin, Cake, ShoppingCart, RefreshCw,
   DollarSign, Wallet, PiggyBank, Package, Receipt, ScrollText,
-  CreditCard, Star, Eye, AlertCircle
+  CreditCard, Star, AlertCircle, Crown
 } from 'lucide-react';
 
-const TABS = [
-  { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, color: 'from-yellow-400 to-amber-600' },
-  { id: 'marktplatz', label: 'Marktplatz', icon: Store, color: 'from-blue-400 to-cyan-600' },
-  { id: 'charakter', label: 'Charaktere', icon: UserIcon, color: 'from-purple-400 to-pink-600' },
-  { id: 'profil', label: 'Mein Profil', icon: BarChart3, color: 'from-emerald-400 to-teal-600' },
+const SUBTABS = [
+  { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+  { id: 'marktplatz', label: 'Marktplatz', icon: Store },
+  { id: 'charakter', label: 'Charaktere', icon: UserIcon },
+  { id: 'profil', label: 'Mein Profil', icon: BarChart3 },
 ];
+
+// --- Gemeinsamer subtiler Container-Style im Stil von TransferMoneyView ---
+const CARD_STYLE = {
+  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))',
+  borderColor: 'rgba(255, 255, 255, 0.1)'
+};
+const CARD_STYLE_SUBTLE = {
+  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
+  borderColor: 'rgba(255, 255, 255, 0.08)'
+};
+const CARD_STYLE_ACTIVE = {
+  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))',
+  borderColor: 'rgba(255, 255, 255, 0.15)'
+};
 
 export default function HamburgHorizonTab({ currentUser }) {
   const [subTab, setSubTab] = useState('leaderboard');
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="glass rounded-2xl p-5 border border-white/[0.08] bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg">
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold text-white">Hamburg Horizon</h2>
-            <p className="text-xs text-white/50">Bot-Funktionen direkt auf der Webseite</p>
+    <div className="space-y-6">
+      {/* Info Banner (wie TransferMoneyView) */}
+      <div
+        className="p-4 rounded-xl border backdrop-blur-sm"
+        style={CARD_STYLE}
+      >
+        <div className="flex items-start gap-3">
+          <Sparkles className="w-5 h-5 text-white/60 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-white/70">
+            <p className="font-medium text-white mb-1">Hamburg Horizon – Bot-Funktionen</p>
+            <p>Leaderboard, Marktplatz, Charakter-Profile und deine Statistiken – alles direkt von unserem Discord-Bot.</p>
           </div>
         </div>
       </div>
 
-      {/* Subtabs */}
-      <div className="glass rounded-2xl p-2 border border-white/[0.08] overflow-x-auto">
+      {/* Subtab Navigation */}
+      <div
+        className="p-2 rounded-xl border overflow-x-auto"
+        style={CARD_STYLE_SUBTLE}
+      >
         <div className="flex gap-1 min-w-max">
-          {TABS.map(t => {
+          {SUBTABS.map(t => {
             const Icon = t.icon;
             const active = subTab === t.id;
             return (
               <button
                 key={t.id}
                 onClick={() => setSubTab(t.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all whitespace-nowrap
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap
                   ${active
-                    ? `bg-gradient-to-r ${t.color} text-white shadow-lg`
-                    : 'text-white/60 hover:text-white hover:bg-white/[0.05]'}`}
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/60 hover:text-white hover:bg-white/[0.04]'}`}
               >
                 <Icon className="w-4 h-4" />
                 {t.label}
@@ -63,6 +81,33 @@ export default function HamburgHorizonTab({ currentUser }) {
       {subTab === 'charakter' && <CharakterView currentUser={currentUser} />}
       {subTab === 'profil' && <MeinProfilView currentUser={currentUser} />}
     </div>
+  );
+}
+
+/* ---------------- Avatar Helper ---------------- */
+function Avatar({ src, name, size = 40, className = '' }) {
+  const [error, setError] = useState(false);
+  const initial = (name || '?').charAt(0).toUpperCase();
+
+  if (!src || error) {
+    return (
+      <div
+        className={`rounded-full bg-white/[0.06] border border-white/10 flex items-center justify-center text-white/80 font-semibold flex-shrink-0 ${className}`}
+        style={{ width: size, height: size, fontSize: size * 0.4 }}
+      >
+        {initial}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={name || 'User'}
+      onError={() => setError(true)}
+      className={`rounded-full border border-white/10 object-cover flex-shrink-0 ${className}`}
+      style={{ width: size, height: size }}
+    />
   );
 }
 
@@ -96,24 +141,31 @@ function LeaderboardView({ currentUser }) {
     <div className="space-y-4">
       {/* Mein Rang Card */}
       {me && (
-        <div className="glass rounded-2xl p-5 border border-yellow-400/20 bg-gradient-to-br from-yellow-500/10 via-amber-500/5 to-orange-500/10">
+        <div
+          className="p-4 rounded-xl border"
+          style={CARD_STYLE_ACTIVE}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-yellow-400 to-amber-600 flex items-center justify-center shadow-lg">
-                <span className="text-2xl font-black text-white">#{me.rank}</span>
+              <div className="relative">
+                <Avatar src={me.avatar} name={me.displayName || me.username || me.character?.name} size={56} />
+                <div className="absolute -bottom-1 -right-1 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-2 py-0.5 text-[10px] font-bold text-white">
+                  #{me.rank}
+                </div>
               </div>
               <div>
-                <div className="text-xs text-white/50 uppercase tracking-wider font-semibold">Dein Rang</div>
-                <div className="text-lg font-bold text-white">Level {me.level}</div>
-                <div className="text-xs text-white/60">
-                  {(me.totalXp > 0 ? me.totalXp : me.xp).toLocaleString('de-DE')} XP gesamt
-                  {me.messages > 0 && ` • ${me.messages.toLocaleString('de-DE')} Nachrichten`}
-                </div>
+                <p className="text-sm text-white/50 mb-0.5">Dein Rang</p>
+                <p className="text-white font-semibold">
+                  {me.character?.name || me.displayName || me.username || 'Spieler'}
+                </p>
+                <p className="text-xs text-white/50">
+                  Level {me.level} • {(me.totalXp > 0 ? me.totalXp : me.xp).toLocaleString('de-DE')} XP
+                </p>
               </div>
             </div>
             <button
               onClick={load}
-              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-all"
+              className="p-2 rounded-lg hover:bg-white/[0.06] text-white/60 hover:text-white transition-all"
               title="Neu laden"
             >
               <RefreshCw className="w-4 h-4" />
@@ -122,34 +174,38 @@ function LeaderboardView({ currentUser }) {
         </div>
       )}
 
-      {/* Top 3 */}
+      {/* Top 3 Podium */}
       {list.length >= 3 && (
         <div className="grid grid-cols-3 gap-3">
           {[1, 0, 2].map((idx, i) => {
             const e = list[idx];
             const position = idx + 1;
             const isGold = position === 1;
-            const isSilver = position === 2;
-            const medal = isGold ? '🥇' : isSilver ? '🥈' : '🥉';
-            const gradient = isGold
-              ? 'from-yellow-400 to-amber-600'
-              : isSilver
-                ? 'from-slate-300 to-slate-500'
-                : 'from-orange-400 to-amber-700';
+            const medal = position === 1 ? '🥇' : position === 2 ? '🥈' : '🥉';
             return (
               <div
                 key={e.discord_user_id}
-                className={`glass rounded-2xl p-4 border border-white/[0.08] text-center ${isGold ? 'md:order-2 md:scale-105' : i === 0 ? 'md:order-1' : 'md:order-3'}`}
+                className={`p-4 rounded-xl border text-center ${isGold ? 'order-2 -mt-2' : i === 0 ? 'order-1' : 'order-3'}`}
+                style={isGold ? CARD_STYLE_ACTIVE : CARD_STYLE_SUBTLE}
               >
-                <div className="text-3xl mb-2">{medal}</div>
-                <div className={`inline-block px-3 py-1 rounded-full text-xs font-bold text-white bg-gradient-to-r ${gradient} mb-2`}>
-                  Rang {position}
+                <div className="flex justify-center mb-2">
+                  <div className="relative">
+                    <Avatar
+                      src={e.avatar}
+                      name={e.displayName || e.character?.name}
+                      size={isGold ? 64 : 52}
+                    />
+                    <div className="absolute -top-1 -right-1 text-2xl">{medal}</div>
+                  </div>
                 </div>
-                <div className="text-sm font-bold text-white truncate">
-                  {e.character?.name || `User ${e.discord_user_id.slice(-4)}`}
-                </div>
-                <div className="text-xs text-white/60 mt-1">Level {e.level}</div>
-                <div className="text-xs text-white/40">{e.xp.toLocaleString('de-DE')} XP</div>
+                <p className="text-xs text-white/50">Rang {position}</p>
+                <p className="text-sm font-semibold text-white truncate mt-1">
+                  {e.character?.name || e.displayName || e.username || 'User'}
+                </p>
+                <p className="text-xs text-white/60 mt-1">Level {e.level}</p>
+                <p className="text-xs text-white/40">
+                  {(e.totalXp > 0 ? e.totalXp : e.xp).toLocaleString('de-DE')} XP
+                </p>
               </div>
             );
           })}
@@ -157,37 +213,44 @@ function LeaderboardView({ currentUser }) {
       )}
 
       {/* Liste */}
-      <div className="glass rounded-2xl border border-white/[0.08] overflow-hidden">
-        <div className="p-4 border-b border-white/[0.06] flex items-center justify-between">
+      <div className="rounded-xl border overflow-hidden" style={CARD_STYLE_SUBTLE}>
+        <div className="p-4 border-b border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-yellow-400" />
-            <h3 className="font-bold text-white">Top {list.length}</h3>
+            <Trophy className="w-5 h-5 text-white/60" />
+            <h3 className="font-semibold text-white">Top {list.length}</h3>
           </div>
           <span className="text-xs text-white/50">{data.total} Spieler insgesamt</span>
         </div>
-        <div className="divide-y divide-white/[0.04]">
+        <div className="divide-y divide-white/[0.06]">
           {list.map((e) => {
             const isMe = currentUser?.id === e.discord_user_id;
             return (
               <div
                 key={e.discord_user_id}
-                className={`flex items-center gap-3 p-3 transition-colors ${isMe ? 'bg-yellow-500/5 hover:bg-yellow-500/10' : 'hover:bg-white/[0.03]'}`}
+                className={`flex items-center gap-3 p-3 transition-colors ${isMe ? 'bg-white/[0.04]' : 'hover:bg-white/[0.03]'}`}
               >
-                <div className="w-10 text-center">
+                <div className="w-8 text-center flex-shrink-0">
                   {e.rank <= 3 ? (
                     <span className="text-xl">{e.rank === 1 ? '🥇' : e.rank === 2 ? '🥈' : '🥉'}</span>
                   ) : (
-                    <span className="text-sm font-bold text-white/50">#{e.rank}</span>
+                    <span className="text-sm font-semibold text-white/40">#{e.rank}</span>
                   )}
                 </div>
+                <Avatar src={e.avatar} name={e.displayName || e.character?.name} size={40} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-sm font-semibold truncate ${isMe ? 'text-yellow-300' : 'text-white'}`}>
-                      {e.character?.name || e.username || `User ${e.discord_user_id.slice(-4)}`}
+                    <span className={`text-sm font-semibold truncate ${isMe ? 'text-white' : 'text-white/90'}`}>
+                      {e.character?.name || e.displayName || e.username || `User ${e.discord_user_id.slice(-4)}`}
                     </span>
-                    {isMe && <span className="text-[10px] px-1.5 py-0.5 rounded bg-yellow-400/20 text-yellow-300 font-bold">DU</span>}
+                    {isMe && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white/80 font-semibold border border-white/10">
+                        DU
+                      </span>
+                    )}
                     {e.character?.faction && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-400/10 text-blue-300">{e.character.faction}</span>
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/60 border border-white/10">
+                        {e.character.faction}
+                      </span>
                     )}
                   </div>
                   <div className="text-xs text-white/40 mt-0.5">
@@ -195,16 +258,15 @@ function LeaderboardView({ currentUser }) {
                     {e.messages > 0 && ` • ${e.messages.toLocaleString('de-DE')} Nachrichten`}
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-base font-black bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">
-                    Lvl {e.level}
-                  </div>
+                <div className="text-right flex-shrink-0">
+                  <div className="text-xs text-white/50">Level</div>
+                  <div className="text-lg font-bold text-white">{e.level}</div>
                 </div>
               </div>
             );
           })}
           {list.length === 0 && (
-            <div className="p-8 text-center text-white/40">
+            <div className="p-8 text-center text-white/40 text-sm">
               Noch keine Einträge im Leaderboard
             </div>
           )}
@@ -225,11 +287,7 @@ function MarktplatzView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        search,
-        page: String(page),
-        pageSize: String(pageSize)
-      });
+      const params = new URLSearchParams({ search, page: String(page), pageSize: String(pageSize) });
       const r = await fetch(`/api/hh/marketplace?${params}`, { cache: 'no-store' });
       const j = await r.json();
       setData(j);
@@ -248,15 +306,15 @@ function MarktplatzView() {
   return (
     <div className="space-y-4">
       {/* Search */}
-      <div className="glass rounded-2xl p-4 border border-white/[0.08]">
+      <div className="p-4 rounded-xl border" style={CARD_STYLE_SUBTLE}>
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
           <input
             type="text"
             value={search}
             onChange={e => { setSearch(e.target.value); setPage(1); }}
-            placeholder="Suche nach Item oder Verkäufer..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-blue-400/50 focus:bg-white/[0.05] transition-all"
+            placeholder="Suche nach Item, Charakter oder Discord-Name..."
+            className="w-full pl-10 pr-4 py-2.5 bg-white/[0.04] border border-white/10 rounded-lg text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 focus:bg-white/[0.06] transition-all"
           />
         </div>
         {data?.success && (
@@ -266,7 +324,7 @@ function MarktplatzView() {
             </span>
             <button
               onClick={load}
-              className="text-xs text-blue-300 hover:text-blue-200 flex items-center gap-1"
+              className="text-xs text-white/60 hover:text-white flex items-center gap-1 transition-colors"
             >
               <RefreshCw className="w-3 h-3" /> Aktualisieren
             </button>
@@ -276,7 +334,6 @@ function MarktplatzView() {
 
       {loading && !data && <LoadingCard />}
 
-      {/* Listings */}
       {data?.success && (
         data.listings.length > 0 ? (
           <>
@@ -284,29 +341,32 @@ function MarktplatzView() {
               {data.listings.map(l => (
                 <div
                   key={l.id}
-                  className="group glass rounded-2xl p-4 border border-white/[0.08] hover:border-blue-400/30 hover:bg-white/[0.05] transition-all"
+                  className="p-4 rounded-xl border transition-all hover:border-white/20"
+                  style={CARD_STYLE_SUBTLE}
                 >
                   <div className="flex items-start gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center text-2xl flex-shrink-0">
+                    <div className="w-12 h-12 rounded-lg bg-white/[0.06] border border-white/10 flex items-center justify-center text-2xl flex-shrink-0">
                       {l.itemEmoji || '📦'}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-sm font-bold text-white truncate">{l.itemName}</h4>
-                      <div className="flex items-center gap-1 mt-0.5 text-xs text-white/50">
-                        <UserCircle2 className="w-3 h-3" />
-                        <span className="truncate">{l.seller.characterName || 'Unbekannt'}</span>
+                      <h4 className="text-sm font-semibold text-white truncate">{l.itemName}</h4>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <Avatar src={l.seller.avatar} name={l.seller.characterName || l.seller.discordUsername} size={20} />
+                        <span className="text-xs text-white/60 truncate">
+                          {l.seller.characterName || l.seller.discordUsername || 'Unbekannt'}
+                        </span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-end justify-between pt-3 border-t border-white/[0.06]">
                     <div>
                       <div className="text-[10px] text-white/40 uppercase tracking-wider">Preis</div>
-                      <div className="text-lg font-black bg-gradient-to-r from-emerald-400 to-green-500 bg-clip-text text-transparent">
+                      <div className="text-lg font-bold text-white">
                         {l.price?.toLocaleString('de-DE')} €
                       </div>
                     </div>
                     {l.allowOffers && (
-                      <span className="text-[10px] px-2 py-1 rounded-full bg-amber-400/10 text-amber-300 border border-amber-400/20">
+                      <span className="text-[10px] px-2 py-1 rounded-full bg-white/[0.04] text-white/60 border border-white/10">
                         Angebote ok
                       </span>
                     )}
@@ -321,11 +381,11 @@ function MarktplatzView() {
             </div>
             {/* Pagination */}
             {data.totalPages > 1 && (
-              <div className="glass rounded-2xl p-3 border border-white/[0.08] flex items-center justify-between">
+              <div className="p-3 rounded-xl border flex items-center justify-between" style={CARD_STYLE_SUBTLE}>
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-white/70 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10"
+                  className="px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] text-white/70 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10 transition-colors"
                 >
                   ← Vorherige
                 </button>
@@ -335,7 +395,7 @@ function MarktplatzView() {
                 <button
                   onClick={() => setPage(p => Math.min(data.totalPages, p + 1))}
                   disabled={page === data.totalPages}
-                  className="px-3 py-1.5 text-xs rounded-lg bg-white/5 text-white/70 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10"
+                  className="px-3 py-1.5 text-xs rounded-lg bg-white/[0.04] text-white/70 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10 transition-colors"
                 >
                   Nächste →
                 </button>
@@ -343,9 +403,9 @@ function MarktplatzView() {
             )}
           </>
         ) : (
-          <div className="glass rounded-2xl p-12 border border-white/[0.08] text-center">
-            <ShoppingCart className="w-16 h-16 mx-auto mb-4 text-white/20" />
-            <h3 className="text-lg font-bold text-white mb-2">Keine Angebote</h3>
+          <div className="p-12 rounded-xl border text-center" style={CARD_STYLE_SUBTLE}>
+            <ShoppingCart className="w-14 h-14 mx-auto mb-4 text-white/20" />
+            <h3 className="text-base font-semibold text-white mb-2">Keine Angebote</h3>
             <p className="text-sm text-white/40">
               {search ? 'Keine Treffer für deine Suche.' : 'Aktuell sind keine Items im Marktplatz.'}
             </p>
@@ -365,7 +425,6 @@ function CharakterView({ currentUser }) {
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
 
-  // Eigenen Charakter als Default beim Mount
   useEffect(() => {
     if (currentUser?.id && !selected) {
       loadCharacter(currentUser.id);
@@ -405,35 +464,33 @@ function CharakterView({ currentUser }) {
   return (
     <div className="space-y-4">
       {/* Search */}
-      <div className="glass rounded-2xl p-4 border border-white/[0.08]">
+      <div className="p-4 rounded-xl border" style={CARD_STYLE_SUBTLE}>
         <div className="relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
           <input
             type="text"
             value={q}
             onChange={e => setQ(e.target.value)}
-            placeholder="Charakter suchen (mind. 2 Zeichen)..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white/[0.03] border border-white/[0.08] rounded-xl text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-purple-400/50 focus:bg-white/[0.05] transition-all"
+            placeholder="Charakter oder Discord-Name suchen (mind. 2 Zeichen)..."
+            className="w-full pl-10 pr-10 py-2.5 bg-white/[0.04] border border-white/10 rounded-lg text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 focus:bg-white/[0.06] transition-all"
           />
           {searching && (
             <Loader2 className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-white/40 animate-spin" />
           )}
         </div>
         {results.length > 0 && (
-          <div className="mt-3 space-y-1 max-h-60 overflow-y-auto">
+          <div className="mt-3 space-y-1 max-h-72 overflow-y-auto">
             {results.map(r => (
               <button
                 key={r.discord_user_id}
                 onClick={() => { loadCharacter(r.discord_user_id); setResults([]); setQ(''); }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left
-                  ${selected === r.discord_user_id ? 'bg-purple-500/10 border border-purple-400/30' : 'hover:bg-white/[0.05]'}`}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all text-left hover:bg-white/[0.05] border border-transparent hover:border-white/10"
               >
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-sm font-bold text-white">
-                  {(r.name || '?').charAt(0).toUpperCase()}
-                </div>
+                <Avatar src={r.avatar} name={r.name} size={36} />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-semibold text-white truncate">{r.name}</div>
-                  <div className="text-xs text-white/50">
+                  <div className="text-xs text-white/50 truncate">
+                    {r.discordUsername && <span>@{r.discordUsername} • </span>}
                     {r.faction && <span>{r.faction} • </span>}
                     Level {r.level}
                   </div>
@@ -444,12 +501,11 @@ function CharakterView({ currentUser }) {
         )}
       </div>
 
-      {/* Detail */}
       {loading && <LoadingCard />}
       {!loading && detail?.error && (
-        <div className="glass rounded-2xl p-12 border border-white/[0.08] text-center">
-          <UserIcon className="w-16 h-16 mx-auto mb-4 text-white/20" />
-          <h3 className="text-lg font-bold text-white mb-2">Kein Charakter</h3>
+        <div className="p-12 rounded-xl border text-center" style={CARD_STYLE_SUBTLE}>
+          <UserIcon className="w-14 h-14 mx-auto mb-4 text-white/20" />
+          <h3 className="text-base font-semibold text-white mb-2">Kein Charakter</h3>
           <p className="text-sm text-white/40">{detail.error}</p>
         </div>
       )}
@@ -461,37 +517,46 @@ function CharakterView({ currentUser }) {
 function CharakterCard({ detail, isSelf }) {
   const c = detail.character;
   const s = detail.stats;
-  const initial = (c.name || c.vorname || '?').charAt(0).toUpperCase();
+  const d = detail.discord;
 
   return (
     <div className="space-y-4">
       {/* Hero Card */}
-      <div className="glass rounded-2xl p-6 border border-white/[0.08] bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-blue-500/10">
+      <div className="p-6 rounded-xl border" style={CARD_STYLE}>
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-          {/* Avatar */}
-          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-purple-400 via-pink-500 to-blue-500 flex items-center justify-center text-4xl font-black text-white shadow-2xl shadow-purple-500/30">
-            {initial}
-          </div>
-          {/* Info */}
+          <Avatar
+            src={d?.avatar}
+            name={c.name || c.vorname}
+            size={96}
+            className="shadow-xl"
+          />
           <div className="flex-1 text-center sm:text-left">
             <div className="flex items-center justify-center sm:justify-start gap-2 mb-1 flex-wrap">
-              <h2 className="text-2xl font-black text-white">{c.name || `${c.vorname || ''} ${c.nachname || ''}`.trim()}</h2>
-              {isSelf && <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-400/20 text-purple-300 font-bold border border-purple-400/30">DU</span>}
+              <h2 className="text-2xl font-bold text-white">
+                {c.name || `${c.vorname || ''} ${c.nachname || ''}`.trim()}
+              </h2>
+              {isSelf && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/80 font-semibold border border-white/10">
+                  DU
+                </span>
+              )}
             </div>
+            {d?.discordUsername && (
+              <p className="text-sm text-white/50 mb-2">@{d.discordUsername}</p>
+            )}
             <div className="flex items-center justify-center sm:justify-start gap-3 text-xs text-white/60 flex-wrap">
               {c.age && <span className="flex items-center gap-1"><Cake className="w-3 h-3" /> {c.age} Jahre</span>}
               {c.geschlecht && <span>{c.geschlecht}</span>}
               {c.herkunft && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {c.herkunft}</span>}
             </div>
-            {/* Badges */}
             <div className="flex flex-wrap gap-2 mt-3 justify-center sm:justify-start">
               {c.job && (
-                <span className="px-2.5 py-1 rounded-full bg-amber-400/10 text-amber-300 text-xs border border-amber-400/20 flex items-center gap-1">
+                <span className="px-2.5 py-1 rounded-full bg-white/[0.04] text-white/80 text-xs border border-white/10 flex items-center gap-1">
                   <Briefcase className="w-3 h-3" /> {c.job}
                 </span>
               )}
               {c.faction && (
-                <span className="px-2.5 py-1 rounded-full bg-blue-400/10 text-blue-300 text-xs border border-blue-400/20 flex items-center gap-1">
+                <span className="px-2.5 py-1 rounded-full bg-white/[0.04] text-white/80 text-xs border border-white/10 flex items-center gap-1">
                   <Award className="w-3 h-3" /> {c.faction}
                 </span>
               )}
@@ -500,42 +565,42 @@ function CharakterCard({ detail, isSelf }) {
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatMini icon={TrendingUp} label="Level" value={s.level} color="text-yellow-400" />
-        <StatMini icon={Sparkles} label="XP" value={s.xp?.toLocaleString('de-DE')} color="text-purple-400" />
-        <StatMini icon={MessageCircle} label="Nachrichten" value={s.messages?.toLocaleString('de-DE')} color="text-blue-400" />
-        <StatMini icon={Store} label="Marktplatz" value={`${detail.activeListings} aktiv`} color="text-emerald-400" />
+        <StatMini icon={TrendingUp} label="Level" value={s.level} />
+        <StatMini icon={Sparkles} label="XP gesamt" value={(s.totalXp > 0 ? s.totalXp : s.xp)?.toLocaleString('de-DE')} />
+        <StatMini icon={MessageCircle} label="Nachrichten" value={s.messages?.toLocaleString('de-DE') || '0'} />
+        <StatMini icon={Store} label="Marktplatz" value={`${detail.activeListings} aktiv`} />
       </div>
 
       {/* Zusatz-Info */}
-      <div className="glass rounded-2xl p-4 border border-white/[0.08]">
+      <div className="p-4 rounded-xl border" style={CARD_STYLE_SUBTLE}>
         <div className="flex items-center gap-2 mb-3">
           <Package className="w-4 h-4 text-white/60" />
-          <h3 className="text-sm font-bold text-white">Besitz</h3>
+          <h3 className="text-sm font-semibold text-white">Besitz</h3>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 rounded-xl bg-white/[0.03]">
-            <div className="text-xs text-white/50">Lizenzen & Items</div>
+          <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+            <div className="text-xs text-white/50 mb-1">Lizenzen & Items</div>
             <div className="text-lg font-bold text-white">{detail.licensesCount}</div>
           </div>
-          <div className="p-3 rounded-xl bg-white/[0.03]">
-            <div className="text-xs text-white/50">Aktive Listings</div>
+          <div className="p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+            <div className="text-xs text-white/50 mb-1">Aktive Listings</div>
             <div className="text-lg font-bold text-white">{detail.activeListings}</div>
           </div>
         </div>
       </div>
 
       {detail.last_sync && (
-        <div className="text-xs text-white/30 text-center">
+        <p className="text-xs text-white/30 text-center">
           Zuletzt synchronisiert: {new Date(detail.last_sync).toLocaleString('de-DE')}
-        </div>
+        </p>
       )}
     </div>
   );
 }
 
-/* ---------------- MEIN PROFIL (erweitert) ---------------- */
+/* ---------------- MEIN PROFIL ---------------- */
 function MeinProfilView({ currentUser }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -559,153 +624,148 @@ function MeinProfilView({ currentUser }) {
 
   return (
     <div className="space-y-4">
-      {/* Level Card - Hero */}
-      <div className="glass rounded-2xl p-6 border border-emerald-400/20 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-cyan-500/10 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-400/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        <div className="relative">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="text-xs text-white/50 uppercase tracking-wider font-semibold mb-1">Dein Level</div>
-              <div className="flex items-end gap-2">
-                <span className="text-6xl font-black bg-gradient-to-br from-emerald-300 to-teal-500 bg-clip-text text-transparent">
-                  {data.stats.level}
-                </span>
-                {data.stats.rank && (
-                  <div className="pb-2">
-                    <div className="text-xs text-white/40">Rang</div>
-                    <div className="text-xl font-bold text-white">#{data.stats.rank}</div>
-                  </div>
-                )}
-              </div>
+      {/* Hero: Avatar, Level, Rang */}
+      <div className="p-6 rounded-xl border" style={CARD_STYLE}>
+        <div className="flex flex-col sm:flex-row items-center gap-5">
+          <Avatar src={data.user?.avatar} name={data.user?.username} size={80} />
+          <div className="flex-1 text-center sm:text-left">
+            <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
+              <h2 className="text-xl font-bold text-white">{data.user?.username}</h2>
+              {data.stats.rank && data.stats.rank <= 3 && (
+                <Crown className="w-5 h-5 text-yellow-400" />
+              )}
             </div>
-            <div className="text-right">
-              <div className="text-xs text-white/50 mb-1">Gesamtvermögen</div>
-              <div className="text-2xl font-black text-white">
-                {totalMoney.toLocaleString('de-DE')} €
+            {data.character && (
+              <p className="text-sm text-white/60 mb-2">
+                Charakter: {data.character.name || `${data.character.vorname || ''} ${data.character.nachname || ''}`.trim()}
+              </p>
+            )}
+            <div className="flex items-center justify-center sm:justify-start gap-4 text-sm">
+              <div>
+                <span className="text-white/50">Level </span>
+                <span className="text-white font-bold">{data.stats.level}</span>
+              </div>
+              {data.stats.rank && (
+                <div>
+                  <span className="text-white/50">Rang </span>
+                  <span className="text-white font-bold">#{data.stats.rank}</span>
+                  <span className="text-white/40 text-xs"> / {data.stats.totalUsers}</span>
+                </div>
+              )}
+              <div>
+                <span className="text-white/50">Vermögen </span>
+                <span className="text-white font-bold">{totalMoney.toLocaleString('de-DE')}€</span>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* XP Bar */}
-          <div>
-            <div className="flex items-center justify-between text-xs text-white/60 mb-2">
-              <span>{data.stats.xp?.toLocaleString('de-DE')} XP</span>
-              <span>{data.stats.xpNeeded?.toLocaleString('de-DE')} XP → Level {data.stats.level + 1}</span>
-            </div>
-            <div className="w-full h-3 rounded-full bg-white/[0.06] overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-700"
-                style={{ width: `${data.stats.progressPct}%` }}
-              />
-            </div>
-            <div className="text-right text-xs text-white/40 mt-1">{data.stats.progressPct}%</div>
+        {/* XP Progress Bar */}
+        <div className="mt-5 pt-5 border-t border-white/10">
+          <div className="flex items-center justify-between text-xs text-white/60 mb-2">
+            <span>{data.stats.xp?.toLocaleString('de-DE')} XP</span>
+            <span>noch {(data.stats.xpNeeded - data.stats.xp).toLocaleString('de-DE')} XP → Level {data.stats.level + 1}</span>
+          </div>
+          <div className="w-full h-2 rounded-full bg-white/[0.06] overflow-hidden">
+            <div
+              className="h-full bg-white/40 rounded-full transition-all duration-700"
+              style={{ width: `${data.stats.progressPct}%` }}
+            />
           </div>
         </div>
       </div>
 
-      {/* Kern-Stats 4er-Grid */}
+      {/* Geld Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatBig icon={Wallet} label="Bank" value={`${data.money.bank?.toLocaleString('de-DE')} €`} color="from-blue-400 to-cyan-500" />
-        <StatBig icon={DollarSign} label="Bar" value={`${data.money.cash?.toLocaleString('de-DE')} €`} color="from-green-400 to-emerald-500" />
-        <StatBig icon={PiggyBank} label="Sparkonto" value={`${data.money.savings?.toLocaleString('de-DE')} €`} color="from-amber-400 to-orange-500" />
-        <StatBig icon={Star} label="Credits" value={data.credits?.toLocaleString('de-DE')} color="from-purple-400 to-pink-500" />
+        <StatBig icon={Wallet} label="Bank" value={`${data.money.bank?.toLocaleString('de-DE')} €`} />
+        <StatBig icon={DollarSign} label="Bar" value={`${data.money.cash?.toLocaleString('de-DE')} €`} />
+        <StatBig icon={PiggyBank} label="Sparkonto" value={`${data.money.savings?.toLocaleString('de-DE')} €`} />
+        <StatBig icon={Star} label="Credits" value={data.credits?.toLocaleString('de-DE')} />
       </div>
 
-      {/* Charakter mini */}
-      {data.character && (
-        <div className="glass rounded-2xl p-4 border border-white/[0.08]">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-xl font-bold text-white">
-              {(data.character.name || data.character.vorname || '?').charAt(0).toUpperCase()}
-            </div>
-            <div className="flex-1">
-              <div className="text-sm font-bold text-white">
-                {data.character.name || `${data.character.vorname || ''} ${data.character.nachname || ''}`.trim()}
-              </div>
-              <div className="text-xs text-white/50">
-                {data.character.job && <span>{data.character.job}</span>}
-                {data.character.job && data.character.faction && <span> • </span>}
-                {data.character.faction && <span>{data.character.faction}</span>}
-              </div>
-            </div>
-          </div>
+      {/* Item Stats Grid */}
+      <div className="p-4 rounded-xl border" style={CARD_STYLE_SUBTLE}>
+        <div className="flex items-center gap-2 mb-3">
+          <BarChart3 className="w-4 h-4 text-white/60" />
+          <h3 className="text-sm font-semibold text-white">Statistiken</h3>
         </div>
-      )}
-
-      {/* Item-Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatMini icon={MessageCircle} label="Nachrichten" value={data.stats.messages?.toLocaleString('de-DE')} color="text-blue-400" />
-        <StatMini icon={ScrollText} label="Lizenzen" value={data.licensesCount} color="text-amber-400" />
-        <StatMini icon={Store} label="Aktive Listings" value={data.marketplaceActive} color="text-emerald-400" />
-        <StatMini icon={ShoppingCart} label="Verkauft" value={data.marketplaceSold} color="text-green-400" />
-        <StatMini icon={Receipt} label="Rechnungen" value={data.invoices} color="text-red-400" />
-        <StatMini icon={CreditCard} label="Kredite" value={data.kredite} color="text-purple-400" />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <StatMini icon={MessageCircle} label="Nachrichten" value={data.stats.messages?.toLocaleString('de-DE') || '0'} />
+          <StatMini icon={ScrollText} label="Lizenzen" value={data.licensesCount} />
+          <StatMini icon={Store} label="Listings" value={data.marketplaceActive} />
+          <StatMini icon={ShoppingCart} label="Verkauft" value={data.marketplaceSold} />
+          <StatMini icon={Receipt} label="Rechnungen" value={data.invoices} />
+          <StatMini icon={CreditCard} label="Kredite" value={data.kredite} />
+        </div>
       </div>
 
       {/* Achievements */}
-      <div className="glass rounded-2xl p-5 border border-white/[0.08]">
-        <div className="flex items-center gap-2 mb-4">
-          <Trophy className="w-5 h-5 text-yellow-400" />
-          <h3 className="text-base font-bold text-white">Achievements</h3>
-          <span className="text-xs text-white/50">({data.achievements.length} freigeschaltet)</span>
+      <div className="p-5 rounded-xl border" style={CARD_STYLE_SUBTLE}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Trophy className="w-5 h-5 text-white/60" />
+            <h3 className="text-base font-semibold text-white">Achievements</h3>
+          </div>
+          <span className="text-xs text-white/50">{data.achievements.length} freigeschaltet</span>
         </div>
         {data.achievements.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {data.achievements.map(a => (
               <div
                 key={a.id}
-                className="p-3 rounded-xl bg-gradient-to-br from-yellow-400/5 to-amber-500/5 border border-yellow-400/20 hover:border-yellow-400/40 transition-all"
+                className="p-3 rounded-lg border transition-all hover:border-white/20"
+                style={CARD_STYLE_SUBTLE}
               >
                 <div className="text-2xl mb-1">{a.icon}</div>
-                <div className="text-sm font-bold text-white">{a.name}</div>
+                <div className="text-sm font-semibold text-white">{a.name}</div>
                 <div className="text-xs text-white/50">{a.desc}</div>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-white/40 text-center py-6">
+          <p className="text-sm text-white/40 text-center py-4">
             Noch keine Achievements. Spiel weiter, um welche freizuschalten!
           </p>
         )}
       </div>
 
       {data.lastSync && (
-        <div className="text-xs text-white/30 text-center">
+        <p className="text-xs text-white/30 text-center">
           Daten vom Bot zuletzt synchronisiert: {new Date(data.lastSync).toLocaleString('de-DE')}
-        </div>
+        </p>
       )}
     </div>
   );
 }
 
 /* ---------------- Shared Mini-Components ---------------- */
-function StatMini({ icon: Icon, label, value, color }) {
+function StatMini({ icon: Icon, label, value }) {
   return (
-    <div className="glass rounded-xl p-3 border border-white/[0.08]">
+    <div className="p-3 rounded-lg border" style={CARD_STYLE_SUBTLE}>
       <div className="flex items-center gap-2 mb-1">
-        <Icon className={`w-3.5 h-3.5 ${color}`} />
+        <Icon className="w-3.5 h-3.5 text-white/50" />
         <span className="text-xs text-white/50 truncate">{label}</span>
       </div>
-      <div className="text-lg font-bold text-white truncate">{value ?? '–'}</div>
+      <div className="text-lg font-semibold text-white truncate">{value ?? '–'}</div>
     </div>
   );
 }
 
-function StatBig({ icon: Icon, label, value, color }) {
+function StatBig({ icon: Icon, label, value }) {
   return (
-    <div className="glass rounded-2xl p-4 border border-white/[0.08] hover:border-white/20 transition-colors">
-      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center mb-3 shadow-lg`}>
-        <Icon className="w-5 h-5 text-white" />
+    <div className="p-4 rounded-xl border transition-colors hover:border-white/20" style={CARD_STYLE_SUBTLE}>
+      <div className="w-10 h-10 rounded-lg bg-white/[0.06] border border-white/10 flex items-center justify-center mb-3">
+        <Icon className="w-5 h-5 text-white/80" />
       </div>
       <div className="text-xs text-white/50 mb-1">{label}</div>
-      <div className="text-xl font-black text-white truncate">{value ?? '–'}</div>
+      <div className="text-lg font-bold text-white truncate">{value ?? '–'}</div>
     </div>
   );
 }
 
 function LoadingCard() {
   return (
-    <div className="glass rounded-2xl p-12 border border-white/[0.08] text-center">
+    <div className="p-12 rounded-xl border text-center" style={CARD_STYLE_SUBTLE}>
       <Loader2 className="w-10 h-10 mx-auto mb-3 text-white/40 animate-spin" />
       <p className="text-sm text-white/50">Wird geladen...</p>
     </div>
@@ -714,13 +774,13 @@ function LoadingCard() {
 
 function ErrorCard({ msg, onRetry }) {
   return (
-    <div className="glass rounded-2xl p-12 border border-red-400/20 text-center">
-      <AlertCircle className="w-12 h-12 mx-auto mb-3 text-red-400/60" />
-      <p className="text-sm text-white/70 mb-4">{msg}</p>
+    <div className="p-12 rounded-xl border text-center" style={CARD_STYLE_SUBTLE}>
+      <AlertCircle className="w-10 h-10 mx-auto mb-3 text-white/40" />
+      <p className="text-sm text-white/60 mb-4">{msg}</p>
       {onRetry && (
         <button
           onClick={onRetry}
-          className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-sm text-white transition-all"
+          className="px-4 py-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-sm text-white transition-all"
         >
           Erneut versuchen
         </button>
