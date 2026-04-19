@@ -4026,45 +4026,25 @@ async function handleShopPurchase(request) {
     const item = SHOP_ITEMS[itemId];
 
     // Hole User Data aus Supabase
-    console.log('[SHOP] Suche User mit Discord ID:', user.id);
-    
     const { data: userData, error: fetchError } = await supabaseAdmin
       .from('user_data')
-      .select('data, licenses')  // Lizenzen explizit laden!
+      .select('*')
       .eq('discord_user_id', user.id)
       .single();
 
-    console.log('[SHOP] Supabase Result:', { 
-      found: !!userData, 
-      error: fetchError?.message,
-      hasLicenses: !!userData?.licenses 
-    });
-
     if (fetchError || !userData) {
-      console.error('[SHOP] User fetch error:', fetchError);
-      return NextResponse.json({ 
-        error: 'User nicht gefunden',
-        debug: {
-          discord_user_id: user.id,
-          supabase_error: fetchError?.message
-        }
-      }, { status: 404 });
+      return NextResponse.json({ error: 'User nicht gefunden' }, { status: 404 });
     }
 
     const userDataObj = typeof userData.data === 'string' 
       ? JSON.parse(userData.data) 
       : userData.data;
 
-    // Lizenzen aus userData.licenses laden (separates Feld!)
-    const userLicenses = typeof userData.licenses === 'string'
-      ? JSON.parse(userData.licenses)
-      : (userData.licenses || {});
-
     const currentBalance = userDataObj?.money?.bank || 0;
 
     // VIP-Status prüfen und Rabatt berechnen
     let vipType = null;
-    const vipLicenses = userLicenses;  // Verwende userLicenses statt userDataObj.licenses
+    const vipLicenses = userDataObj?.licenses || {};
     const now = Date.now();
     
     console.log('[SHOP] Checking VIP licenses:', Object.keys(vipLicenses));
@@ -4156,15 +4136,7 @@ async function handleShopPurchase(request) {
         price: finalPrice,
         originalPrice: vipType ? item.price : undefined,
         vipDiscount: vipType ? VIP_SHOP_DISCOUNTS[vipType] : undefined,
-        vipType: vipType,  // DEBUG
         status: 'pending'
-      },
-      debug: {  // DEBUG INFO
-        vipLicensesFound: Object.keys(userLicenses || {}),
-        vipTypeDetected: vipType,
-        originalPrice: item.price,
-        finalPrice: finalPrice,
-        discountApplied: vipType ? VIP_SHOP_DISCOUNTS[vipType] : 0
       }
     });
 
