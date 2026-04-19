@@ -4313,6 +4313,13 @@ async function handleSpendCredits(request) {
           error: 'Kontonummer ungültig – bitte genau 9 Ziffern angeben'
         }, { status: 400 });
       }
+      // Prüfe ob es bereits die aktuelle Kontonummer ist
+      const currentAccountNumber = buffs?.accountNumber || userDataObj?.bankAccount?.accountNumber;
+      if (currentAccountNumber === nr) {
+        return NextResponse.json({
+          error: `${nr} ist bereits deine aktuelle Kontonummer`
+        }, { status: 400 });
+      }
       // Uniqueness-Check gegen alle anderen User
       try {
         const { data: allUsers } = await supabaseAdmin
