@@ -4363,6 +4363,27 @@ async function handleSpendCredits(request) {
       }
     }
 
+    // Bank-PIN ändern
+    if (item.id === 'bank_pin_change') {
+      const last = buffs?.lastPinChange || 0;
+      const cd = 48 * 60 * 60 * 1000;
+      if (last && now - last < cd) {
+        const left = cd - (now - last);
+        return NextResponse.json({
+          error: 'PIN-Änderung hat noch 48h Cooldown',
+          cooldownUntil: last + cd,
+          hoursLeft: Math.ceil(left / (60 * 60 * 1000))
+        }, { status: 409 });
+      }
+      // Custom Input validieren (3-stellig)
+      const newPin = String(customValue || '').trim();
+      if (!/^[0-9]{3}$/.test(newPin)) {
+        return NextResponse.json({
+          error: 'PIN ungültig – bitte genau 3 Ziffern angeben'
+        }, { status: 400 });
+      }
+    }
+
     if (item.id === 'cooldown_reset') {
       const last = buffs?.lastCooldownReset || 0;
       const cd = 24 * 60 * 60 * 1000;
@@ -5618,3 +5639,7 @@ ${ticket.closedAt ? ` • Geschlossen: ${_escapeHtml(new Date(ticket.closedAt).t
 ${msgs || '<p style="color:#71717a">Keine Nachrichten gespeichert.</p>'}
 </body></html>`;
 }
+
+
+
+
