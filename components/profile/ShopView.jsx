@@ -5,11 +5,41 @@ import {
   Sparkles, Shield, Car, Briefcase, Wrench, FileText, Lock,
   Truck, Bike, Crosshair, Scale, Heart, Ambulance, Flame,
   Fish, Laptop, AlertTriangle, ShoppingBag, Trash2,
-  Plus, Minus, KeyRound, Info, Loader2, CheckCircle2, Calculator, Coins
+  Plus, Minus, KeyRound, Info, Loader2, CheckCircle2, Calculator, Coins,
+  // Icons für Credit-Spend + Mystery Boxes
+  Hash, RotateCcw, Receipt, Zap, Rocket, Award, ShieldPlus, Unlock,
+  ShieldCheck, Dice5, Ticket, Crown, Gem, Package, Gift
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+
+// Icon-Map für Credit-Spend Items (ersetzt Emojis)
+const SPEND_ITEM_ICONS = {
+  custom_kontonummer:   { Icon: Hash,         color: '#60A5FA' }, // Blau
+  cooldown_reset:       { Icon: RotateCcw,    color: '#34D399' }, // Grün
+  steuerbefreiung:      { Icon: Receipt,      color: '#A78BFA' }, // Violett
+  double_xp:            { Icon: Sparkles,     color: '#FBBF24' }, // Gelb
+  collect_boost:        { Icon: Rocket,       color: '#F97316' }, // Orange
+  gehaltsbonus:         { Icon: Briefcase,    color: '#14B8A6' }, // Teal
+  premium_badge:        { Icon: Award,        color: '#EAB308' }, // Gold
+  schutzbrief_upgrade:  { Icon: ShieldPlus,   color: '#38BDF8' }, // Sky
+  ueberweisungs_bypass: { Icon: Unlock,       color: '#22D3EE' }, // Cyan
+  konto_schutz:         { Icon: ShieldCheck,  color: '#A3E635' }, // Lime
+  zinsen_boost:         { Icon: TrendingUp,   color: '#10B981' }, // Emerald
+  gluecksrad:           { Icon: Dice5,        color: '#EC4899' }, // Pink
+  lotto_bundle:         { Icon: Ticket,       color: '#F43F5E' }, // Rose
+  gehalt_multiplikator: { Icon: Flame,        color: '#EF4444' }, // Rot
+  exklusiver_titel:     { Icon: Crown,        color: '#FACC15' }  // Amber
+};
+
+// Icon-Map für Mystery Boxes
+const CRATE_ICONS = {
+  bronze:  { Icon: Package, color: '#CD7F32' },
+  silber:  { Icon: Package, color: '#C0C0C0' },
+  gold:    { Icon: Gift,    color: '#FFD700' },
+  diamond: { Icon: Gem,     color: '#22D3EE' }
+};
 import { Label } from '@/components/ui/label';
 
 export function ShopView({ user, userData, onRefresh }) {
@@ -714,42 +744,126 @@ export function ShopView({ user, userData, onRefresh }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {creditSpendItems.map((item) => {
             const needsInput = item.id === 'custom_kontonummer' || item.id === 'exklusiver_titel';
-            const canAfford = userCredits >= item.creditCost;
+            const buffs = userData?.activeBuffs || {};
+            const now = Date.now();
+
+            // Aktivitäts-Status
+            const activeFlagMap = {
+              double_xp: 'doubleXpUntil', collect_boost: 'collectBoostUntil',
+              gehaltsbonus: 'gehaltsbonusUntil', steuerbefreiung: 'steuerfreiUntil',
+              premium_badge: 'premiumBadgeUntil', ueberweisungs_bypass: 'gebuehrenBypassUntil',
+              konto_schutz: 'kontoSchutzUntil', zinsen_boost: 'zinsenBoostUntil',
+              exklusiver_titel: 'customTitleUntil'
+            };
+            const flagKey = activeFlagMap[item.id];
+            const activeUntil = flagKey ? (buffs?.[flagKey] || 0) : 0;
+            const isActive = activeUntil > now;
+
+            // Cooldown-Items
+            let cooldownLeft = 0;
+            if (item.id === 'custom_kontonummer') {
+              const last = buffs?.lastKontonummerChange || 0;
+              const cd = 48 * 3600 * 1000;
+              if (last && now - last < cd) cooldownLeft = cd - (now - last);
+            } else if (item.id === 'cooldown_reset') {
+              const last = buffs?.lastCooldownReset || 0;
+              const cd = 24 * 3600 * 1000;
+              if (last && now - last < cd) cooldownLeft = cd - (now - last);
+            }
+            const pending = item.id === 'gehalt_multiplikator' && !!buffs?.gehaltMultiplikatorNext;
+
+            // Dynamischer Preis: base * 1.10^purchases
+            const purchases = buffs?.creditPurchases?.[item.id] || 0;
+            const dynamicPrice = Math.ceil(item.creditCost * Math.pow(1.10, purchases));
+
+            const blocked = isActive || cooldownLeft > 0 || pending;
+            const canAfford = userCredits >= dynamicPrice;
+            const canBuy = !blocked && canAfford;
+
+            const fmtHours = (ms) => {
+              const h = Math.ceil(ms / (3600 * 1000));
+              if (h >= 24) return `${Math.ceil(h/24)}d`;
+              return `${h}h`;
+            };
+
+            const iconMeta = SPEND_ITEM_ICONS[item.id] || { Icon: Sparkles, color: '#ffffff' };
+            const { Icon: ItemIcon, color: iconColor } = iconMeta;
+
             return (
               <div
                 key={item.id}
                 className="p-4 rounded-xl border flex flex-col"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
-                  borderColor: 'rgba(255, 255, 255, 0.08)'
+                  background: blocked
+                    ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.06), rgba(255,255,255,0.01))'
+                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
+                  borderColor: blocked ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.08)'
                 }}
               >
                 <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl">{item.emoji}</span>
-                    <h3 className="font-semibold text-white">{item.label}</h3>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div
+                      className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border"
+                      style={{
+                        background: `${iconColor}18`,
+                        borderColor: `${iconColor}33`
+                      }}
+                    >
+                      <ItemIcon className="w-4 h-4" style={{ color: iconColor }} />
+                    </div>
+                    <h3 className="font-semibold text-white truncate">{item.label}</h3>
                   </div>
                   {item.group && (
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/50 uppercase tracking-wider">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/50 uppercase tracking-wider flex-shrink-0">
                       {item.group}
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-white/60 mb-3 flex-1">{item.description}</p>
+                <p className="text-sm text-white/60 mb-2 flex-1">{item.description}</p>
+
+                {/* Status-Hinweis */}
+                {isActive && (
+                  <div className="mb-2 px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20 text-[11px] text-green-300 flex items-center gap-1">
+                    ✓ Aktiv – läuft in {fmtHours(activeUntil - now)} ab
+                  </div>
+                )}
+                {cooldownLeft > 0 && (
+                  <div className="mb-2 px-2 py-1 rounded-md bg-orange-500/10 border border-orange-500/20 text-[11px] text-orange-300 flex items-center gap-1">
+                    ⏳ Cooldown: noch {fmtHours(cooldownLeft)}
+                  </div>
+                )}
+                {pending && (
+                  <div className="mb-2 px-2 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-[11px] text-blue-300 flex items-center gap-1">
+                    💼 Ungenutzt vorhanden – erst /collect nutzen
+                  </div>
+                )}
+                {!blocked && purchases > 0 && (
+                  <div className="mb-2 text-[11px] text-white/40">
+                    Bereits {purchases}× gekauft → Preis: +{((Math.pow(1.10, purchases) - 1) * 100).toFixed(0)}%
+                  </div>
+                )}
+
                 <div className="flex items-center justify-between">
-                  <span className="text-white/80 text-sm font-medium flex items-center gap-1">
-                    <Coins className="w-3.5 h-3.5 text-yellow-400" />
-                    {item.creditCost.toLocaleString('de-DE')} Credits
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="text-white/80 text-sm font-medium flex items-center gap-1">
+                      <Coins className="w-3.5 h-3.5 text-yellow-400" />
+                      {dynamicPrice.toLocaleString('de-DE')} Credits
+                    </span>
+                    {dynamicPrice !== item.creditCost && (
+                      <span className="text-[10px] text-white/30 line-through">
+                        {item.creditCost.toLocaleString('de-DE')}
+                      </span>
+                    )}
+                  </div>
                   <Button
                     onClick={() => needsInput
                       ? setSpendModal({ item, value: '' })
                       : handleSpendCredit(item)}
-                    disabled={purchasing || !canAfford}
+                    disabled={purchasing || !canBuy}
                     size="sm"
                     className="rounded-lg"
                     style={{
-                      background: canAfford
+                      background: canBuy
                         ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))'
                         : 'rgba(255,255,255,0.05)',
                       border: '1px solid rgba(255, 255, 255, 0.2)',
@@ -757,7 +871,7 @@ export function ShopView({ user, userData, onRefresh }) {
                     }}
                   >
                     <Sparkles className="w-4 h-4 mr-1" />
-                    {canAfford ? 'Aktivieren' : 'Zu wenig'}
+                    {isActive ? 'Aktiv' : cooldownLeft > 0 ? 'Cooldown' : pending ? 'Ungenutzt' : !canAfford ? 'Zu wenig' : 'Aktivieren'}
                   </Button>
                 </div>
               </div>
@@ -771,17 +885,30 @@ export function ShopView({ user, userData, onRefresh }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {creditCrates.map((crate) => {
             const canAfford = userCredits >= crate.creditCost;
+            const iconMeta = CRATE_ICONS[crate.id] || { Icon: Package, color: '#ffffff' };
+            const { Icon: CrateIcon } = iconMeta;
+            const color = crate.color || iconMeta.color;
+
             return (
               <div
                 key={crate.id}
                 className="p-5 rounded-xl border relative overflow-hidden flex flex-col"
                 style={{
-                  background: `linear-gradient(135deg, ${crate.color}22, rgba(255,255,255,0.02))`,
-                  borderColor: `${crate.color}55`
+                  background: `linear-gradient(135deg, ${color}18, rgba(255,255,255,0.02))`,
+                  borderColor: `${color}55`
                 }}
               >
                 <div className="text-center mb-3">
-                  <div className="text-5xl mb-2">{crate.emoji}</div>
+                  <div
+                    className="w-16 h-16 mx-auto mb-3 rounded-xl flex items-center justify-center border-2"
+                    style={{
+                      background: `${color}22`,
+                      borderColor: `${color}66`,
+                      boxShadow: `0 0 30px ${color}33`
+                    }}
+                  >
+                    <CrateIcon className="w-9 h-9" style={{ color }} strokeWidth={1.5} />
+                  </div>
                   <h3 className="font-bold text-white text-lg">{crate.name}</h3>
                 </div>
                 <p className="text-xs text-white/60 text-center mb-3">{crate.description}</p>
@@ -803,13 +930,13 @@ export function ShopView({ user, userData, onRefresh }) {
                     className="rounded-lg"
                     style={{
                       background: canAfford
-                        ? `linear-gradient(135deg, ${crate.color}44, ${crate.color}22)`
+                        ? `linear-gradient(135deg, ${color}44, ${color}22)`
                         : 'rgba(255,255,255,0.05)',
-                      border: `1px solid ${crate.color}77`,
+                      border: `1px solid ${color}77`,
                       color: '#fff'
                     }}
                   >
-                    <ShoppingBag className="w-4 h-4 mr-1" />
+                    <Gift className="w-4 h-4 mr-1" />
                     Öffnen
                   </Button>
                 </div>
@@ -1369,9 +1496,20 @@ export function ShopView({ user, userData, onRefresh }) {
             }}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <span className="text-2xl">{spendModal.item.emoji}</span>
-                {spendModal.item.label}
+              <h3 className="text-lg font-bold text-white flex items-center gap-2 min-w-0">
+                {(() => {
+                  const m = SPEND_ITEM_ICONS[spendModal.item.id] || { Icon: Sparkles, color: '#fff' };
+                  const { Icon: IIcon } = m;
+                  return (
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 border"
+                      style={{ background: `${m.color}20`, borderColor: `${m.color}44` }}
+                    >
+                      <IIcon className="w-5 h-5" style={{ color: m.color }} />
+                    </div>
+                  );
+                })()}
+                <span className="truncate">{spendModal.item.label}</span>
               </h3>
               <button
                 onClick={() => !purchasing && setSpendModal(null)}
