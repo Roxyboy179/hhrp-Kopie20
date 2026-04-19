@@ -1262,11 +1262,15 @@ export function ShopView({ user, userData, onRefresh }) {
           >
             <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
               <KeyRound className="w-5 h-5" />
-              Bank-PIN eingeben
+              {pendingPurchase?.type === 'spend' && pendingPurchase?.item?.id === 'bank_pin_change' 
+                ? 'Aktuelle Bank-PIN eingeben'
+                : 'Bank-PIN eingeben'}
             </h3>
             
             <p className="text-sm text-white/60 mb-6">
-              Bitte gib deine Bank-PIN ein, um den Kauf zu bestätigen.
+              {pendingPurchase?.type === 'spend' && pendingPurchase?.item?.id === 'bank_pin_change'
+                ? 'Bitte gib deine AKTUELLE Bank-PIN ein, um die PIN-Änderung zu bestätigen.'
+                : 'Bitte gib deine Bank-PIN ein, um den Kauf zu bestätigen.'}
             </p>
 
             <div className="space-y-4">
