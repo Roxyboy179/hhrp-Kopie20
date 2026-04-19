@@ -4026,14 +4026,29 @@ async function handleShopPurchase(request) {
     const item = SHOP_ITEMS[itemId];
 
     // Hole User Data aus Supabase
+    console.log('[SHOP] Suche User mit Discord ID:', user.id);
+    
     const { data: userData, error: fetchError } = await supabaseAdmin
       .from('user_data')
       .select('data, licenses')  // Lizenzen explizit laden!
       .eq('discord_user_id', user.id)
       .single();
 
+    console.log('[SHOP] Supabase Result:', { 
+      found: !!userData, 
+      error: fetchError?.message,
+      hasLicenses: !!userData?.licenses 
+    });
+
     if (fetchError || !userData) {
-      return NextResponse.json({ error: 'User nicht gefunden' }, { status: 404 });
+      console.error('[SHOP] User fetch error:', fetchError);
+      return NextResponse.json({ 
+        error: 'User nicht gefunden',
+        debug: {
+          discord_user_id: user.id,
+          supabase_error: fetchError?.message
+        }
+      }, { status: 404 });
     }
 
     const userDataObj = typeof userData.data === 'string' 
