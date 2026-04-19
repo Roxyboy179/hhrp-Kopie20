@@ -3310,7 +3310,7 @@ export default function ProfilPage() {
             <ShopView 
               user={user} 
               userData={userData} 
-              onRefresh={() => fetchUserData(user.id)}
+              onRefresh={loadData}
             />
           </div>
         )}
