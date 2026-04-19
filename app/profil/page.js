@@ -126,6 +126,96 @@ function BotStatusCard({ status, onRetry }) {
   return null;
 }
 
+// Glassmorphe Tab-Wechsel Modal (exakt wie im Screenshot)
+function TabChangeModal({ show, tabInfo, onClose }) {
+  useEffect(() => {
+    if (show) {
+      // Auto-close nach 3 Sekunden
+      const timer = setTimeout(() => {
+        onClose();
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [show, onClose]);
+
+  if (!show) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop mit Blur */}
+      <div 
+        className="absolute inset-0 bg-black/60 backdrop-blur-md"
+        onClick={onClose}
+      />
+      
+      {/* Modal Content */}
+      <div 
+        className="relative z-10 w-full max-w-md rounded-2xl p-8 border overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, rgba(30, 30, 40, 0.95), rgba(20, 20, 30, 0.95))',
+          borderColor: 'rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+        }}
+      >
+        {/* Gradient Overlay */}
+        <div 
+          className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 opacity-50"
+          style={{ mixBlendMode: 'overlay' }}
+        />
+        
+        <div className="relative z-10 flex flex-col items-center justify-center text-center space-y-6">
+          {/* Icon mit gelbem Glow */}
+          <div 
+            className="w-24 h-24 rounded-full flex items-center justify-center relative"
+            style={{
+              background: 'radial-gradient(circle, rgba(234, 179, 8, 0.3), transparent 70%)'
+            }}
+          >
+            <div className="w-20 h-20 rounded-full bg-yellow-500/20 flex items-center justify-center">
+              <CheckCircle className="w-10 h-10 text-yellow-400" />
+            </div>
+          </div>
+          
+          {/* Text Content */}
+          <div className="space-y-3">
+            <h3 className="text-2xl font-bold text-white">{tabInfo.title}</h3>
+            <p className="text-white/70 max-w-lg text-sm">
+              {tabInfo.subtitle}
+            </p>
+          </div>
+
+          {/* Info Box */}
+          <div className="w-full">
+            <div 
+              className="flex items-center justify-center gap-3 p-4 rounded-xl border"
+              style={{
+                background: 'rgba(59, 130, 246, 0.1)',
+                borderColor: 'rgba(59, 130, 246, 0.2)'
+              }}
+            >
+              <Sparkles className="w-5 h-5 text-blue-400" />
+              <div className="text-left">
+                <p className="text-sm font-medium text-blue-300">Tab erfolgreich gewechselt</p>
+                <p className="text-xs text-blue-400/60">Diese Meldung schließt sich automatisch...</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Verstanden Button */}
+          <Button
+            onClick={onClose}
+            className="w-full border-white/10 hover:bg-white/5 bg-white/5 text-white"
+          >
+            <CheckCircle className="w-5 h-5 mr-2" />
+            Verstanden
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 function IDCard({ character, avatarUrl, userId }) {
   const [showDetails, setShowDetails] = useState(false);
@@ -918,6 +1008,10 @@ export default function ProfilPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [activeSubTab, setActiveSubTab] = useState('transactions'); // Default Sub-Tab
   
+  // Tab-Wechsel Modal States
+  const [showTabModal, setShowTabModal] = useState(false);
+  const [tabModalInfo, setTabModalInfo] = useState({ title: '', subtitle: '' });
+  
   // Filter States für Transaktionen
   const [transactionFilter, setTransactionFilter] = useState({
     dateRange: 'all', // all, 7days, 30days, year, custom
@@ -999,11 +1093,37 @@ export default function ProfilPage() {
 
   // Handler für Haupt-Tab Wechsel
   const handleMainTabChange = (tabId) => {
+    // Finde den Tab-Namen
+    const tab = mainTabs.find(t => t.id === tabId);
+    
+    // Zeige Modal
+    setTabModalInfo({
+      title: `Tab "${tab?.label}" ausgewählt`,
+      subtitle: `Du hast erfolgreich zum Tab "${tab?.label}" gewechselt.`
+    });
+    setShowTabModal(true);
+    
     setActiveTab(tabId);
     // Setze Default Sub-Tab wenn Kategorie Sub-Tabs hat
     if (subTabs[tabId]) {
       setActiveSubTab(subTabs[tabId][0].id);
     }
+  };
+  
+  // Handler für Sub-Tab Wechsel
+  const handleSubTabChange = (subTabId) => {
+    // Finde den Sub-Tab Namen
+    const currentSubTabs = subTabs[activeTab];
+    const subTab = currentSubTabs?.find(t => t.id === subTabId);
+    
+    // Zeige Modal
+    setTabModalInfo({
+      title: `Unterbereich "${subTab?.label}" ausgewählt`,
+      subtitle: `Du hast erfolgreich zu "${subTab?.label}" gewechselt.`
+    });
+    setShowTabModal(true);
+    
+    setActiveSubTab(subTabId);
   };
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [botStatus, setBotStatus] = useState({ isOnline: true, checking: true, error: null });
@@ -1231,6 +1351,13 @@ export default function ProfilPage() {
 
   return (
     <div className="min-h-screen px-4 py-8 pt-24">
+      {/* Tab-Wechsel Modal */}
+      <TabChangeModal 
+        show={showTabModal} 
+        tabInfo={tabModalInfo} 
+        onClose={() => setShowTabModal(false)} 
+      />
+      
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header mit Discord Avatar */}
         <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
@@ -1354,7 +1481,7 @@ export default function ProfilPage() {
                 return (
                   <button
                     key={subTab.id}
-                    onClick={() => setActiveSubTab(subTab.id)}
+                    onClick={() => handleSubTabChange(subTab.id)}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-xs whitespace-nowrap flex-shrink-0 ${
                       activeSubTab === subTab.id
                         ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white border border-blue-400/30'
@@ -1375,7 +1502,7 @@ export default function ProfilPage() {
                 return (
                   <button
                     key={subTab.id}
-                    onClick={() => setActiveSubTab(subTab.id)}
+                    onClick={() => handleSubTabChange(subTab.id)}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm ${
                       activeSubTab === subTab.id
                         ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white border border-blue-400/30'
