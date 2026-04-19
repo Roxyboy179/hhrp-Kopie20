@@ -1204,11 +1204,21 @@ export default function ProfilPage() {
   // licenses und cards sind bereits Arrays von der Sync-Funktion
   // WICHTIG: Filtere Credits-Käufe raus (credits_5, credits_25, etc.)
   // Licenses sind jetzt Objekte mit Details (expiresAt, autoRenew, etc.)
-  const licenses = Array.isArray(userData?.licenses) 
-    ? userData.licenses.filter(l => {
-        if (!l) return false; // Filtere null/undefined raus
+  const licenses = userData?.licenses 
+    ? (Array.isArray(userData.licenses) 
+        ? userData.licenses 
+        : Object.entries(userData.licenses).map(([key, val]) => ({
+            id: key,
+            name: val.name || key,
+            expiresAt: val.expiresAt || 0,
+            autoRenew: val.autoRenew || false,
+            purchasedAt: val.purchasedAt || null,
+            giftedBy: val.giftedBy || null
+          }))
+      ).filter(l => {
+        if (!l) return false;
         const name = typeof l === 'string' ? l : (l.name || l.id);
-        if (!name || typeof name !== 'string') return false; // Sicherheitscheck: name muss String sein!
+        if (!name || typeof name !== 'string') return false;
         return !name.startsWith('credits_') && !name.startsWith('credit_');
       })
     : [];
