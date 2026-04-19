@@ -2494,6 +2494,9 @@ export async function GET(request) {
   if (p === 'hh/my-profile') {
     return handleHHMyProfile(request);
   }
+  if (p === 'hh/my-warnings') {
+    return handleHHMyWarnings(request);
+  }
   if (p === 'hh/tickets') {
     return handleHHTickets(request);
   }
@@ -4909,8 +4912,98 @@ async function handleHHMyProfile(request) {
 }
 
 // =============================================================
-// ===== TRANSFER: Empfänger-Suche nach Vor-/Nachname =====
+// ===== HH: Meine Server-Verwarnungen (warns.json vom Bot) =====
 // =============================================================
+// Bot-Regel (src/index.js): Verwarnung ist AKTIV, solange sie nicht entfernt
+// wurde UND jünger als 30 Tage ist. Ab 4 aktiven Warns folgen Maßnahmen.
+const WARN_ACTIVE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000; // 30 Tage
+const WARN_MAX_ACTIVE = 4;
+
+async function handleHHMyWarnings(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('user_data')
+      .select('data, last_sync')
+      .eq('discord_user_id', user.id)
+      .single();
+
+    // PGRST116 = no rows -> User hat noch keine Daten (auch keine Warns)
+    if (error && error.code !== 'PGRST116') {
+      console.error('[HH] MyWarnings DB error:', error);
+      return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
+    }
+
+    let parsed = data?.data || {};
+    if (typeof parsed === 'string') {
+      try { parsed = JSON.parse(parsed); } catch { parsed = {}; }
+    }
+
+    const rawWarns = Array.isArray(parsed?.warns) ? parsed.warns : [];
+    const now = Date.now();
+
+    // Anreichern mit Status: active / expired / removed
+    const warnings = rawWarns.map(w => {
+      const createdTs = w.createdAt ? new Date(w.createdAt).getTime() : 0;
+      const expiresAt = createdTs ? createdTs + WARN_ACTIVE_WINDOW_MS : 0;
+      const isRemoved = !!w.removed;
+      const isExpired = !isRemoved && createdTs > 0 && (now - createdTs) >= WARN_ACTIVE_WINDOW_MS;
+      const isActive = !isRemoved && !isExpired;
+
+      let status = 'active';
+      if (isRemoved) status = 'removed';
+      else if (isExpired) status = 'expired';
+
+      return {
+        id: w.id || null,
+        reason: w.reason || '',
+        moderator: w.moderator || null,
+        moderatorTag: w.moderatorTag || null,
+        createdAt: w.createdAt || null,
+        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+        daysLeft: isActive && expiresAt
+          ? Math.max(0, Math.ceil((expiresAt - now) / (24 * 60 * 60 * 1000)))
+          : 0,
+        status,
+        removedAt: w.removedAt || null,
+        removedBy: w.removedBy || null,
+        removedByTag: w.removedByTag || null,
+        removeReason: w.removeReason || null
+      };
+    })
+    // Neueste zuerst
+    .sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tb - ta;
+    });
+
+    const activeCount = warnings.filter(w => w.status === 'active').length;
+    const expiredCount = warnings.filter(w => w.status === 'expired').length;
+    const removedCount = warnings.filter(w => w.status === 'removed').length;
+
+    return NextResponse.json({
+      success: true,
+      warnings,
+      counts: {
+        total: warnings.length,
+        active: activeCount,
+        expired: expiredCount,
+        removed: removedCount
+      },
+      maxActive: WARN_MAX_ACTIVE,
+      activeWindowDays: 30,
+      lastSync: data?.last_sync || null
+    });
+  } catch (e) {
+    console.error('[HH] MyWarnings error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
 async function handleSearchRecipients(request) {
   try {
     const user = getUserFromRequest(request);

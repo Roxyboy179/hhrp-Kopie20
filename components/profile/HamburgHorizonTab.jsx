@@ -6,7 +6,8 @@ import {
   Search, Loader2, Sparkles, Award, TrendingUp, MessageCircle,
   Briefcase, MapPin, Cake, ShoppingCart, RefreshCw,
   DollarSign, Wallet, PiggyBank, Package, Receipt, ScrollText,
-  CreditCard, Star, AlertCircle, Crown, TicketIcon, X, FileText, Clock
+  CreditCard, Star, AlertCircle, Crown, TicketIcon, X, FileText, Clock,
+  ShieldAlert, ShieldCheck, ShieldX, CalendarClock
 } from 'lucide-react';
 
 const SUBTABS = [
@@ -14,6 +15,7 @@ const SUBTABS = [
   { id: 'marktplatz', label: 'Marktplatz', icon: Store },
   { id: 'charakter', label: 'Charaktere', icon: UserIcon },
   { id: 'profil', label: 'Mein Profil', icon: BarChart3 },
+  { id: 'verwarnungen', label: 'Server Verwarnungen', icon: ShieldAlert },
   { id: 'tickets', label: 'Tickets', icon: TicketIcon },
 ];
 
@@ -81,6 +83,7 @@ export default function HamburgHorizonTab({ currentUser }) {
       {subTab === 'marktplatz' && <MarktplatzView />}
       {subTab === 'charakter' && <CharakterView currentUser={currentUser} />}
       {subTab === 'profil' && <MeinProfilView currentUser={currentUser} />}
+      {subTab === 'verwarnungen' && <VerwarnungenView currentUser={currentUser} />}
       {subTab === 'tickets' && <TicketsView currentUser={currentUser} />}
     </div>
   );
@@ -1059,6 +1062,251 @@ function TicketsView({ currentUser }) {
               )}
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- SERVER VERWARNUNGEN ---------------- */
+function VerwarnungenView({ currentUser }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all'); // all | active | expired | removed
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/hh/my-warnings', { cache: 'no-store' });
+      const j = await r.json();
+      setData(j);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  if (loading) return <LoadingCard />;
+  if (!data?.success) return <ErrorCard msg="Verwarnungen konnten nicht geladen werden" onRetry={load} />;
+
+  const counts = data.counts || { total: 0, active: 0, expired: 0, removed: 0 };
+  const maxActive = data.maxActive || 4;
+  const all = Array.isArray(data.warnings) ? data.warnings : [];
+  const filtered = filter === 'all' ? all : all.filter(w => w.status === filter);
+
+  const progressPct = Math.min(100, Math.round((counts.active / maxActive) * 100));
+  const progressColor =
+    counts.active >= maxActive ? 'bg-red-500/70'
+    : counts.active >= maxActive - 1 ? 'bg-orange-400/70'
+    : counts.active >= 2 ? 'bg-yellow-400/60'
+    : 'bg-white/40';
+
+  const filterBtns = [
+    { id: 'all', label: 'Alle', count: counts.total },
+    { id: 'active', label: 'Aktiv', count: counts.active },
+    { id: 'expired', label: 'Abgelaufen', count: counts.expired },
+    { id: 'removed', label: 'Entfernt', count: counts.removed },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Header / Übersichts-Karte */}
+      <div className="p-5 rounded-xl border" style={CARD_STYLE}>
+        <div className="flex items-start gap-3">
+          <div className="w-11 h-11 rounded-lg bg-white/[0.06] border border-white/10 flex items-center justify-center flex-shrink-0">
+            <ShieldAlert className="w-5 h-5 text-white/80" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-base font-semibold text-white mb-1">Server Verwarnungen</h2>
+            <p className="text-xs text-white/50 leading-relaxed">
+              Verwarnungen vom Hamburg Horizon Discord-Server. Aktive Verwarnungen laufen
+              nach <span className="text-white/70 font-medium">{data.activeWindowDays || 30} Tagen</span> automatisch ab.
+              Bei <span className="text-white/70 font-medium">{maxActive}</span> aktiven Warns folgen weitere Maßnahmen.
+            </p>
+          </div>
+          <button
+            onClick={load}
+            className="p-2 rounded-lg hover:bg-white/[0.06] text-white/50 hover:text-white transition-all"
+            title="Aktualisieren"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Aktiv-Progress Bar */}
+        <div className="mt-5 pt-5 border-t border-white/10">
+          <div className="flex items-center justify-between text-xs mb-2">
+            <span className="text-white/60">
+              Aktive Verwarnungen: <span className="text-white font-semibold">{counts.active}</span> / {maxActive}
+            </span>
+            <span className="text-white/40">{progressPct}%</span>
+          </div>
+          <div className="w-full h-2 rounded-full bg-white/[0.06] overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-700 ${progressColor}`}
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Stat-Karten */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatBig icon={ScrollText} label="Gesamt" value={counts.total} />
+        <StatBig icon={ShieldAlert} label="Aktiv" value={counts.active} />
+        <StatBig icon={CalendarClock} label="Abgelaufen" value={counts.expired} />
+        <StatBig icon={ShieldCheck} label="Entfernt" value={counts.removed} />
+      </div>
+
+      {/* Filter Buttons */}
+      {counts.total > 0 && (
+        <div className="p-2 rounded-xl border flex gap-1 overflow-x-auto" style={CARD_STYLE_SUBTLE}>
+          {filterBtns.map(b => {
+            const active = filter === b.id;
+            return (
+              <button
+                key={b.id}
+                onClick={() => setFilter(b.id)}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                  active ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white hover:bg-white/[0.04]'
+                }`}
+              >
+                {b.label}
+                <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                  active ? 'bg-white/15 text-white' : 'bg-white/[0.06] text-white/50'
+                }`}>
+                  {b.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Liste */}
+      {filtered.length > 0 ? (
+        <div className="space-y-3">
+          {filtered.map(w => <WarnCard key={w.id || w.createdAt} warn={w} />)}
+        </div>
+      ) : (
+        <div className="p-12 rounded-xl border text-center" style={CARD_STYLE_SUBTLE}>
+          <ShieldCheck className="w-14 h-14 mx-auto mb-4 text-white/20" />
+          <h3 className="text-base font-semibold text-white mb-2">
+            {counts.total === 0 ? 'Keine Verwarnungen' : 'Keine Einträge in dieser Kategorie'}
+          </h3>
+          <p className="text-sm text-white/40">
+            {counts.total === 0
+              ? 'Sauberes Konto – du hast bisher keine Server-Verwarnungen erhalten.'
+              : 'Wähle einen anderen Filter um andere Verwarnungen zu sehen.'}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- Warn Card ---------------- */
+function WarnCard({ warn }) {
+  const statusMeta = {
+    active: {
+      label: 'Aktiv',
+      icon: ShieldAlert,
+      badge: 'bg-orange-500/15 text-orange-300 border-orange-500/30',
+      bar: 'border-l-orange-500/60',
+    },
+    expired: {
+      label: 'Abgelaufen',
+      icon: CalendarClock,
+      badge: 'bg-white/[0.06] text-white/50 border-white/15',
+      bar: 'border-l-white/20',
+    },
+    removed: {
+      label: 'Entfernt',
+      icon: ShieldCheck,
+      badge: 'bg-green-500/15 text-green-300 border-green-500/30',
+      bar: 'border-l-green-500/60',
+    },
+  };
+  const meta = statusMeta[warn.status] || statusMeta.active;
+  const StatusIcon = meta.icon;
+
+  const dateFmt = (iso) => {
+    if (!iso) return '–';
+    try { return new Date(iso).toLocaleString('de-DE'); } catch { return iso; }
+  };
+
+  return (
+    <div
+      className={`p-4 rounded-xl border border-l-4 ${meta.bar}`}
+      style={CARD_STYLE_SUBTLE}
+    >
+      <div className="flex items-start justify-between gap-3 mb-2 flex-wrap">
+        <div className="flex items-center gap-2 min-w-0">
+          <StatusIcon className="w-4 h-4 text-white/70 flex-shrink-0" />
+          <h4 className="text-sm font-semibold text-white truncate">
+            {warn.id || 'WARN-?'}
+          </h4>
+          <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${meta.badge}`}>
+            {meta.label}
+          </span>
+        </div>
+        {warn.status === 'active' && warn.daysLeft > 0 && (
+          <span className="text-[10px] text-white/50 flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            läuft in {warn.daysLeft} {warn.daysLeft === 1 ? 'Tag' : 'Tagen'} ab
+          </span>
+        )}
+      </div>
+
+      {/* Grund */}
+      <div className="mb-3 p-3 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+        <div className="text-[10px] uppercase tracking-wider text-white/40 mb-1">Grund</div>
+        <div className="text-sm text-white/90 break-words">{warn.reason || '–'}</div>
+      </div>
+
+      {/* Meta */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+        <div className="flex items-center gap-2 text-white/50">
+          <Clock className="w-3 h-3" />
+          <span>Erteilt: <span className="text-white/80">{dateFmt(warn.createdAt)}</span></span>
+        </div>
+        {warn.moderatorTag && (
+          <div className="flex items-center gap-2 text-white/50">
+            <UserIcon className="w-3 h-3" />
+            <span>Von: <span className="text-white/80">{warn.moderatorTag}</span></span>
+          </div>
+        )}
+        {warn.status === 'active' && warn.expiresAt && (
+          <div className="flex items-center gap-2 text-white/50">
+            <CalendarClock className="w-3 h-3" />
+            <span>Läuft ab: <span className="text-white/80">{dateFmt(warn.expiresAt)}</span></span>
+          </div>
+        )}
+        {warn.status === 'expired' && warn.expiresAt && (
+          <div className="flex items-center gap-2 text-white/50">
+            <CalendarClock className="w-3 h-3" />
+            <span>Abgelaufen seit: <span className="text-white/80">{dateFmt(warn.expiresAt)}</span></span>
+          </div>
+        )}
+        {warn.status === 'removed' && warn.removedAt && (
+          <div className="flex items-center gap-2 text-white/50">
+            <ShieldX className="w-3 h-3" />
+            <span>Entfernt: <span className="text-white/80">{dateFmt(warn.removedAt)}</span></span>
+          </div>
+        )}
+        {warn.status === 'removed' && warn.removedByTag && (
+          <div className="flex items-center gap-2 text-white/50">
+            <UserIcon className="w-3 h-3" />
+            <span>Entfernt von: <span className="text-white/80">{warn.removedByTag}</span></span>
+          </div>
+        )}
+      </div>
+
+      {/* Entfernungs-Grund */}
+      {warn.status === 'removed' && warn.removeReason && (
+        <div className="mt-3 p-3 rounded-lg bg-green-500/[0.04] border border-green-500/15">
+          <div className="text-[10px] uppercase tracking-wider text-green-300/70 mb-1">Entfernungs-Grund</div>
+          <div className="text-sm text-white/80 break-words">{warn.removeReason}</div>
         </div>
       )}
     </div>
