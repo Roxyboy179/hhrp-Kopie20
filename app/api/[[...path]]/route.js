@@ -3857,6 +3857,17 @@ async function handleTransferMoney(request) {
       feeRate = discount === 1.0 ? 0 : feeRate * (1 - discount);
     }
 
+    // Gebühren-Bypass prüfen (aus Credit-Shop)
+    const activeBuffs = userDataObj.activeBuffs || {};
+    const gebuehrenBypassUntil = activeBuffs.gebuehrenBypassUntil || 0;
+    const now = Date.now();
+    
+    if (gebuehrenBypassUntil > now) {
+      // Gebühren-Bypass aktiv - keine Gebühren!
+      feeRate = 0;
+      console.log('[TRANSFER] 💸 Gebühren-Bypass aktiv! Keine Gebühren.');
+    }
+
     const fee = Math.ceil(betrag * feeRate);
     const totalCost = betrag + fee;
 
