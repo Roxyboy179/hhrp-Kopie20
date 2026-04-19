@@ -3421,11 +3421,9 @@ export default function ProfilPage() {
           </div>
         )}
 
-        {/* Marktplatz Tab */}
+        {/* Hamburg Horizon Tab (ersetzt den alten Marktplatz-Tab) */}
         {activeTab === 'hamburg-horizon' && (
           <HamburgHorizonTab currentUser={user} />
-        )}
-
         )}
 
         {/* Sparkonto Tab - NEU */}
