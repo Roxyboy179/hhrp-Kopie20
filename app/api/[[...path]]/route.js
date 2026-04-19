@@ -4160,7 +4160,7 @@ async function handleShopPurchase(request) {
         status: 'pending'
       },
       debug: {  // DEBUG INFO
-        vipLicensesFound: Object.keys(userDataObj?.licenses || {}),
+        vipLicensesFound: Object.keys(userLicenses || {}),
         vipTypeDetected: vipType,
         originalPrice: item.price,
         finalPrice: finalPrice,
