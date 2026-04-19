@@ -1547,6 +1547,19 @@ export function ShopView({ user, userData, onRefresh }) {
                 />
                 <p className="text-[11px] text-white/40 mt-1">Nur Ziffern, genau 9 Stellen. 48h Cooldown danach.</p>
               </div>
+            ) : spendModal.item.id === 'bank_pin_change' ? (
+              <div className="mb-4">
+                <Label className="text-xs text-white/60 mb-1 block">Neue Bank-PIN (3 Ziffern)</Label>
+                <Input
+                  value={spendModal.value}
+                  onChange={(e) => setSpendModal({ ...spendModal, value: e.target.value.replace(/\D/g, '').slice(0, 3) })}
+                  placeholder="123"
+                  maxLength={3}
+                  type="password"
+                  className="bg-white/5 border-white/10 text-white font-mono tracking-wider text-center text-2xl"
+                />
+                <p className="text-[11px] text-white/40 mt-1">Nur Ziffern, genau 3 Stellen. 48h Cooldown danach.</p>
+              </div>
             ) : spendModal.item.id === 'exklusiver_titel' ? (
               <div className="mb-4">
                 <Label className="text-xs text-white/60 mb-1 block">Dein Titel (2–20 Zeichen)</Label>
@@ -1580,7 +1593,10 @@ export function ShopView({ user, userData, onRefresh }) {
               </Button>
               <Button
                 onClick={() => handleSpendCredit(spendModal.item, spendModal.value)}
-                disabled={purchasing || !spendModal.value || (spendModal.item.id === 'custom_kontonummer' && spendModal.value.length !== 9) || (spendModal.item.id === 'exklusiver_titel' && spendModal.value.length < 2)}
+                disabled={purchasing || !spendModal.value || 
+                  (spendModal.item.id === 'custom_kontonummer' && spendModal.value.length !== 9) || 
+                  (spendModal.item.id === 'bank_pin_change' && spendModal.value.length !== 3) ||
+                  (spendModal.item.id === 'exklusiver_titel' && spendModal.value.length < 2)}
                 className="flex-1"
                 style={{
                   background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(124, 58, 237, 0.15))',

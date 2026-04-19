@@ -4383,6 +4383,13 @@ async function handleSpendCredits(request) {
             error: 'Neue PIN ungültig – bitte genau 3 Ziffern angeben'
           }, { status: 400 });
         }
+        // Prüfe ob neue PIN = alte PIN
+        const currentPin = userDataObj?.bankAccount?.pin || buffs?.bankPin;
+        if (currentPin === newPin) {
+          return NextResponse.json({
+            error: `${newPin} ist bereits deine aktuelle PIN`
+          }, { status: 400 });
+        }
       }
     }
 
