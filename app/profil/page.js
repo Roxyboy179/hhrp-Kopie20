@@ -388,6 +388,12 @@ function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
                       <span className="text-[10px] text-white/50 ml-1">LKW</span>
                     </div>
                   )}
+                  {hasBus && (
+                    <div className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20">
+                      <span className="text-sm font-bold text-white">D</span>
+                      <span className="text-[10px] text-white/50 ml-1">Bus</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </>
