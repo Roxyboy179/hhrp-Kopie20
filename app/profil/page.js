@@ -21,7 +21,7 @@ import {
   CircleDollarSign, BellRing, AppWindow, Settings, ImagePlus, 
   Trash2, Upload, BellOff, ZoomIn, ZoomOut, PieChart, BarChart3,
   Lightbulb, Filter, Search, ArrowLeftRight, Target, Calculator,
-  TrendingUpIcon, BarChart2, Send, XCircle, Infinity
+  TrendingUpIcon, BarChart2, Send, XCircle, Infinity, Car
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -306,7 +306,7 @@ function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
 
   const birthDate = calculateBirthDate(character?.age, userId);
   const issueDate = '10.06.2021';
-  const expiryDate = '10.06.2036';
+  const expiryDate = 'Unbegrenzt gültig';
 
   return (
     <div className="w-full max-w-md mx-auto">
@@ -333,7 +333,7 @@ function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
               <p className="text-xs text-white/50 uppercase tracking-wider">Bundesrepublik HHRP</p>
               <p className="text-sm font-bold text-white">FÜHRERSCHEIN</p>
             </div>
-            <div className="text-2xl">🚗</div>
+            <Car className="w-6 h-6 text-white/60" />
           </div>
 
           {hasAnyLicense ? (
@@ -400,19 +400,16 @@ function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
           {/* Hint */}
           <div className="mt-4 pt-4 border-t border-white/10">
             <p className="text-[10px] text-white/40 text-center">
-              {hasAnyLicense ? `Klicke für Details • Gültig bis ${expiryDate}` : 'Keine Fahrerlaubnis vorhanden'}
+              {hasAnyLicense ? `Klicke für Details • ${expiryDate}` : 'Keine Fahrerlaubnis vorhanden'}
             </p>
           </div>
         </div>
 
-        {/* Chip Decoration */}
-        <div 
-          className="absolute bottom-4 right-4 w-12 h-12 rounded-lg opacity-20 pointer-events-none"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1))',
-            border: '1px solid rgba(255, 255, 255, 0.3)'
-          }}
-        />
+        {/* Server Logo */}
+        <div className="absolute bottom-4 right-4 w-12 h-12 rounded-lg overflow-hidden opacity-50 pointer-events-none">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icon-192.png" alt="HHRP" className="w-full h-full object-contain" />
+        </div>
 
         {/* Hover Effect */}
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl" style={{ background: 'rgba(255, 255, 255, 0.02)' }} />
@@ -495,6 +492,13 @@ function WeaponsLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
   // Prüfe ob User einen Waffenschein hat
   const hasWeaponsLicense = hasLicense('waffenschein') || hasLicense('waffen');
   
+  // Finde die Waffenschein-Lizenz um das Ausstellungsdatum zu bekommen
+  const weaponsLicenseData = licenses.find(l => {
+    if (!l) return false;
+    const name = typeof l === 'string' ? l : (l.name || l.id);
+    return name === 'waffenschein' || name === 'waffen';
+  });
+  
   const calculateBirthDate = (age, userId) => {
     if (!age) return 'N/A';
     const currentYear = new Date().getFullYear();
@@ -506,8 +510,23 @@ function WeaponsLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
   };
 
   const birthDate = calculateBirthDate(character?.age, userId);
+  
+  // Berechne Ablaufdatum: 30 Tage nach Ausstellung
   const issueDate = '20.08.2022';
-  const expiryDate = '20.08.2032';
+  const calculateExpiryDate = () => {
+    if (weaponsLicenseData && typeof weaponsLicenseData === 'object' && weaponsLicenseData.purchasedAt) {
+      const issued = new Date(weaponsLicenseData.purchasedAt);
+      const expiry = new Date(issued);
+      expiry.setDate(expiry.getDate() + 30);
+      return expiry.toLocaleDateString('de-DE');
+    }
+    // Fallback: 30 Tage nach issueDate
+    const issued = new Date('2022-08-20');
+    const expiry = new Date(issued);
+    expiry.setDate(expiry.getDate() + 30);
+    return expiry.toLocaleDateString('de-DE');
+  };
+  const expiryDate = calculateExpiryDate();
 
   return (
     <div className="w-full max-w-md mx-auto">
@@ -534,7 +553,7 @@ function WeaponsLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
               <p className="text-xs text-white/50 uppercase tracking-wider">Bundesrepublik HHRP</p>
               <p className="text-sm font-bold text-white">WAFFENSCHEIN</p>
             </div>
-            <div className="text-2xl">🔫</div>
+            <Shield className="w-6 h-6 text-white/60" />
           </div>
 
           {hasWeaponsLicense ? (
@@ -590,14 +609,11 @@ function WeaponsLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
           </div>
         </div>
 
-        {/* Chip Decoration */}
-        <div 
-          className="absolute bottom-4 right-4 w-12 h-12 rounded-lg opacity-20 pointer-events-none"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1))',
-            border: '1px solid rgba(255, 255, 255, 0.3)'
-          }}
-        />
+        {/* Server Logo */}
+        <div className="absolute bottom-4 right-4 w-12 h-12 rounded-lg overflow-hidden opacity-50 pointer-events-none">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icon-192.png" alt="HHRP" className="w-full h-full object-contain" />
+        </div>
 
         {/* Hover Effect */}
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl" style={{ background: 'rgba(255, 255, 255, 0.02)' }} />
@@ -787,7 +803,7 @@ function BankCard({ card, userName, userData }) {
           {/* Hint */}
           <div className="mt-4 pt-4 border-t border-white/10">
             <p className="text-[10px] text-white/40 text-center">
-              Klicke für Details • Limit: {(card.limit || 500000).toLocaleString('de-DE')}€
+              Klicke für Details • Limit: {(card.limit || 1000000).toLocaleString('de-DE')}€
             </p>
           </div>
         </div>
@@ -845,7 +861,7 @@ function BankCard({ card, userName, userData }) {
               </div>
               <div className="flex justify-between py-2 border-b border-white/10">
                 <span className="text-white/50">Limit</span>
-                <span className="text-white font-medium">{(card.limit || 500000).toLocaleString('de-DE')}€</span>
+                <span className="text-white font-medium">{(card.limit || 1000000).toLocaleString('de-DE')}€</span>
               </div>
               <div className="flex justify-between py-2 border-b border-white/10">
                 <span className="text-white/50">Inhaber</span>
@@ -1169,6 +1185,7 @@ export default function ProfilPage() {
   const avatarUrl = getDiscordAvatarUrl(user, 256);
   const money = userData?.money || {};
   const character = userData?.character || {};
+  const bankLimit = userData?.bankLimit || 1000000; // Lese bankLimit aus userData
   
   // licenses und cards sind bereits Arrays von der Sync-Funktion
   // WICHTIG: Filtere Credits-Käufe raus (credits_5, credits_25, etc.)
@@ -1181,7 +1198,15 @@ export default function ProfilPage() {
         return !name.startsWith('credits_') && !name.startsWith('credit_');
       })
     : [];
-  const cards = Array.isArray(userData?.cards) ? userData.cards : [];
+  
+  // Cards mit dynamischem Limit
+  const cards = Array.isArray(userData?.cards) 
+    ? userData.cards.map(card => ({
+        ...card,
+        limit: card.limit || bankLimit // Verwende card.limit oder bankLimit
+      }))
+    : [];
+  
   const stats = userData?.stats || {};
   
   // Globale Hilfsfunktion für Lizenz-Checks (String und Object Format)
