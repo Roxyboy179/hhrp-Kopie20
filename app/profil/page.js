@@ -47,107 +47,74 @@ function SkeletonCard({ className = "" }) {
   );
 }
 
-// Bot Status Modal - Zentrale Glassmorphismus-Meldung (exakt wie im Screenshot)
 function BotStatusCard({ status, onRetry }) {
+  // Zeige immer nur die gelbe Error-Karte, keine blaue Loading-Karte
   if (!status.isOnline || status.error || status.checking) {
+    // Error State - NUR GELBE KARTE
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        {/* Backdrop mit Blur */}
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-md" />
-        
-        {/* Modal Content */}
-        <div 
-          className="relative z-10 w-full max-w-md rounded-2xl p-8 border overflow-hidden"
-          style={{
-            background: 'linear-gradient(135deg, rgba(30, 30, 40, 0.95), rgba(20, 20, 30, 0.95))',
-            borderColor: 'rgba(255, 255, 255, 0.1)',
-            backdropFilter: 'blur(20px)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
-          }}
-        >
-          {/* Gradient Overlay */}
-          <div 
-            className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 opacity-50"
-            style={{ mixBlendMode: 'overlay' }}
-          />
-          
-          <div className="relative z-10 flex flex-col items-center justify-center text-center space-y-6">
-            {/* Gelbes Warning Icon mit Glow */}
-            <div 
-              className="w-24 h-24 rounded-full flex items-center justify-center relative"
-              style={{
-                background: 'radial-gradient(circle, rgba(234, 179, 8, 0.3), transparent 70%)'
-              }}
+      <div className="glass rounded-2xl p-8 border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-orange-500/10">
+        <div className="flex flex-col items-center justify-center text-center space-y-6">
+          <div className="w-24 h-24 rounded-full bg-yellow-500/20 flex items-center justify-center">
+            <svg 
+              className="w-12 h-12 text-yellow-400" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
             >
-              <div className="w-20 h-20 rounded-full bg-yellow-500/20 flex items-center justify-center">
-                <svg 
-                  className="w-10 h-10 text-yellow-400" 
-                  fill="none" 
-                  viewBox="0 0 24 24" 
-                  stroke="currentColor"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
-                  />
-                </svg>
-              </div>
-            </div>
-            
-            {/* Text Content */}
-            <div className="space-y-3">
-              <h3 className="text-2xl font-bold text-white">Verbindungsproblem</h3>
-              <p className="text-white/70 max-w-lg text-sm">
-                Wir haben derzeit Probleme, die Daten vom Discord Bot Server zu laden.
-              </p>
-            </div>
-
-            {/* Error Message Box */}
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
+              />
+            </svg>
+          </div>
+          
+          <div className="space-y-3">
+            <h3 className="text-2xl font-bold text-white">Verbindungsproblem</h3>
+            <p className="text-white/70 max-w-lg">
+              Wir haben derzeit Probleme, die Daten vom Discord Bot Server zu laden.
+            </p>
             {status.error && (
-              <div 
-                className="w-full p-4 rounded-xl border"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  borderColor: 'rgba(255, 255, 255, 0.1)'
-                }}
-              >
-                <p className="text-sm text-white/50">
-                  Der Discord Bot ist derzeit offline. Deine Profildaten können nicht geladen werden.
-                </p>
+              <div className="glass rounded-lg p-4 border border-white/10 bg-white/5">
+                <p className="text-sm text-white/50">{status.error}</p>
               </div>
             )}
+          </div>
 
-            {/* Automatische Prüfung läuft */}
-            <div className="w-full">
-              <div 
-                className="flex items-center justify-center gap-3 p-4 rounded-xl border"
-                style={{
-                  background: 'rgba(59, 130, 246, 0.1)',
-                  borderColor: 'rgba(59, 130, 246, 0.2)'
-                }}
-              >
-                <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
-                <div className="text-left">
-                  <p className="text-sm font-medium text-blue-300">Automatische Prüfung läuft</p>
-                  <p className="text-xs text-blue-400/60">Versucht alle 15 Sekunden erneut zu verbinden...</p>
-                </div>
+          <div className="space-y-3 w-full max-w-md">
+            {/* Automatischer Retry Hinweis */}
+            <div className="flex items-center justify-center gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+              <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+              <div className="text-left">
+                <p className="text-sm font-medium text-blue-300">Automatische Prüfung läuft</p>
+                <p className="text-xs text-blue-400/60">Versucht alle 15 Sekunden erneut zu verbinden...</p>
               </div>
             </div>
             
-            {/* Info Text */}
-            <p className="text-xs text-white/40 flex items-center gap-2">
-              <Lightbulb className="w-4 h-4" />
-              Die Seite wird automatisch aktualisiert, sobald der Bot wieder online ist.
+            <p className="text-xs text-white/40">
+              💡 Die Seite wird automatisch aktualisiert, sobald der Bot wieder online ist.
             </p>
             
-            {/* Manueller Retry Button */}
+            {/* Manueller Retry Button (optional) */}
             <Button
               onClick={onRetry}
-              className="w-full border-white/10 hover:bg-white/5 bg-white/5 text-white"
+              variant="outline"
+              className="w-full border-white/10 hover:bg-white/5"
             >
-              <RefreshCw className="w-5 h-5 mr-2" />
+              <svg 
+                className="w-5 h-5 mr-2" 
+                fill="none" 
+                viewBox="0 0 24 24" 
+                stroke="currentColor"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
+                />
+              </svg>
               Jetzt manuell versuchen
             </Button>
           </div>
