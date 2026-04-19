@@ -6,7 +6,7 @@ import {
   Search, Loader2, Sparkles, Award, TrendingUp, MessageCircle,
   Briefcase, MapPin, Cake, ShoppingCart, RefreshCw,
   DollarSign, Wallet, PiggyBank, Package, Receipt, ScrollText,
-  CreditCard, Star, AlertCircle, Crown
+  CreditCard, Star, AlertCircle, Crown, TicketIcon, X, FileText, Clock
 } from 'lucide-react';
 
 const SUBTABS = [
@@ -14,6 +14,7 @@ const SUBTABS = [
   { id: 'marktplatz', label: 'Marktplatz', icon: Store },
   { id: 'charakter', label: 'Charaktere', icon: UserIcon },
   { id: 'profil', label: 'Mein Profil', icon: BarChart3 },
+  { id: 'tickets', label: 'Tickets', icon: TicketIcon },
 ];
 
 // --- Gemeinsamer subtiler Container-Style im Stil von TransferMoneyView ---
@@ -80,6 +81,7 @@ export default function HamburgHorizonTab({ currentUser }) {
       {subTab === 'marktplatz' && <MarktplatzView />}
       {subTab === 'charakter' && <CharakterView currentUser={currentUser} />}
       {subTab === 'profil' && <MeinProfilView currentUser={currentUser} />}
+      {subTab === 'tickets' && <TicketsView currentUser={currentUser} />}
     </div>
   );
 }
@@ -841,6 +843,223 @@ function MeinProfilView({ currentUser }) {
         <p className="text-xs text-white/30 text-center">
           Daten vom Bot zuletzt synchronisiert: {new Date(data.lastSync).toLocaleString('de-DE')}
         </p>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- TICKETS ---------------- */
+function TicketsView({ currentUser }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [transcriptLoading, setTranscriptLoading] = useState(false);
+  const [transcript, setTranscript] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/hh/tickets', { cache: 'no-store' });
+      const j = await r.json();
+      setData(j);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const openTranscript = async (ticketId) => {
+    setSelectedTicket(ticketId);
+    setTranscriptLoading(true);
+    setTranscript(null);
+    try {
+      const r = await fetch(`/api/hh/tickets/${ticketId}/transcript`, { cache: 'no-store' });
+      const j = await r.json();
+      if (j.success) {
+        setTranscript(j);
+      } else {
+        setTranscript({ error: j.error || j.hint || 'Kein Transkript verfügbar' });
+      }
+    } catch (e) {
+      console.error(e);
+      setTranscript({ error: 'Fehler beim Laden' });
+    } finally {
+      setTranscriptLoading(false);
+    }
+  };
+
+  const closeModal = () => {
+    setSelectedTicket(null);
+    setTranscript(null);
+  };
+
+  if (loading) return <LoadingCard />;
+  if (!data?.success) return <ErrorCard msg="Tickets konnten nicht geladen werden" onRetry={load} />;
+
+  const tickets = data.tickets || [];
+  const stats = data.stats || { total: 0, open: 0, closed: 0, withTranscript: 0 };
+
+  return (
+    <div className="space-y-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatMini icon={TicketIcon} label="Gesamt" value={stats.total} />
+        <StatMini icon={Clock} label="Offen" value={stats.open} />
+        <StatMini icon={X} label="Geschlossen" value={stats.closed} />
+        <StatMini icon={FileText} label="Mit Transkript" value={stats.withTranscript} />
+      </div>
+
+      {/* Refresh Button */}
+      <div className="flex justify-between items-center">
+        <h3 className="text-sm font-semibold text-white/80">Deine Tickets</h3>
+        <button
+          onClick={load}
+          className="p-2 rounded-lg hover:bg-white/[0.06] text-white/60 hover:text-white transition-all"
+          title="Neu laden"
+        >
+          <RefreshCw className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Tickets Liste */}
+      {tickets.length > 0 ? (
+        <div className="space-y-3">
+          {tickets.map(t => {
+            const statusColors = {
+              open: 'bg-green-500/10 text-green-400 border-green-500/20',
+              claimed: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+              closed: 'bg-white/10 text-white/60 border-white/10',
+            };
+            const statusLabel = {
+              open: 'Offen',
+              claimed: 'In Bearbeitung',
+              closed: 'Geschlossen',
+            };
+            
+            return (
+              <div
+                key={t.id}
+                className="p-4 rounded-xl border transition-all hover:border-white/20"
+                style={CARD_STYLE_SUBTLE}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <h4 className="text-sm font-semibold text-white">Ticket #{t.id}</h4>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${statusColors[t.status] || statusColors.closed}`}>
+                        {statusLabel[t.status] || t.status}
+                      </span>
+                      {t.category && (
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.04] text-white/60 border border-white/10">
+                          {t.category}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-white/50 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-3 h-3" />
+                        <span>Erstellt: {t.createdAt ? new Date(t.createdAt).toLocaleString('de-DE') : 'Unbekannt'}</span>
+                      </div>
+                      {t.closedAt && (
+                        <div className="flex items-center gap-2">
+                          <X className="w-3 h-3" />
+                          <span>Geschlossen: {new Date(t.closedAt).toLocaleString('de-DE')}</span>
+                        </div>
+                      )}
+                      {t.closedByTag && (
+                        <div className="text-[10px] text-white/40">
+                          Bearbeitet von: {t.closedByTag}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {t.hasTranscript && (
+                    <button
+                      onClick={() => openTranscript(t.id)}
+                      className="px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 text-xs text-white transition-all flex items-center gap-1.5"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      Transkript
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="p-12 rounded-xl border text-center" style={CARD_STYLE_SUBTLE}>
+          <TicketIcon className="w-14 h-14 mx-auto mb-4 text-white/20" />
+          <h3 className="text-base font-semibold text-white mb-2">Keine Tickets</h3>
+          <p className="text-sm text-white/40">
+            Du hast noch keine Support-Tickets auf Discord erstellt.
+          </p>
+        </div>
+      )}
+
+      {/* Transkript Modal */}
+      {selectedTicket && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={closeModal}
+        >
+          <div
+            className="w-full max-w-4xl max-h-[90vh] rounded-2xl border overflow-hidden flex flex-col"
+            style={CARD_STYLE}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-4 border-b border-white/10 flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-white/60" />
+                <h3 className="text-base font-semibold text-white">Ticket Transkript #{selectedTicket}</h3>
+              </div>
+              <button
+                onClick={closeModal}
+                className="p-2 rounded-lg hover:bg-white/[0.06] text-white/60 hover:text-white transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-auto p-4 bg-[#18181b]">
+              {transcriptLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="w-10 h-10 mb-3 text-white/40 animate-spin" />
+                  <p className="text-sm text-white/50">Lade Transkript...</p>
+                </div>
+              ) : transcript?.error ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <AlertCircle className="w-10 h-10 mb-3 text-white/40" />
+                  <p className="text-sm text-white/60 mb-2">{transcript.error}</p>
+                  {transcript.hint && (
+                    <p className="text-xs text-white/40 text-center max-w-md">{transcript.hint}</p>
+                  )}
+                </div>
+              ) : transcript?.transcriptHtml ? (
+                <div className="rounded-xl overflow-hidden border border-white/10">
+                  <iframe
+                    srcDoc={transcript.transcriptHtml}
+                    className="w-full h-[600px] bg-[#18181b]"
+                    title={`Ticket ${selectedTicket}`}
+                    sandbox="allow-same-origin"
+                  />
+                  {transcript.generated && (
+                    <div className="p-2 bg-yellow-500/10 border-t border-yellow-500/20 text-center">
+                      <span className="text-xs text-yellow-400/80">⚠️ Automatisch generiertes Transkript</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-white/40 text-center py-8">Kein Transkript vorhanden.</p>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

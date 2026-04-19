@@ -2494,6 +2494,18 @@ export async function GET(request) {
   if (p === 'hh/my-profile') {
     return handleHHMyProfile(request);
   }
+  if (p === 'hh/tickets') {
+    return handleHHTickets(request);
+  }
+  if (p && p.startsWith('hh/tickets/')) {
+    const ticketId = p.replace('hh/tickets/', '').replace('/transcript', '');
+    return handleHHTicketTranscript(request, ticketId);
+  }
+
+  // === Transfer: Empfänger-Suche (Vor-/Nachname) ===
+  if (p === 'transfer/search-recipients') {
+    return handleSearchRecipients(request);
+  }
 
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
 }
@@ -4889,6 +4901,252 @@ async function handleHHMyProfile(request) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
+
+// =============================================================
+// ===== TRANSFER: Empfänger-Suche nach Vor-/Nachname =====
+// =============================================================
+async function handleSearchRecipients(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+
+    const url = new URL(request.url);
+    const q = (url.searchParams.get('q') || '').toLowerCase().trim();
+    if (q.length < 2) {
+      return NextResponse.json({ success: true, results: [] });
+    }
+
+    const [all, members] = await Promise.all([
+      _loadAllUserData(),
+      _loadDiscordMembers()
+    ]);
+
+    const results = [];
+    for (const row of all) {
+      // Sich selbst ausschließen
+      if (row.discord_user_id === user.id) continue;
+
+      const c = row.data?.character;
+      if (!c) continue;
+      const vorname = (c.vorname || '').toLowerCase();
+      const nachname = (c.nachname || '').toLowerCase();
+      const fullName = (c.name || (vorname && nachname ? `${vorname} ${nachname}` : '') || '').toLowerCase();
+
+      // Match-Logik: q kann "Vorname", "Nachname" oder "Vorname Nachname" sein
+      const parts = q.split(/\s+/).filter(Boolean);
+      let matches = false;
+      if (parts.length === 1) {
+        matches = vorname.includes(parts[0]) || nachname.includes(parts[0]) || fullName.includes(parts[0]);
+      } else {
+        // Mehrere Teile: alle müssen irgendwo matchen
+        matches = parts.every(p =>
+          vorname.includes(p) || nachname.includes(p) || fullName.includes(p)
+        );
+      }
+      if (!matches) continue;
+
+      // Kontonummer ermitteln
+      const cards = row.data?.cards || [];
+      const card = Array.isArray(cards) ? cards[0] : null;
+      const accountNumber = card?.accountNumber;
+      if (!accountNumber) continue; // Kein Konto → kann nicht überwiesen werden
+
+      const m = members[row.discord_user_id] || null;
+      results.push({
+        discord_user_id: row.discord_user_id,
+        characterName: c.name || `${c.vorname || ''} ${c.nachname || ''}`.trim(),
+        vorname: c.vorname || null,
+        nachname: c.nachname || null,
+        accountNumber,
+        bankId: card?.bankId || null,
+        avatar: m?.avatar || null,
+        discordUsername: m?.username || null,
+        faction: c.faction || null,
+      });
+
+      if (results.length >= 20) break;
+    }
+
+    return NextResponse.json({ success: true, results });
+  } catch (e) {
+    console.error('[Transfer-Search] Error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+// =============================================================
+// ===== HAMBURG HORIZON: Tickets + Transcripts =====
+// =============================================================
+// GET /api/hh/tickets  → Liste aller eigenen Tickets
+async function handleHHTickets(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+
+    const { data, error } = await supabaseAdmin
+      .from('user_data')
+      .select('data')
+      .eq('discord_user_id', user.id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('[HH-Tickets] DB error:', error);
+      return NextResponse.json({ error: 'Fehler beim Laden' }, { status: 500 });
+    }
+
+    let parsed = data?.data || {};
+    if (typeof parsed === 'string') {
+      try { parsed = JSON.parse(parsed); } catch { parsed = {}; }
+    }
+
+    const ticketsObj = parsed.tickets || {};
+    // tickets kann Array oder Object sein
+    const ticketsArr = Array.isArray(ticketsObj)
+      ? ticketsObj
+      : Object.values(ticketsObj);
+
+    const tickets = ticketsArr
+      .filter(t => t && t.id)
+      .map(t => ({
+        id: t.id,
+        type: t.type || 'Support',
+        category: t.category || null,
+        status: t.status || 'open',
+        createdAt: t.createdAt || null,
+        closedAt: t.closedAt || null,
+        closedByTag: t.closedByTag || null,
+        claimedBy: t.claimedBy || null,
+        hasTranscript: Boolean(t.transcriptHtml) || Boolean(t.transcriptPath),
+        messagesCount: Array.isArray(t.messages) ? t.messages.length : 0,
+      }))
+      .sort((a, b) => {
+        const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return tb - ta;
+      });
+
+    const stats = {
+      total: tickets.length,
+      open: tickets.filter(t => t.status === 'open' || t.status === 'claimed').length,
+      closed: tickets.filter(t => t.status === 'closed').length,
+      withTranscript: tickets.filter(t => t.hasTranscript).length,
+    };
+
+    return NextResponse.json({ success: true, stats, tickets });
+  } catch (e) {
+    console.error('[HH-Tickets] Error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+// GET /api/hh/tickets/:id/transcript  → HTML-Vorschau
+async function handleHHTicketTranscript(request, ticketId) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    if (!ticketId) return NextResponse.json({ error: 'Ticket-ID fehlt' }, { status: 400 });
+
+    const { data, error } = await supabaseAdmin
+      .from('user_data')
+      .select('data')
+      .eq('discord_user_id', user.id)
+      .single();
+
+    if (error || !data) {
+      return NextResponse.json({ error: 'Ticket nicht gefunden' }, { status: 404 });
+    }
+    let parsed = data.data;
+    if (typeof parsed === 'string') {
+      try { parsed = JSON.parse(parsed); } catch { parsed = {}; }
+    }
+
+    const ticketsObj = parsed?.tickets || {};
+    const ticketsArr = Array.isArray(ticketsObj) ? ticketsObj : Object.values(ticketsObj);
+    const ticket = ticketsArr.find(t => t && t.id === ticketId);
+
+    if (!ticket) {
+      return NextResponse.json({ error: 'Ticket gehört nicht dir oder existiert nicht' }, { status: 404 });
+    }
+
+    if (ticket.transcriptHtml) {
+      return NextResponse.json({
+        success: true,
+        id: ticket.id,
+        type: ticket.type || 'Support',
+        status: ticket.status,
+        createdAt: ticket.createdAt,
+        closedAt: ticket.closedAt,
+        transcriptHtml: ticket.transcriptHtml
+      });
+    }
+
+    // Fallback: Wenn keine HTML vorhanden, aus messages eine einfache HTML generieren
+    if (Array.isArray(ticket.messages) && ticket.messages.length > 0) {
+      const html = _buildFallbackTranscript(ticket);
+      return NextResponse.json({
+        success: true,
+        id: ticket.id,
+        type: ticket.type || 'Support',
+        status: ticket.status,
+        createdAt: ticket.createdAt,
+        closedAt: ticket.closedAt,
+        transcriptHtml: html,
+        generated: true
+      });
+    }
+
+    return NextResponse.json({
+      error: 'Kein Transkript verfügbar',
+      hint: 'Der Bot muss das Transkript beim Schließen in user_data.tickets[id].transcriptHtml speichern.'
+    }, { status: 404 });
+  } catch (e) {
+    console.error('[HH-Ticket-Transcript] Error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+function _escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function _buildFallbackTranscript(ticket) {
+  const msgs = (ticket.messages || []).map(m => {
+    const ts = m.createdAt ? new Date(m.createdAt).toLocaleString('de-DE') : '';
+    return `
+      <div class="hh-msg">
+        <div class="hh-msg-meta">
+          <span class="hh-author">${_escapeHtml(m.authorTag || m.author || 'Unbekannt')}</span>
+          <span class="hh-time">${_escapeHtml(ts)}</span>
+        </div>
+        <div class="hh-content">${_escapeHtml(m.content || '')}</div>
+      </div>`;
+  }).join('');
+
+  return `
+<!DOCTYPE html>
+<html lang="de"><head>
+<meta charset="UTF-8">
+<title>Ticket ${_escapeHtml(ticket.id)}</title>
+<style>
+  body { font-family: -apple-system, Segoe UI, sans-serif; background: #18181b; color: #e4e4e7; padding: 20px; margin:0; }
+  .hh-msg { padding: 12px; background: #27272a; border-radius: 8px; margin-bottom: 8px; }
+  .hh-msg-meta { display: flex; gap: 12px; font-size: 12px; color: #a1a1aa; margin-bottom: 6px; }
+  .hh-author { font-weight: 600; color: #fafafa; }
+  .hh-content { white-space: pre-wrap; font-size: 14px; }
+  h1 { font-size: 18px; border-bottom: 1px solid #3f3f46; padding-bottom: 10px; }
+</style></head><body>
+<h1>Ticket #${_escapeHtml(ticket.id)} – ${_escapeHtml(ticket.type || 'Support')}</h1>
+<p style="color:#a1a1aa; font-size:13px;">Erstellt: ${_escapeHtml(ticket.createdAt ? new Date(ticket.createdAt).toLocaleString('de-DE') : '?')}
+${ticket.closedAt ? ` • Geschlossen: ${_escapeHtml(new Date(ticket.closedAt).toLocaleString('de-DE'))}` : ''}</p>
+${msgs || '<p style="color:#71717a">Keine Nachrichten gespeichert.</p>'}
+</body></html>`;
+}
+
 
 
 

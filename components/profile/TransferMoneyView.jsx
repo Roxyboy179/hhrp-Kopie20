@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Send, ArrowRight, AlertCircle, CheckCircle2, Loader2, Calculator } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Send, ArrowRight, AlertCircle, CheckCircle2, Loader2, Calculator, Search, User as UserIcon, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,25 +27,62 @@ export function TransferMoneyView({ userData, onTransferComplete }) {
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // === Empfänger-Suche State ===
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [selectedRecipient, setSelectedRecipient] = useState(null);
+  const searchTimerRef = useRef(null);
+
+  // Debounced Suche
+  useEffect(() => {
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    if (!searchQuery || searchQuery.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const r = await fetch(`/api/transfer/search-recipients?q=${encodeURIComponent(searchQuery)}`, { cache: 'no-store' });
+        const j = await r.json();
+        setSearchResults(j.results || []);
+      } catch (e) {
+        console.error('Empfänger-Suche fehlgeschlagen:', e);
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 250);
+    return () => clearTimeout(searchTimerRef.current);
+  }, [searchQuery]);
+
+  const selectRecipient = (rec) => {
+    setSelectedRecipient(rec);
+    setKontonummer(rec.accountNumber);
+    setSearchQuery('');
+    setSearchResults([]);
+    setSearchFocused(false);
+  };
+
+  const clearRecipient = () => {
+    setSelectedRecipient(null);
+    setKontonummer('');
+  };
+
   // Bank und VIP Status aus userData
-  console.log('[TRANSFER DEBUG] userData:', userData);
-  
   // Kontonummer und Bank-Info aus cards
   const userCard = userData?.cards?.[0] || {};
-  console.log('[TRANSFER DEBUG] userCard:', userCard);
-  console.log('[TRANSFER DEBUG] userCard keys:', Object.keys(userCard));
-  
+
   // Die Kontonummer heißt 'accountNumber', nicht 'cardNumber'!
   const senderAccountNumber = userCard.accountNumber || null;
   const bankId = userCard.bankId || 'hamburg_horizon';
   const bank = BANKS[bankId] || BANKS['hamburg_horizon'];
-  
-  console.log('[TRANSFER DEBUG] senderAccountNumber:', senderAccountNumber);
-  console.log('[TRANSFER DEBUG] bankId:', bankId);
-  
+
   // VIP Status aus licenses Array ermitteln
   const licenses = userData?.licenses || [];
-  
+
   // Hilfsfunktion: Prüfe ob User eine Lizenz hat (unterstützt String und Object Format)
   const hasLicense = (licenseId) => {
     if (!licenseId) return false;
@@ -221,20 +258,161 @@ export function TransferMoneyView({ userData, onTransferComplete }) {
 
       {/* Transfer Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Kontonummer */}
+        {/* Empfänger-Suche */}
         <div>
-          <Label className="text-white/70 mb-2 block">Empfänger Kontonummer</Label>
-          <Input
-            type="text"
-            value={kontonummer}
-            onChange={(e) => setKontonummer(e.target.value.replace(/\D/g, '').slice(0, 9))}
-            placeholder="123456789"
-            maxLength={9}
-            className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/25 h-12 text-lg"
-            required
-          />
-          <p className="text-xs text-white/40 mt-1">9-stellige Kontonummer des Empfängers</p>
+          <Label className="text-white/70 mb-2 block">Empfänger suchen</Label>
+          <div className="relative">
+            {selectedRecipient ? (
+              // Ausgewählter Empfänger - Chip-Ansicht
+              <div
+                className="flex items-center gap-3 p-3 rounded-lg border transition-all"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))',
+                  borderColor: 'rgba(255, 255, 255, 0.15)'
+                }}
+              >
+                {selectedRecipient.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={selectedRecipient.avatar}
+                    alt={selectedRecipient.characterName}
+                    className="w-10 h-10 rounded-full border border-white/10"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full bg-white/[0.06] border border-white/10 flex items-center justify-center text-sm font-semibold text-white/80">
+                    {(selectedRecipient.characterName || '?').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-white truncate">
+                    {selectedRecipient.characterName}
+                  </div>
+                  <div className="text-xs text-white/50 truncate flex items-center gap-2">
+                    <span className="font-mono">Kto: {selectedRecipient.accountNumber}</span>
+                    {selectedRecipient.discordUsername && <span>• @{selectedRecipient.discordUsername}</span>}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={clearRecipient}
+                  className="p-1.5 rounded-lg hover:bg-white/[0.08] text-white/60 hover:text-white transition-colors flex-shrink-0"
+                  title="Empfänger entfernen"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <Search
+                  className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${searching ? 'text-white/80 animate-pulse' : 'text-white/40'}`}
+                />
+                <Input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
+                  placeholder="Vor- oder Nachname eingeben..."
+                  className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/25 h-12 pl-10 pr-10"
+                />
+                {searching ? (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <span className="w-1 h-1 rounded-full bg-white/60 animate-hh-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1 h-1 rounded-full bg-white/60 animate-hh-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1 h-1 rounded-full bg-white/60 animate-hh-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                ) : searchQuery.length >= 2 && searchResults.length === 0 && !searching ? (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] text-white/50 border border-white/10 font-mono">
+                    0
+                  </span>
+                ) : searchResults.length > 0 ? (
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] px-1.5 py-0.5 rounded bg-white/[0.06] text-white/60 border border-white/10 font-mono">
+                    {searchResults.length}
+                  </span>
+                ) : null}
+              </>
+            )}
+
+            {/* Dropdown */}
+            {!selectedRecipient && searchFocused && searchQuery.length >= 2 && (
+              <div
+                className="absolute left-0 right-0 top-full mt-2 p-2 rounded-lg border shadow-xl z-10 max-h-80 overflow-y-auto hh-scroll"
+                style={{
+                  background: 'rgba(24, 24, 27, 0.98)',
+                  backdropFilter: 'blur(12px)',
+                  borderColor: 'rgba(255, 255, 255, 0.1)'
+                }}
+              >
+                {searching && searchResults.length === 0 ? (
+                  <div className="py-4 text-center text-sm text-white/50">Suche läuft...</div>
+                ) : searchResults.length > 0 ? (
+                  <div className="space-y-1">
+                    {searchResults.map((r, i) => (
+                      <button
+                        key={r.discord_user_id}
+                        type="button"
+                        onClick={() => selectRecipient(r)}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-left hover:bg-white/[0.06] transition-all animate-hh-slide-in opacity-0"
+                        style={{
+                          animationDelay: `${Math.min(i * 30, 350)}ms`,
+                          animationFillMode: 'forwards'
+                        }}
+                      >
+                        {r.avatar ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={r.avatar}
+                            alt={r.characterName}
+                            className="w-9 h-9 rounded-full border border-white/10 flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-white/[0.06] border border-white/10 flex items-center justify-center text-sm font-semibold text-white/80 flex-shrink-0">
+                            {(r.characterName || '?').charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-white truncate">
+                            {r.characterName}
+                          </div>
+                          <div className="text-xs text-white/50 truncate flex items-center gap-2">
+                            <span className="font-mono">Kto {r.accountNumber}</span>
+                            {r.faction && <span>• {r.faction}</span>}
+                          </div>
+                        </div>
+                        <ArrowRight className="w-4 h-4 text-white/30 flex-shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-6 text-center">
+                    <UserIcon className="w-8 h-8 mx-auto mb-2 text-white/20" />
+                    <p className="text-sm text-white/60">Keine Treffer</p>
+                    <p className="text-xs text-white/40 mt-0.5">Für &quot;{searchQuery}&quot; wurde nichts gefunden</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <p className="text-xs text-white/40 mt-1">
+            Nach Vor- und/oder Nachname suchen – die Kontonummer wird automatisch eingefügt.
+          </p>
         </div>
+
+        {/* Kontonummer (Fallback wenn keine Suche) */}
+        {!selectedRecipient && (
+          <div>
+            <Label className="text-white/70 mb-2 block">Oder Kontonummer direkt eingeben</Label>
+            <Input
+              type="text"
+              value={kontonummer}
+              onChange={(e) => setKontonummer(e.target.value.replace(/\D/g, '').slice(0, 9))}
+              placeholder="123456789"
+              maxLength={9}
+              className="bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/25 h-12 text-lg font-mono"
+            />
+            <p className="text-xs text-white/40 mt-1">9-stellige Kontonummer des Empfängers</p>
+          </div>
+        )}
 
         {/* Betrag */}
         <div>
