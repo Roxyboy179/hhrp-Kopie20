@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import webpush from 'web-push';
 import { supabaseAdmin } from '@/lib/supabase';
 import { readStats, writeStats, incrementStat } from '@/lib/stats-file';
-import { SHOP_ITEMS, CREDIT_PURCHASE_OPTIONS, BANK_LIMIT_UPGRADES } from '@/lib/shop-data';
+import { SHOP_ITEMS, CREDIT_PURCHASE_OPTIONS, BANK_LIMIT_UPGRADES, CREDIT_SPEND_ITEMS, CREDIT_CRATES } from '@/lib/shop-data';
 import { 
   createBewerbung, 
   getUserBewerbungen, 
@@ -2777,6 +2777,8 @@ export async function POST(request) {
     case 'shop/purchase': return handleShopPurchase(request);
     case 'shop/purchase-credits': return handlePurchaseCredits(request);
     case 'shop/upgrade-bank-limit': return handleUpgradeBankLimit(request);
+    case 'shop/spend-credits': return handleSpendCredits(request);
+    case 'shop/open-crate': return handleOpenCrate(request);
     case 'shop/check-recipient': 
       console.log('[DEBUG] check-recipient route hit!');
       return handleCheckRecipient(request);
@@ -3967,7 +3969,18 @@ async function handleGetShopItems(request) {
       success: true,
       items: SHOP_ITEMS,
       creditOptions: CREDIT_PURCHASE_OPTIONS,
-      bankLimitUpgrades: BANK_LIMIT_UPGRADES
+      bankLimitUpgrades: BANK_LIMIT_UPGRADES,
+      creditSpendItems: CREDIT_SPEND_ITEMS,
+      creditCrates: Object.values(CREDIT_CRATES).map(c => ({
+        id: c.id,
+        name: c.name,
+        emoji: c.emoji,
+        creditCost: c.creditCost,
+        color: c.color,
+        maxPayout: c.maxPayout,
+        description: c.description
+        // rewards absichtlich NICHT exponiert (Anti-Abuse / Spannung)
+      }))
     });
   } catch (e) {
     console.error('Get shop items error:', e);
@@ -4208,6 +4221,173 @@ async function handleUpgradeBankLimit(request) {
 
   } catch (e) {
     console.error('Upgrade bank limit error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+// POST /api/shop/spend-credits - Credit-Extra kaufen (Custom Kontonummer, Boosts, etc.)
+async function handleSpendCredits(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const { itemId, customValue } = body || {};
+
+    const item = CREDIT_SPEND_ITEMS.find(i => i.id === itemId);
+    if (!item) {
+      return NextResponse.json({ error: 'Extra nicht gefunden' }, { status: 400 });
+    }
+
+    // Hole User Data
+    const { data: userData, error: fetchError } = await supabaseAdmin
+      .from('user_data')
+      .select('*')
+      .eq('discord_user_id', user.id)
+      .single();
+
+    if (fetchError || !userData) {
+      return NextResponse.json({ error: 'User nicht gefunden' }, { status: 404 });
+    }
+
+    const userDataObj = typeof userData.data === 'string' ? JSON.parse(userData.data) : userData.data;
+    const currentCredits = userDataObj?.credits || 0;
+
+    if (currentCredits < item.creditCost) {
+      return NextResponse.json({
+        error: 'Nicht genug Credits',
+        required: item.creditCost,
+        current: currentCredits
+      }, { status: 400 });
+    }
+
+    // Extra-Validierung: Custom Kontonummer braucht zusätzlichen Wert
+    const meta = {};
+    if (item.id === 'custom_kontonummer') {
+      const nr = String(customValue || '').trim();
+      if (!/^[0-9]{9}$/.test(nr)) {
+        return NextResponse.json({
+          error: 'Kontonummer ungültig – bitte genau 9 Ziffern angeben'
+        }, { status: 400 });
+      }
+      meta.customKontonummer = nr;
+    } else if (item.id === 'exklusiver_titel') {
+      const t = String(customValue || '').trim();
+      if (t.length < 2 || t.length > 20) {
+        return NextResponse.json({
+          error: 'Titel muss 2–20 Zeichen lang sein'
+        }, { status: 400 });
+      }
+      meta.customTitle = t;
+    }
+
+    const { data: purchase, error: insertError } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .insert({
+        buyer_discord_id: user.id,
+        item_id: `spend_${item.id}`,
+        item_name: item.label,
+        item_category: 'credit_spend',
+        price: 0, // Kosten in Credits
+        status: 'pending',
+        initiated_from: 'website',
+        metadata: Object.keys(meta).length ? meta : null
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      return NextResponse.json({ error: 'Fehler beim Erstellen des Kaufs' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `${item.label} wird aktiviert...`,
+      purchase: {
+        id: purchase.id,
+        item: item.label,
+        creditCost: item.creditCost,
+        status: 'pending'
+      }
+    });
+  } catch (e) {
+    console.error('Spend credits error:', e);
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+  }
+}
+
+// POST /api/shop/open-crate - Mystery Box öffnen (Credits abgezogen, Gewinn vom Bot gerollt)
+async function handleOpenCrate(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const { crateId } = body || {};
+
+    const crate = CREDIT_CRATES[crateId];
+    if (!crate) {
+      return NextResponse.json({ error: 'Box nicht gefunden' }, { status: 400 });
+    }
+
+    // Hole User Data
+    const { data: userData, error: fetchError } = await supabaseAdmin
+      .from('user_data')
+      .select('*')
+      .eq('discord_user_id', user.id)
+      .single();
+
+    if (fetchError || !userData) {
+      return NextResponse.json({ error: 'User nicht gefunden' }, { status: 404 });
+    }
+
+    const userDataObj = typeof userData.data === 'string' ? JSON.parse(userData.data) : userData.data;
+    const currentCredits = userDataObj?.credits || 0;
+
+    if (currentCredits < crate.creditCost) {
+      return NextResponse.json({
+        error: 'Nicht genug Credits',
+        required: crate.creditCost,
+        current: currentCredits
+      }, { status: 400 });
+    }
+
+    const { data: purchase, error: insertError } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .insert({
+        buyer_discord_id: user.id,
+        item_id: `crate_${crate.id}`,
+        item_name: crate.name,
+        item_category: 'mystery_box',
+        price: 0, // Kosten in Credits
+        status: 'pending',
+        initiated_from: 'website'
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      return NextResponse.json({ error: 'Fehler beim Öffnen der Box' }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `${crate.name} wird geöffnet...`,
+      purchase: {
+        id: purchase.id,
+        crate: crate.name,
+        creditCost: crate.creditCost,
+        status: 'pending'
+      }
+    });
+  } catch (e) {
+    console.error('Open crate error:', e);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
@@ -5245,7 +5425,3 @@ ${ticket.closedAt ? ` • Geschlossen: ${_escapeHtml(new Date(ticket.closedAt).t
 ${msgs || '<p style="color:#71717a">Keine Nachrichten gespeichert.</p>'}
 </body></html>`;
 }
-
-
-
-

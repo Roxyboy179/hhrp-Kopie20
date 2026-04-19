@@ -16,9 +16,14 @@ export function ShopView({ user, userData, onRefresh }) {
   const [shopItems, setShopItems] = useState({});
   const [creditOptions, setCreditOptions] = useState([]);
   const [bankLimitUpgrades, setBankLimitUpgrades] = useState([]);
+  const [creditSpendItems, setCreditSpendItems] = useState([]);
+  const [creditCrates, setCreditCrates] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
+
+  // Modal state für Credit-Spend mit Custom Input (Kontonummer / Titel)
+  const [spendModal, setSpendModal] = useState(null); // {item, value}
   
   // Warenkorb State
   const [cart, setCart] = useState([]);
@@ -90,7 +95,9 @@ export function ShopView({ user, userData, onRefresh }) {
 
   const specialCategories = {
     'credits': { name: 'Credits kaufen', icon: CreditCard },
-    'bank_limit': { name: 'Bank Limit', icon: TrendingUp }
+    'bank_limit': { name: 'Bank Limit', icon: TrendingUp },
+    'credit_spend': { name: 'Credits-Extras', icon: Sparkles },
+    'mystery_box': { name: 'Mystery Boxes', icon: ShoppingBag }
   };
 
   useEffect(() => {
@@ -105,12 +112,64 @@ export function ShopView({ user, userData, onRefresh }) {
         setShopItems(data.items);
         setCreditOptions(data.creditOptions);
         setBankLimitUpgrades(data.bankLimitUpgrades);
+        setCreditSpendItems(data.creditSpendItems || []);
+        setCreditCrates(data.creditCrates || []);
       }
     } catch (e) {
       console.error('Load shop error:', e);
       toast.error('Fehler beim Laden des Shops');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Credit-Extra kaufen (Boost / Custom Kontonummer / Glücksrad etc.)
+  const handleSpendCredit = async (item, customValue = null) => {
+    if (purchasing) return;
+    setPurchasing(true);
+    try {
+      const res = await fetch('/api/shop/spend-credits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId: item.id, customValue }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Kauf fehlgeschlagen');
+      } else {
+        toast.success(`${item.label} wird aktiviert!`);
+        setSpendModal(null);
+        onRefresh?.();
+      }
+    } catch (e) {
+      toast.error('Netzwerkfehler');
+    } finally {
+      setPurchasing(false);
+    }
+  };
+
+  // Mystery Box öffnen
+  const handleOpenCrate = async (crate) => {
+    if (purchasing) return;
+    if (!confirm(`${crate.name} für ${crate.creditCost} Credits öffnen?`)) return;
+    setPurchasing(true);
+    try {
+      const res = await fetch('/api/shop/open-crate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ crateId: crate.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Box konnte nicht geöffnet werden');
+      } else {
+        toast.success(`${crate.name} geöffnet – das Ergebnis siehst du gleich auf deinem Konto!`);
+        onRefresh?.();
+      }
+    } catch (e) {
+      toast.error('Netzwerkfehler');
+    } finally {
+      setPurchasing(false);
     }
   };
 
@@ -650,8 +709,118 @@ export function ShopView({ user, userData, onRefresh }) {
         </div>
       )}
 
+      {/* Credits-Extras (Spend Credits) */}
+      {selectedCategory === 'credit_spend' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {creditSpendItems.map((item) => {
+            const needsInput = item.id === 'custom_kontonummer' || item.id === 'exklusiver_titel';
+            const canAfford = userCredits >= item.creditCost;
+            return (
+              <div
+                key={item.id}
+                className="p-4 rounded-xl border flex flex-col"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
+                  borderColor: 'rgba(255, 255, 255, 0.08)'
+                }}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{item.emoji}</span>
+                    <h3 className="font-semibold text-white">{item.label}</h3>
+                  </div>
+                  {item.group && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-white/50 uppercase tracking-wider">
+                      {item.group}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-white/60 mb-3 flex-1">{item.description}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-white/80 text-sm font-medium flex items-center gap-1">
+                    <Coins className="w-3.5 h-3.5 text-yellow-400" />
+                    {item.creditCost.toLocaleString('de-DE')} Credits
+                  </span>
+                  <Button
+                    onClick={() => needsInput
+                      ? setSpendModal({ item, value: '' })
+                      : handleSpendCredit(item)}
+                    disabled={purchasing || !canAfford}
+                    size="sm"
+                    className="rounded-lg"
+                    style={{
+                      background: canAfford
+                        ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))'
+                        : 'rgba(255,255,255,0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      color: '#fff'
+                    }}
+                  >
+                    <Sparkles className="w-4 h-4 mr-1" />
+                    {canAfford ? 'Aktivieren' : 'Zu wenig'}
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Mystery Boxes */}
+      {selectedCategory === 'mystery_box' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {creditCrates.map((crate) => {
+            const canAfford = userCredits >= crate.creditCost;
+            return (
+              <div
+                key={crate.id}
+                className="p-5 rounded-xl border relative overflow-hidden flex flex-col"
+                style={{
+                  background: `linear-gradient(135deg, ${crate.color}22, rgba(255,255,255,0.02))`,
+                  borderColor: `${crate.color}55`
+                }}
+              >
+                <div className="text-center mb-3">
+                  <div className="text-5xl mb-2">{crate.emoji}</div>
+                  <h3 className="font-bold text-white text-lg">{crate.name}</h3>
+                </div>
+                <p className="text-xs text-white/60 text-center mb-3">{crate.description}</p>
+                <div className="mb-3 p-2 rounded-lg bg-white/[0.04] border border-white/10 text-center">
+                  <div className="text-[10px] uppercase tracking-wider text-white/40 mb-1">Max-Gewinn</div>
+                  <div className="text-sm text-white font-semibold">
+                    {crate.maxPayout.toLocaleString('de-DE')}€
+                  </div>
+                </div>
+                <div className="mt-auto flex items-center justify-between gap-2">
+                  <span className="text-white/80 text-sm font-medium flex items-center gap-1">
+                    <Coins className="w-3.5 h-3.5 text-yellow-400" />
+                    {crate.creditCost.toLocaleString('de-DE')}
+                  </span>
+                  <Button
+                    onClick={() => handleOpenCrate(crate)}
+                    disabled={purchasing || !canAfford}
+                    size="sm"
+                    className="rounded-lg"
+                    style={{
+                      background: canAfford
+                        ? `linear-gradient(135deg, ${crate.color}44, ${crate.color}22)`
+                        : 'rgba(255,255,255,0.05)',
+                      border: `1px solid ${crate.color}77`,
+                      color: '#fff'
+                    }}
+                  >
+                    <ShoppingBag className="w-4 h-4 mr-1" />
+                    Öffnen
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       {/* Shop Items */}
-      {selectedCategory !== 'credits' && selectedCategory !== 'bank_limit' && (
+      {selectedCategory !== 'credits' && selectedCategory !== 'bank_limit' && selectedCategory !== 'credit_spend' && selectedCategory !== 'mystery_box' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredItems.map(([id, item]) => {
             const ItemIcon = itemIcons[id] || ShoppingBag;
@@ -1178,6 +1347,101 @@ export function ShopView({ user, userData, onRefresh }) {
                   Verschenken aktivieren
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Spend-Credit Modal (Custom Kontonummer / Titel) */}
+      {spendModal && createPortal(
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)' }}
+          onClick={() => !purchasing && setSpendModal(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md rounded-2xl border p-6"
+            style={{
+              background: 'linear-gradient(135deg, #1a1a1a, #0f0f0f)',
+              borderColor: 'rgba(255,255,255,0.1)'
+            }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <span className="text-2xl">{spendModal.item.emoji}</span>
+                {spendModal.item.label}
+              </h3>
+              <button
+                onClick={() => !purchasing && setSpendModal(null)}
+                className="text-white/40 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-sm text-white/60 mb-4">{spendModal.item.description}</p>
+
+            {spendModal.item.id === 'custom_kontonummer' ? (
+              <div className="mb-4">
+                <Label className="text-xs text-white/60 mb-1 block">Neue Kontonummer (9 Ziffern)</Label>
+                <Input
+                  value={spendModal.value}
+                  onChange={(e) => setSpendModal({ ...spendModal, value: e.target.value.replace(/\D/g, '').slice(0, 9) })}
+                  placeholder="123456789"
+                  maxLength={9}
+                  className="bg-white/5 border-white/10 text-white font-mono tracking-wider"
+                />
+                <p className="text-[11px] text-white/40 mt-1">Nur Ziffern, genau 9 Stellen. 48h Cooldown danach.</p>
+              </div>
+            ) : spendModal.item.id === 'exklusiver_titel' ? (
+              <div className="mb-4">
+                <Label className="text-xs text-white/60 mb-1 block">Dein Titel (2–20 Zeichen)</Label>
+                <Input
+                  value={spendModal.value}
+                  onChange={(e) => setSpendModal({ ...spendModal, value: e.target.value.slice(0, 20) })}
+                  placeholder="z.B. Der Boss"
+                  maxLength={20}
+                  className="bg-white/5 border-white/10 text-white"
+                />
+                <p className="text-[11px] text-white/40 mt-1">Wird 30 Tage vor deinem Namen angezeigt.</p>
+              </div>
+            ) : null}
+
+            <div className="flex items-center justify-between p-3 rounded-lg bg-white/[0.04] border border-white/10 mb-4">
+              <span className="text-sm text-white/60">Kosten</span>
+              <span className="text-sm font-semibold text-white flex items-center gap-1">
+                <Coins className="w-4 h-4 text-yellow-400" />
+                {spendModal.item.creditCost.toLocaleString('de-DE')} Credits
+              </span>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setSpendModal(null)}
+                disabled={purchasing}
+                variant="outline"
+                className="flex-1"
+              >
+                Abbrechen
+              </Button>
+              <Button
+                onClick={() => handleSpendCredit(spendModal.item, spendModal.value)}
+                disabled={purchasing || !spendModal.value || (spendModal.item.id === 'custom_kontonummer' && spendModal.value.length !== 9) || (spendModal.item.id === 'exklusiver_titel' && spendModal.value.length < 2)}
+                className="flex-1"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.3), rgba(124, 58, 237, 0.15))',
+                  border: '1px solid rgba(124, 58, 237, 0.5)',
+                  color: '#fff'
+                }}
+              >
+                {purchasing ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4 mr-2" />
+                )}
+                Aktivieren
+              </Button>
             </div>
           </div>
         </div>,
