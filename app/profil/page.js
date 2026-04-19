@@ -1172,27 +1172,27 @@ export default function ProfilPage() {
   }
 
   const avatarUrl = getDiscordAvatarUrl(user, 256);
-  const money = userData?.money || {};
-  const character = userData?.character || {};
+  const money = userData?.data?.money || {};
+  const character = userData?.data?.character || {};
   
   // licenses und cards sind bereits Arrays von der Sync-Funktion
   // WICHTIG: Filtere Credits-Käufe raus (credits_5, credits_25, etc.)
   // Licenses sind jetzt Objekte mit Details (expiresAt, autoRenew, etc.)
-  const licenses = Array.isArray(userData?.licenses) 
-    ? userData.licenses.filter(l => {
+  const licenses = Array.isArray(userData?.data?.licenses) 
+    ? userData.data.licenses.filter(l => {
         if (!l) return false; // Filtere null/undefined raus
         const name = typeof l === 'string' ? l : (l.name || l.id);
         if (!name || typeof name !== 'string') return false; // Sicherheitscheck: name muss String sein!
         return !name.startsWith('credits_') && !name.startsWith('credit_');
       })
     : [];
-  const cards = Array.isArray(userData?.cards) ? userData.cards : [];
-  const stats = userData?.stats || {};
+  const cards = Array.isArray(userData?.data?.cards) ? userData.data.cards : [];
+  const stats = userData?.data?.stats || {};
   
   // Globale Hilfsfunktion für Lizenz-Checks (String und Object Format)
   const userHasLicense = (licenseId) => {
-    if (!userData?.licenses || !licenseId) return false;
-    return userData.licenses.some(l => {
+    if (!licenses || !licenseId) return false;
+    return licenses.some(l => {
       if (!l) return false; // Sicherheitscheck
       if (typeof l === 'string') return l === licenseId;
       if (typeof l === 'object') return (l.name === licenseId || l.id === licenseId);
