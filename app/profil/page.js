@@ -690,10 +690,10 @@ function BankCard({ card, userName, userData }) {
   const bankColor = bankColors[card.bankId] || 'from-blue-500/20 to-cyan-500/20';
   
   // Guthaben aus userData
-  const totalBalance = (userData?.data?.money?.bank || 0) + (userData?.data?.money?.cash || 0) + (userData?.data?.money?.savings || 0);
-  const bankBalance = userData?.data?.money?.bank || 0;
-  const cashBalance = userData?.data?.money?.cash || 0;
-  const savingsBalance = userData?.data?.money?.savings || 0;
+  const totalBalance = (userData?.money?.bank || 0) + (userData?.money?.cash || 0) + (userData?.money?.savings || 0);
+  const bankBalance = userData?.money?.bank || 0;
+  const cashBalance = userData?.money?.cash || 0;
+  const savingsBalance = userData?.money?.savings || 0;
 
   const formatCardNumber = (num) => {
     if (!num) return '••• ••• •••';
@@ -1172,22 +1172,22 @@ export default function ProfilPage() {
   }
 
   const avatarUrl = getDiscordAvatarUrl(user, 256);
-  const money = userData?.data?.money || {};
-  const character = userData?.data?.character || {};
+  const money = userData?.money || {};
+  const character = userData?.character || {};
   
   // licenses und cards sind bereits Arrays von der Sync-Funktion
   // WICHTIG: Filtere Credits-Käufe raus (credits_5, credits_25, etc.)
   // Licenses sind jetzt Objekte mit Details (expiresAt, autoRenew, etc.)
-  const licenses = Array.isArray(userData?.data?.licenses) 
-    ? userData.data.licenses.filter(l => {
+  const licenses = Array.isArray(userData?.licenses) 
+    ? userData.licenses.filter(l => {
         if (!l) return false; // Filtere null/undefined raus
         const name = typeof l === 'string' ? l : (l.name || l.id);
         if (!name || typeof name !== 'string') return false; // Sicherheitscheck: name muss String sein!
         return !name.startsWith('credits_') && !name.startsWith('credit_');
       })
     : [];
-  const cards = Array.isArray(userData?.data?.cards) ? userData.data.cards : [];
-  const stats = userData?.data?.stats || {};
+  const cards = Array.isArray(userData?.cards) ? userData.cards : [];
+  const stats = userData?.stats || {};
   
   // Globale Hilfsfunktion für Lizenz-Checks (String und Object Format)
   const userHasLicense = (licenseId) => {
