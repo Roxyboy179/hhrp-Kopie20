@@ -4419,6 +4419,8 @@ async function handleSpendCredits(request) {
     const meta = { price: dynamicPrice };
     if (item.id === 'custom_kontonummer') {
       meta.customKontonummer = String(customValue).trim();
+    } else if (item.id === 'bank_pin_change') {
+      meta.newPin = String(customValue).trim();
     } else if (item.id === 'exklusiver_titel') {
       const t = String(customValue || '').trim();
       if (t.length < 2 || t.length > 20) {
