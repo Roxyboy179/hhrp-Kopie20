@@ -4045,14 +4045,39 @@ async function handleShopPurchase(request) {
     // VIP-Status prüfen und Rabatt berechnen
     let vipType = null;
     const vipLicenses = userDataObj?.licenses || {};
-    if (vipLicenses['vip_elite_plus'] && new Date(vipLicenses['vip_elite_plus'].expiresAt) > new Date()) {
-      vipType = 'elite_plus';
-    } else if (vipLicenses['vip_ultimate'] && new Date(vipLicenses['vip_ultimate'].expiresAt) > new Date()) {
-      vipType = 'ultimate';
-    } else if (vipLicenses['vip_platinum'] && new Date(vipLicenses['vip_platinum'].expiresAt) > new Date()) {
-      vipType = 'platinum';
-    } else if (vipLicenses['vip_premium'] && new Date(vipLicenses['vip_premium'].expiresAt) > new Date()) {
-      vipType = 'premium';
+    const now = Date.now();
+    
+    console.log('[SHOP] Checking VIP licenses:', Object.keys(vipLicenses));
+    
+    // Prüfe VIP-Status (expiresAt kann 0 sein = unbegrenzt, oder Timestamp)
+    if (vipLicenses['vip_elite_plus']) {
+      const license = vipLicenses['vip_elite_plus'];
+      const expires = license.expiresAt || 0;
+      if (expires === 0 || expires > now) {
+        vipType = 'elite_plus';
+        console.log('[SHOP] VIP Elite Plus erkannt, expiresAt:', expires);
+      }
+    } else if (vipLicenses['vip_ultimate']) {
+      const license = vipLicenses['vip_ultimate'];
+      const expires = license.expiresAt || 0;
+      if (expires === 0 || expires > now) {
+        vipType = 'ultimate';
+        console.log('[SHOP] VIP Ultimate erkannt, expiresAt:', expires);
+      }
+    } else if (vipLicenses['vip_platinum']) {
+      const license = vipLicenses['vip_platinum'];
+      const expires = license.expiresAt || 0;
+      if (expires === 0 || expires > now) {
+        vipType = 'platinum';
+        console.log('[SHOP] VIP Platinum erkannt, expiresAt:', expires);
+      }
+    } else if (vipLicenses['vip_premium']) {
+      const license = vipLicenses['vip_premium'];
+      const expires = license.expiresAt || 0;
+      if (expires === 0 || expires > now) {
+        vipType = 'premium';
+        console.log('[SHOP] VIP Premium erkannt, expiresAt:', expires);
+      }
     }
 
     // VIP-Rabatt nur für Nicht-Credit-Items
@@ -4067,7 +4092,9 @@ async function handleShopPurchase(request) {
     if (vipType && VIP_SHOP_DISCOUNTS[vipType] && item.category !== 'credits') {
       const discount = VIP_SHOP_DISCOUNTS[vipType];
       finalPrice = Math.floor(item.price * (1 - discount));
-      console.log(`[SHOP] VIP ${vipType} Rabatt: ${item.price}€ → ${finalPrice}€ (-${discount * 100}%)`);
+      console.log(`[SHOP] ✅ VIP ${vipType} Rabatt angewendet: ${item.price}€ → ${finalPrice}€ (-${discount * 100}%)`);
+    } else {
+      console.log(`[SHOP] ❌ Kein Rabatt: vipType=${vipType}, category=${item.category}`);
     }
 
     // Prüfe ob genug Geld vorhanden
