@@ -4375,12 +4375,14 @@ async function handleSpendCredits(request) {
           hoursLeft: Math.ceil(left / (60 * 60 * 1000))
         }, { status: 409 });
       }
-      // Custom Input validieren (3-stellig)
-      const newPin = String(customValue || '').trim();
-      if (!/^[0-9]{3}$/.test(newPin)) {
-        return NextResponse.json({
-          error: 'PIN ungültig – bitte genau 3 Ziffern angeben'
-        }, { status: 400 });
+      // Custom Input validieren (3-stellig) - nur wenn customValue vorhanden
+      if (customValue !== null && customValue !== undefined) {
+        const newPin = String(customValue).trim();
+        if (!/^[0-9]{3}$/.test(newPin)) {
+          return NextResponse.json({
+            error: 'Neue PIN ungültig – bitte genau 3 Ziffern angeben'
+          }, { status: 400 });
+        }
       }
     }
 
