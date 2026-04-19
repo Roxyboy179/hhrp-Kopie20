@@ -127,9 +127,9 @@ function BotStatusCard({ status, onRetry }) {
 }
 
 function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   
-  // Hilfsfunktion: Prüfe ob User eine Lizenz hat (unterstützt String und Object Format)
+  // Hilfsfunktion: Prüfe ob User eine Lizenz hat
   const hasLicense = (licenseId) => {
     return licenses.some(l => {
       if (!l) return false;
@@ -157,193 +157,184 @@ function DriversLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
   };
 
   const birthDate = calculateBirthDate(character?.age, userId);
-  const issueDate = new Date(2021, 5, 10);
+  const issueDate = '10.06.2021';
+  const expiryDate = '10.06.2036';
 
   return (
-    <div className="w-full perspective-1000">
+    <div className="w-full max-w-md mx-auto">
+      {/* Moderner Führerschein - Glasmorphism Style */}
       <div 
-        className="relative w-full aspect-[1.586/1] cursor-pointer group"
-        onClick={() => setIsFlipped(!isFlipped)}
+        className="relative p-6 rounded-2xl border overflow-hidden cursor-pointer group transition-all hover:scale-[1.02]"
+        style={{
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
+        }}
+        onClick={() => setShowDetails(true)}
       >
+        {/* Gradient Overlay */}
         <div 
-          className={`relative w-full h-full transition-transform duration-700 transform-style-3d`}
-          style={{
-            transformStyle: 'preserve-3d',
-            transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
-          }}
-        >
-          {/* VORDERSEITE */}
-          <div 
-            className="absolute inset-0 backface-hidden rounded-2xl bg-gradient-to-br from-gray-800 via-gray-900 to-black shadow-2xl overflow-hidden"
-            style={{ backfaceVisibility: 'hidden' }}
-          >
-            {/* Wasserzeichen */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
-              <span className="text-[160px] font-black tracking-wider rotate-[-20deg] select-none">
-                {hasAnyLicense ? 'HHRP' : 'HHRP'}
-              </span>
+          className={`absolute inset-0 bg-gradient-to-br ${hasAnyLicense ? 'from-green-500/20 to-emerald-500/20' : 'from-gray-500/20 to-gray-600/20'} opacity-40`}
+          style={{ mixBlendMode: 'overlay' }}
+        />
+        
+        {/* Card Content */}
+        <div className="relative z-10">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <p className="text-xs text-white/50 uppercase tracking-wider">Bundesrepublik HHRP</p>
+              <p className="text-sm font-bold text-white">FÜHRERSCHEIN</p>
             </div>
-
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-gray-700/20 rounded-full translate-y-24 -translate-x-24"></div>
-
-            <div className="relative h-full p-4 sm:p-6 flex flex-col text-white">
-              {/* Header */}
-              <div className="flex items-start justify-between mb-3 sm:mb-4">
-                <div>
-                  <p className="text-[8px] sm:text-[10px] uppercase tracking-widest opacity-70 mb-1">Bundesrepublik HHRP</p>
-                  <h2 className="text-sm sm:text-base font-bold">FÜHRERSCHEIN</h2>
-                </div>
-                <img src="/icon-192.png" alt="HHRP" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg" />
-              </div>
-
-              {hasAnyLicense ? (
-                <>
-                  {/* Foto & Info */}
-                  <div className="flex gap-3 sm:gap-4 flex-1">
-                    <div className="w-16 h-20 sm:w-20 sm:h-24 bg-gray-700 rounded overflow-hidden flex-shrink-0 border-2 border-gray-600">
-                      {avatarUrl ? (
-                        <img src={avatarUrl} alt="Photo" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gray-600 flex items-center justify-center">
-                          <User className="w-10 h-10 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1 space-y-2 text-xs">
-                      <div>
-                        <p className="text-[10px] opacity-60 uppercase">Nachname</p>
-                        <p className="font-semibold text-xs">{character?.nachname || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] opacity-60 uppercase">Vorname</p>
-                        <p className="font-semibold text-xs">{character?.vorname || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] opacity-60 uppercase">Geburtsdatum</p>
-                        <p className="font-semibold text-xs">{birthDate}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Führerschein-Klassen */}
-                  <div className="pt-3 border-t border-white/20 mt-auto">
-                    <p className="text-[10px] opacity-70 uppercase mb-2">Klassen</p>
-                    <div className="flex gap-2 flex-wrap">
-                      {hasPKW && (
-                        <span className="px-2.5 py-1 bg-white/20 rounded text-[10px] font-bold">B (PKW)</span>
-                      )}
-                      {hasMotorrad && (
-                        <span className="px-2.5 py-1 bg-white/20 rounded text-[10px] font-bold">A (Motorrad)</span>
-                      )}
-                      {hasLKW && (
-                        <span className="px-2.5 py-1 bg-white/20 rounded text-[10px] font-bold">C (LKW)</span>
-                      )}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-                  <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-3">
-                    <svg className="w-8 h-8 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </div>
-                  <p className="text-xs font-semibold mb-1">Kein Führerschein</p>
-                  <p className="text-[10px] opacity-60">Nicht im Besitz</p>
-                </div>
-              )}
-
-              {/* Footer */}
-              <div className="flex items-center justify-between pt-3 border-t border-white/20 mt-auto">
-                <div className="text-[10px] opacity-70">
-                  {hasAnyLicense ? (
-                    <><span className="font-semibold">Erstellt am:</span> {issueDate.toLocaleDateString('de-DE')}</>
-                  ) : (
-                    <span className="opacity-50">Keine Lizenz vorhanden</span>
-                  )}
-                </div>
-                <div className="text-[10px] opacity-40">
-                  Klicken zum Umdrehen
-                </div>
-              </div>
-            </div>
+            <div className="text-2xl">🚗</div>
           </div>
 
-          {/* RÜCKSEITE */}
-          <div 
-            className="absolute inset-0 backface-hidden rounded-2xl bg-gradient-to-br from-gray-800 via-gray-900 to-black shadow-2xl overflow-hidden"
-            style={{ 
-              backfaceVisibility: 'hidden',
-              transform: 'rotateY(180deg)'
-            }}
-          >
-            <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
-              <span className="text-[160px] font-black tracking-wider rotate-[20deg] select-none">
-                HHRP
-              </span>
+          {hasAnyLicense ? (
+            <>
+              {/* Main Info */}
+              <div className="flex gap-4 mb-6">
+                {/* Avatar */}
+                <div className="w-16 h-20 rounded-lg overflow-hidden border-2 border-white/20 flex-shrink-0">
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={avatarUrl} alt="Photo" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-white/10 flex items-center justify-center">
+                      <User className="w-8 h-8 text-white/40" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 space-y-2">
+                  <div>
+                    <p className="text-[10px] text-white/50 uppercase">Name</p>
+                    <p className="text-base font-bold text-white">{character?.vorname} {character?.nachname}</p>
+                  </div>
+                  <div className="text-xs">
+                    <p className="text-[10px] text-white/50">Geboren</p>
+                    <p className="text-white font-medium">{birthDate}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Klassen */}
+              <div className="space-y-2">
+                <p className="text-xs text-white/50 uppercase">Klassen</p>
+                <div className="flex flex-wrap gap-2">
+                  {hasPKW && (
+                    <div className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20">
+                      <span className="text-sm font-bold text-white">B</span>
+                      <span className="text-[10px] text-white/50 ml-1">PKW</span>
+                    </div>
+                  )}
+                  {hasMotorrad && (
+                    <div className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20">
+                      <span className="text-sm font-bold text-white">A</span>
+                      <span className="text-[10px] text-white/50 ml-1">Motorrad</span>
+                    </div>
+                  )}
+                  {hasLKW && (
+                    <div className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20">
+                      <span className="text-sm font-bold text-white">C</span>
+                      <span className="text-[10px] text-white/50 ml-1">LKW</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-white/60 text-sm mb-2">Kein Führerschein</p>
+              <p className="text-white/40 text-xs">Erwerbe einen im Discord Bot</p>
             </div>
+          )}
 
-            <div className="relative h-full p-4 sm:p-6 flex flex-col justify-between text-white">
-              {hasAnyLicense ? (
-                <>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-[10px] opacity-60 uppercase mb-2">Führerschein-Nummer</p>
-                      <p className="text-sm font-mono font-bold tracking-wider">{userId?.slice(0, 12) || 'N/A'}</p>
-                    </div>
+          {/* Hint */}
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <p className="text-[10px] text-white/40 text-center">
+              {hasAnyLicense ? `Klicke für Details • Gültig bis ${expiryDate}` : 'Keine Fahrerlaubnis vorhanden'}
+            </p>
+          </div>
+        </div>
 
-                    <div>
-                      <p className="text-[10px] opacity-60 uppercase mb-2">Ausgestellt am</p>
-                      <p className="font-semibold text-xs">{issueDate.toLocaleDateString('de-DE')}</p>
-                    </div>
+        {/* Chip Decoration */}
+        <div 
+          className="absolute bottom-4 right-4 w-12 h-12 rounded-lg opacity-20 pointer-events-none"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1))',
+            border: '1px solid rgba(255, 255, 255, 0.3)'
+          }}
+        />
 
-                    <div>
-                      <p className="text-[10px] opacity-60 uppercase mb-2">Ausstellende Behörde</p>
-                      <p className="text-xs font-semibold">Hamburg Horizon RP</p>
-                      <p className="text-[10px] opacity-50">Straßenverkehrsamt Hamburg</p>
-                    </div>
+        {/* Hover Effect */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl" style={{ background: 'rgba(255, 255, 255, 0.02)' }} />
+      </div>
 
-                    <div className="pt-3 border-t border-white/20">
-                      <p className="text-xs text-green-400 font-semibold flex items-center gap-2">
-                        <Check className="w-4 h-4" />
-                        Unbegrenzt gültig
-                      </p>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center">
-                  <p className="text-sm opacity-70 mb-2">Dieses Dokument ist nicht im Besitz</p>
-                  <p className="text-xs opacity-50">Besuche den Discord Bot Shop</p>
+      {/* Detail Modal */}
+      {showDetails && hasAnyLicense && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowDetails(false)}
+        >
+          <div 
+            className="w-full max-w-md p-6 rounded-2xl border"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))',
+              borderColor: 'rgba(255, 255, 255, 0.15)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">Führerschein</h3>
+              <button 
+                onClick={() => setShowDetails(false)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-all"
+              >
+                <XCircle className="w-5 h-5 text-white/60" />
+              </button>
+            </div>
+            
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Vorname</span>
+                <span className="text-white font-medium">{character?.vorname || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Nachname</span>
+                <span className="text-white font-medium">{character?.nachname || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Geburtsdatum</span>
+                <span className="text-white font-medium">{birthDate}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Ausgestellt</span>
+                <span className="text-white font-medium">{issueDate}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Gültig bis</span>
+                <span className="text-green-400 font-medium">{expiryDate}</span>
+              </div>
+              <div className="py-2">
+                <span className="text-white/50 block mb-2">Klassen</span>
+                <div className="flex flex-wrap gap-2">
+                  {hasPKW && <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-xs font-semibold border border-green-500/30">B - PKW</span>}
+                  {hasMotorrad && <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs font-semibold border border-blue-500/30">A - Motorrad</span>}
+                  {hasLKW && <span className="px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 text-xs font-semibold border border-orange-500/30">C - LKW</span>}
                 </div>
-              )}
-
-              <div className="pt-4 border-t border-white/20">
-                <div className="flex items-center justify-between text-[10px] opacity-60 mb-2">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4" />
-                    <span className="font-medium">HHRP Führerschein</span>
-                  </div>
-                  <span className="opacity-40">Klicken zum Umdrehen</span>
-                </div>
-                <p className="text-[10px] opacity-40 leading-relaxed">
-                  Dieser Führerschein ist Eigentum von Hamburg Horizon RP. Bei Verlust oder Diebstahl unverzüglich melden.
-                </p>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
 function WeaponsLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   
-  // Hilfsfunktion: Prüfe ob User eine Lizenz hat (unterstützt String und Object Format)
+  // Hilfsfunktion: Prüfe ob User eine Lizenz hat
   const hasLicense = (licenseId) => {
     return licenses.some(l => {
       if (!l) return false;
@@ -353,11 +344,8 @@ function WeaponsLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
     });
   };
   
-  // Prüfe welche Waffenscheine vorhanden sind
-  const hasWaffenschein = hasLicense('waffenschein');
-  const hasJagdschein = hasLicense('jagdschein');
-  
-  const hasAnyLicense = hasWaffenschein || hasJagdschein;
+  // Prüfe ob User einen Waffenschein hat
+  const hasWeaponsLicense = hasLicense('waffenschein') || hasLicense('waffen');
   
   const calculateBirthDate = (age, userId) => {
     if (!age) return 'N/A';
@@ -370,197 +358,166 @@ function WeaponsLicenseCard({ character, avatarUrl, userId, licenses = [] }) {
   };
 
   const birthDate = calculateBirthDate(character?.age, userId);
-  const issueDate = new Date(2021, 8, 15);
-  const expiryDate = new Date(2025, 8, 15);
+  const issueDate = '20.08.2022';
+  const expiryDate = '20.08.2032';
 
   return (
-    <div className="w-full perspective-1000">
+    <div className="w-full max-w-md mx-auto">
+      {/* Moderner Waffenschein - Glasmorphism Style */}
       <div 
-        className="relative w-full aspect-[1.586/1] cursor-pointer group"
-        onClick={() => setIsFlipped(!isFlipped)}
+        className="relative p-6 rounded-2xl border overflow-hidden cursor-pointer group transition-all hover:scale-[1.02]"
+        style={{
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
+        }}
+        onClick={() => setShowDetails(true)}
       >
+        {/* Gradient Overlay */}
         <div 
-          className={`relative w-full h-full transition-transform duration-700 transform-style-3d`}
-          style={{
-            transformStyle: 'preserve-3d',
-            transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
-          }}
-        >
-          {/* VORDERSEITE */}
-          <div 
-            className="absolute inset-0 backface-hidden rounded-2xl bg-gradient-to-br from-gray-800 via-gray-900 to-black shadow-2xl overflow-hidden"
-            style={{ backfaceVisibility: 'hidden' }}
-          >
-            {/* Wasserzeichen */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
-              <span className="text-[160px] font-black tracking-wider rotate-[-20deg] select-none">
-                {hasAnyLicense ? 'WS' : 'HHRP'}
-              </span>
+          className={`absolute inset-0 bg-gradient-to-br ${hasWeaponsLicense ? 'from-red-500/20 to-orange-500/20' : 'from-gray-500/20 to-gray-600/20'} opacity-40`}
+          style={{ mixBlendMode: 'overlay' }}
+        />
+        
+        {/* Card Content */}
+        <div className="relative z-10">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <p className="text-xs text-white/50 uppercase tracking-wider">Bundesrepublik HHRP</p>
+              <p className="text-sm font-bold text-white">WAFFENSCHEIN</p>
             </div>
-
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-gray-700/20 rounded-full translate-y-24 -translate-x-24"></div>
-
-            <div className="relative h-full p-4 sm:p-6 flex flex-col text-white">
-              {/* Header */}
-              <div className="flex items-start justify-between mb-3 sm:mb-4">
-                <div>
-                  <p className="text-[8px] sm:text-[10px] uppercase tracking-widest opacity-70 mb-1">Bundesrepublik HHRP</p>
-                  <h2 className="text-sm sm:text-base font-bold">WAFFENSCHEIN</h2>
-                </div>
-                <img src="/icon-192.png" alt="HHRP" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg" />
-              </div>
-
-              {hasAnyLicense ? (
-                <>
-                  {/* Foto & Info */}
-                  <div className="flex gap-3 sm:gap-4 flex-1">
-                    <div className="w-16 h-20 sm:w-20 sm:h-24 bg-gray-700 rounded overflow-hidden flex-shrink-0 border-2 border-gray-600">
-                      {avatarUrl ? (
-                        <img src={avatarUrl} alt="Photo" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gray-600 flex items-center justify-center">
-                          <User className="w-10 h-10 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex-1 space-y-2 text-xs">
-                      <div>
-                        <p className="text-[10px] opacity-60 uppercase">Nachname</p>
-                        <p className="font-semibold text-sm">{character?.nachname || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] opacity-60 uppercase">Vorname</p>
-                        <p className="text-sm font-semibold">{character?.vorname || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] opacity-60 uppercase">Geburtsdatum</p>
-                        <p className="text-sm font-semibold">{birthDate}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Waffenschein-Typen */}
-                  <div className="pt-3 border-t border-white/20 mt-auto">
-                    <p className="text-[10px] opacity-70 uppercase mb-2">Berechtigungen</p>
-                    <div className="flex gap-2 flex-wrap">
-                      {hasWaffenschein && (
-                        <span className="px-2.5 py-1 bg-white/20 rounded text-[10px] font-bold">Waffenschein</span>
-                      )}
-                      {hasJagdschein && (
-                        <span className="px-2.5 py-1 bg-white/20 rounded text-[10px] font-bold">Jagdschein</span>
-                      )}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-                  <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-3">
-                    <svg className="w-8 h-8 text-white/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </div>
-                  <p className="text-sm font-semibold mb-1">Kein Waffenschein</p>
-                  <p className="text-xs opacity-60">Nicht im Besitz</p>
-                </div>
-              )}
-
-              {/* Footer */}
-              <div className="flex items-center justify-between pt-3 border-t border-white/20 mt-auto">
-                <div className="text-[10px] opacity-70">
-                  {hasAnyLicense ? (
-                    <><span className="font-semibold">Erstellt am:</span> {issueDate.toLocaleDateString('de-DE')}</>
-                  ) : (
-                    <span className="opacity-50">Keine Lizenz vorhanden</span>
-                  )}
-                </div>
-                <div className="text-[10px] opacity-40">
-                  Klicken zum Umdrehen
-                </div>
-              </div>
-            </div>
+            <div className="text-2xl">🔫</div>
           </div>
 
-          {/* RÜCKSEITE */}
-          <div 
-            className="absolute inset-0 backface-hidden rounded-2xl bg-gradient-to-br from-gray-800 via-gray-900 to-black shadow-2xl overflow-hidden"
-            style={{ 
-              backfaceVisibility: 'hidden',
-              transform: 'rotateY(180deg)'
-            }}
-          >
-            <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
-              <span className="text-[160px] font-black tracking-wider rotate-[20deg] select-none">
-                WS
-              </span>
+          {hasWeaponsLicense ? (
+            <>
+              {/* Main Info */}
+              <div className="flex gap-4 mb-6">
+                {/* Avatar */}
+                <div className="w-16 h-20 rounded-lg overflow-hidden border-2 border-white/20 flex-shrink-0">
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={avatarUrl} alt="Photo" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-white/10 flex items-center justify-center">
+                      <User className="w-8 h-8 text-white/40" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 space-y-2">
+                  <div>
+                    <p className="text-[10px] text-white/50 uppercase">Name</p>
+                    <p className="text-base font-bold text-white">{character?.vorname} {character?.nachname}</p>
+                  </div>
+                  <div className="text-xs">
+                    <p className="text-[10px] text-white/50">Geboren</p>
+                    <p className="text-white font-medium">{birthDate}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Berechtigung */}
+              <div className="space-y-2">
+                <p className="text-xs text-white/50 uppercase">Berechtigung</p>
+                <div className="px-3 py-2 rounded-lg bg-white/10 border border-white/20">
+                  <p className="text-sm font-semibold text-white">Führen von Schusswaffen</p>
+                  <p className="text-xs text-white/50 mt-1">Gültig im gesamten HHRP-Gebiet</p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-white/60 text-sm mb-2">Kein Waffenschein</p>
+              <p className="text-white/40 text-xs">Erwerbe einen im Discord Bot</p>
             </div>
+          )}
 
-            <div className="relative h-full p-4 sm:p-6 flex flex-col justify-between text-white">
-              {hasAnyLicense ? (
-                <>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-[10px] opacity-60 uppercase mb-2">Waffenschein-Nummer</p>
-                      <p className="text-sm font-mono font-bold tracking-wider">WS-{userId?.slice(0, 10) || 'N/A'}</p>
-                    </div>
+          {/* Hint */}
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <p className="text-[10px] text-white/40 text-center">
+              {hasWeaponsLicense ? `Klicke für Details • Gültig bis ${expiryDate}` : 'Keine Waffenberechtigung vorhanden'}
+            </p>
+          </div>
+        </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <p className="text-[10px] opacity-60 uppercase mb-2">Ausgestellt am</p>
-                        <p className="font-semibold text-xs">{issueDate.toLocaleDateString('de-DE')}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] opacity-60 uppercase mb-2">Gültig bis</p>
-                        <p className="font-semibold text-xs">{expiryDate.toLocaleDateString('de-DE')}</p>
-                      </div>
-                    </div>
+        {/* Chip Decoration */}
+        <div 
+          className="absolute bottom-4 right-4 w-12 h-12 rounded-lg opacity-20 pointer-events-none"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1))',
+            border: '1px solid rgba(255, 255, 255, 0.3)'
+          }}
+        />
 
-                    <div>
-                      <p className="text-[10px] opacity-60 uppercase mb-2">Ausstellende Behörde</p>
-                      <p className="text-xs font-semibold">Hamburg Horizon RP</p>
-                      <p className="text-[10px] opacity-50">Waffenbehörde Hamburg</p>
-                    </div>
+        {/* Hover Effect */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl" style={{ background: 'rgba(255, 255, 255, 0.02)' }} />
+      </div>
 
-                    <div className="pt-3 border-t border-white/20">
-                      <p className="text-[10px] opacity-60 uppercase mb-2">Hinweise</p>
-                      <p className="text-xs opacity-70 leading-relaxed">
-                        • Waffe muss registriert sein<br/>
-                        • Nur für Selbstverteidigung<br/>
-                        • Bei Verlust sofort melden
-                      </p>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex-1 flex flex-col items-center justify-center text-center">
-                  <p className="text-sm opacity-70 mb-2">Dieses Dokument ist nicht im Besitz</p>
-                  <p className="text-xs opacity-50">Besuche den Discord Bot Shop</p>
+      {/* Detail Modal */}
+      {showDetails && hasWeaponsLicense && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowDetails(false)}
+        >
+          <div 
+            className="w-full max-w-md p-6 rounded-2xl border"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))',
+              borderColor: 'rgba(255, 255, 255, 0.15)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">Waffenschein</h3>
+              <button 
+                onClick={() => setShowDetails(false)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-all"
+              >
+                <XCircle className="w-5 h-5 text-white/60" />
+              </button>
+            </div>
+            
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Vorname</span>
+                <span className="text-white font-medium">{character?.vorname || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Nachname</span>
+                <span className="text-white font-medium">{character?.nachname || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Geburtsdatum</span>
+                <span className="text-white font-medium">{birthDate}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Ausgestellt</span>
+                <span className="text-white font-medium">{issueDate}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Gültig bis</span>
+                <span className="text-green-400 font-medium">{expiryDate}</span>
+              </div>
+              <div className="py-2">
+                <span className="text-white/50 block mb-2">Berechtigung</span>
+                <div className="px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/30">
+                  <p className="text-sm font-semibold text-red-400">Führen von Schusswaffen</p>
+                  <p className="text-xs text-white/50 mt-1">Kategorie: Alle Handfeuerwaffen</p>
                 </div>
-              )}
-
-              <div className="pt-4 border-t border-white/20">
-                <div className="flex items-center justify-between text-[10px] opacity-60 mb-2">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4" />
-                    <span className="font-medium">HHRP Waffenschein</span>
-                  </div>
-                  <span className="opacity-40">Klicken zum Umdrehen</span>
-                </div>
-                <p className="text-[10px] opacity-40 leading-relaxed">
-                  Dieser Waffenschein ist Eigentum von Hamburg Horizon RP. Verlängerung alle 30 Tage erforderlich.
-                </p>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-function IDCard({ character, avatarUrl, userId }) {
-  const [isFlipped, setIsFlipped] = useState(false);
+function BankCard({ card, userName, userData }) {
+      if (typeof l === 'object') return (l.name === licenseId || l.id === licenseId || l.name?.includes(licenseId) || l.id?.includes(licenseId));
+  const [showDetails, setShowDetails] = useState(false);
   
   // Berechne Geburtsdatum aus Alter - FEST basierend auf User-ID
   const calculateBirthDate = (age, userId) => {
@@ -577,180 +534,152 @@ function IDCard({ character, avatarUrl, userId }) {
   };
 
   const birthDate = calculateBirthDate(character?.age, userId);
-  const issueDate = new Date(2020, 3, 15); // Beispiel: 15.04.2020
+  const issueDate = '15.04.2020';
+  const expiryDate = '15.04.2030';
 
   return (
-    <div className="w-full perspective-1000">
+    <div className="w-full max-w-md mx-auto">
+      {/* Moderne ID Card - Glasmorphism Style */}
       <div 
-        className="relative w-full aspect-[1.586/1] cursor-pointer group"
-        onClick={() => setIsFlipped(!isFlipped)}
+        className="relative p-6 rounded-2xl border overflow-hidden cursor-pointer group transition-all hover:scale-[1.02]"
+        style={{
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
+        }}
+        onClick={() => setShowDetails(true)}
       >
+        {/* Gradient Overlay */}
         <div 
-          className={`relative w-full h-full transition-transform duration-700 transform-style-3d`}
-          style={{
-            transformStyle: 'preserve-3d',
-            transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
-          }}
-        >
-          {/* VORDERSEITE */}
-          <div 
-            className="absolute inset-0 backface-hidden rounded-2xl bg-gradient-to-br from-gray-800 via-gray-900 to-black shadow-2xl overflow-hidden"
-            style={{ backfaceVisibility: 'hidden' }}
-          >
-            {/* Wasserzeichen */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
-              <span className="text-[160px] font-black tracking-wider rotate-[-20deg] select-none">
-                HHRP
-              </span>
+          className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 opacity-40"
+          style={{ mixBlendMode: 'overlay' }}
+        />
+        
+        {/* Card Content */}
+        <div className="relative z-10">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <p className="text-xs text-white/50 uppercase tracking-wider">Bundesrepublik HHRP</p>
+              <p className="text-sm font-bold text-white">PERSONALAUSWEIS</p>
+            </div>
+            <div className="text-2xl">🪪</div>
+          </div>
+
+          {/* Main Info */}
+          <div className="flex gap-4 mb-6">
+            {/* Avatar */}
+            <div className="w-20 h-24 rounded-lg overflow-hidden border-2 border-white/20 flex-shrink-0">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="Photo" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-white/10 flex items-center justify-center">
+                  <User className="w-10 h-10 text-white/40" />
+                </div>
+              )}
             </div>
 
-            {/* Decorative waves */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-gray-700/20 rounded-full translate-y-24 -translate-x-24"></div>
-
-            <div className="relative h-full p-4 sm:p-6 flex flex-col text-white">
-              {/* Header */}
-              <div className="flex items-start justify-between mb-3 sm:mb-4">
+            {/* Info */}
+            <div className="flex-1 space-y-2">
+              <div>
+                <p className="text-[10px] text-white/50 uppercase">Name</p>
+                <p className="text-lg font-bold text-white">{character?.vorname} {character?.nachname}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <p className="text-[8px] sm:text-[10px] uppercase tracking-widest opacity-70 mb-1">Bundesrepublik HHRP</p>
-                  <h2 className="text-sm sm:text-base font-bold">PERSONALAUSWEIS</h2>
+                  <p className="text-[10px] text-white/50">Geboren</p>
+                  <p className="text-white font-medium">{birthDate}</p>
                 </div>
-                <img src="/icon-192.png" alt="HHRP" className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg" />
-              </div>
-
-              {/* Content Grid */}
-              <div className="flex gap-3 sm:gap-4 flex-1">
-                {/* Photo */}
-                <div className="w-16 h-20 sm:w-20 sm:h-24 bg-gray-700 rounded overflow-hidden flex-shrink-0 border-2 border-gray-600">
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="Photo" className="w-full h-full object-cover" />
-                  ) : (
-                    <div className="w-full h-full bg-gray-600 flex items-center justify-center">
-                      <User className="w-10 h-10 text-gray-400" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 space-y-2 text-xs">
-                  <div>
-                    <p className="text-[10px] opacity-60 uppercase">Nachname</p>
-                    <p className="font-semibold text-sm">{character?.nachname || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] opacity-60 uppercase">Vorname</p>
-                    <p className="font-semibold text-xs">{character?.vorname || 'N/A'}</p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-[10px] opacity-60 uppercase">Geburtsdatum</p>
-                      <p className="font-semibold text-xs">{birthDate}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] opacity-60 uppercase">Geschlecht</p>
-                      <p className="font-semibold text-xs">{character?.geschlecht || 'N/A'}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-[10px] opacity-60 uppercase">Wohnort</p>
-                    <p className="font-semibold text-xs">{character?.herkunft || 'Hamburg'}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-between pt-3 border-t border-white/20 mt-auto">
-                <div className="text-[10px] opacity-70">
-                  <span className="font-semibold">Erstellt am:</span> {issueDate.toLocaleDateString('de-DE')}
-                </div>
-                <div className="text-[10px] opacity-40">
-                  Klicken zum Umdrehen
+                <div>
+                  <p className="text-[10px] text-white/50">Alter</p>
+                  <p className="text-white font-medium">{character?.age || 'N/A'} Jahre</p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* RÜCKSEITE */}
+          {/* Hint */}
+          <div className="pt-4 border-t border-white/10">
+            <p className="text-[10px] text-white/40 text-center">
+              Klicke für Details • Gültig bis {expiryDate}
+            </p>
+          </div>
+        </div>
+
+        {/* Chip Decoration */}
+        <div 
+          className="absolute bottom-4 right-4 w-12 h-12 rounded-lg opacity-20 pointer-events-none"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1))',
+            border: '1px solid rgba(255, 255, 255, 0.3)'
+          }}
+        />
+
+        {/* Hover Effect */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl" style={{ background: 'rgba(255, 255, 255, 0.02)' }} />
+      </div>
+
+      {/* Detail Modal */}
+      {showDetails && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowDetails(false)}
+        >
           <div 
-            className="absolute inset-0 backface-hidden rounded-2xl bg-gradient-to-br from-gray-800 via-gray-900 to-black shadow-2xl overflow-hidden"
-            style={{ 
-              backfaceVisibility: 'hidden',
-              transform: 'rotateY(180deg)'
+            className="w-full max-w-md p-6 rounded-2xl border"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))',
+              borderColor: 'rgba(255, 255, 255, 0.15)'
             }}
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Wasserzeichen */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
-              <span className="text-[160px] font-black tracking-wider rotate-[20deg] select-none">
-                HHRP
-              </span>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">Personalausweis</h3>
+              <button 
+                onClick={() => setShowDetails(false)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-all"
+              >
+                <XCircle className="w-5 h-5 text-white/60" />
+              </button>
             </div>
-
-            {/* Decorative waves */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"></div>
-
-            <div className="relative h-full p-4 sm:p-6 flex flex-col justify-between text-white">
-              {/* Barcode Area */}
-              <div className="space-y-4">
-                <div>
-                  <p className="text-[10px] opacity-60 uppercase mb-2">Ausweis-Nummer</p>
-                  <p className="text-lg font-mono font-bold tracking-wider">{userId?.slice(0, 12) || 'N/A'}</p>
-                </div>
-
-                {/* Barcode */}
-                <div className="bg-white/95 rounded-lg p-3">
-                  <div className="flex gap-[1px] h-14">
-                    {[...Array(30)].map((_, i) => (
-                      <div 
-                        key={i} 
-                        className="flex-1 bg-gray-800"
-                        style={{ opacity: Math.random() > 0.3 ? 1 : 0.3 }}
-                      ></div>
-                    ))}
-                  </div>
-                  <p className="text-center text-[10px] text-gray-800 font-mono mt-2">{userId?.slice(0, 16) || 'N/A'}</p>
-                </div>
-
-                <div>
-                  <p className="text-[10px] opacity-60 uppercase mb-2">Ausgestellt am</p>
-                  <p className="font-semibold text-sm">{issueDate.toLocaleDateString('de-DE')}</p>
-                </div>
-
-                <div>
-                  <p className="text-[10px] opacity-60 uppercase mb-2">Ausstellende Behörde</p>
-                  <p className="text-xs font-semibold">Hamburg Horizon RP</p>
-                  <p className="text-[10px] opacity-50">Bürgerbüro Hamburg</p>
-                </div>
-
-                <div className="pt-3 border-t border-white/20">
-                  <p className="text-xs text-green-400 font-semibold flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5" />
-                    Unbegrenzt gültig
-                  </p>
-                </div>
+            
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Vorname</span>
+                <span className="text-white font-medium">{character?.vorname || 'N/A'}</span>
               </div>
-
-              {/* Footer */}
-              <div className="pt-4 border-t border-white/20">
-                <div className="flex items-center justify-between text-[10px] opacity-60 mb-2">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-3.5 h-3.5" />
-                    <span className="font-medium">HHRP ID</span>
-                  </div>
-                  <span className="opacity-40">Klicken zum Umdrehen</span>
-                </div>
-                <p className="text-[10px] opacity-40 leading-relaxed">
-                  Dieser Ausweis ist Eigentum von Hamburg Horizon RP. Bei Verlust oder Diebstahl unverzüglich melden.
-                </p>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Nachname</span>
+                <span className="text-white font-medium">{character?.nachname || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Geburtsdatum</span>
+                <span className="text-white font-medium">{birthDate}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Alter</span>
+                <span className="text-white font-medium">{character?.age || 'N/A'} Jahre</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Geschlecht</span>
+                <span className="text-white font-medium">{character?.geschlecht || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Ausgestellt</span>
+                <span className="text-white font-medium">{issueDate}</span>
+              </div>
+              <div className="flex justify-between py-2">
+                <span className="text-white/50">Gültig bis</span>
+                <span className="text-green-400 font-medium">{expiryDate}</span>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-function BankCard({ card, userName, userData }) {
   const [showDetails, setShowDetails] = useState(false);
   
   const bankNames = {
