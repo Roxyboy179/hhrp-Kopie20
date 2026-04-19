@@ -751,15 +751,15 @@ function IDCard({ character, avatarUrl, userId }) {
 }
 
 function BankCard({ card, userName, userData }) {
-  const [isFlipped, setIsFlipped] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   
   const bankNames = {
-    'elite_federal': 'Elite Federal Bank',
-    'hamburg_horizon': 'Hamburg Horizon Bank',
-    'deutsche_bank': 'Deutsche Bank',
-    'sparkasse': 'Sparkasse Hamburg',
-    'nordic_capital': 'Nordic Capital Bank',
-    'metrova_trust': 'Metrova Trust Bank'
+    'elite_federal': 'ELITE FEDERAL',
+    'hamburg_horizon': 'HAMBURG HORIZON',
+    'deutsche_bank': 'DEUTSCHE BANK',
+    'sparkasse': 'SPARKASSE HAMBURG',
+    'nordic_capital': 'NORDIC CAPITAL',
+    'metrova_trust': 'METROVA TRUST'
   };
 
   const bankColors = {
@@ -771,7 +771,7 @@ function BankCard({ card, userName, userData }) {
     'metrova_trust': 'from-green-500/20 to-emerald-500/20'
   };
 
-  const bankName = bankNames[card.bankId] || 'Hamburg Bank';
+  const bankName = bankNames[card.bankId] || 'HAMBURG BANK';
   const bankColor = bankColors[card.bankId] || 'from-blue-500/20 to-cyan-500/20';
   
   // Guthaben aus userData
@@ -779,6 +779,191 @@ function BankCard({ card, userName, userData }) {
   const bankBalance = userData?.data?.money?.bank || 0;
   const cashBalance = userData?.data?.money?.cash || 0;
   const savingsBalance = userData?.data?.money?.savings || 0;
+
+  const formatCardNumber = (num) => {
+    if (!num) return '••• ••• •••';
+    const str = num.toString();
+    // Letzten 3 Ziffern zeigen, Rest maskieren
+    if (str.length >= 9) {
+      return `••• ••• ${str.slice(-3)}`;
+    }
+    return str.match(/.{1,3}/g)?.join(' ') || str;
+  };
+
+  const copyToClipboard = (text, label) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} kopiert!`);
+  };
+
+  return (
+    <div className="w-full max-w-md mx-auto">
+      {/* Moderne Bank Card - Glasmorphism Style */}
+      <div 
+        className="relative p-6 rounded-2xl border overflow-hidden cursor-pointer group transition-all hover:scale-[1.02]"
+        style={{
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))',
+          borderColor: 'rgba(255, 255, 255, 0.15)'
+        }}
+        onClick={() => setShowDetails(true)}
+      >
+        {/* Gradient Overlay */}
+        <div 
+          className={`absolute inset-0 bg-gradient-to-br ${bankColor} opacity-40`}
+          style={{ mixBlendMode: 'overlay' }}
+        />
+        
+        {/* Card Content */}
+        <div className="relative z-10">
+          {/* Bank Name & Logo */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <div className="text-2xl">🏦</div>
+              <div>
+                <p className="text-xs text-white/50 uppercase tracking-wider">Bank</p>
+                <p className="text-sm font-bold text-white">{bankName}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-white/50">Inhaber</p>
+              <p className="text-sm font-semibold text-white truncate max-w-[120px]">{userName}</p>
+            </div>
+          </div>
+
+          {/* Kontonummer - Chip Style */}
+          <div className="mb-6">
+            <div 
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-sm"
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.2)'
+              }}
+            >
+              <CreditCard className="w-3.5 h-3.5 text-white/60" />
+              <span className="text-sm font-mono text-white tracking-wider">
+                {formatCardNumber(card.accountNumber)}
+              </span>
+            </div>
+          </div>
+
+          {/* Guthaben */}
+          <div className="space-y-3">
+            <div>
+              <p className="text-xs text-white/50 mb-1">Gesamt-Guthaben</p>
+              <p className="text-3xl font-bold text-white tracking-tight">
+                {totalBalance.toLocaleString('de-DE')}€
+              </p>
+            </div>
+            
+            {/* Breakdown */}
+            <div className="flex items-center gap-4 text-xs flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <Wallet className="w-3 h-3 text-white/40" />
+                <span className="text-white/60">{bankBalance.toLocaleString('de-DE')}€</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <DollarSign className="w-3 h-3 text-white/40" />
+                <span className="text-white/60">{cashBalance.toLocaleString('de-DE')}€</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <PiggyBank className="w-3 h-3 text-white/40" />
+                <span className="text-white/60">{savingsBalance.toLocaleString('de-DE')}€</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Hint */}
+          <div className="mt-4 pt-4 border-t border-white/10">
+            <p className="text-[10px] text-white/40 text-center">
+              Klicke für Details • Limit: {(card.limit || 500000).toLocaleString('de-DE')}€
+            </p>
+          </div>
+        </div>
+
+        {/* Chip Decoration */}
+        <div 
+          className="absolute bottom-4 right-4 w-12 h-12 rounded-lg opacity-20 pointer-events-none"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1))',
+            border: '1px solid rgba(255, 255, 255, 0.3)'
+          }}
+        />
+
+        {/* Hover Effect */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-2xl" style={{ background: 'rgba(255, 255, 255, 0.02)' }} />
+      </div>
+
+      {/* Detail Modal */}
+      {showDetails && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowDetails(false)}
+        >
+          <div 
+            className="w-full max-w-md p-6 rounded-2xl border"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03))',
+              borderColor: 'rgba(255, 255, 255, 0.15)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">Karten-Details</h3>
+              <button 
+                onClick={() => setShowDetails(false)}
+                className="p-2 hover:bg-white/10 rounded-lg transition-all"
+              >
+                <XCircle className="w-5 h-5 text-white/60" />
+              </button>
+            </div>
+            
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Bank</span>
+                <span className="text-white font-medium">{bankName}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Kontonummer</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-white font-mono">{card.accountNumber}</span>
+                  <button
+                    onClick={() => copyToClipboard(card.accountNumber, 'Kontonummer')}
+                    className="p-1 hover:bg-white/10 rounded"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-white/40" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Limit</span>
+                <span className="text-white font-medium">{(card.limit || 500000).toLocaleString('de-DE')}€</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Inhaber</span>
+                <span className="text-white font-medium">{userName}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Bank-Guthaben</span>
+                <span className="text-white font-medium">{bankBalance.toLocaleString('de-DE')}€</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Bargeld</span>
+                <span className="text-white font-medium">{cashBalance.toLocaleString('de-DE')}€</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-white/10">
+                <span className="text-white/50">Sparkonto</span>
+                <span className="text-white font-medium">{savingsBalance.toLocaleString('de-DE')}€</span>
+              </div>
+              <div className="flex justify-between py-2">
+                <span className="text-white/50">Gesamt</span>
+                <span className="text-green-400 font-bold text-lg">{totalBalance.toLocaleString('de-DE')}€</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
   const formatCardNumber = (num) => {
     if (!num) return '0000 0000 0000 0000';
