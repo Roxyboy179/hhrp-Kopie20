@@ -4042,11 +4042,39 @@ async function handleShopPurchase(request) {
 
     const currentBalance = userDataObj?.money?.bank || 0;
 
+    // VIP-Status prüfen und Rabatt berechnen
+    let vipType = null;
+    const vipLicenses = userDataObj?.licenses || {};
+    if (vipLicenses['vip_elite_plus'] && new Date(vipLicenses['vip_elite_plus'].expiresAt) > new Date()) {
+      vipType = 'elite_plus';
+    } else if (vipLicenses['vip_ultimate'] && new Date(vipLicenses['vip_ultimate'].expiresAt) > new Date()) {
+      vipType = 'ultimate';
+    } else if (vipLicenses['vip_platinum'] && new Date(vipLicenses['vip_platinum'].expiresAt) > new Date()) {
+      vipType = 'platinum';
+    } else if (vipLicenses['vip_premium'] && new Date(vipLicenses['vip_premium'].expiresAt) > new Date()) {
+      vipType = 'premium';
+    }
+
+    // VIP-Rabatt nur für Nicht-Credit-Items
+    let finalPrice = item.price;
+    const VIP_SHOP_DISCOUNTS = {
+      elite_plus: 0.35,  // 35%
+      ultimate: 0.30,    // 30%
+      platinum: 0.25,    // 25%
+      premium: 0.20      // 20%
+    };
+
+    if (vipType && VIP_SHOP_DISCOUNTS[vipType] && item.category !== 'credits') {
+      const discount = VIP_SHOP_DISCOUNTS[vipType];
+      finalPrice = Math.floor(item.price * (1 - discount));
+      console.log(`[SHOP] VIP ${vipType} Rabatt: ${item.price}€ → ${finalPrice}€ (-${discount * 100}%)`);
+    }
+
     // Prüfe ob genug Geld vorhanden
-    if (currentBalance < item.price) {
+    if (currentBalance < finalPrice) {
       return NextResponse.json({ 
         error: 'Nicht genug Guthaben',
-        required: item.price,
+        required: finalPrice,
         current: currentBalance
       }, { status: 400 });
     }
@@ -4059,9 +4087,10 @@ async function handleShopPurchase(request) {
         item_id: itemId,
         item_name: item.name,
         item_category: item.category,
-        price: item.price,
+        price: finalPrice,  // VIP-Rabatt bereits angewendet
         status: 'pending',
-        initiated_from: 'website'
+        initiated_from: 'website',
+        metadata: vipType ? { original_price: item.price, vip_discount: VIP_SHOP_DISCOUNTS[vipType] } : {}
       })
       .select()
       .single();
@@ -4077,7 +4106,9 @@ async function handleShopPurchase(request) {
       purchase: {
         id: purchase.id,
         item: item.name,
-        price: item.price,
+        price: finalPrice,
+        originalPrice: vipType ? item.price : undefined,
+        vipDiscount: vipType ? VIP_SHOP_DISCOUNTS[vipType] : undefined,
         status: 'pending'
       }
     });
