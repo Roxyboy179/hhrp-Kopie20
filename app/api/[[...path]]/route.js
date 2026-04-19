@@ -4028,7 +4028,7 @@ async function handleShopPurchase(request) {
     // Hole User Data aus Supabase
     const { data: userData, error: fetchError } = await supabaseAdmin
       .from('user_data')
-      .select('*')
+      .select('data, licenses')  // Lizenzen explizit laden!
       .eq('discord_user_id', user.id)
       .single();
 
@@ -4040,11 +4040,16 @@ async function handleShopPurchase(request) {
       ? JSON.parse(userData.data) 
       : userData.data;
 
+    // Lizenzen aus userData.licenses laden (separates Feld!)
+    const userLicenses = typeof userData.licenses === 'string'
+      ? JSON.parse(userData.licenses)
+      : (userData.licenses || {});
+
     const currentBalance = userDataObj?.money?.bank || 0;
 
     // VIP-Status prüfen und Rabatt berechnen
     let vipType = null;
-    const vipLicenses = userDataObj?.licenses || {};
+    const vipLicenses = userLicenses;  // Verwende userLicenses statt userDataObj.licenses
     const now = Date.now();
     
     console.log('[SHOP] Checking VIP licenses:', Object.keys(vipLicenses));
@@ -4136,7 +4141,15 @@ async function handleShopPurchase(request) {
         price: finalPrice,
         originalPrice: vipType ? item.price : undefined,
         vipDiscount: vipType ? VIP_SHOP_DISCOUNTS[vipType] : undefined,
+        vipType: vipType,  // DEBUG
         status: 'pending'
+      },
+      debug: {  // DEBUG INFO
+        vipLicensesFound: Object.keys(userDataObj?.licenses || {}),
+        vipTypeDetected: vipType,
+        originalPrice: item.price,
+        finalPrice: finalPrice,
+        discountApplied: vipType ? VIP_SHOP_DISCOUNTS[vipType] : 0
       }
     });
 
