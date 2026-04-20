@@ -37,6 +37,7 @@ import { ErweiterteTransaktionenView, SparkontoManagementView } from '@/componen
 import { TransferMoneyView } from '@/components/profile/TransferMoneyView';
 import { ShopView } from '@/components/profile/ShopView';
 import HamburgHorizonTab from '@/components/profile/HamburgHorizonTab';
+import LicensesView from '@/components/profile/LicensesView';
 import ProfileTour, { TourStartButton, hasCompletedProfileTour } from '@/components/profile/ProfileTour';
 
 function SkeletonCard({ className = "" }) {
@@ -1006,7 +1007,7 @@ export default function ProfilPage() {
     { id: 'finance', label: 'Finanzen', icon: Wallet, hasSubTabs: true },
     { id: 'documents', label: 'Dokumente', icon: IdCard, hasSubTabs: true },
     { id: 'shop', label: 'Shop', icon: ShoppingCart },
-    { id: 'hamburg-horizon', label: 'Hamburg Horizon', icon: Sparkles },
+    { id: 'hamburg-horizon', label: 'Hamburg Horizon', icon: Sparkles, hasSubTabs: true },
     { id: 'applications', label: 'Bewerbungen', icon: ClipboardList },
     { id: 'settings', label: 'Einstellungen', icon: Settings }
   ];
@@ -1029,6 +1030,10 @@ export default function ProfilPage() {
     documents: [
       { id: 'cards', label: 'Ausweise', icon: IdCard },
       { id: 'personalakte', label: 'Personalakte', icon: Award }
+    ],
+    'hamburg-horizon': [
+      { id: 'overview', label: 'Übersicht', icon: Sparkles },
+      { id: 'licenses', label: 'Lizenzen', icon: ShieldCheck }
     ]
   };
 
@@ -3377,10 +3382,17 @@ export default function ProfilPage() {
           </div>
         )}
 
-        {/* Hamburg Horizon Tab (ersetzt den alten Marktplatz-Tab) */}
-        {activeTab === 'hamburg-horizon' && (
+        {/* Hamburg Horizon Tab - Übersicht */}
+        {activeTab === 'hamburg-horizon' && activeSubTab === 'overview' && (
           <div data-tour-card="Hamburg Horizon|Die komplette Server-Welt: Stadtkarte, Fraktionen, Events, Statistiken und aktuelle News aus Hamburg Horizon.">
           <HamburgHorizonTab currentUser={user} />
+          </div>
+        )}
+
+        {/* Hamburg Horizon Tab - Lizenzen */}
+        {activeTab === 'hamburg-horizon' && activeSubTab === 'licenses' && (
+          <div data-tour-card="Meine Lizenzen|Verwalte alle deine aktiven Lizenzen: Auto-Verlängerung ein/ausschalten oder Lizenzen kündigen. Der Discord Bot übernimmt die Änderung in Sekunden.">
+          <LicensesView userData={userData} refreshUserData={loadData} />
           </div>
         )}
 

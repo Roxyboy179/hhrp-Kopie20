@@ -2793,6 +2793,7 @@ export async function POST(request) {
       console.log('[DEBUG] check-recipient route hit!');
       return handleCheckRecipient(request);
     case 'shop/gift': return handleGiftItem(request);
+    case 'licenses/action': return handleLicenseAction(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
@@ -4868,6 +4869,97 @@ async function handleGiftItem(request) {
     console.error('[GIFT] Stack:', e.stack);
     return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
   }
+
+// =============================================================
+// ===== LICENSE MANAGEMENT (Auto-Renew / Cancel) =========
+// =============================================================
+// POST /api/licenses/action - User verwaltet eigene Lizenzen
+// Body: { licenseId: string, action: 'enable_autorenew' | 'disable_autorenew' | 'cancel' }
+// Speichert Aktion in pending_shop_purchases mit is_license_action=true.
+// Discord Bot (shop-processor) holt diese Aktionen ab und aktualisiert userData.
+async function handleLicenseAction(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const { licenseId, action } = await request.json();
+    const ALLOWED = ['enable_autorenew', 'disable_autorenew', 'cancel'];
+    if (!licenseId || !ALLOWED.includes(action)) {
+      return NextResponse.json({ error: 'Ungültige Parameter' }, { status: 400 });
+    }
+
+    console.log(`[LICENSE-ACTION] User ${user.id} → ${action} on "${licenseId}"`);
+
+    // Hole aktuelle User-Daten (prüfe ob Lizenz wirklich existiert)
+    const { data: userRow, error: userErr } = await supabaseAdmin
+      .from('user_data')
+      .select('*')
+      .eq('discord_user_id', user.id)
+      .single();
+
+    if (userErr || !userRow) {
+      return NextResponse.json({ error: 'Userdaten nicht gefunden' }, { status: 404 });
+    }
+
+    const dataObj = typeof userRow.data === 'string' ? JSON.parse(userRow.data) : userRow.data;
+    const licensesArr = Array.isArray(dataObj?.licenses) ? dataObj.licenses : [];
+
+    // Prüfe ob Lizenz existiert
+    const hasLicense = licensesArr.some((l) => {
+      if (!l) return false;
+      if (typeof l === 'string') return l === licenseId;
+      if (typeof l === 'object') return (l.name === licenseId || l.id === licenseId);
+      return false;
+    });
+
+    if (!hasLicense) {
+      return NextResponse.json({ error: 'Lizenz nicht gefunden' }, { status: 404 });
+    }
+
+    // Schreibe Action in pending_shop_purchases → der Bot verarbeitet es
+    const { data: purchase, error: insertErr } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .insert({
+        buyer_discord_id: user.id,
+        recipient_discord_id: user.id, // Eigene Aktion
+        item_id: licenseId,
+        item_name: `License Action: ${action}`,
+        item_category: 'license_management',
+        price: 0,
+        status: 'pending',
+        initiated_from: 'website',
+        is_gift: false,
+        metadata: {
+          license_action: action,
+          license_id: licenseId,
+          triggered_at: new Date().toISOString()
+        }
+      })
+      .select()
+      .single();
+
+    if (insertErr) {
+      console.error('[LICENSE-ACTION] ❌ Insert error:', insertErr);
+      return NextResponse.json({ error: 'Fehler beim Speichern', details: insertErr.message }, { status: 500 });
+    }
+
+    console.log(`[LICENSE-ACTION] ✅ Queued: purchase_id=${purchase.id}`);
+    return NextResponse.json({
+      success: true,
+      action,
+      licenseId,
+      queuedId: purchase.id,
+      message: 'Aktion wurde gespeichert und wird vom Discord Bot verarbeitet.'
+    });
+
+  } catch (e) {
+    console.error('[LICENSE-ACTION] ❌ Error:', e);
+    return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
+  }
+}
+
 }
 
 // =============================================================
