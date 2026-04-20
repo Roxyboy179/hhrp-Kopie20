@@ -797,6 +797,12 @@ export function ShopView({ user, userData, onRefresh }) {
     return findActiveCreditBonus(creditsAmount, userHighestVIP);
   }, [userHighestVIP]);
 
+  // 🎉 Alle aktuell aktiven Aktionen ermitteln (Slider zeigt alle durch)
+  // 🚀 PERFORMANCE: Memoize um unnötige Neuberechnungen zu vermeiden
+  const activeBannerPromos = useMemo(() => {
+    return getActiveBannerPromotions(userHighestVIP);
+  }, [userHighestVIP]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -804,12 +810,6 @@ export function ShopView({ user, userData, onRefresh }) {
       </div>
     );
   }
-
-  // 🎉 Alle aktuell aktiven Aktionen ermitteln (Slider zeigt alle durch)
-  // 🚀 PERFORMANCE: Memoize um unnötige Neuberechnungen zu vermeiden
-  const activeBannerPromos = useMemo(() => {
-    return getActiveBannerPromotions(userHighestVIP);
-  }, [userHighestVIP]);
 
   return (
     <div className="space-y-6">
