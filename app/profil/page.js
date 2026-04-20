@@ -1405,22 +1405,22 @@ export default function ProfilPage() {
               const Icon = tab.icon;
               const hasChar = !!(userData?.character?.name || userData?.characterName);
               const isLocked = !hasChar && tab.id !== 'overview';
+              const DisplayIcon = isLocked ? Lock : Icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => handleMainTabChange(tab.id)}
                   disabled={isLocked}
-                  className={`flex items-center gap-2 px-4 py-3 rounded-xl transition-all text-sm whitespace-nowrap snap-center flex-shrink-0 relative ${
+                  className={`flex items-center gap-2 px-4 py-3 rounded-xl transition-all text-sm whitespace-nowrap snap-center flex-shrink-0 ${
                     activeTab === tab.id
                       ? 'bg-white/10 text-white border border-white/20 shadow-lg'
                       : isLocked
-                      ? 'text-white/25 bg-white/[0.02] border border-white/5 cursor-not-allowed'
+                      ? 'bg-orange-500/5 text-orange-300/50 border border-orange-500/20 cursor-not-allowed'
                       : 'text-white/50 hover:text-white/70 hover:bg-white/5 border border-transparent'
                   }`}
                 >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <DisplayIcon className={`w-4 h-4 flex-shrink-0 ${isLocked ? 'text-orange-400/60' : ''}`} />
                   <span className="font-medium">{tab.label}</span>
-                  {isLocked && <Lock className="w-3 h-3 ml-0.5 flex-shrink-0" />}
                 </button>
               );
             })}
@@ -1432,23 +1432,23 @@ export default function ProfilPage() {
               const Icon = tab.icon;
               const hasChar = !!(userData?.character?.name || userData?.characterName);
               const isLocked = !hasChar && tab.id !== 'overview';
+              const DisplayIcon = isLocked ? Lock : Icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => handleMainTabChange(tab.id)}
                   disabled={isLocked}
                   title={isLocked ? 'Charakter erforderlich – erstelle einen im Discord' : tab.label}
-                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all text-base relative ${
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all text-base ${
                     activeTab === tab.id
                       ? 'bg-white/10 text-white border border-white/20'
                       : isLocked
-                      ? 'text-white/25 bg-white/[0.02] cursor-not-allowed'
+                      ? 'bg-orange-500/5 text-orange-300/50 border border-orange-500/20 cursor-not-allowed'
                       : 'text-white/50 hover:text-white/70 hover:bg-white/5'
                   }`}
                 >
-                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <DisplayIcon className={`w-5 h-5 flex-shrink-0 ${isLocked ? 'text-orange-400/60' : ''}`} />
                   <span className="font-medium">{tab.label}</span>
-                  {isLocked && <Lock className="w-3.5 h-3.5 ml-0.5 flex-shrink-0 opacity-60" />}
                 </button>
               );
             })}
@@ -1564,14 +1564,43 @@ export default function ProfilPage() {
             ) : (
               <>
                 {/* Daily Bonus Card */}
-                <div data-tour-card="Täglicher Bonus|Hole jeden Tag deinen kostenlosen Bonus ab. Je länger dein Streak, desto höher die Belohnung – plus spezielle VIP-Bonis für Premium-Mitglieder.">
-                <DailyBonusCard 
-                  userId={user?.id}
-                  onSuccess={() => {
-                    // Reload data after claiming
-                    loadData();
-                  }}
-                />
+                <div data-tour-card="Täglicher Bonus|Hole jeden Tag deinen kostenlosen Bonus ab. Je länger dein Streak, desto höher die Belohnung – plus spezielle VIP-Bonis für Premium-Mitglieder." className="relative">
+                {(() => {
+                  const hasChar = !!(userData?.character?.name || userData?.characterName);
+                  return (
+                    <>
+                      <div className={hasChar ? '' : 'pointer-events-none select-none'}>
+                        <DailyBonusCard 
+                          userId={user?.id}
+                          onSuccess={() => {
+                            // Reload data after claiming
+                            loadData();
+                          }}
+                        />
+                      </div>
+                      {!hasChar && (
+                        <div
+                          className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl"
+                          style={{
+                            background: 'rgba(10, 11, 15, 0.88)',
+                            backdropFilter: 'blur(6px)',
+                            border: '1px solid rgba(251, 146, 60, 0.3)'
+                          }}
+                        >
+                          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-lg">
+                            <Lock className="w-7 h-7 text-white" />
+                          </div>
+                          <div className="text-center px-4 max-w-sm">
+                            <p className="text-sm font-bold text-white">Täglicher Bonus gesperrt</p>
+                            <p className="text-xs text-white/60 mt-1 leading-snug">
+                              Erstelle deinen Charakter im Discord mit <code className="px-1 py-0.5 rounded bg-white/10 text-orange-300 font-mono">/charakter-erstellen</code>
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
                 </div>
 
             {/* Money Overview */}
