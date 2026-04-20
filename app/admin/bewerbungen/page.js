@@ -470,53 +470,85 @@ export default function AdminBewerbungenPage() {
           <Separator className="bg-white/[0.06]" />
 
           {/* Aktionen */}
-          <div className="flex flex-wrap gap-3">
-            {!selected.claimedBy && selected.status === 'Eingereicht' && (
-              <Button 
-                onClick={() => handleAction(selected.id, 'claim')} 
-                disabled={actionLoading}
-                className="bg-blue-600 hover:bg-blue-700 rounded-xl"
-              >
-                {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <User className="w-4 h-4 mr-2" />}
-                Übernehmen
-              </Button>
-            )}
-            {selected.claimedBy === admin?.discordUserId && selected.status !== 'Angenommen' && selected.status !== 'Abgelehnt' && (
-              <>
+          {selected.status === 'Zurückgezogen' ? (
+            <div className="p-4 rounded-xl bg-gray-500/10 border border-gray-500/20 flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-gray-400 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-gray-300">Bewerbung wurde vom Bewerber zurückgezogen</p>
+                <p className="text-xs text-white/40 mt-0.5">Es sind keine weiteren Aktionen möglich.</p>
+              </div>
+            </div>
+          ) : selected.status === 'Angenommen' ? (
+            <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center gap-3">
+              <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-green-300">Bewerbung wurde angenommen</p>
+                <p className="text-xs text-white/40 mt-0.5">Der Vorgang ist abgeschlossen.</p>
+              </div>
+            </div>
+          ) : selected.status === 'Abgelehnt' ? (
+            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3">
+              <XCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-red-300">Bewerbung wurde abgelehnt</p>
+                <p className="text-xs text-white/40 mt-0.5">Der Vorgang ist abgeschlossen.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-3">
+              {!selected.claimedBy && selected.status === 'Eingereicht' && (
                 <Button 
-                  onClick={() => handleAction(selected.id, 'unclaim')} 
+                  onClick={() => handleAction(selected.id, 'claim')} 
                   disabled={actionLoading}
-                  variant="outline" 
-                  className="rounded-xl border-white/10"
+                  className="bg-blue-600 hover:bg-blue-700 rounded-xl"
                 >
-                  Freigeben
+                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <User className="w-4 h-4 mr-2" />}
+                  Übernehmen
                 </Button>
-                <Button 
-                  disabled={actionLoading}
-                  onClick={() => setActionConfirm({
-                    id: selected.id,
-                    action: null,
-                    status: 'Angenommen',
-                    title: 'Bewerbung annehmen?',
-                    description: `Möchtest du die Bewerbung von ${selected.username} wirklich annehmen? Der Bewerber wird per Discord benachrichtigt.`
-                  })} 
-                  className="bg-green-600 hover:bg-green-700 rounded-xl"
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-2" /> Annehmen
-                </Button>
-                <Button 
-                  disabled={actionLoading}
-                  onClick={() => {
-                    setShowRejectModal(true);
-                    setRejectReason('');
-                  }} 
-                  className="bg-red-600 hover:bg-red-700 rounded-xl"
-                >
-                  <XCircle className="w-4 h-4 mr-2" /> Ablehnen
-                </Button>
-              </>
-            )}
-          </div>
+              )}
+              {selected.claimedBy === admin?.discordUserId && (
+                <>
+                  <Button 
+                    onClick={() => handleAction(selected.id, 'unclaim')} 
+                    disabled={actionLoading}
+                    variant="outline" 
+                    className="rounded-xl border-white/10"
+                  >
+                    Freigeben
+                  </Button>
+                  <Button 
+                    disabled={actionLoading}
+                    onClick={() => setActionConfirm({
+                      id: selected.id,
+                      action: null,
+                      status: 'Angenommen',
+                      title: 'Bewerbung annehmen?',
+                      description: `Möchtest du die Bewerbung von ${selected.username} wirklich annehmen? Der Bewerber wird per Discord benachrichtigt.`
+                    })} 
+                    className="bg-green-600 hover:bg-green-700 rounded-xl"
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-2" /> Annehmen
+                  </Button>
+                  <Button 
+                    disabled={actionLoading}
+                    onClick={() => {
+                      setShowRejectModal(true);
+                      setRejectReason('');
+                    }} 
+                    className="bg-red-600 hover:bg-red-700 rounded-xl"
+                  >
+                    <XCircle className="w-4 h-4 mr-2" /> Ablehnen
+                  </Button>
+                </>
+              )}
+              {selected.claimedBy && selected.claimedBy !== admin?.discordUserId && (
+                <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 text-sm flex items-center gap-2">
+                  <User className="w-4 h-4" />
+                  Diese Bewerbung wird aktuell von <strong>{selected.claimedByName}</strong> bearbeitet.
+                </div>
+              )}
+            </div>
+          )}
         </GlassCard>
       </div>
     );
@@ -637,7 +669,7 @@ export default function AdminBewerbungenPage() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {['all', 'Eingereicht', 'In Bearbeitung', 'Angenommen', 'Abgelehnt'].map(f => (
+          {['all', 'Eingereicht', 'In Bearbeitung', 'Angenommen', 'Abgelehnt', 'Zurückgezogen'].map(f => (
             <Button
               key={f}
               variant={filter === f ? 'default' : 'outline'}
