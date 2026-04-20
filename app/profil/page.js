@@ -2230,9 +2230,9 @@ export default function ProfilPage() {
                                 <div className="p-3 rounded-lg bg-white/[0.04] border border-white/[0.06]">
                                   <div className="flex items-center gap-2 mb-1">
                                     <CircleDollarSign className="w-3.5 h-3.5 text-white/40" />
-                                    <p className="text-sm text-white/40">Elite+ Daily Bonus</p>
+                                    <p className="text-sm text-white/40">{hasLuxusPass ? 'Luxus-Pass Daily Bonus' : 'Elite+ Daily Bonus'}</p>
                                   </div>
-                                  <p className="text-lg font-semibold text-white">{vipStatus.bonus}</p>
+                                  <p className="text-lg font-semibold text-white">{vipStatus.bonus}€</p>
                                 </div>
                               )}
                             </div>
@@ -3805,7 +3805,7 @@ export default function ProfilPage() {
                       .map(l => typeof l === 'string' ? l : (l.name || l.id))
                       .filter(l => l && typeof l === 'string')
                 .filter(l => l && !l.startsWith('credits_') && !l.startsWith('credit_'));
-              const hasVipForCustomBg = licenses.includes('vip_platinum') || licenses.includes('vip_ultimate') || licenses.includes('vip_elite_plus');
+              const hasVipForCustomBg = licenses.includes('vip_platinum') || licenses.includes('vip_ultimate') || licenses.includes('vip_elite_plus') || licenses.includes('luxus_pass');
               const isStandardBgActive = customBg === 'standard';
               const isPresetBg = customBg && customBg.startsWith('preset:');
               const isCustomBgActive = customBg && customBg !== 'standard' && !isPresetBg;

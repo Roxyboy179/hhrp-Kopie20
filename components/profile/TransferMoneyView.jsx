@@ -18,7 +18,8 @@ const VIP_DISCOUNTS = {
   'premium': { label: 'VIP Premium', discount: 0.5, emoji: '⭐' },
   'platinum': { label: 'VIP Platinum', discount: 0.75, emoji: '💎' },
   'ultimate': { label: 'VIP Ultimate', discount: 0.9, emoji: '⚡' },
-  'elite_plus': { label: 'VIP ELITE PLUS', discount: 1.0, emoji: '🏆' }
+  'elite_plus': { label: 'VIP ELITE PLUS', discount: 1.0, emoji: '🏆' },
+  'luxus_pass': { label: 'Luxus-Pass', discount: 1.0, emoji: '🎩' }
 };
 
 export function TransferMoneyView({ userData, onTransferComplete }) {
@@ -97,7 +98,10 @@ export function TransferMoneyView({ userData, onTransferComplete }) {
   let vipStatus = null;
   let vipDiscount = null;
   
-  if (hasLicense('vip_elite_plus')) {
+  if (hasLicense('luxus_pass')) {
+    vipStatus = 'luxus_pass';
+    vipDiscount = VIP_DISCOUNTS['luxus_pass'];
+  } else if (hasLicense('vip_elite_plus')) {
     vipStatus = 'elite_plus';
     vipDiscount = VIP_DISCOUNTS['elite_plus'];
   } else if (hasLicense('vip_ultimate')) {

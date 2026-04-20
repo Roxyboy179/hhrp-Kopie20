@@ -161,6 +161,7 @@ export function Navbar({ user, loading }) {
                             });
                           };
                           
+                          const hasLuxusPass = hasLicense('luxus_pass');
                           const hasVipElitePlus = hasLicense('vip_elite_plus');
                           const hasVipUltimate = hasLicense('vip_ultimate');
                           const hasVipPlatinum = hasLicense('vip_platinum');
@@ -168,7 +169,8 @@ export function Navbar({ user, loading }) {
                           const hasBetaTester = user.roles?.includes('1494434149623136276');
                           
                           let vipStatus = '';
-                          if (hasVipElitePlus) vipStatus = 'VIP Elite Plus';
+                          if (hasLuxusPass) vipStatus = 'Luxus-Pass';
+                          else if (hasVipElitePlus) vipStatus = 'VIP Elite Plus';
                           else if (hasVipUltimate) vipStatus = 'VIP Ultimate';
                           else if (hasVipPlatinum) vipStatus = 'VIP Platinum';
                           else if (hasVipPremium) vipStatus = 'VIP Premium';
