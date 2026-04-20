@@ -3843,7 +3843,9 @@ async function handleTransferMoney(request) {
       });
     };
     
-    if (hasLicense('vip_elite_plus')) {
+    if (hasLicense('luxus_pass')) {
+      vipType = 'luxus_pass';
+    } else if (hasLicense('vip_elite_plus')) {
       vipType = 'elite_plus';
     } else if (hasLicense('vip_ultimate')) {
       vipType = 'ultimate';
@@ -3856,10 +3858,11 @@ async function handleTransferMoney(request) {
     console.log('[TRANSFER API] vipType:', vipType);
     
     const VIP_DISCOUNTS = {
-      'premium': 0.5,
-      'platinum': 0.75,
-      'ultimate': 0.9,
-      'elite_plus': 1.0
+      'luxus_pass': 1.0,  // 100% = keine Gebühren
+      'premium': 0.5,     // 50%
+      'platinum': 0.75,   // 75%
+      'ultimate': 0.9,    // 90%
+      'elite_plus': 1.0   // 100% = keine Gebühren
     };
 
     if (vipType && VIP_DISCOUNTS[vipType]) {
@@ -4072,7 +4075,8 @@ async function handleShopPurchase(request) {
 
     // VIP-Hierarchie: Nimm den höchsten aktiven Rang
     let vipType = null;
-    if (hasLicense('vip_elite_plus')) vipType = 'elite_plus';
+    if (hasLicense('luxus_pass')) vipType = 'luxus_pass';
+    else if (hasLicense('vip_elite_plus')) vipType = 'elite_plus';
     else if (hasLicense('vip_ultimate')) vipType = 'ultimate';
     else if (hasLicense('vip_platinum')) vipType = 'platinum';
     else if (hasLicense('vip_premium')) vipType = 'premium';
@@ -4083,13 +4087,14 @@ async function handleShopPurchase(request) {
     // (VIP-Items bekommen keinen VIP-Rabatt auf sich selbst)
     let finalPrice = item.price;
     const VIP_SHOP_DISCOUNTS = {
+      luxus_pass: 0.50, // 50% Luxus-Pass
       elite_plus: 0.35, // 35%
       ultimate:   0.20, // 20%
       platinum:   0.10, // 10%
       premium:    0.00  //  0% (kein Rabatt für Premium)
     };
 
-    const isVipItem = typeof itemId === 'string' && itemId.startsWith('vip_');
+    const isVipItem = typeof itemId === 'string' && (itemId.startsWith('vip_') || itemId === 'luxus_pass');
 
     if (vipType && VIP_SHOP_DISCOUNTS[vipType] > 0 && item.category !== 'credits' && !isVipItem) {
       const discount = VIP_SHOP_DISCOUNTS[vipType];
@@ -4757,18 +4762,20 @@ async function handleGiftItem(request) {
     };
 
     let vipType = null;
-    if (hasLicense('vip_elite_plus')) vipType = 'elite_plus';
+    if (hasLicense('luxus_pass')) vipType = 'luxus_pass';
+    else if (hasLicense('vip_elite_plus')) vipType = 'elite_plus';
     else if (hasLicense('vip_ultimate')) vipType = 'ultimate';
     else if (hasLicense('vip_platinum')) vipType = 'platinum';
     else if (hasLicense('vip_premium')) vipType = 'premium';
 
     const VIP_SHOP_DISCOUNTS = {
+      luxus_pass: 0.50, // 50% Luxus-Pass
       elite_plus: 0.35,
       ultimate:   0.20,
       platinum:   0.10,
       premium:    0.00
     };
-    const isVipItem = typeof itemId === 'string' && itemId.startsWith('vip_');
+    const isVipItem = typeof itemId === 'string' && (itemId.startsWith('vip_') || itemId === 'luxus_pass');
     let finalPrice = item.price;
     if (vipType && VIP_SHOP_DISCOUNTS[vipType] > 0 && item.category !== 'credits' && !isVipItem) {
       const discount = VIP_SHOP_DISCOUNTS[vipType];
@@ -5752,3 +5759,7 @@ ${ticket.closedAt ? ` • Geschlossen: ${_escapeHtml(new Date(ticket.closedAt).t
 ${msgs || '<p style="color:#71717a">Keine Nachrichten gespeichert.</p>'}
 </body></html>`;
 }
+
+
+
+

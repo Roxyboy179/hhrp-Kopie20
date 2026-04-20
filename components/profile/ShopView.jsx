@@ -8,7 +8,7 @@ import {
   Plus, Minus, KeyRound, Info, Loader2, CheckCircle2, Calculator, Coins,
   // Icons für Credit-Spend + Mystery Boxes
   Hash, RotateCcw, Receipt, Zap, Rocket, Award, ShieldPlus, Unlock,
-  ShieldCheck, Dice5, Ticket, Crown, Gem, Package, Gift
+  ShieldCheck, Dice5, Ticket, Crown, Gem, Package, Gift, Glasses
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -105,6 +105,7 @@ export function ShopView({ user, userData, onRefresh }) {
     'vip_platinum': Sparkles,
     'vip_ultimate': Sparkles,
     'vip_elite_plus': Sparkles,
+    'luxus_pass': Crown,
     'werkzeug_angel': Fish,
     'werkzeug_hacking': Laptop,
     'schutzbrief_polizei': Shield,
@@ -494,17 +495,20 @@ export function ShopView({ user, userData, onRefresh }) {
   const hasVIPPlatinum = hasLicense('vip_platinum');
   const hasVIPUltimate = hasLicense('vip_ultimate');
   const hasVIPElitePlus = hasLicense('vip_elite_plus');
+  const hasLuxusPass = hasLicense('luxus_pass');
   
   // VIP Hierarchie
   const vipHierarchy = {
     'vip_premium': 0,
     'vip_platinum': 1,
     'vip_ultimate': 2,
-    'vip_elite_plus': 3
+    'vip_elite_plus': 3,
+    'luxus_pass': 4
   };
   
   let userHighestVIP = -1;
-  if (hasVIPElitePlus) userHighestVIP = 3;
+  if (hasLuxusPass) userHighestVIP = 4;
+  else if (hasVIPElitePlus) userHighestVIP = 3;
   else if (hasVIPUltimate) userHighestVIP = 2;
   else if (hasVIPPlatinum) userHighestVIP = 1;
   else if (hasVIPPremium) userHighestVIP = 0;
@@ -517,16 +521,23 @@ export function ShopView({ user, userData, onRefresh }) {
   
   // VIP-Rabatte (korrekte Werte!)
   let vipDiscount = 0;
-  if (hasVIPElitePlus) vipDiscount = 0.35; // 35%
+  if (hasLuxusPass) vipDiscount = 0.50; // 50% Luxus-Pass
+  else if (hasVIPElitePlus) vipDiscount = 0.35; // 35%
   else if (hasVIPUltimate) vipDiscount = 0.20; // 20%
   else if (hasVIPPlatinum) vipDiscount = 0.10; // 10%
   
   const calculatePrice = (basePrice, itemId = null) => {
-    // VIP-Items bekommen KEINEN VIP-Rabatt!
-    if (itemId && itemId.startsWith('vip_')) {
+    // VIP-Items und Credits bekommen KEINEN Rabatt!
+    if (itemId && (itemId.startsWith('vip_') || itemId === 'luxus_pass')) {
       return basePrice;
     }
     
+    // Luxus-Pass: 50% Rabatt auf alles außer VIP & Credits
+    if (hasLuxusPass) {
+      return Math.floor(basePrice * 0.50);
+    }
+    
+    // Normale VIP-Rabatte
     if (vipDiscount > 0) {
       return Math.floor(basePrice * (1 - vipDiscount));
     }
