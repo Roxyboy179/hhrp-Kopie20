@@ -6,6 +6,7 @@ import webpush from 'web-push';
 import { supabaseAdmin } from '@/lib/supabase';
 import { readStats, writeStats, incrementStat } from '@/lib/stats-file';
 import { SHOP_ITEMS, CREDIT_PURCHASE_OPTIONS, BANK_LIMIT_UPGRADES, CREDIT_SPEND_ITEMS, CREDIT_CRATES } from '@/lib/shop-data';
+import { findActivePromotion } from '@/lib/shop-promotions';
 import { 
   createBewerbung, 
   getUserBewerbungen, 
@@ -4117,10 +4118,36 @@ async function handleShopPurchase(request) {
 
     const isVipItem = typeof itemId === 'string' && (itemId.startsWith('vip_') || itemId === 'luxus_pass');
 
+    // VIP-Rabatt-Prozent ermitteln
+    let vipDiscountPercent = 0;
     if (vipType && VIP_SHOP_DISCOUNTS[vipType] > 0 && item.category !== 'credits' && !isVipItem) {
-      const discount = VIP_SHOP_DISCOUNTS[vipType];
-      finalPrice = Math.floor(item.price * (1 - discount));
-      console.log(`[SHOP] ✅ VIP ${vipType} Rabatt angewendet: ${item.price}€ → ${finalPrice}€ (-${discount * 100}%)`);
+      vipDiscountPercent = VIP_SHOP_DISCOUNTS[vipType];
+    }
+
+    // 🎉 Promo-Rabatt (z.B. Führerschein-Aktion) – userHighestVIP-Mapping
+    // In SHOP_PROMOTIONS ist eligibility 'non_vip' wenn userHighestVIP < 0.
+    // vipType gesetzt ⇒ User hat VIP ⇒ Non-VIP-Promo fällt weg.
+    const userHighestVIPForPromo = vipType ? 0 : -1;
+    let promoDiscountPercent = 0;
+    let activePromo = null;
+    if (item.category !== 'credits' && !isVipItem) {
+      activePromo = findActivePromotion(item, itemId, userHighestVIPForPromo);
+      if (activePromo) promoDiscountPercent = activePromo.discount;
+    }
+
+    // Besserer Rabatt gewinnt (VIP vs. Promo)
+    const bestDiscount = Math.max(vipDiscountPercent, promoDiscountPercent);
+    const appliedDiscountSource =
+      bestDiscount === 0 ? null :
+      (promoDiscountPercent > vipDiscountPercent ? 'promo' : 'vip');
+
+    if (bestDiscount > 0) {
+      finalPrice = Math.floor(item.price * (1 - bestDiscount));
+      console.log(
+        `[SHOP] ✅ Rabatt angewendet (${appliedDiscountSource}): ` +
+        `${item.price}€ → ${finalPrice}€ (-${(bestDiscount * 100).toFixed(0)}%) ` +
+        `[vip:${vipType || 'none'}, promo:${activePromo?.id || 'none'}]`
+      );
     } else {
       console.log(`[SHOP] ❌ Kein Rabatt: vipType=${vipType}, category=${item.category}, isVipItem=${isVipItem}`);
     }
@@ -4134,6 +4161,23 @@ async function handleShopPurchase(request) {
       }, { status: 400 });
     }
 
+    // Metadata für den Kauf
+    const purchaseMetadata = {};
+    if (vipType) {
+      purchaseMetadata.original_price = item.price;
+      purchaseMetadata.vip_status = vipType;
+      purchaseMetadata.vip_discount = VIP_SHOP_DISCOUNTS[vipType];
+    }
+    if (activePromo) {
+      purchaseMetadata.original_price = item.price;
+      purchaseMetadata.promo_id = activePromo.id;
+      purchaseMetadata.promo_discount = activePromo.discount;
+    }
+    if (appliedDiscountSource) {
+      purchaseMetadata.applied_discount = appliedDiscountSource;
+      purchaseMetadata.applied_discount_percent = bestDiscount;
+    }
+
     // Erstelle Eintrag in pending_shop_purchases
     const { data: purchase, error: insertError } = await supabaseAdmin
       .from('pending_shop_purchases')
@@ -4142,10 +4186,10 @@ async function handleShopPurchase(request) {
         item_id: itemId,
         item_name: item.name,
         item_category: item.category,
-        price: finalPrice,  // VIP-Rabatt bereits angewendet
+        price: finalPrice,  // Rabatt bereits angewendet
         status: 'pending',
         initiated_from: 'website',
-        metadata: vipType ? { original_price: item.price, vip_discount: VIP_SHOP_DISCOUNTS[vipType] } : {}
+        metadata: purchaseMetadata
       })
       .select()
       .single();
@@ -4162,8 +4206,10 @@ async function handleShopPurchase(request) {
         id: purchase.id,
         item: item.name,
         price: finalPrice,
-        originalPrice: vipType ? item.price : undefined,
-        vipDiscount: vipType ? VIP_SHOP_DISCOUNTS[vipType] : undefined,
+        originalPrice: appliedDiscountSource ? item.price : undefined,
+        vipDiscount: appliedDiscountSource === 'vip' ? vipDiscountPercent : undefined,
+        promoDiscount: appliedDiscountSource === 'promo' ? promoDiscountPercent : undefined,
+        promoId: activePromo?.id,
         status: 'pending'
       }
     });
@@ -4798,10 +4844,34 @@ async function handleGiftItem(request) {
     };
     const isVipItem = typeof itemId === 'string' && (itemId.startsWith('vip_') || itemId === 'luxus_pass');
     let finalPrice = item.price;
+
+    // VIP-Rabatt-Prozent
+    let vipDiscountPercent = 0;
     if (vipType && VIP_SHOP_DISCOUNTS[vipType] > 0 && item.category !== 'credits' && !isVipItem) {
-      const discount = VIP_SHOP_DISCOUNTS[vipType];
-      finalPrice = Math.floor(item.price * (1 - discount));
-      console.log(`[GIFT] ✅ VIP ${vipType} Rabatt: ${item.price}€ → ${finalPrice}€ (-${discount * 100}%)`);
+      vipDiscountPercent = VIP_SHOP_DISCOUNTS[vipType];
+    }
+
+    // 🎉 Aktions-Rabatt (Preis bezieht sich auf den Sender/Käufer – er muss den rabattierten Preis bekommen)
+    const userHighestVIPForPromo = vipType ? 0 : -1;
+    let promoDiscountPercent = 0;
+    let activePromo = null;
+    if (item.category !== 'credits' && !isVipItem) {
+      activePromo = findActivePromotion(item, itemId, userHighestVIPForPromo);
+      if (activePromo) promoDiscountPercent = activePromo.discount;
+    }
+
+    // Besserer Rabatt gewinnt
+    const bestDiscount = Math.max(vipDiscountPercent, promoDiscountPercent);
+    const appliedDiscountSource =
+      bestDiscount === 0 ? null :
+      (promoDiscountPercent > vipDiscountPercent ? 'promo' : 'vip');
+
+    if (bestDiscount > 0) {
+      finalPrice = Math.floor(item.price * (1 - bestDiscount));
+      console.log(
+        `[GIFT] ✅ Rabatt (${appliedDiscountSource}): ${item.price}€ → ${finalPrice}€ ` +
+        `(-${(bestDiscount * 100).toFixed(0)}%) [vip:${vipType || 'none'}, promo:${activePromo?.id || 'none'}]`
+      );
     }
     const price = finalPrice;
 
@@ -4852,7 +4922,14 @@ async function handleGiftItem(request) {
         status: 'pending',
         initiated_from: 'website',
         is_gift: true,
-        metadata: { originalPrice: item.price, vipType, discount: item.price - price }
+        metadata: {
+          originalPrice: item.price,
+          vipType,
+          discount: item.price - price,
+          applied_discount: appliedDiscountSource,
+          applied_discount_percent: bestDiscount,
+          promo_id: activePromo?.id || null,
+        }
       })
       .select()
       .single();

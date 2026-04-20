@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { ScrollProgressBar } from '@/components/shared/ScrollProgressBar';
 import { LoginModal } from '@/components/LoginModal';
 import WebsiteStatsTracker from '@/components/WebsiteStatsTracker';
+import { PromoBanner } from '@/components/shop/PromoBanner';
+import { getActiveBannerPromotion } from '@/lib/shop-promotions';
 import { 
   FileText, Users, CheckCircle2, Clock, ArrowRight, 
   Zap, Target, Loader2, ChevronDown, Sparkles, UserCircle,
@@ -88,6 +90,18 @@ export default function HomePage() {
   const [teamMembers, setTeamMembers] = useState([]);
   const [isMobile, setIsMobile] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
+  // 🎉 Aktuell aktive Shop-Aktion (für den Landingpage-Banner)
+  // Auf der Landingpage zeigen wir die Aktion allen Besuchern (auch VIPs)
+  // als Marketing-Hinweis – die Eligibility-Prüfung erfolgt im Shop.
+  const [bannerPromo, setBannerPromo] = useState(null);
+
+  useEffect(() => {
+    // Aktive Aktion bei Mount ermitteln (ohne Eligibility-Filter → für alle)
+    setBannerPromo(getActiveBannerPromotion());
+    // Minütlich neu prüfen, damit abgelaufene Aktionen live verschwinden
+    const id = setInterval(() => setBannerPromo(getActiveBannerPromotion()), 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     setIsMobile(window.innerWidth < 768);
@@ -278,6 +292,22 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* === 🎉 AKTIONS-BANNER (falls aktuell eine Aktion läuft) === */}
+      {bannerPromo && (
+        <section className="px-4 sm:px-6 pb-4 md:pb-0">
+          <div className={`max-w-5xl mx-auto ${!isMobile ? 'animate-fade-in-up' : ''}`}>
+            <PromoBanner
+              promo={bannerPromo}
+              variant="landing"
+              onClick={() => {
+                if (user) router.push('/profil?tab=shop');
+                else setLoginModalOpen(true);
+              }}
+            />
+          </div>
+        </section>
+      )}
 
       {/* === STATS === */}
       <section className="px-4 sm:px-6 py-16 md:py-24">

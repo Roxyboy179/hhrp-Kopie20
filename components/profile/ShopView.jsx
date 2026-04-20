@@ -41,84 +41,12 @@ const CRATE_ICONS = {
   diamond: { Icon: Gem,     color: '#22D3EE' }
 };
 
-// ═══════════════════════════════════════════════════════════════
-// 🎉 SHOP-AKTIONEN / RABATT-KAMPAGNEN
-// ═══════════════════════════════════════════════════════════════
-// Zeitlich begrenzte Rabatt-Aktionen. Werden automatisch angewendet,
-// sobald das aktuelle Datum im Zeitraum liegt UND der User die
-// Bedingungen (z.B. kein VIP-/Luxus-Pass) erfüllt.
-//
-// eligibility:
-//   - 'non_vip'  → nur User OHNE aktives VIP oder Luxus-Pass
-//   - 'all'      → alle User
-//
-// appliesTo:
-//   - categories: Liste der SHOP_ITEMS.category, auf die der Rabatt greift
-//   - itemIds:    (optional) konkrete Item-IDs (wenn gesetzt, hat Vorrang)
-//
-// discount:       Prozent als Dezimalzahl (0.25 = 25% Rabatt)
-// startDate/endDate: ISO-Date-Strings (inkl. Zeit). Tagesgenau im Zeitraum.
-// ═══════════════════════════════════════════════════════════════
-const SHOP_PROMOTIONS = [
-  {
-    id: 'fuehrerschein_fruehjahr_2026',
-    title: 'Frühjahrs-Aktion: Führerscheine',
-    description: '25% Rabatt auf ALLE Führerscheine',
-    icon: '🚗',
-    discount: 0.25,
-    startDate: '2026-04-21T00:00:00',
-    endDate:   '2026-05-21T23:59:59',
-    eligibility: 'non_vip',
-    appliesTo: { categories: ['führerscheine'] },
-    badgeLabel: '-25% Aktion',
-    notEligibleReason: 'Nur für Nutzer ohne VIP oder Luxus-Pass',
-  },
-];
-
-// Hilfsfunktion: Prüft ob eine Aktion auf ein Item angewendet werden kann.
-// `item` muss das SHOP_ITEMS-Objekt sein (mit .category).
-const findActivePromotion = (item, itemId, userHighestVIP) => {
-  if (!item) return null;
-  const now = new Date();
-  for (const promo of SHOP_PROMOTIONS) {
-    const start = new Date(promo.startDate);
-    const end = new Date(promo.endDate);
-    if (now < start || now > end) continue;
-
-    // Item-Match
-    const inIds = promo.appliesTo?.itemIds?.includes(itemId);
-    const inCats = promo.appliesTo?.categories?.includes(item.category);
-    if (!inIds && !inCats) continue;
-
-    // Eligibility
-    if (promo.eligibility === 'non_vip' && userHighestVIP >= 0) continue;
-
-    return promo;
-  }
-  return null;
-};
-
-// Liefert die aktive Aktion (ohne Item-Filter) — für Banner oben im Shop.
-const getActiveBannerPromotion = (userHighestVIP) => {
-  const now = new Date();
-  for (const promo of SHOP_PROMOTIONS) {
-    const start = new Date(promo.startDate);
-    const end = new Date(promo.endDate);
-    if (now < start || now > end) continue;
-    // Bei non_vip-Aktionen Banner nur für nicht-VIP-User anzeigen
-    if (promo.eligibility === 'non_vip' && userHighestVIP >= 0) continue;
-    return promo;
-  }
-  return null;
-};
-
-// Formatiert ein Datum für die Anzeige (DD.MM.YYYY)
-const formatPromoDate = (iso) => {
-  const d = new Date(iso);
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  return `${dd}.${mm}.${d.getFullYear()}`;
-};
+// Shop-Aktionen (Single Source of Truth – shared mit Backend)
+import {
+  findActivePromotion,
+  getActiveBannerPromotion,
+} from '@/lib/shop-promotions';
+import { PromoBanner } from '@/components/shop/PromoBanner';
 
 import { Label } from '@/components/ui/label';
 
@@ -872,108 +800,7 @@ export function ShopView({ user, userData, onRefresh }) {
   return (
     <div className="space-y-6">
       {/* 🎉 Aktions-Banner (nur wenn aktuell eine Aktion läuft UND User qualifiziert) */}
-      {activeBannerPromo && (
-        <div
-          className="relative p-5 rounded-xl border backdrop-blur-sm overflow-hidden"
-          style={{
-            background:
-              'linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(236, 72, 153, 0.14), rgba(168, 85, 247, 0.12))',
-            borderColor: 'rgba(245, 158, 11, 0.45)',
-            boxShadow: '0 0 24px rgba(245, 158, 11, 0.15)',
-          }}
-        >
-          {/* Dekorative glow */}
-          <div
-            className="absolute -top-8 -right-8 w-40 h-40 rounded-full opacity-30 pointer-events-none"
-            style={{
-              background:
-                'radial-gradient(circle, rgba(245, 158, 11, 0.6), transparent 70%)',
-            }}
-          />
-
-          <div className="relative flex items-start gap-4 flex-wrap sm:flex-nowrap">
-            <div
-              className="flex items-center justify-center w-12 h-12 rounded-xl text-2xl shrink-0"
-              style={{
-                background: 'rgba(245, 158, 11, 0.25)',
-                border: '1px solid rgba(245, 158, 11, 0.5)',
-              }}
-            >
-              {activeBannerPromo.icon || '🎉'}
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span
-                  className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md"
-                  style={{
-                    background: 'rgba(245, 158, 11, 0.3)',
-                    color: '#FCD34D',
-                    border: '1px solid rgba(245, 158, 11, 0.5)',
-                  }}
-                >
-                  🔥 Limitierte Aktion
-                </span>
-                <span
-                  className="text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md"
-                  style={{
-                    background: 'rgba(16, 185, 129, 0.2)',
-                    color: '#6EE7B7',
-                    border: '1px solid rgba(16, 185, 129, 0.4)',
-                  }}
-                >
-                  ✓ Automatisch aktiv
-                </span>
-              </div>
-
-              <h3 className="text-base sm:text-lg font-bold text-white mb-1 leading-tight">
-                {activeBannerPromo.title}
-              </h3>
-              <p className="text-sm text-white/80 mb-2">
-                {activeBannerPromo.description}
-              </p>
-
-              <div className="flex items-center gap-2 text-xs text-white/60 flex-wrap">
-                <Clock className="w-3.5 h-3.5" />
-                <span>
-                  Gültig vom{' '}
-                  <span className="text-white font-medium">
-                    {formatPromoDate(activeBannerPromo.startDate)}
-                  </span>{' '}
-                  bis{' '}
-                  <span className="text-white font-medium">
-                    {formatPromoDate(activeBannerPromo.endDate)}
-                  </span>
-                </span>
-                {activeBannerPromo.eligibility === 'non_vip' && (
-                  <>
-                    <span className="opacity-50">•</span>
-                    <span>Nur für Nutzer ohne VIP / Luxus-Pass</span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="shrink-0 text-right">
-              <div
-                className="text-3xl sm:text-4xl font-black leading-none"
-                style={{
-                  background:
-                    'linear-gradient(135deg, #FCD34D, #F59E0B, #EC4899)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
-                -{Math.round(activeBannerPromo.discount * 100)}%
-              </div>
-              <div className="text-[10px] text-white/50 uppercase tracking-wider mt-1">
-                Rabatt
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <PromoBanner promo={activeBannerPromo} variant="shop" />
 
       {/* Info Banner - Überweisung-Stil */}
       <div 
