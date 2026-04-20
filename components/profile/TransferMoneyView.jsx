@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Send, ArrowRight, AlertCircle, CheckCircle2, Loader2, Calculator, Search, User as UserIcon, X } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Send, ArrowRight, AlertCircle, CheckCircle2, Loader2, Calculator, Search, User as UserIcon, X, Clock, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +21,76 @@ const VIP_DISCOUNTS = {
   'elite_plus': { label: 'VIP ELITE PLUS', discount: 1.0, emoji: '🏆' },
   'luxus_pass': { label: 'Luxus-Pass', discount: 1.0, emoji: '🎩' }
 };
+
+// ──────────────────────────────────────────────────────────────
+// Pending Transfer Row — einzelne Zeile für offene Überweisung
+// ──────────────────────────────────────────────────────────────
+function PendingTransferRow({ transfer }) {
+  const [elapsedSec, setElapsedSec] = useState(0);
+
+  useEffect(() => {
+    if (!transfer?.queuedAt) return;
+    const start = new Date(transfer.queuedAt).getTime();
+    const tick = () => setElapsedSec(Math.max(0, Math.floor((Date.now() - start) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [transfer?.queuedAt]);
+
+  const elapsedStr = elapsedSec < 60
+    ? `${elapsedSec}s`
+    : `${Math.floor(elapsedSec / 60)}m ${elapsedSec % 60}s`;
+
+  return (
+    <div
+      className="flex items-center gap-3 p-3 rounded-lg border"
+      style={{
+        background: 'rgba(255, 255, 255, 0.02)',
+        borderColor: 'rgba(245, 158, 11, 0.15)'
+      }}
+    >
+      {/* Spinning-Indicator */}
+      <div className="relative w-9 h-9 flex-shrink-0">
+        <div className="absolute inset-0 rounded-full border-2 border-amber-500/10" />
+        <div className="absolute inset-0 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Send className="w-3.5 h-3.5 text-amber-400" />
+        </div>
+      </div>
+
+      {/* Details */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 text-sm text-white font-medium truncate">
+          <span className="tabular-nums">{(transfer.amount || 0).toLocaleString('de-DE')}€</span>
+          <ArrowRight className="w-3.5 h-3.5 text-white/40 flex-shrink-0" />
+          <span className="font-mono text-xs text-white/70 truncate">
+            {transfer.receiverAccount}
+          </span>
+        </div>
+        <div className="flex items-center gap-3 mt-0.5 text-[11px] text-white/40">
+          {transfer.fee > 0 && (
+            <span className="flex items-center gap-1">
+              <Building2 className="w-3 h-3" />
+              Gebühr {Number(transfer.fee).toLocaleString('de-DE')}€
+            </span>
+          )}
+          <span className="flex items-center gap-1 text-amber-300/80">
+            <Clock className="w-3 h-3" />
+            {elapsedStr}
+          </span>
+        </div>
+      </div>
+
+      {/* Status-Badge */}
+      <div className="flex-shrink-0 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/20">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-300 flex items-center gap-1">
+          <Loader2 className="w-3 h-3 animate-spin" />
+          {transfer.status === 'processing' ? 'Bucht…' : 'Wartend'}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export function TransferMoneyView({ userData, onTransferComplete }) {
   const [kontonummer, setKontonummer] = useState('');
@@ -71,6 +141,76 @@ export function TransferMoneyView({ userData, onTransferComplete }) {
     setSelectedRecipient(null);
     setKontonummer('');
   };
+
+  // ═══════════════════════════════════════════════════════════════
+  // PENDING TRANSFERS — Bot-Verarbeitung tracken
+  // ═══════════════════════════════════════════════════════════════
+  const [pendingTransfers, setPendingTransfers] = useState([]);
+  const pollTimeoutRef = useRef(null);
+  const previousPendingIds = useRef(new Set());
+
+  const fetchPendingTransfers = useCallback(async () => {
+    try {
+      const res = await fetch('/api/transfer/pending', { cache: 'no-store' });
+      if (!res.ok) return null;
+      const text = await res.text();
+      let data = {};
+      try { data = text ? JSON.parse(text) : {}; } catch { return null; }
+      return data.pending || [];
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const schedulePollTransfers = useCallback((delay = 3000) => {
+    if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+    pollTimeoutRef.current = setTimeout(async () => {
+      const fresh = await fetchPendingTransfers();
+      if (fresh === null) {
+        schedulePollTransfers(5000);
+        return;
+      }
+
+      const newIds = new Set(fresh.map(t => t.queuedId));
+      const oldIds = previousPendingIds.current;
+      const removed = [...oldIds].filter(id => !newIds.has(id));
+
+      if (removed.length > 0) {
+        // Bot hat verarbeitet → Balance neu laden
+        if (typeof onTransferComplete === 'function') {
+          await onTransferComplete();
+        }
+        removed.forEach(() => {
+          toast.success('Überweisung abgeschlossen', {
+            description: 'Der Bot hat die Buchung durchgeführt.'
+          });
+        });
+      }
+
+      previousPendingIds.current = newIds;
+      setPendingTransfers(fresh);
+
+      if (newIds.size > 0) {
+        schedulePollTransfers(3000);
+      }
+    }, delay);
+  }, [fetchPendingTransfers, onTransferComplete]);
+
+  // Initial fetch
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const fresh = await fetchPendingTransfers();
+      if (cancelled || !fresh) return;
+      previousPendingIds.current = new Set(fresh.map(t => t.queuedId));
+      setPendingTransfers(fresh);
+      if (fresh.length > 0) schedulePollTransfers(3000);
+    })();
+    return () => {
+      cancelled = true;
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+    };
+  }, [fetchPendingTransfers, schedulePollTransfers]);
 
   // Bank und VIP Status aus userData
   // Kontonummer und Bank-Info aus cards
@@ -187,16 +327,35 @@ export function TransferMoneyView({ userData, onTransferComplete }) {
         throw new Error(data.error || 'Überweisung fehlgeschlagen');
       }
 
-      toast.success('Überweisung erfolgreich!', {
-        description: `${betragNum.toLocaleString('de-DE')}€ wurden überwiesen.`
+      // Optimistic: Transfer direkt in die Pending-Liste aufnehmen
+      // (damit der Spinner sofort erscheint, ohne auf den nächsten Poll zu warten)
+      if (data.transfer?.id) {
+        const optimistic = {
+          queuedId: data.transfer.id,
+          senderAccount: senderAccountNumber,
+          receiverAccount: kontonummer,
+          amount: betragNum,
+          fee: data.transfer.fee,
+          totalCost: data.transfer.total,
+          status: 'pending',
+          queuedAt: new Date().toISOString()
+        };
+        setPendingTransfers(prev => [optimistic, ...prev.filter(t => t.queuedId !== optimistic.queuedId)]);
+        previousPendingIds.current = new Set([...previousPendingIds.current, optimistic.queuedId]);
+        schedulePollTransfers(2500);
+      }
+
+      toast.info('Überweisung eingereicht', {
+        description: `${betragNum.toLocaleString('de-DE')}€ – der Bot bucht gleich.`
       });
 
       // Reset form
       setKontonummer('');
       setBetrag('');
       setShowConfirm(false);
+      setSelectedRecipient(null);
 
-      // Callback zum Neuladen der Daten
+      // Callback zum Neuladen der Daten (Balance)
       if (onTransferComplete) {
         onTransferComplete();
       }
@@ -227,6 +386,36 @@ export function TransferMoneyView({ userData, onTransferComplete }) {
           </div>
         </div>
       </div>
+
+      {/* ═══ PENDING TRANSFERS — Bot-Verarbeitung im Gange ═══ */}
+      {pendingTransfers.length > 0 && (
+        <div
+          className="p-4 rounded-xl border animate-in fade-in slide-in-from-top-2 duration-300"
+          style={{
+            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(245, 158, 11, 0.02))',
+            borderColor: 'rgba(245, 158, 11, 0.3)'
+          }}
+        >
+          <div className="flex items-center gap-2 mb-3">
+            <div className="relative w-5 h-5">
+              <div className="absolute inset-0 rounded-full border-2 border-amber-500/20" />
+              <div className="absolute inset-0 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
+            </div>
+            <h3 className="text-sm font-semibold text-white">
+              {pendingTransfers.length} Überweisung{pendingTransfers.length !== 1 ? 'en' : ''} in Verarbeitung
+            </h3>
+          </div>
+          <p className="text-xs text-white/60 mb-3 leading-relaxed">
+            Der Discord-Bot bucht deine Überweisung gleich. Bitte einen kurzen Moment Geduld —
+            du wirst automatisch informiert, sobald der Vorgang abgeschlossen ist.
+          </p>
+          <div className="space-y-2">
+            {pendingTransfers.map(t => (
+              <PendingTransferRow key={t.queuedId} transfer={t} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Bank Info */}
       <div 

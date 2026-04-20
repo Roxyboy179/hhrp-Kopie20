@@ -2351,6 +2351,8 @@ export async function GET(request) {
     case 'team/members': return handleGetTeamMembers(request);
     case 'shop/items': return handleGetShopItems(request);
     case 'licenses/pending-actions': return handleGetPendingLicenseActions(request);
+    case 'shop/pending-purchases': return handleGetPendingShopPurchases(request);
+    case 'transfer/pending': return handleGetPendingTransfers(request);
     default: break;
   }
 
@@ -4996,6 +4998,86 @@ async function handleGetPendingLicenseActions(request) {
     return NextResponse.json({ pending });
   } catch (e) {
     console.error('[LICENSE-PENDING] ❌ Error:', e);
+    return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
+  }
+}
+
+// GET /api/shop/pending-purchases - Holt noch nicht verarbeitete Shop-Käufe des Users
+// Nutzung: Shop-View sperrt Karten, die aktuell vom Bot verarbeitet werden.
+async function handleGetPendingShopPurchases(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    // Alle Pending-Einträge des Users, aber OHNE license_management (das hat eigenen Endpoint)
+    const { data, error } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .select('id, item_id, item_name, item_category, status, is_gift, recipient_discord_id, metadata, created_at')
+      .eq('buyer_discord_id', user.id)
+      .neq('item_category', 'license_management')
+      .in('status', ['pending', 'processing'])
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('[SHOP-PENDING] ❌ Fetch error:', error);
+      return NextResponse.json({ error: 'DB error', details: error.message }, { status: 500 });
+    }
+
+    const pending = (data || []).map(row => ({
+      queuedId: row.id,
+      itemId: row.item_id,
+      itemName: row.item_name,
+      category: row.item_category,
+      status: row.status,
+      isGift: row.is_gift === true,
+      recipientId: row.recipient_discord_id,
+      queuedAt: row.created_at
+    }));
+
+    return NextResponse.json({ pending });
+  } catch (e) {
+    console.error('[SHOP-PENDING] ❌ Error:', e);
+    return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
+  }
+}
+
+// GET /api/transfer/pending - Holt noch nicht verarbeitete Überweisungen des Users
+// Der Bot löscht den Eintrag aus pending_transfers nach Abarbeitung.
+async function handleGetPendingTransfers(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('pending_transfers')
+      .select('id, sender_account_number, receiver_account_number, amount, fee, total_cost, status, created_at')
+      .eq('sender_discord_id', user.id)
+      .in('status', ['pending', 'processing'])
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[TRANSFER-PENDING] ❌ Fetch error:', error);
+      return NextResponse.json({ error: 'DB error', details: error.message }, { status: 500 });
+    }
+
+    const pending = (data || []).map(row => ({
+      queuedId: row.id,
+      senderAccount: row.sender_account_number,
+      receiverAccount: row.receiver_account_number,
+      amount: row.amount,
+      fee: row.fee,
+      totalCost: row.total_cost,
+      status: row.status,
+      queuedAt: row.created_at
+    }));
+
+    return NextResponse.json({ pending });
+  } catch (e) {
+    console.error('[TRANSFER-PENDING] ❌ Error:', e);
     return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
   }
 }

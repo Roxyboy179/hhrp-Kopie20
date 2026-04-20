@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   ShoppingCart, CreditCard, TrendingUp, Check, X, Clock, 
@@ -42,6 +42,59 @@ const CRATE_ICONS = {
 };
 import { Label } from '@/components/ui/label';
 
+// ──────────────────────────────────────────────────────────────
+// Bot-Pending Overlay — sperrt die Karte mit Spinner während Verarbeitung
+// ──────────────────────────────────────────────────────────────
+function ShopPendingOverlay({ queuedAt, isGift }) {
+  const [elapsedSec, setElapsedSec] = useState(0);
+
+  useEffect(() => {
+    if (!queuedAt) return;
+    const start = new Date(queuedAt).getTime();
+    const tick = () => setElapsedSec(Math.max(0, Math.floor((Date.now() - start) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [queuedAt]);
+
+  return (
+    <div
+      className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 rounded-xl animate-in fade-in duration-200"
+      style={{
+        background: 'rgba(10, 11, 15, 0.88)',
+        backdropFilter: 'blur(3px)',
+        border: '1px solid rgba(245, 158, 11, 0.3)'
+      }}
+    >
+      {/* Spinning Ring mit Icon in der Mitte */}
+      <div className="relative w-14 h-14">
+        <div className="absolute inset-0 rounded-full border-2 border-amber-500/10" />
+        <div className="absolute inset-0 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          {isGift ? (
+            <Gift className="w-5 h-5 text-amber-400" />
+          ) : (
+            <ShoppingBag className="w-5 h-5 text-amber-400" />
+          )}
+        </div>
+      </div>
+
+      <div className="text-center px-3 max-w-[90%]">
+        <p className="text-xs font-semibold text-white">
+          {isGift ? 'Geschenk wird versendet …' : 'Kauf wird verarbeitet …'}
+        </p>
+        <p className="text-[10px] text-white/60 mt-0.5 leading-snug">
+          Bitte einen kurzen Moment Geduld.
+        </p>
+        <p className="text-[10px] text-amber-300/80 mt-1.5 flex items-center justify-center gap-1">
+          <Clock className="w-2.5 h-2.5" />
+          {elapsedSec}s in Warteschlange
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function ShopView({ user, userData, onRefresh }) {
   const [shopItems, setShopItems] = useState({});
   const [creditOptions, setCreditOptions] = useState([]);
@@ -74,6 +127,115 @@ export function ShopView({ user, userData, onRefresh }) {
   const [giftRecipient, setGiftRecipient] = useState(null); // Empfänger-Daten nach Prüfung
   const [giftError, setGiftError] = useState('');
   const [checkingRecipient, setCheckingRecipient] = useState(false);
+
+  // ═══════════════════════════════════════════════════════════════
+  // PENDING PURCHASES — Karten sperren bis Bot verarbeitet hat
+  // pendingPurchases = { [itemId]: { queuedId, queuedAt, category, isGift } }
+  // ═══════════════════════════════════════════════════════════════
+  const [pendingPurchases, setPendingPurchases] = useState({});
+  const pollTimeoutRef = useRef(null);
+  const previousPendingKeys = useRef(new Set());
+
+  const fetchPendingPurchases = useCallback(async () => {
+    try {
+      const res = await fetch('/api/shop/pending-purchases');
+      if (!res.ok) return null;
+      const text = await res.text();
+      let data = {};
+      try { data = text ? JSON.parse(text) : {}; } catch { return null; }
+
+      const map = {};
+      (data.pending || []).forEach(p => {
+        // Bei mehreren Einträgen zum selben Item → neuester gewinnt
+        if (!map[p.itemId] || new Date(p.queuedAt) > new Date(map[p.itemId].queuedAt)) {
+          map[p.itemId] = {
+            queuedId: p.queuedId,
+            queuedAt: p.queuedAt,
+            category: p.category,
+            isGift: p.isGift,
+            status: p.status
+          };
+        }
+      });
+      return map;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const schedulePollPurchases = useCallback((delay = 3000) => {
+    if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+    pollTimeoutRef.current = setTimeout(async () => {
+      const fresh = await fetchPendingPurchases();
+      if (fresh === null) {
+        schedulePollPurchases(5000);
+        return;
+      }
+
+      const newKeys = new Set(Object.keys(fresh));
+      const oldKeys = previousPendingKeys.current;
+      const removed = [...oldKeys].filter(k => !newKeys.has(k));
+
+      if (removed.length > 0) {
+        // Bot hat verarbeitet → Daten neu laden
+        if (typeof onRefresh === 'function') {
+          await onRefresh();
+        }
+        removed.forEach(itemId => {
+          const item = shopItems[itemId];
+          toast.success('Kauf abgeschlossen', {
+            description: `${item?.name || itemId} – der Bot hat die Lieferung abgeschlossen.`
+          });
+        });
+      }
+
+      previousPendingKeys.current = newKeys;
+      setPendingPurchases(fresh);
+
+      if (newKeys.size > 0) {
+        schedulePollPurchases(3000);
+      }
+    }, delay);
+  }, [fetchPendingPurchases, onRefresh, shopItems]);
+
+  // Initial fetch
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const fresh = await fetchPendingPurchases();
+      if (cancelled || !fresh) return;
+      previousPendingKeys.current = new Set(Object.keys(fresh));
+      setPendingPurchases(fresh);
+      if (Object.keys(fresh).length > 0) schedulePollPurchases(3000);
+    })();
+    return () => {
+      cancelled = true;
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+    };
+  }, [fetchPendingPurchases, schedulePollPurchases]);
+
+  // Helper: markiere Items als pending (optimistic update nach Kauf/Gift)
+  const markItemsPending = (itemIds, opts = {}) => {
+    const now = new Date().toISOString();
+    setPendingPurchases(prev => {
+      const next = { ...prev };
+      itemIds.forEach(itemId => {
+        next[itemId] = {
+          queuedId: `optimistic_${itemId}_${Date.now()}`,
+          queuedAt: now,
+          category: shopItems[itemId]?.category || 'unknown',
+          isGift: opts.isGift === true,
+          status: 'pending'
+        };
+      });
+      return next;
+    });
+    previousPendingKeys.current = new Set([
+      ...previousPendingKeys.current,
+      ...itemIds
+    ]);
+    schedulePollPurchases(2500);
+  };
 
   // Deaktiviere Body Scroll wenn Modal offen ist
   useEffect(() => {
@@ -296,6 +458,7 @@ export function ShopView({ user, userData, onRefresh }) {
     try {
       if (pendingPurchase.type === 'cart') {
         // Kaufe alle Items im Warenkorb
+        const successfulItemIds = [];
         for (const item of cart) {
           const res = await fetch('/api/shop/purchase', {
             method: 'POST',
@@ -306,9 +469,15 @@ export function ShopView({ user, userData, onRefresh }) {
           if (!res.ok) {
             const data = await res.json();
             toast.error(`Fehler bei ${item.name}: ${data.error}`);
+          } else {
+            successfulItemIds.push(item.id);
           }
         }
-        toast.success(`${cart.length} Item(s) gekauft!`);
+        if (successfulItemIds.length > 0) {
+          // Sofort als pending markieren → Karten werden gesperrt
+          markItemsPending(successfulItemIds, { isGift: false });
+          toast.info(`${successfulItemIds.length} Item(s) gekauft — Bot liefert gleich aus.`);
+        }
         clearCart();
         setShowCart(false);
       } else if (pendingPurchase.type === 'credits') {
@@ -449,7 +618,9 @@ export function ShopView({ user, userData, onRefresh }) {
       const data = await res.json();
       
       if (res.ok) {
-        toast.success(`${item.name} an ${giftRecipient.displayName} verschenkt!`);
+        toast.info(`${item.name} an ${giftRecipient.displayName} gesendet — Bot liefert gleich aus.`);
+        // Sofort als pending markieren → Karte wird gesperrt
+        markItemsPending([giftItemId], { isGift: true });
         setGiftItemId(null);
         setGiftFirstName('');
         setGiftLastName('');
@@ -1036,6 +1207,10 @@ export function ShopView({ user, userData, onRefresh }) {
             
             // Im Gift-Mode: eigene Licenses irrelevant, es zählt nur die Empfänger-Logik
             const visuallyLocked = (!giftMode && hasItem) || isLowerVIP || isDisabledInGiftMode;
+
+            // Bot-Pending: Kauf läuft noch → Karte komplett sperren mit Spinner-Overlay
+            const itemPending = pendingPurchases[id] || null;
+            const isBotLocked = !!itemPending;
             
             const originalPrice = item.price;
             const discountedPrice = calculatePrice(originalPrice, id);
@@ -1044,14 +1219,16 @@ export function ShopView({ user, userData, onRefresh }) {
             return (
               <div
                 key={id}
-                className="p-4 rounded-xl border relative"
+                className={`p-4 rounded-xl border relative ${isBotLocked ? 'overflow-hidden pointer-events-none' : ''}`}
                 style={{
                   background: visuallyLocked
                     ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.15), rgba(80, 80, 80, 0.1))'
                     : 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
-                  borderColor: visuallyLocked
-                    ? 'rgba(150, 150, 150, 0.2)'
-                    : 'rgba(255, 255, 255, 0.08)',
+                  borderColor: isBotLocked
+                    ? 'rgba(245, 158, 11, 0.4)'
+                    : visuallyLocked
+                      ? 'rgba(150, 150, 150, 0.2)'
+                      : 'rgba(255, 255, 255, 0.08)',
                   opacity: visuallyLocked ? 0.7 : 1,
                   position: 'relative'
                 }}
@@ -1063,6 +1240,14 @@ export function ShopView({ user, userData, onRefresh }) {
                     style={{
                       background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.05) 10px, rgba(0,0,0,0.05) 20px)'
                     }}
+                  />
+                )}
+
+                {/* ═══ BOT-LOCKED OVERLAY: Kauf in Verarbeitung ═══ */}
+                {isBotLocked && (
+                  <ShopPendingOverlay
+                    queuedAt={itemPending.queuedAt}
+                    isGift={itemPending.isGift}
                   />
                 )}
                 
@@ -1133,16 +1318,16 @@ export function ShopView({ user, userData, onRefresh }) {
                     {giftMode ? (
                       <Button
                         onClick={() => giftItem(id)}
-                        disabled={isDisabledInGiftMode || isLowerVIP}
+                        disabled={isDisabledInGiftMode || isLowerVIP || isBotLocked}
                         size="sm"
                         className="rounded-lg"
                         style={{
-                          background: (isDisabledInGiftMode || isLowerVIP)
+                          background: (isDisabledInGiftMode || isLowerVIP || isBotLocked)
                             ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.3), rgba(80, 80, 80, 0.2))'
                             : 'linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(126, 34, 206, 0.3))',
                           border: '1px solid rgba(147, 51, 234, 0.4)',
-                          color: (isDisabledInGiftMode || isLowerVIP) ? 'rgba(255, 255, 255, 0.4)' : '#fff',
-                          cursor: (isDisabledInGiftMode || isLowerVIP) ? 'not-allowed' : 'pointer'
+                          color: (isDisabledInGiftMode || isLowerVIP || isBotLocked) ? 'rgba(255, 255, 255, 0.4)' : '#fff',
+                          cursor: (isDisabledInGiftMode || isLowerVIP || isBotLocked) ? 'not-allowed' : 'pointer'
                         }}
                       >
                         <Heart className="w-4 h-4 mr-1" />
@@ -1151,19 +1336,24 @@ export function ShopView({ user, userData, onRefresh }) {
                     ) : (
                       <Button
                         onClick={() => addToCart(id)}
-                        disabled={hasItem || isLowerVIP}
+                        disabled={hasItem || isLowerVIP || isBotLocked}
                         size="sm"
                         className="rounded-lg"
                         style={{
-                          background: (hasItem || isLowerVIP)
+                          background: (hasItem || isLowerVIP || isBotLocked)
                             ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.3), rgba(80, 80, 80, 0.2))'
                             : 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
                           border: '1px solid rgba(255, 255, 255, 0.2)',
-                          color: (hasItem || isLowerVIP) ? 'rgba(255, 255, 255, 0.4)' : '#fff',
-                          cursor: (hasItem || isLowerVIP) ? 'not-allowed' : 'pointer'
+                          color: (hasItem || isLowerVIP || isBotLocked) ? 'rgba(255, 255, 255, 0.4)' : '#fff',
+                          cursor: (hasItem || isLowerVIP || isBotLocked) ? 'not-allowed' : 'pointer'
                         }}
                       >
-                        {hasItem ? (
+                        {isBotLocked ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                            Verarbeitung
+                          </>
+                        ) : hasItem ? (
                           <>
                             <Check className="w-4 h-4 mr-1" />
                             Gekauft
