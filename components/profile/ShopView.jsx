@@ -981,9 +981,10 @@ export function ShopView({ user, userData, onRefresh }) {
             const ItemIcon = itemIcons[id] || ShoppingBag;
             
             const hasItem = hasLicense(id); // Verwende die neue Hilfsfunktion
-            const isVIPItem = id.startsWith('vip_');
+            const isVIPItem = id.startsWith('vip_') || id === 'luxus_pass';
             const canBuyThisVIP = canPurchaseVIP(id);
-            const isLowerVIP = isVIPItem && !canBuyThisVIP && !hasItem;
+            // Im Gift-Mode ist der eigene VIP-Level irrelevant — nur die Empfänger-Hierarchie zählt
+            const isLowerVIP = !giftMode && isVIPItem && !canBuyThisVIP && !hasItem;
             
             // Im Verschenken-Modus: Prüfe VIP-Upgrade-Logik
             let recipientCanReceiveVIP = true;
@@ -1033,6 +1034,9 @@ export function ShopView({ user, userData, onRefresh }) {
             
             const isDisabledInGiftMode = giftMode && (recipientHasItem || (isVIPItem && !recipientCanReceiveVIP));
             
+            // Im Gift-Mode: eigene Licenses irrelevant, es zählt nur die Empfänger-Logik
+            const visuallyLocked = (!giftMode && hasItem) || isLowerVIP || isDisabledInGiftMode;
+            
             const originalPrice = item.price;
             const discountedPrice = calculatePrice(originalPrice, id);
             const hasDiscount = discountedPrice < originalPrice;
@@ -1042,18 +1046,18 @@ export function ShopView({ user, userData, onRefresh }) {
                 key={id}
                 className="p-4 rounded-xl border relative"
                 style={{
-                  background: (hasItem || isLowerVIP || isDisabledInGiftMode)
+                  background: visuallyLocked
                     ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.15), rgba(80, 80, 80, 0.1))'
                     : 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
-                  borderColor: (hasItem || isLowerVIP || isDisabledInGiftMode)
+                  borderColor: visuallyLocked
                     ? 'rgba(150, 150, 150, 0.2)'
                     : 'rgba(255, 255, 255, 0.08)',
-                  opacity: (hasItem || isLowerVIP || isDisabledInGiftMode) ? 0.7 : 1,
+                  opacity: visuallyLocked ? 0.7 : 1,
                   position: 'relative'
                 }}
               >
                 {/* Sperr-Overlay */}
-                {(hasItem || isLowerVIP || isDisabledInGiftMode) && (
+                {visuallyLocked && (
                   <div 
                     className="absolute inset-0 rounded-xl pointer-events-none"
                     style={{
