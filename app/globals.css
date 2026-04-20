@@ -348,9 +348,9 @@ select option:hover {
   }
 }
 @keyframes promo-gradient-pan {
-  0%   { transform: translateX(0); }
-  50%  { transform: translateX(10%); }
-  100% { transform: translateX(0); }
+  0%   { background-position:   0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position:   0% 50%; }
 }
 @keyframes promo-shimmer-sweep {
   0%   { transform: translateX(-120%) skewX(-20deg); opacity: 0; }
