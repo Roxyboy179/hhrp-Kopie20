@@ -89,16 +89,19 @@ export function CharacterManagementView({ userData, onRefresh }) {
   const [pendingActions, setPendingActions] = useState([]);
   const pollTimeoutRef = useRef(null);
   const previousPendingKeys = useRef(new Set());
+  const initializedRef = useRef(false);
 
-  // Initialisiere Formular mit aktuellen Werten
+  // Initialisiere Formular NUR EINMAL mit aktuellen Werten
+  // (nicht bei jedem Polling-Refresh, sonst werden User-Eingaben überschrieben)
   useEffect(() => {
-    if (userData) {
+    if (userData && !initializedRef.current) {
       const fullName = userData.characterName || '';
       const nameParts = fullName.split(' ');
       setVorname(nameParts[0] || '');
       setNachname(nameParts.slice(1).join(' ') || '');
       setHerkunft(userData.origin || '');
       setGeschlecht(userData.gender || '');
+      initializedRef.current = true;
     }
   }, [userData]);
 
