@@ -8,10 +8,10 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
 const BANKS = {
-  hamburg_horizon: { name: 'HAMBURG HORIZON BANK', fee: 0.02, emoji: '🏦' },
-  nordic_capital: { name: 'NORDIC CAPITAL BANK', fee: 0.03, emoji: '🏦' },
-  metrova_trust: { name: 'METROVA TRUST BANK', fee: 0.015, emoji: '🏦' },
-  elite_federal: { name: 'ELITE FEDERAL BANK', fee: 0.004, emoji: '🏦' }
+  hamburg_horizon: { name: 'HAMBURG HORIZON BANK', fee: 2.00, emoji: '🏦' },
+  nordic_capital: { name: 'NORDIC CAPITAL BANK', fee: 3.00, emoji: '🏦' },
+  metrova_trust: { name: 'METROVA TRUST BANK', fee: 1.50, emoji: '🏦' },
+  elite_federal: { name: 'ELITE FEDERAL BANK', fee: 4.00, emoji: '🏦' }
 };
 
 const VIP_DISCOUNTS = {
