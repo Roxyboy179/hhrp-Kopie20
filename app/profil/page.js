@@ -1587,6 +1587,7 @@ export default function ProfilPage() {
                       .map(l => typeof l === 'string' ? l : (l.name || l.id)) // Extrahiere Name
                       .filter(l => l && typeof l === 'string') // Nur Strings behalten
                       .filter(l => !l.startsWith('credits_') && !l.startsWith('credit_')); // Keine Credits
+                    const hasLuxusPass = licenses.includes('luxus_pass');
                     const hasVipElitePlus = licenses.includes('vip_elite_plus');
                     const hasVipUltimate = licenses.includes('vip_ultimate');
                     const hasVipPlatinum = licenses.includes('vip_platinum');
@@ -1594,8 +1595,8 @@ export default function ProfilPage() {
                     
                     // Collect Cooldown basierend auf VIP-Status
                     let collectCooldown = 4 * 60 * 60 * 1000; // 4h Standard
-                    if (hasVipElitePlus || hasVipUltimate) {
-                      collectCooldown = 45 * 60 * 1000; // 45 Minuten für Elite+ / Ultimate
+                    if (hasLuxusPass || hasVipElitePlus || hasVipUltimate) {
+                      collectCooldown = 45 * 60 * 1000; // 45 Minuten für Luxus / Elite+ / Ultimate
                     } else if (hasVipPlatinum) {
                       collectCooldown = 1 * 60 * 60 * 1000; // 1 Stunde für Platinum
                     } else if (hasVipPremium) {
@@ -2187,13 +2188,16 @@ export default function ProfilPage() {
                       .map(l => typeof l === 'string' ? l : (l.name || l.id))
                       .filter(l => l && typeof l === 'string')
                       .filter(l => l && !l.startsWith('credits_') && !l.startsWith('credit_'));
+                    const hasLuxusPass = licenses.includes('luxus_pass');
                     const hasVipElitePlus = licenses.includes('vip_elite_plus');
                     const hasVipUltimate = licenses.includes('vip_ultimate');
                     const hasVipPlatinum = licenses.includes('vip_platinum');
                     const hasVipPremium = licenses.includes('vip_premium');
 
                     let vipStatus = null;
-                    if (hasVipElitePlus) {
+                    if (hasLuxusPass) {
+                      vipStatus = { name: 'Luxus-Pass', color: 'gold', cooldown: '45 Min', bonus: '8.000', icon: Crown };
+                    } else if (hasVipElitePlus) {
                       vipStatus = { name: 'VIP ELITE PLUS', color: 'purple', cooldown: '45 Min', bonus: '2.000', icon: Gem };
                     } else if (hasVipUltimate) {
                       vipStatus = { name: 'VIP Ultimate', color: 'blue', cooldown: '45 Min', bonus: null, icon: Star };
@@ -4003,7 +4007,7 @@ export default function ProfilPage() {
                             <div className="flex items-center gap-2">
                               <Lock className="w-4 h-4 text-white/20 flex-shrink-0" />
                               <p className="text-xs text-white/35">
-                                Du benötigst VIP Platinum, VIP Ultimate oder VIP Elite Plus um zusätzliche Hintergrundbilder und eigene Uploads zu nutzen.
+                                Du benötigst VIP Platinum, VIP Ultimate, VIP Elite Plus oder Luxus-Pass um zusätzliche Hintergrundbilder und eigene Uploads zu nutzen.
                               </p>
                             </div>
                           </div>
