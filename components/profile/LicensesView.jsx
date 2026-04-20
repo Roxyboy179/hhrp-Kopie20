@@ -1,34 +1,33 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import {
   Crown, Gem, Shield, Car, Umbrella, Bike, Truck, Bus,
-  Wrench, Briefcase, Scale, HeartPulse, Home, FileSignature,
+  Wrench, Scale, HeartPulse, Home, FileSignature,
   CheckCircle2, XCircle, Calendar, Zap, AlertTriangle, Loader2,
-  Sparkles, ShoppingBag, RefreshCw, Infinity as InfinityIcon,
+  ShoppingBag, RefreshCw,
   Info, Clock, Bell, BellOff, Ban, ShieldCheck, ShieldOff,
-  PackageOpen, Rocket
+  PackageOpen, Lock
 } from 'lucide-react';
 import { SHOP_ITEMS } from '@/lib/shop-data';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 
 // ──────────────────────────────────────────────────────────────
-// Kategorie-Icon / Farb-Map (wiederverwendbar in Card & Popup)
+// Kategorie-Icon / Farb-Map
 // ──────────────────────────────────────────────────────────────
 const CATEGORY_META = {
-  vip_premiums:    { icon: Crown,       color: 'from-amber-500/30 to-yellow-500/20',  label: 'VIP-Mitgliedschaft' },
-  waffen:          { icon: Shield,      color: 'from-red-500/30 to-orange-500/20',    label: 'Waffenschein' },
-  versicherungen:  { icon: Umbrella,    color: 'from-blue-500/30 to-cyan-500/20',     label: 'Versicherung' },
-  werkzeuge:       { icon: Wrench,      color: 'from-purple-500/30 to-violet-500/20', label: 'Werkzeug' },
+  vip_premiums:    { icon: Crown,         color: 'from-amber-500/30 to-yellow-500/20',  label: 'VIP-Mitgliedschaft' },
+  waffen:          { icon: Shield,        color: 'from-red-500/30 to-orange-500/20',    label: 'Waffenschein' },
+  versicherungen:  { icon: Umbrella,      color: 'from-blue-500/30 to-cyan-500/20',     label: 'Versicherung' },
+  werkzeuge:       { icon: Wrench,        color: 'from-purple-500/30 to-violet-500/20', label: 'Werkzeug' },
   schutzbriefe:    { icon: FileSignature, color: 'from-emerald-500/30 to-green-500/20', label: 'Schutzbrief' },
-  führerscheine:   { icon: Car,         color: 'from-slate-500/30 to-zinc-500/20',    label: 'Führerschein' },
-  credits:         { icon: Zap,         color: 'from-yellow-500/30 to-amber-500/20',  label: 'Credits' },
-  default:         { icon: PackageOpen, color: 'from-white/20 to-white/5',            label: 'Sonstiges' }
+  führerscheine:   { icon: Car,           color: 'from-slate-500/30 to-zinc-500/20',    label: 'Führerschein' },
+  credits:         { icon: Zap,           color: 'from-yellow-500/30 to-amber-500/20',  label: 'Credits' },
+  default:         { icon: PackageOpen,   color: 'from-white/20 to-white/5',            label: 'Sonstiges' }
 };
 
-// Spezifische Item-Icons (für schönere Popups)
 const ITEM_ICON = {
   'führerschein_pkw': Car,
   'führerschein_motorrad': Bike,
@@ -49,6 +48,13 @@ const ITEM_ICON = {
   'vip_ultimate': Crown,
   'vip_elite_plus': Crown,
   'luxus_pass': Crown
+};
+
+// Action → User-freundlicher Text
+const ACTION_LABEL = {
+  cancel:             { title: 'Lizenz wird gekündigt …',      sub: 'Der Discord-Bot übernimmt die Änderung gleich.' },
+  disable_autorenew:  { title: 'Auto-Verlängerung deaktivieren …', sub: 'Bitte einen kurzen Moment Geduld.' },
+  enable_autorenew:   { title: 'Auto-Verlängerung aktivieren …',   sub: 'Bitte einen kurzen Moment Geduld.' }
 };
 
 // ──────────────────────────────────────────────────────────────
@@ -74,9 +80,14 @@ function daysLeft(ts) {
 // ──────────────────────────────────────────────────────────────
 export default function LicensesView({ userData, refreshUserData }) {
   const [processing, setProcessing] = useState({});
-  const [confirmCancel, setConfirmCancel] = useState(null); // {license, item}
+  const [confirmCancel, setConfirmCancel] = useState(null);
 
-  // Normalisiere die Licenses zu Objekten
+  // pendingActions = Map<licenseId, { action, queuedId, queuedAt, startedAt }>
+  const [pendingActions, setPendingActions] = useState({});
+  const pollTimeoutRef = useRef(null);
+  const previousPendingKeys = useRef(new Set());
+
+  // Normalisiere Licenses
   const licenses = useMemo(() => {
     const raw = Array.isArray(userData?.licenses) ? userData.licenses : [];
     return raw
@@ -98,8 +109,7 @@ export default function LicensesView({ userData, refreshUserData }) {
       .filter(l => l.id && !l.id.startsWith('credits_') && !l.id.startsWith('credit_'));
   }, [userData]);
 
-  // NUR kündbare Lizenzen: haben Ablaufdatum + autoRenewable + nicht abgelaufen
-  // Bereits gekündigte bleiben sichtbar, damit der User die Kündigung rückgängig machen kann.
+  // Nur kündbare Lizenzen
   const cancellableLicenses = useMemo(() => {
     const now = Date.now();
     return licenses.filter(l => {
@@ -111,7 +121,6 @@ export default function LicensesView({ userData, refreshUserData }) {
     });
   }, [licenses]);
 
-  // Sortiere: bald ablaufende zuerst, gekündigte ans Ende
   const sortedLicenses = useMemo(() => {
     return [...cancellableLicenses].sort((a, b) => {
       const aCanceled = a.canceledAt && !a.autoRenew;
@@ -124,6 +133,95 @@ export default function LicensesView({ userData, refreshUserData }) {
   const totalLicensesCount = licenses.length;
   const hiddenCount = totalLicensesCount - cancellableLicenses.length;
 
+  // ──────────────────────────────────────────────────────────────
+  // Pending Actions Polling
+  // ──────────────────────────────────────────────────────────────
+  const fetchPendingActions = useCallback(async () => {
+    try {
+      const res = await fetch('/api/licenses/pending-actions');
+      if (!res.ok) return null;
+      const text = await res.text();
+      let data = {};
+      try { data = text ? JSON.parse(text) : {}; } catch { return null; }
+
+      const map = {};
+      (data.pending || []).forEach(p => {
+        // Bei mehreren Actions auf gleicher License nur die neueste behalten
+        if (!map[p.licenseId] || new Date(p.queuedAt) > new Date(map[p.licenseId].queuedAt)) {
+          map[p.licenseId] = {
+            action: p.action,
+            queuedId: p.queuedId,
+            queuedAt: p.queuedAt,
+            status: p.status
+          };
+        }
+      });
+      return map;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // Initial fetch + wenn irgendeine Action gesetzt wird → polling starten
+  const schedulePoll = useCallback((delay = 3000) => {
+    if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+    pollTimeoutRef.current = setTimeout(async () => {
+      const fresh = await fetchPendingActions();
+      if (fresh === null) {
+        // Netzwerkfehler – später erneut versuchen
+        schedulePoll(5000);
+        return;
+      }
+
+      const newKeys = new Set(Object.keys(fresh));
+      const oldKeys = previousPendingKeys.current;
+
+      // Check ob etwas verschwunden ist (= Bot hat verarbeitet)
+      const removed = [...oldKeys].filter(k => !newKeys.has(k));
+      if (removed.length > 0) {
+        // Bot hat verarbeitet → Daten neu laden
+        if (typeof refreshUserData === 'function') {
+          await refreshUserData();
+        }
+        removed.forEach(licId => {
+          const item = SHOP_ITEMS[licId];
+          toast.success('Aktion übernommen', {
+            description: `${item?.name || licId} – der Bot hat die Änderung durchgeführt.`
+          });
+        });
+      }
+
+      previousPendingKeys.current = newKeys;
+      setPendingActions(fresh);
+
+      // Wenn noch was pending ist → weiter pollen
+      if (newKeys.size > 0) {
+        schedulePoll(3000);
+      }
+    }, delay);
+  }, [fetchPendingActions, refreshUserData]);
+
+  // Mount: initial load
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const fresh = await fetchPendingActions();
+      if (cancelled) return;
+      if (fresh) {
+        previousPendingKeys.current = new Set(Object.keys(fresh));
+        setPendingActions(fresh);
+        if (Object.keys(fresh).length > 0) schedulePoll(3000);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+    };
+  }, [fetchPendingActions, schedulePoll]);
+
+  // ──────────────────────────────────────────────────────────────
+  // Actions
+  // ──────────────────────────────────────────────────────────────
   const submitLicenseAction = async (licenseId, action) => {
     setProcessing(prev => ({ ...prev, [licenseId]: true }));
     try {
@@ -132,20 +230,28 @@ export default function LicensesView({ userData, refreshUserData }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ licenseId, action })
       });
-      // Sicher gegen leere Body
       const text = await res.text();
       let data = {};
       try { data = text ? JSON.parse(text) : {}; } catch { /* ignore */ }
 
       if (res.ok) {
-        const msg = action === 'enable_autorenew' ? 'Auto-Verlängerung aktiviert'
-          : action === 'disable_autorenew' ? 'Auto-Verlängerung deaktiviert'
-          : action === 'cancel' ? 'Lizenz gekündigt (läuft bis Ablauf)'
-          : 'Aktion ausgeführt';
-        toast.success(msg, { description: 'Der Discord-Bot übernimmt die Änderung in Kürze.' });
-        if (typeof refreshUserData === 'function') {
-          await refreshUserData();
-        }
+        // Sofort lokal als pending markieren (damit Karte sofort gesperrt wird)
+        setPendingActions(prev => ({
+          ...prev,
+          [licenseId]: {
+            action,
+            queuedId: data.queuedId,
+            queuedAt: new Date().toISOString(),
+            status: 'pending'
+          }
+        }));
+        previousPendingKeys.current = new Set([...previousPendingKeys.current, licenseId]);
+
+        const msg = ACTION_LABEL[action]?.title?.replace(' …', '') || 'Aktion gespeichert';
+        toast.info(msg, { description: 'Wird vom Discord-Bot gleich verarbeitet.' });
+
+        // Polling starten (erstes Check in 2.5s)
+        schedulePoll(2500);
       } else {
         toast.error('Fehler', { description: data.error || `HTTP ${res.status}` });
       }
@@ -171,6 +277,9 @@ export default function LicensesView({ userData, refreshUserData }) {
     setConfirmCancel(null);
   };
 
+  // ──────────────────────────────────────────────────────────────
+  // Render
+  // ──────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       {/* Info-Banner */}
@@ -192,6 +301,12 @@ export default function LicensesView({ userData, refreshUserData }) {
             <p className="text-[11px] text-white/30 mt-2 flex items-center gap-1.5">
               <Info className="w-3 h-3" />
               {hiddenCount} Lizenz{hiddenCount !== 1 ? 'en' : ''} ausgeblendet (permanent / abgelaufen / Credits).
+            </p>
+          )}
+          {Object.keys(pendingActions).length > 0 && (
+            <p className="text-[11px] text-amber-300 mt-2 flex items-center gap-1.5">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              {Object.keys(pendingActions).length} Änderung{Object.keys(pendingActions).length !== 1 ? 'en' : ''} werden gerade verarbeitet …
             </p>
           )}
         </div>
@@ -221,6 +336,8 @@ export default function LicensesView({ userData, refreshUserData }) {
             const days = daysLeft(license.expiresAt);
             const isCanceled = license.canceledAt && !license.autoRenew;
             const isProcessing = !!processing[license.id];
+            const pending = pendingActions[license.id] || null;
+            const isLocked = !!pending;
 
             const statusColor = isCanceled ? 'orange' : (days !== null && days <= 7) ? 'yellow' : 'green';
             const statusColorMap = {
@@ -233,7 +350,7 @@ export default function LicensesView({ userData, refreshUserData }) {
             return (
               <div
                 key={`${license.id}-${license._idx}`}
-                className={`group p-5 rounded-2xl border ${c.border} bg-white/[0.02] relative overflow-hidden transition-all hover:bg-white/[0.04] hover:border-white/10`}
+                className={`group p-5 rounded-2xl border ${c.border} bg-white/[0.02] relative overflow-hidden transition-all hover:bg-white/[0.04] hover:border-white/10 ${isLocked ? 'pointer-events-none' : ''}`}
               >
                 {/* Farb-Akzent links */}
                 <div className={`absolute left-0 top-0 bottom-0 w-1 ${c.accent}`} />
@@ -288,7 +405,7 @@ export default function LicensesView({ userData, refreshUserData }) {
                       </span>
                       <Switch
                         checked={license.autoRenew}
-                        disabled={isProcessing}
+                        disabled={isProcessing || isLocked}
                         onCheckedChange={() => toggleAutoRenew(license)}
                         aria-label="Auto-Verlängerung umschalten"
                       />
@@ -303,8 +420,8 @@ export default function LicensesView({ userData, refreshUserData }) {
                       variant="outline"
                       size="sm"
                       onClick={() => setConfirmCancel({ license, item: { name: displayName, emoji: item?.emoji, category, ItemIcon } })}
-                      disabled={isProcessing}
-                      className="flex-1 rounded-xl border-red-500/20 text-red-300 hover:bg-red-500/10 hover:text-red-200 hover:border-red-500/40"
+                      disabled={isProcessing || isLocked}
+                      className="flex-1 rounded-xl border-red-500/20 text-red-300 hover:bg-red-500/10 hover:text-red-200 hover:border-red-500/40 disabled:opacity-40"
                     >
                       {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Ban className="w-4 h-4 mr-1.5" /> Jetzt kündigen</>}
                     </Button>
@@ -315,6 +432,13 @@ export default function LicensesView({ userData, refreshUserData }) {
                     </div>
                   )}
                 </div>
+
+                {/* ═══════════════════════════════════════════════════
+                    LOCKED OVERLAY — wenn Action beim Bot in Arbeit
+                    ═══════════════════════════════════════════════════ */}
+                {isLocked && (
+                  <LockedOverlay action={pending.action} queuedAt={pending.queuedAt} />
+                )}
               </div>
             );
           })}
@@ -330,6 +454,50 @@ export default function LicensesView({ userData, refreshUserData }) {
           onConfirm={() => cancelLicense(confirmCancel.license)}
         />
       )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────
+// Locked Overlay — Karte gesperrt bis Bot verarbeitet hat
+// ──────────────────────────────────────────────────────────────
+function LockedOverlay({ action, queuedAt }) {
+  const meta = ACTION_LABEL[action] || { title: 'Wird verarbeitet …', sub: 'Bitte einen kurzen Moment Geduld.' };
+  const [elapsedSec, setElapsedSec] = useState(0);
+
+  useEffect(() => {
+    if (!queuedAt) return;
+    const start = new Date(queuedAt).getTime();
+    const tick = () => setElapsedSec(Math.max(0, Math.floor((Date.now() - start) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [queuedAt]);
+
+  return (
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-[#0A0B0F]/85 backdrop-blur-[3px] rounded-2xl border border-amber-500/20 animate-in fade-in duration-200">
+      {/* Spinning Ring + Lock in Center */}
+      <div className="relative w-16 h-16">
+        <div className="absolute inset-0 rounded-full border-2 border-amber-500/10" />
+        <div className="absolute inset-0 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Lock className="w-6 h-6 text-amber-400" />
+        </div>
+      </div>
+
+      {/* Text */}
+      <div className="text-center px-4 max-w-[90%]">
+        <p className="text-sm font-semibold text-white flex items-center justify-center gap-1.5">
+          {meta.title}
+        </p>
+        <p className="text-[11px] text-white/60 mt-1 leading-snug">
+          {meta.sub}
+        </p>
+        <p className="text-[10px] text-amber-300/80 mt-2 flex items-center justify-center gap-1">
+          <Clock className="w-3 h-3" />
+          {elapsedSec}s in Warteschlange
+        </p>
+      </div>
     </div>
   );
 }
@@ -351,12 +519,10 @@ function CancelConfirmDialog({ data, isProcessing, onClose, onConfirm }) {
       }}
     >
       <div className="bg-[#0A0B0F] border border-red-500/20 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl shadow-red-500/10 animate-in zoom-in-95 duration-200">
-        {/* Header mit Hintergrund-Gradient */}
         <div className="relative p-6 border-b border-white/[0.06] bg-gradient-to-br from-red-500/10 via-red-500/5 to-transparent">
           <div className="flex items-start gap-4">
             <div className={`relative w-14 h-14 rounded-2xl bg-gradient-to-br ${catMeta.color} border border-white/10 flex items-center justify-center flex-shrink-0`}>
               <ItemIcon className="w-6 h-6 text-white" />
-              {/* Ban-Overlay */}
               <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-red-500 border-2 border-[#0A0B0F] flex items-center justify-center">
                 <Ban className="w-3 h-3 text-white" />
               </div>
@@ -372,9 +538,7 @@ function CancelConfirmDialog({ data, isProcessing, onClose, onConfirm }) {
           </div>
         </div>
 
-        {/* Body */}
         <div className="p-6 space-y-4">
-          {/* Was passiert? */}
           <div className="space-y-2">
             <p className="text-xs font-semibold text-white/60 uppercase tracking-wider flex items-center gap-1.5">
               <Info className="w-3 h-3" />
@@ -417,7 +581,6 @@ function CancelConfirmDialog({ data, isProcessing, onClose, onConfirm }) {
             </div>
           </div>
 
-          {/* Footer Actions */}
           <div className="flex gap-2 pt-2">
             <Button
               variant="outline"

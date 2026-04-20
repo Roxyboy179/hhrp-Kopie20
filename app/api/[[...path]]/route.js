@@ -2350,6 +2350,7 @@ export async function GET(request) {
     case 'admin/settings': return handleAdminGetSettings(request);
     case 'team/members': return handleGetTeamMembers(request);
     case 'shop/items': return handleGetShopItems(request);
+    case 'licenses/pending-actions': return handleGetPendingLicenseActions(request);
     default: break;
   }
 
@@ -4957,6 +4958,44 @@ async function handleLicenseAction(request) {
 
   } catch (e) {
     console.error('[LICENSE-ACTION] ❌ Error:', e);
+    return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
+  }
+}
+
+// GET /api/licenses/pending-actions - Holt noch nicht verarbeitete License-Actions des Users
+// Nutzung: Das Frontend pollt diese Route, um zu sehen, ob der Bot eine Action schon verarbeitet hat.
+// Sobald ein Eintrag fehlt (= vom Bot gelöscht), gilt die Action als abgeschlossen.
+async function handleGetPendingLicenseActions(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .select('id, item_id, status, metadata, created_at')
+      .eq('buyer_discord_id', user.id)
+      .eq('item_category', 'license_management')
+      .in('status', ['pending', 'processing'])
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('[LICENSE-PENDING] ❌ Fetch error:', error);
+      return NextResponse.json({ error: 'DB error', details: error.message }, { status: 500 });
+    }
+
+    const pending = (data || []).map(row => ({
+      queuedId: row.id,
+      licenseId: row.metadata?.license_id || row.item_id,
+      action: row.metadata?.license_action || null,
+      status: row.status,
+      queuedAt: row.created_at
+    })).filter(p => p.action);
+
+    return NextResponse.json({ pending });
+  } catch (e) {
+    console.error('[LICENSE-PENDING] ❌ Error:', e);
     return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
   }
 }
