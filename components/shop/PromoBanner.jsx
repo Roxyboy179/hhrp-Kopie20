@@ -205,7 +205,10 @@ export function PromoBanner({
                 backgroundClip: 'text',
               }}
             >
-              -{Math.round(currentPromo.discount * 100)}%
+              {currentPromo.type === 'credit_bonus' 
+                ? `+${Math.round(currentPromo.bonusPercent * 100)}%`
+                : `-${Math.round(currentPromo.discount * 100)}%`
+              }
             </div>
           </div>
         </div>
@@ -289,10 +292,13 @@ export function PromoBanner({
                 backgroundClip: 'text',
               }}
             >
-              -{Math.round(currentPromo.discount * 100)}%
+              {currentPromo.type === 'credit_bonus' 
+                ? `+${Math.round(currentPromo.bonusPercent * 100)}%`
+                : `-${Math.round(currentPromo.discount * 100)}%`
+              }
             </div>
             <div className="text-[10px] text-white/50 uppercase tracking-wider mt-1">
-              Rabatt
+              {currentPromo.type === 'credit_bonus' ? 'Bonus' : 'Rabatt'}
             </div>
             {isLanding && clickable && (
               <div className="text-[10px] text-amber-300 uppercase tracking-wider mt-2 font-semibold">
