@@ -228,35 +228,60 @@ export default function ProfileTour({ run, onClose, setActiveTab, setActiveSubTa
 
     const rect = el.getBoundingClientRect();
     const padding = 8;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
     // Begrenze Spotlight-Höhe, damit bei großen Tab-Inhalten nur der obere,
     // relevante Teil hervorgehoben wird (User kann trotzdem den Rest erkennen)
     const MAX_SPOTLIGHT_HEIGHT = 420;
-    const visibleHeight = Math.min(rect.height, MAX_SPOTLIGHT_HEIGHT);
+
+    // Clippe den sichtbaren Rect auf den Viewport, damit der Spotlight
+    // IMMER nur im sichtbaren Bereich gezeichnet wird – auch ohne zu scrollen
+    const visTop = Math.max(0, rect.top);
+    const visBottom = Math.min(vh, rect.bottom);
+    const clippedHeight = Math.max(0, visBottom - visTop);
+    const cappedHeight = Math.min(clippedHeight || rect.height, MAX_SPOTLIGHT_HEIGHT);
+
+    // Starte Spotlight bei sichtbarem Top oder rect.top, was größer ist
+    const spotTop = rect.top < 0 ? 0 : rect.top;
     const box = {
-      top: rect.top - padding,
+      top: spotTop - padding,
       left: rect.left - padding,
       width: rect.width + padding * 2,
-      height: visibleHeight + padding * 2
+      height: cappedHeight + padding * 2
     };
     setTargetRect(box);
 
-    // Tooltip-Position berechnen
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    // Tooltip-Position berechnen – wähle intelligent die Seite mit mehr Platz
     const tipW = Math.min(420, vw - 32);
     const tipH = 280;
     const gap = 16;
-    let placement = step.placement || 'bottom';
-    let top, left;
 
-    // Auto-Placement: Prüfe ob unten Platz ist
-    if (placement === 'bottom' && box.top + box.height + gap + tipH > vh) {
-      placement = 'top';
-    }
-    if (placement === 'top' && box.top - gap - tipH < 0) {
+    const spaceBelow = vh - (box.top + box.height) - gap;
+    const spaceAbove = box.top - gap;
+    const spaceRight = vw - (box.left + box.width) - gap;
+    const spaceLeft = box.left - gap;
+
+    let placement;
+    // Bevorzuge unten/oben. Wenn beide zu klein, nimm rechts/links oder fallback
+    if (spaceBelow >= tipH) {
       placement = 'bottom';
+    } else if (spaceAbove >= tipH) {
+      placement = 'top';
+    } else if (spaceRight >= tipW) {
+      placement = 'right';
+    } else if (spaceLeft >= tipW) {
+      placement = 'left';
+    } else {
+      // Kein Platz direkt am Element – nimm die Seite mit mehr Raum
+      const max = Math.max(spaceBelow, spaceAbove, spaceRight, spaceLeft);
+      if (max === spaceBelow) placement = 'bottom';
+      else if (max === spaceAbove) placement = 'top';
+      else if (max === spaceRight) placement = 'right';
+      else placement = 'left';
     }
 
+    let top, left;
     if (placement === 'bottom') {
       top = box.top + box.height + gap;
       left = box.left + box.width / 2 - tipW / 2;
@@ -274,18 +299,18 @@ export default function ProfileTour({ run, onClose, setActiveTab, setActiveSubTa
       left = vw / 2 - tipW / 2;
     }
 
-    // Clamp innerhalb Viewport
+    // Clamp innerhalb Viewport – Popup ist IMMER sichtbar
     left = Math.max(16, Math.min(left, vw - tipW - 16));
     top = Math.max(16, Math.min(top, vh - tipH - 16));
 
     setTipPos({ top, left, placement, width: tipW });
 
-    // Scrolle Element in den sichtbaren Bereich
-    // Bei großen Elementen: scroll an den Anfang, sonst zur Mitte
-    const inView = rect.top >= 0 && rect.top <= vh * 0.3;
-    if (!inView) {
-      const scrollBlock = rect.height > MAX_SPOTLIGHT_HEIGHT ? 'start' : 'center';
-      el.scrollIntoView({ behavior: 'smooth', block: scrollBlock });
+    // Scrolle Element NUR wenn es komplett außerhalb des Viewports ist.
+    // Niemals scrollen, wenn ein Teil bereits sichtbar ist – das Popup
+    // muss zuverlässig am Bildschirm bleiben.
+    const completelyOffScreen = rect.bottom < 0 || rect.top > vh;
+    if (completelyOffScreen) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [run, step]);
 
