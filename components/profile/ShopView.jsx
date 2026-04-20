@@ -1451,7 +1451,7 @@ export function ShopView({ user, userData, onRefresh }) {
                       }}
                       title={activePromoForItem.title}
                     >
-                      <span className="promo-sparkle">✨</span>
+                      <Sparkles className="w-3 h-3 promo-sparkle" strokeWidth={2.5} />
                       {activePromoForItem.badgeLabel || `-${Math.round(activePromoForItem.discount * 100)}%`}
                     </span>
                   )}
