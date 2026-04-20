@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { 
   CreditCard, Calendar, Clock, AlertTriangle, CheckCircle, XCircle,
   TrendingUp, TrendingDown, Filter, Search, Download, Target, Calculator,
-  PiggyBank, Lightbulb, BarChart2, DollarSign, ArrowUpRight, ArrowDownRight
+  PiggyBank, Lightbulb, BarChart2, DollarSign, ArrowUpRight, ArrowDownRight,
+  Loader2, ArrowRight, ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format, parseISO, subDays, isAfter, isBefore, differenceInDays } from 'date-fns';
@@ -11,14 +12,74 @@ import {
   LineChart, Line, BarChart, Bar, PieChart as RechartsPie, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
+import { toast } from 'sonner';
 
 // Chart Colors
 const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
+// ══════════════════════════════════════════════════════════════════════════
+// PENDING OVERLAY für Kredit-Aktionen (Zurückzahlen / Verlängern)
+// ══════════════════════════════════════════════════════════════════════════
+function CreditPendingOverlay({ queuedAt, action }) {
+  const [elapsedSec, setElapsedSec] = useState(0);
+
+  useEffect(() => {
+    if (!queuedAt) return;
+    const start = new Date(queuedAt).getTime();
+    const tick = () => setElapsedSec(Math.max(0, Math.floor((Date.now() - start) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [queuedAt]);
+
+  const meta = action === 'repay' 
+    ? { label: 'Rückzahlung wird verarbeitet …', color: '#10b981', icon: CheckCircle }
+    : { label: 'Verlängerung wird verarbeitet …', color: '#3b82f6', icon: Clock };
+
+  const IconComp = meta.icon;
+
+  return (
+    <div
+      className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 rounded-xl animate-in fade-in duration-200"
+      style={{
+        background: 'rgba(10, 11, 15, 0.88)',
+        backdropFilter: 'blur(3px)',
+        border: `1px solid ${meta.color}44`
+      }}
+    >
+      {/* Spinning Ring */}
+      <div className="relative w-14 h-14">
+        <div
+          className="absolute inset-0 rounded-full border-2"
+          style={{ borderColor: `${meta.color}22` }}
+        />
+        <div
+          className="absolute inset-0 rounded-full border-2 border-t-transparent animate-spin"
+          style={{ borderColor: meta.color, borderTopColor: 'transparent' }}
+        />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <IconComp className="w-5 h-5" style={{ color: meta.color }} />
+        </div>
+      </div>
+
+      <div className="text-center px-3 max-w-[90%]">
+        <p className="text-xs font-semibold text-white">{meta.label}</p>
+        <p className="text-[10px] text-white/60 mt-0.5 leading-snug">
+          Bitte einen kurzen Moment Geduld.
+        </p>
+        <p className="text-[10px] mt-1.5 flex items-center justify-center gap-1" style={{ color: meta.color }}>
+          <Clock className="w-2.5 h-2.5" />
+          {elapsedSec}s in Warteschlange
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // =============================================
 // PHASE 1: KREDITE DETAIL-ÜBERSICHT
 // =============================================
-export function KrediteDetailView({ userData }) {
+export function KrediteDetailView({ userData, onRefresh }) {
   const kredite = userData?.kredite || [];
   
   const aktiveKredite = kredite.filter(k => k.status === 'aktiv');
@@ -26,6 +87,170 @@ export function KrediteDetailView({ userData }) {
   const abgeschlosseneKredite = kredite.filter(k => k.status === 'abgeschlossen');
   
   const totalSchulden = aktiveKredite.reduce((sum, k) => sum + (k.rueckzahlungsBetrag || 0), 0);
+  
+  // ═══════════════════════════════════════════════════════════════
+  // PENDING CREDIT ACTIONS — Karten sperren bis Bot verarbeitet hat
+  // ═══════════════════════════════════════════════════════════════
+  const [pendingActions, setPendingActions] = useState({});
+  const [processing, setProcessing] = useState(false);
+  const pollTimeoutRef = useRef(null);
+  const previousPendingKeys = useRef(new Set());
+
+  // Modals
+  const [showRepayModal, setShowRepayModal] = useState(false);
+  const [showExtendModal, setShowExtendModal] = useState(false);
+  const [selectedKredit, setSelectedKredit] = useState(null);
+  const [extendDays, setExtendDays] = useState(2);
+
+  const fetchPendingActions = useCallback(async () => {
+    try {
+      const res = await fetch('/api/credits/pending');
+      if (!res.ok) return null;
+      const text = await res.text();
+      let data = {};
+      try { data = text ? JSON.parse(text) : {}; } catch { return null; }
+
+      const map = {};
+      (data.pending || []).forEach(p => {
+        if (!map[p.kreditId] || new Date(p.queuedAt) > new Date(map[p.kreditId].queuedAt)) {
+          map[p.kreditId] = {
+            queuedId: p.queuedId,
+            queuedAt: p.queuedAt,
+            action: p.action,
+            status: p.status
+          };
+        }
+      });
+      return map;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const schedulePollActions = useCallback((delay = 3000) => {
+    if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+    pollTimeoutRef.current = setTimeout(async () => {
+      const fresh = await fetchPendingActions();
+      if (fresh === null) {
+        schedulePollActions(5000);
+        return;
+      }
+
+      const newKeys = new Set(Object.keys(fresh));
+      const oldKeys = previousPendingKeys.current;
+      const removed = [...oldKeys].filter(k => !newKeys.has(k));
+
+      if (removed.length > 0) {
+        if (typeof onRefresh === 'function') {
+          await onRefresh();
+        }
+        removed.forEach(kreditId => {
+          const kredit = kredite.find(k => k.kreditId === kreditId);
+          const action = (pendingActions[kreditId] || {}).action;
+          toast.success(
+            action === 'repay' ? 'Rückzahlung abgeschlossen' : 'Verlängerung abgeschlossen',
+            { description: `${kredit?.name || kreditId} – Bot hat die Verarbeitung abgeschlossen.` }
+          );
+        });
+      }
+
+      previousPendingKeys.current = newKeys;
+      setPendingActions(fresh);
+
+      if (newKeys.size > 0) {
+        schedulePollActions(3000);
+      }
+    }, delay);
+  }, [fetchPendingActions, onRefresh, kredite, pendingActions]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const fresh = await fetchPendingActions();
+      if (cancelled || !fresh) return;
+      previousPendingKeys.current = new Set(Object.keys(fresh));
+      setPendingActions(fresh);
+      if (Object.keys(fresh).length > 0) schedulePollActions(3000);
+    })();
+    return () => {
+      cancelled = true;
+      if (pollTimeoutRef.current) clearTimeout(pollTimeoutRef.current);
+    };
+  }, [fetchPendingActions, schedulePollActions]);
+
+  // Sofort als pending markieren (optimistic update)
+  const markActionPending = (kreditId, action) => {
+    const now = new Date().toISOString();
+    setPendingActions(prev => ({
+      ...prev,
+      [kreditId]: {
+        queuedId: `optimistic_${kreditId}_${Date.now()}`,
+        queuedAt: now,
+        action,
+        status: 'pending'
+      }
+    }));
+    previousPendingKeys.current.add(kreditId);
+    schedulePollActions(2500);
+  };
+
+  // Kredit zurückzahlen
+  const handleRepay = async () => {
+    if (!selectedKredit || processing) return;
+    setProcessing(true);
+    try {
+      const res = await fetch('/api/credits/repay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kreditId: selectedKredit.kreditId })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Rückzahlung fehlgeschlagen');
+      } else {
+        toast.info('Rückzahlung wird verarbeitet …');
+        markActionPending(selectedKredit.kreditId, 'repay');
+        setShowRepayModal(false);
+      }
+    } catch (e) {
+      toast.error('Netzwerkfehler');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Kredit verlängern
+  const handleExtend = async () => {
+    if (!selectedKredit || processing) return;
+    setProcessing(true);
+    try {
+      const res = await fetch('/api/credits/extend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kreditId: selectedKredit.kreditId, days: extendDays })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Verlängerung fehlgeschlagen');
+      } else {
+        toast.info(`Verlängerung um ${extendDays} Tage wird verarbeitet …`);
+        markActionPending(selectedKredit.kreditId, 'extend');
+        setShowExtendModal(false);
+      }
+    } catch (e) {
+      toast.error('Netzwerkfehler');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Gebühren-Optionen für Verlängerung
+  const extensionOptions = [
+    { days: 2, percent: 0.05, label: '+2 Tage' },
+    { days: 4, percent: 0.06, label: '+4 Tage' },
+    { days: 6, percent: 0.08, label: '+6 Tage' },
+    { days: 8, percent: 0.10, label: '+8 Tage' }
+  ];
   
   const renderKreditCard = (kredit) => {
     const daysLeft = kredit.rueckzahlungsDatum 
@@ -39,15 +264,40 @@ export function KrediteDetailView({ userData }) {
       ? ((kredit.betrag / kredit.rueckzahlungsBetrag) * 100).toFixed(1)
       : 0;
     
+    // Pending-Check
+    const pending = pendingActions[kredit.kreditId];
+    const isBotLocked = !!pending;
+    const isExtendable = !kredit.verlaengert && kredit.status === 'aktiv';
+    
     return (
       <div 
         key={kredit.kreditId}
-        className={`glass rounded-2xl p-6 border ${
-          isOverdue ? 'border-red-500/30 bg-red-500/5' :
-          isUrgent ? 'border-yellow-500/30 bg-yellow-500/5' :
-          'border-white/[0.08]'
-        }`}
+        className={`glass rounded-2xl p-6 border relative ${isBotLocked ? 'overflow-hidden pointer-events-none' : ''}`}
+        style={{
+          borderColor: isBotLocked
+            ? 'rgba(59, 130, 246, 0.4)'
+            : isOverdue
+            ? 'rgba(239, 68, 68, 0.3)'
+            : isUrgent
+            ? 'rgba(245, 158, 11, 0.3)'
+            : 'rgba(255, 255, 255, 0.08)',
+          background: isBotLocked
+            ? 'rgba(59, 130, 246, 0.05)'
+            : isOverdue
+            ? 'rgba(239, 68, 68, 0.05)'
+            : isUrgent
+            ? 'rgba(245, 158, 11, 0.05)'
+            : undefined
+        }}
       >
+        {/* Bot-Pending Overlay */}
+        {isBotLocked && (
+          <CreditPendingOverlay
+            queuedAt={pending.queuedAt}
+            action={pending.action}
+          />
+        )}
+
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -129,7 +379,7 @@ export function KrediteDetailView({ userData }) {
         )}
         
         {/* Daten */}
-        <div className="grid grid-cols-2 gap-3 text-sm">
+        <div className="grid grid-cols-2 gap-3 text-sm mb-4">
           <div className="flex items-center gap-2 text-white/60">
             <Calendar className="w-4 h-4" />
             <span>Beantragt: {kredit.beantragtAm ? format(new Date(kredit.beantragtAm), 'dd.MM.yyyy', { locale: de }) : 'N/A'}</span>
@@ -142,14 +392,55 @@ export function KrediteDetailView({ userData }) {
           )}
         </div>
         
-        {/* Früh-Rückzahlung Hinweis */}
-        {kredit.status === 'aktiv' && !kredit.fruehRueckgezahlt && (
+        {/* Action Buttons - NUR für aktive Kredite */}
+        {kredit.status === 'aktiv' && !isBotLocked && (
+          <div className="flex gap-2">
+            <Button
+              onClick={() => {
+                setSelectedKredit(kredit);
+                setShowRepayModal(true);
+              }}
+              disabled={processing}
+              className="flex-1 rounded-xl h-11"
+              style={{
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.3))',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                color: '#fff'
+              }}
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Zurückzahlen
+            </Button>
+            
+            {isExtendable && (
+              <Button
+                onClick={() => {
+                  setSelectedKredit(kredit);
+                  setShowExtendModal(true);
+                }}
+                disabled={processing}
+                className="flex-1 rounded-xl h-11"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.3))',
+                  border: '1px solid rgba(59, 130, 246, 0.4)',
+                  color: '#fff'
+                }}
+              >
+                <Clock className="w-4 h-4 mr-2" />
+                Verlängern
+              </Button>
+            )}
+          </div>
+        )}
+        
+        {/* Verlängerungs-Hinweis */}
+        {kredit.status === 'aktiv' && kredit.verlaengert && !isBotLocked && (
           <div className="mt-4 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
             <div className="flex items-start gap-3">
-              <Lightbulb className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <AlertTriangle className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-blue-300">Früh-Rückzahlung möglich!</p>
-                <p className="text-xs text-blue-400/60 mt-1">Zahle deinen Kredit früher zurück und spare Zinsen.</p>
+                <p className="text-sm font-medium text-blue-300">Bereits verlängert</p>
+                <p className="text-xs text-blue-400/60 mt-1">Dieser Kredit kann nur einmal verlängert werden.</p>
               </div>
             </div>
           </div>
@@ -246,6 +537,170 @@ export function KrediteDetailView({ userData }) {
           <CreditCard className="w-16 h-16 text-white/20 mx-auto mb-4" />
           <h3 className="text-xl font-bold text-white mb-2">Keine Kredite</h3>
           <p className="text-white/50">Du hast aktuell keine Kredite.</p>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* REPAY MODAL */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {showRepayModal && selectedKredit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div 
+            className="w-full max-w-md rounded-2xl border shadow-2xl"
+            style={{
+              background: 'linear-gradient(135deg, rgba(40, 40, 40, 0.95), rgba(20, 20, 20, 0.98))',
+              borderColor: 'rgba(16, 185, 129, 0.3)'
+            }}
+          >
+            <div className="p-6 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-6 h-6 text-green-400" />
+                <h3 className="text-xl font-bold text-white">Kredit zurückzahlen</h3>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                <p className="text-sm text-white/60 mb-2">Kredit #{selectedKredit.kreditId}</p>
+                <p className="text-2xl font-bold text-white mb-4">
+                  {selectedKredit.rueckzahlungsBetrag?.toLocaleString('de-DE')} €
+                </p>
+                <div className="flex items-center gap-2 text-sm">
+                  <AlertTriangle className="w-4 h-4 text-yellow-400" />
+                  <p className="text-yellow-400">
+                    Dieser Betrag wird von deinem Bankkonto abgebucht.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                <p className="text-sm text-green-300">
+                  ✓ Nach der Rückzahlung ist dieser Kredit abgeschlossen und du bist schuldenfrei.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-white/10 flex gap-3">
+              <Button
+                onClick={() => setShowRepayModal(false)}
+                variant="outline"
+                disabled={processing}
+                className="flex-1 rounded-xl h-12"
+              >
+                Abbrechen
+              </Button>
+              <Button
+                onClick={handleRepay}
+                disabled={processing}
+                className="flex-1 rounded-xl h-12"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.4))',
+                  border: '1px solid rgba(16, 185, 129, 0.5)',
+                  color: '#fff'
+                }}
+              >
+                {processing ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verarbeite...</>
+                ) : (
+                  <><CheckCircle className="w-4 h-4 mr-2" /> Zurückzahlen</>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* EXTEND MODAL */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {showExtendModal && selectedKredit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div 
+            className="w-full max-w-md rounded-2xl border shadow-2xl"
+            style={{
+              background: 'linear-gradient(135deg, rgba(40, 40, 40, 0.95), rgba(20, 20, 20, 0.98))',
+              borderColor: 'rgba(59, 130, 246, 0.3)'
+            }}
+          >
+            <div className="p-6 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <Clock className="w-6 h-6 text-blue-400" />
+                <h3 className="text-xl font-bold text-white">Kredit verlängern</h3>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]">
+                <p className="text-sm text-white/60 mb-2">Kredit #{selectedKredit.kreditId}</p>
+                <p className="text-lg font-bold text-white">
+                  Rückzahlung: {selectedKredit.rueckzahlungsBetrag?.toLocaleString('de-DE')} €
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm text-white/60 mb-2">Verlängerungsoption wählen:</p>
+                {extensionOptions.map((opt) => {
+                  const gebuehr = Math.ceil((selectedKredit.rueckzahlungsBetrag || 0) * opt.percent);
+                  return (
+                    <button
+                      key={opt.days}
+                      onClick={() => setExtendDays(opt.days)}
+                      className={`w-full p-4 rounded-xl border transition-all ${
+                        extendDays === opt.days
+                          ? 'bg-blue-500/20 border-blue-500/50'
+                          : 'bg-white/[0.03] border-white/[0.08] hover:border-white/20'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="text-left">
+                          <p className="font-semibold text-white">{opt.label}</p>
+                          <p className="text-xs text-white/50">
+                            Gebühr: {(opt.percent * 100).toFixed(0)}% = {gebuehr.toLocaleString('de-DE')} €
+                          </p>
+                        </div>
+                        {extendDays === opt.days && (
+                          <CheckCircle className="w-5 h-5 text-blue-400" />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                <p className="text-sm text-blue-300">
+                  ℹ️ Nach der Verlängerung kann dieser Kredit nicht erneut verlängert werden.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-white/10 flex gap-3">
+              <Button
+                onClick={() => setShowExtendModal(false)}
+                variant="outline"
+                disabled={processing}
+                className="flex-1 rounded-xl h-12"
+              >
+                Abbrechen
+              </Button>
+              <Button
+                onClick={handleExtend}
+                disabled={processing}
+                className="flex-1 rounded-xl h-12"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.4))',
+                  border: '1px solid rgba(59, 130, 246, 0.5)',
+                  color: '#fff'
+                }}
+              >
+                {processing ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verarbeite...</>
+                ) : (
+                  <><Clock className="w-4 h-4 mr-2" /> Verlängern</>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

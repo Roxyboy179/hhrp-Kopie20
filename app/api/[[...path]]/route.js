@@ -2797,6 +2797,9 @@ export async function POST(request) {
       return handleCheckRecipient(request);
     case 'shop/gift': return handleGiftItem(request);
     case 'licenses/action': return handleLicenseAction(request);
+    case 'credits/repay': return handleCreditRepay(request);
+    case 'credits/extend': return handleCreditExtend(request);
+    case 'credits/pending': return handleGetPendingCreditActions(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
@@ -4960,6 +4963,245 @@ async function handleLicenseAction(request) {
 
   } catch (e) {
     console.error('[LICENSE-ACTION] ❌ Error:', e);
+    return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
+  }
+}
+
+// =============================================================
+// ===== KREDIT-VERWALTUNG (Rückzahlung / Verlängerung) =====
+// =============================================================
+
+// Kredit-Config (Spiegel des Bot-Configs)
+const KREDIT_EXTENSION_OPTIONS = {
+  2: 0.05,  // 2 Tage = 5% Gebühr
+  4: 0.06,  // 4 Tage = 6%
+  6: 0.08,  // 6 Tage = 8%
+  8: 0.10   // 8 Tage = 10%
+};
+
+// POST /api/credits/repay - Kredit frühzeitig zurückzahlen
+// Body: { kreditId }
+// Erstellt pending_shop_purchases-Eintrag, Bot verarbeitet tatsächliche Abbuchung.
+async function handleCreditRepay(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+
+    const body = await request.json();
+    const { kreditId } = body || {};
+    if (!kreditId) {
+      return NextResponse.json({ error: 'kreditId fehlt' }, { status: 400 });
+    }
+
+    // Kredit aus user_data laden
+    const { data: userRow } = await supabaseAdmin
+      .from('user_data')
+      .select('data')
+      .eq('discord_id', user.id)
+      .single();
+
+    const kredite = userRow?.data?.kredite || [];
+    const kredit = kredite.find(k => k.id === kreditId);
+
+    if (!kredit) {
+      return NextResponse.json({ error: 'Kredit nicht gefunden' }, { status: 404 });
+    }
+    if (kredit.status !== 'aktiv') {
+      return NextResponse.json({ error: 'Kredit ist nicht aktiv' }, { status: 400 });
+    }
+
+    // Duplikat-Check: gibt es schon eine pending Rückzahlung für diesen Kredit?
+    const { data: existingRepay } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .select('id')
+      .eq('buyer_discord_id', user.id)
+      .eq('item_category', 'credit_repayment')
+      .eq('item_id', kreditId)
+      .in('status', ['pending', 'processing'])
+      .limit(1);
+
+    if (existingRepay && existingRepay.length > 0) {
+      return NextResponse.json({ error: 'Rückzahlung für diesen Kredit läuft bereits' }, { status: 409 });
+    }
+
+    // Pending-Eintrag erstellen
+    const { data: insertData, error: insertErr } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .insert({
+        buyer_discord_id: user.id,
+        recipient_discord_id: user.id,
+        item_id: kreditId,
+        item_name: `Kredit-Rückzahlung: ${kredit.name || kreditId}`,
+        item_category: 'credit_repayment',
+        price: kredit.rueckzahlungsBetrag || 0,
+        status: 'pending',
+        initiated_from: 'website',
+        is_gift: false,
+        metadata: {
+          kredit_id: kreditId,
+          action: 'repay',
+          rueckzahlungs_betrag: kredit.rueckzahlungsBetrag || 0,
+          kredit_name: kredit.name || null,
+          triggered_at: new Date().toISOString()
+        }
+      })
+      .select('id')
+      .single();
+
+    if (insertErr) {
+      console.error('[CREDIT-REPAY] ❌ Insert error:', insertErr);
+      return NextResponse.json({ error: 'Konnte nicht anlegen', details: insertErr.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      queuedId: insertData.id,
+      kreditId,
+      action: 'repay',
+      message: 'Rückzahlung wird vom Discord-Bot gleich verarbeitet.'
+    });
+  } catch (e) {
+    console.error('[CREDIT-REPAY] ❌ Error:', e);
+    return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
+  }
+}
+
+// POST /api/credits/extend - Kredit um X Tage verlängern
+// Body: { kreditId, days: 2|4|6|8 }
+async function handleCreditExtend(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+
+    const body = await request.json();
+    const { kreditId, days } = body || {};
+    if (!kreditId) {
+      return NextResponse.json({ error: 'kreditId fehlt' }, { status: 400 });
+    }
+
+    const daysInt = parseInt(days);
+    if (!KREDIT_EXTENSION_OPTIONS[daysInt]) {
+      return NextResponse.json({
+        error: 'Ungültige Verlängerungsdauer',
+        allowed: Object.keys(KREDIT_EXTENSION_OPTIONS).map(Number)
+      }, { status: 400 });
+    }
+
+    // Kredit laden
+    const { data: userRow } = await supabaseAdmin
+      .from('user_data')
+      .select('data')
+      .eq('discord_id', user.id)
+      .single();
+
+    const kredite = userRow?.data?.kredite || [];
+    const kredit = kredite.find(k => k.id === kreditId);
+
+    if (!kredit) return NextResponse.json({ error: 'Kredit nicht gefunden' }, { status: 404 });
+    if (kredit.status !== 'aktiv') return NextResponse.json({ error: 'Kredit ist nicht aktiv' }, { status: 400 });
+    if (kredit.verlaengert) {
+      return NextResponse.json({ error: 'Kredit wurde bereits einmal verlängert' }, { status: 400 });
+    }
+
+    const gebuehrProzent = KREDIT_EXTENSION_OPTIONS[daysInt];
+    const verlaengerungsGebuehr = Math.ceil((kredit.rueckzahlungsBetrag || 0) * gebuehrProzent);
+
+    // Duplikat-Check
+    const { data: existingExt } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .select('id')
+      .eq('buyer_discord_id', user.id)
+      .eq('item_category', 'credit_extension')
+      .eq('item_id', kreditId)
+      .in('status', ['pending', 'processing'])
+      .limit(1);
+
+    if (existingExt && existingExt.length > 0) {
+      return NextResponse.json({ error: 'Verlängerung für diesen Kredit läuft bereits' }, { status: 409 });
+    }
+
+    const { data: insertData, error: insertErr } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .insert({
+        buyer_discord_id: user.id,
+        recipient_discord_id: user.id,
+        item_id: kreditId,
+        item_name: `Kredit-Verlängerung +${daysInt} Tage: ${kredit.name || kreditId}`,
+        item_category: 'credit_extension',
+        price: verlaengerungsGebuehr,
+        status: 'pending',
+        initiated_from: 'website',
+        is_gift: false,
+        metadata: {
+          kredit_id: kreditId,
+          action: 'extend',
+          days: daysInt,
+          gebuehr_prozent: gebuehrProzent,
+          verlaengerungs_gebuehr: verlaengerungsGebuehr,
+          kredit_name: kredit.name || null,
+          triggered_at: new Date().toISOString()
+        }
+      })
+      .select('id')
+      .single();
+
+    if (insertErr) {
+      console.error('[CREDIT-EXTEND] ❌ Insert error:', insertErr);
+      return NextResponse.json({ error: 'Konnte nicht anlegen', details: insertErr.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      queuedId: insertData.id,
+      kreditId,
+      action: 'extend',
+      days: daysInt,
+      gebuehr: verlaengerungsGebuehr,
+      message: `Verlängerung um ${daysInt} Tage wird vom Discord-Bot gleich verarbeitet.`
+    });
+  } catch (e) {
+    console.error('[CREDIT-EXTEND] ❌ Error:', e);
+    return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
+  }
+}
+
+// GET /api/credits/pending - Holt pending Credit-Aktionen (Repay/Extend) des Users
+// Wird vom Frontend gepollt, um zu sehen ob Bot schon verarbeitet hat
+async function handleGetPendingCreditActions(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .select('id, item_id, item_name, item_category, price, status, metadata, created_at')
+      .eq('buyer_discord_id', user.id)
+      .in('item_category', ['credit_repayment', 'credit_extension'])
+      .in('status', ['pending', 'processing'])
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[CREDITS-PENDING] ❌ Fetch error:', error);
+      return NextResponse.json({ error: 'DB error', details: error.message }, { status: 500 });
+    }
+
+    const pending = (data || []).map(row => ({
+      queuedId: row.id,
+      kreditId: row.item_id,
+      action: row.metadata?.action || (row.item_category === 'credit_repayment' ? 'repay' : 'extend'),
+      category: row.item_category,
+      name: row.item_name,
+      price: row.price,
+      days: row.metadata?.days || null,
+      status: row.status,
+      queuedAt: row.created_at
+    }));
+
+    return NextResponse.json({ pending });
+  } catch (e) {
+    console.error('[CREDITS-PENDING] ❌ Error:', e);
     return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
   }
 }

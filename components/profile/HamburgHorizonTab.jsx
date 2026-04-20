@@ -46,8 +46,8 @@ export default function HamburgHorizonTab({ currentUser }) {
         <div className="flex items-start gap-3">
           <Sparkles className="w-5 h-5 text-white/60 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-white/70">
-            <p className="font-medium text-white mb-1">Hamburg Horizon – Bot-Funktionen</p>
-            <p>Leaderboard, Marktplatz, Charakter-Profile und deine Statistiken – alles direkt von unserem Discord-Bot.</p>
+            <p className="font-medium text-white mb-1">Mein Profil – Persönlicher Bereich</p>
+            <p>Leaderboard, Marktplatz, Charakter-Profile, Lizenzen und deine Statistiken – alles direkt verknüpft mit unserem Discord-Bot.</p>
           </div>
         </div>
       </div>

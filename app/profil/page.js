@@ -1007,7 +1007,7 @@ export default function ProfilPage() {
     { id: 'finance', label: 'Finanzen', icon: Wallet, hasSubTabs: true },
     { id: 'documents', label: 'Dokumente', icon: IdCard, hasSubTabs: true },
     { id: 'shop', label: 'Shop', icon: ShoppingCart },
-    { id: 'hamburg-horizon', label: 'Hamburg Horizon', icon: Sparkles, hasSubTabs: true },
+    { id: 'hamburg-horizon', label: 'Mein Profil', icon: Sparkles, hasSubTabs: true },
     { id: 'applications', label: 'Bewerbungen', icon: ClipboardList },
     { id: 'settings', label: 'Einstellungen', icon: Settings }
   ];
@@ -3410,7 +3410,7 @@ export default function ProfilPage() {
         {/* Kredite Tab - NEU */}
         {activeTab === 'finance' && activeSubTab === 'kredite' && (
           <div data-tour-card="Kredite|Deine laufenden Kredite mit Laufzeit, Zinssatz und Rückzahlungsplan. Hier kannst du auch Sondertilgungen machen.">
-          <KrediteDetailView userData={userData} />
+          <KrediteDetailView userData={userData} onRefresh={reloadUserData} />
           </div>
         )}
 
