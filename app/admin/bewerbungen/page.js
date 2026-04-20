@@ -239,6 +239,78 @@ export default function AdminBewerbungenPage() {
     );
   };
 
+  // Reject Modal als wiederverwendbare Komponente (wird in beiden Views gerendert)
+  const RejectModal = () => {
+    if (!showRejectModal || !selected) return null;
+    return (
+      <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4">
+        <div className="bg-[#0A0B0F] border border-red-500/20 rounded-2xl max-w-md w-full p-6 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-red-500/10 rounded-lg">
+              <XCircle className="w-6 h-6 text-red-400" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-white">Bewerbung ablehnen</h3>
+              <p className="text-sm text-white/40">Von: {selected.username}</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm text-white/60">Ablehnungsgrund *</label>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="Bitte gib einen Grund für die Ablehnung an (wird dem Bewerber mitgeteilt)..."
+              className="w-full min-h-[100px] px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-red-500/50 resize-none"
+            />
+            <p className="text-xs text-white/30">Mindestens 10 Zeichen</p>
+          </div>
+
+          {userWarnings && userWarnings.total >= 3 && (
+            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+              <p className="text-xs text-red-300 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4" />
+                Bewerber hat {userWarnings.total} Verwarnungen
+              </p>
+            </div>
+          )}
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowRejectModal(false);
+                setRejectReason('');
+              }}
+              className="flex-1 rounded-xl border-white/10"
+              disabled={actionLoading}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              onClick={() => {
+                if (rejectReason.trim().length < 10) {
+                  toast.error('Ablehnungsgrund zu kurz', {
+                    description: 'Bitte gib mindestens 10 Zeichen ein.'
+                  });
+                  return;
+                }
+                setShowRejectModal(false);
+                handleAction(selected.id, null, 'Abgelehnt', rejectReason.trim());
+                setRejectReason('');
+              }}
+              className="flex-1 bg-red-600 hover:bg-red-700 rounded-xl"
+              disabled={actionLoading || rejectReason.trim().length < 10}
+            >
+              {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
+              Bewerbung ablehnen
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // DETAIL-ANSICHT
   if (selected) {
     // formData richtig auslesen - unterstützt verschiedene Formate
@@ -252,6 +324,7 @@ export default function AdminBewerbungenPage() {
     return (
       <div className="p-6 space-y-6 max-w-5xl mx-auto">
         <ConfirmDialog />
+        <RejectModal />
         
         <Button 
           variant="ghost" 
@@ -567,75 +640,7 @@ export default function AdminBewerbungenPage() {
   return (
     <div className="p-6 space-y-6">
       <ConfirmDialog />
-      
-      {/* Reject Modal mit Pflicht-Grund */}
-      {showRejectModal && selected && (
-        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#0A0B0F] border border-red-500/20 rounded-2xl max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-500/10 rounded-lg">
-                <XCircle className="w-6 h-6 text-red-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-white">Bewerbung ablehnen</h3>
-                <p className="text-sm text-white/40">Von: {selected.username}</p>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm text-white/60">Ablehnungsgrund *</label>
-              <textarea
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Bitte gib einen Grund für die Ablehnung an (wird dem Bewerber mitgeteilt)..."
-                className="w-full min-h-[100px] px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-red-500/50 resize-none"
-              />
-              <p className="text-xs text-white/30">Mindestens 10 Zeichen</p>
-            </div>
-
-            {userWarnings && userWarnings.total >= 3 && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
-                <p className="text-xs text-red-300 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4" />
-                  Bewerber hat {userWarnings.total} Verwarnungen
-                </p>
-              </div>
-            )}
-
-            <div className="flex gap-3 pt-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowRejectModal(false);
-                  setRejectReason('');
-                }}
-                className="flex-1 rounded-xl border-white/10"
-                disabled={actionLoading}
-              >
-                Abbrechen
-              </Button>
-              <Button
-                onClick={() => {
-                  if (rejectReason.trim().length < 10) {
-                    toast.error('Ablehnungsgrund zu kurz', {
-                      description: 'Bitte gib mindestens 10 Zeichen ein.'
-                    });
-                    return;
-                  }
-                  setShowRejectModal(false);
-                  handleAction(selected.id, null, 'Abgelehnt', rejectReason.trim());
-                  setRejectReason('');
-                }}
-                className="flex-1 bg-red-600 hover:bg-red-700 rounded-xl"
-                disabled={actionLoading || rejectReason.trim().length < 10}
-              >
-                {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
-                Bewerbung ablehnen
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <RejectModal />
       
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
