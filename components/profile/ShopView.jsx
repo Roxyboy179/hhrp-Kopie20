@@ -44,7 +44,7 @@ const CRATE_ICONS = {
 // Shop-Aktionen (Single Source of Truth – shared mit Backend)
 import {
   findActivePromotion,
-  getActiveBannerPromotion,
+  getActiveBannerPromotions,
 } from '@/lib/shop-promotions';
 import { PromoBanner } from '@/components/shop/PromoBanner';
 
@@ -762,23 +762,25 @@ export function ShopView({ user, userData, onRefresh }) {
   else if (hasVIPPlatinum) vipDiscount = 0.10; // 10%
   
   const calculatePrice = (basePrice, itemId = null) => {
-    // VIP-Items und Credits bekommen KEINEN Rabatt!
-    if (itemId && (itemId.startsWith('vip_') || itemId === 'luxus_pass')) {
-      return basePrice;
-    }
-
-    // 🎉 Aktions-Rabatt prüfen (z.B. Führerschein-Aktion für Nicht-VIP-User)
+    // Credits bekommen NIE einen Rabatt
     const itemObj = itemId ? shopItems[itemId] : null;
+    if (itemObj && itemObj.category === 'credits') return basePrice;
+
+    const isVipItem = itemId && (itemId.startsWith('vip_') || itemId === 'luxus_pass');
+
+    // 🎉 Aktions-Rabatt (kann AUCH auf VIP-Items greifen, wenn die Aktion es vorsieht)
     const activePromo = findActivePromotion(itemObj, itemId, userHighestVIP);
     const promoDiscount = activePromo ? activePromo.discount : 0;
 
-    // VIP-Rabatt (nur wenn User VIP/Luxus-Pass hat)
+    // VIP-Rabatt (greift NICHT auf VIP-Items selbst – du bekommst keinen VIP-Rabatt auf ein VIP-Abo)
     let vipDiscountPercent = 0;
-    if (hasLuxusPass) vipDiscountPercent = 0.50;
-    else if (vipDiscount > 0) vipDiscountPercent = vipDiscount;
+    if (!isVipItem) {
+      if (hasLuxusPass) vipDiscountPercent = 0.50;
+      else if (vipDiscount > 0) vipDiscountPercent = vipDiscount;
+    }
 
-    // Besseren Rabatt anwenden (in der Praxis schließen sich die beiden
-    // aus, weil die Promo `non_vip`-only ist – aber sicher ist sicher)
+    // Besserer Rabatt gewinnt (in der Praxis schließen sich Promo (non_vip) und
+    // VIP-Rabatt aus, aber Math.max ist die sichere Variante)
     const bestDiscount = Math.max(vipDiscountPercent, promoDiscount);
     if (bestDiscount > 0) {
       return Math.floor(basePrice * (1 - bestDiscount));
@@ -794,13 +796,13 @@ export function ShopView({ user, userData, onRefresh }) {
     );
   }
 
-  // 🎉 Aktive Aktion für Banner ermitteln
-  const activeBannerPromo = getActiveBannerPromotion(userHighestVIP);
+  // 🎉 Alle aktuell aktiven Aktionen ermitteln (Slider zeigt alle durch)
+  const activeBannerPromos = getActiveBannerPromotions(userHighestVIP);
 
   return (
     <div className="space-y-6">
-      {/* 🎉 Aktions-Banner (nur wenn aktuell eine Aktion läuft UND User qualifiziert) */}
-      <PromoBanner promo={activeBannerPromo} variant="shop" />
+      {/* 🎉 Aktions-Banner (Slider bei mehreren aktiven Aktionen) */}
+      <PromoBanner promos={activeBannerPromos} variant="shop" />
 
       {/* Info Banner - Überweisung-Stil */}
       <div 
@@ -1348,20 +1350,26 @@ export function ShopView({ user, userData, onRefresh }) {
             const hasDiscount = discountedPrice < originalPrice;
             // 🎉 Prüfen ob für dieses Item eine Aktion aktiv ist
             const activePromoForItem = findActivePromotion(item, id, userHighestVIP);
-            
+            // 🎉 Ist für diese Karte die Aktions-Optik aktiv? (nicht bei Locked/Besitz/Gift-Mode)
+            const showPromoStyling = !!activePromoForItem && !hasItem && !visuallyLocked && !isBotLocked;
+
             return (
               <div
                 key={id}
-                className={`p-4 rounded-xl border relative ${isBotLocked ? 'overflow-hidden pointer-events-none' : ''}`}
+                className={`p-4 rounded-xl border relative ${isBotLocked ? 'overflow-hidden pointer-events-none' : ''} ${showPromoStyling ? 'promo-card' : ''}`}
                 style={{
-                  background: visuallyLocked
-                    ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.15), rgba(80, 80, 80, 0.1))'
-                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
-                  borderColor: isBotLocked
-                    ? 'rgba(245, 158, 11, 0.4)'
-                    : visuallyLocked
-                      ? 'rgba(150, 150, 150, 0.2)'
-                      : 'rgba(255, 255, 255, 0.08)',
+                  background: showPromoStyling
+                    ? undefined  // promo-card CSS übernimmt (via !important)
+                    : (visuallyLocked
+                        ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.15), rgba(80, 80, 80, 0.1))'
+                        : 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))'),
+                  borderColor: showPromoStyling
+                    ? undefined  // promo-card CSS übernimmt
+                    : (isBotLocked
+                        ? 'rgba(245, 158, 11, 0.4)'
+                        : visuallyLocked
+                          ? 'rgba(150, 150, 150, 0.2)'
+                          : 'rgba(255, 255, 255, 0.08)'),
                   opacity: visuallyLocked ? 0.7 : 1,
                   position: 'relative'
                 }}
@@ -1434,16 +1442,16 @@ export function ShopView({ user, userData, onRefresh }) {
                   {/* 🎉 Aktions-Badge (z.B. "-25% Aktion") */}
                   {activePromoForItem && !hasItem && (
                     <span
-                      className="text-[10px] font-bold tracking-wider uppercase px-2 py-1 rounded-md shrink-0 shadow-lg"
+                      className="promo-badge-animated text-[10px] font-bold tracking-wider uppercase px-2 py-1 rounded-md shrink-0 shadow-lg flex items-center gap-1"
                       style={{
                         background:
-                          'linear-gradient(135deg, rgba(245, 158, 11, 0.85), rgba(236, 72, 153, 0.7))',
+                          'linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(236, 72, 153, 0.85))',
                         color: '#fff',
-                        border: '1px solid rgba(245, 158, 11, 0.6)',
-                        boxShadow: '0 0 12px rgba(245, 158, 11, 0.35)',
+                        border: '1px solid rgba(253, 224, 71, 0.7)',
                       }}
                       title={activePromoForItem.title}
                     >
+                      <span className="promo-sparkle">✨</span>
                       {activePromoForItem.badgeLabel || `-${Math.round(activePromoForItem.discount * 100)}%`}
                     </span>
                   )}

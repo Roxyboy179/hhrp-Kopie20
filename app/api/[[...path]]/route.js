@@ -4118,19 +4118,19 @@ async function handleShopPurchase(request) {
 
     const isVipItem = typeof itemId === 'string' && (itemId.startsWith('vip_') || itemId === 'luxus_pass');
 
-    // VIP-Rabatt-Prozent ermitteln
+    // VIP-Rabatt-Prozent ermitteln (nur auf Nicht-VIP-Items)
     let vipDiscountPercent = 0;
     if (vipType && VIP_SHOP_DISCOUNTS[vipType] > 0 && item.category !== 'credits' && !isVipItem) {
       vipDiscountPercent = VIP_SHOP_DISCOUNTS[vipType];
     }
 
-    // 🎉 Promo-Rabatt (z.B. Führerschein-Aktion) – userHighestVIP-Mapping
+    // 🎉 Promo-Rabatt: kann auch auf VIP-Items greifen (z.B. 30% VIP-Aktion für Nicht-VIPs)
     // In SHOP_PROMOTIONS ist eligibility 'non_vip' wenn userHighestVIP < 0.
     // vipType gesetzt ⇒ User hat VIP ⇒ Non-VIP-Promo fällt weg.
     const userHighestVIPForPromo = vipType ? 0 : -1;
     let promoDiscountPercent = 0;
     let activePromo = null;
-    if (item.category !== 'credits' && !isVipItem) {
+    if (item.category !== 'credits') {
       activePromo = findActivePromotion(item, itemId, userHighestVIPForPromo);
       if (activePromo) promoDiscountPercent = activePromo.discount;
     }
@@ -4851,11 +4851,11 @@ async function handleGiftItem(request) {
       vipDiscountPercent = VIP_SHOP_DISCOUNTS[vipType];
     }
 
-    // 🎉 Aktions-Rabatt (Preis bezieht sich auf den Sender/Käufer – er muss den rabattierten Preis bekommen)
+    // 🎉 Aktions-Rabatt kann AUCH auf VIP-Items greifen (z.B. 30% VIP-Aktion für Nicht-VIPs)
     const userHighestVIPForPromo = vipType ? 0 : -1;
     let promoDiscountPercent = 0;
     let activePromo = null;
-    if (item.category !== 'credits' && !isVipItem) {
+    if (item.category !== 'credits') {
       activePromo = findActivePromotion(item, itemId, userHighestVIPForPromo);
       if (activePromo) promoDiscountPercent = activePromo.discount;
     }
