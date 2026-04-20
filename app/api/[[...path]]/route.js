@@ -3832,10 +3832,10 @@ async function handleTransferMoney(request) {
 
     // Bank Gebühren
     const BANKS = {
-      hamburg_horizon: { fee: 0.02 },
-      nordic_capital: { fee: 0.03 },
-      metrova_trust: { fee: 0.015 },
-      elite_federal: { fee: 0.004 }
+      hamburg_horizon: { fee: 0.20 },
+      nordic_capital: { fee: 0.30 },
+      metrova_trust: { fee: 0.15 },
+      elite_federal: { fee: 0.40 }
     };
 
     const bank = BANKS[bankId] || BANKS['hamburg_horizon'];
