@@ -3410,7 +3410,7 @@ export default function ProfilPage() {
         {/* Kredite Tab - NEU */}
         {activeTab === 'finance' && activeSubTab === 'kredite' && (
           <div data-tour-card="Kredite|Deine laufenden Kredite mit Laufzeit, Zinssatz und Rückzahlungsplan. Hier kannst du auch Sondertilgungen machen.">
-          <KrediteDetailView userData={userData} onRefresh={reloadUserData} />
+          <KrediteDetailView userData={userData} onRefresh={loadData} />
           </div>
         )}
 
