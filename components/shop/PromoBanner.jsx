@@ -277,6 +277,18 @@ export function PromoBanner({
                 <>
                   <span className="opacity-50">•</span>
                   <span>Nur für Nutzer ohne VIP / Luxus-Pass</span>
+                  {currentPromo.isEligible === false && (
+                    <span
+                      className="ml-1 inline-flex items-center gap-1 text-[10px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-md"
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.2)',
+                        color: '#FCA5A5',
+                        border: '1px solid rgba(239, 68, 68, 0.4)',
+                      }}
+                    >
+                      Du hast bereits VIP-Vorteile
+                    </span>
+                  )}
                 </>
               )}
             </div>
@@ -356,8 +368,20 @@ export function PromoBanner({
           </div>
 
           {currentPromo.eligibility === 'non_vip' && (
-            <div className="text-[10px] text-white/50 leading-tight">
-              Nur für Nutzer ohne VIP / Luxus-Pass
+            <div className="text-[10px] leading-tight">
+              <span className="text-white/50">Nur für Nutzer ohne VIP / Luxus-Pass</span>
+              {currentPromo.isEligible === false && (
+                <span
+                  className="ml-2 inline-flex items-center gap-1 text-[9px] font-bold tracking-wider uppercase px-1.5 py-0.5 rounded"
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.2)',
+                    color: '#FCA5A5',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                  }}
+                >
+                  Du hast VIP
+                </span>
+              )}
             </div>
           )}
 
