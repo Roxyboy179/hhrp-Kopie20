@@ -252,62 +252,51 @@ export default function ProfileTour({ run, onClose, setActiveTab, setActiveSubTa
     };
     setTargetRect(box);
 
-    // Tooltip-Position berechnen – wähle intelligent die Seite mit mehr Platz
+    // Tooltip-Position: FIXE Viewport-Ecke, damit das Popup beim Scrollen
+    // an derselben Stelle am Bildschirm bleibt und der User den Inhalt
+    // in Ruhe anschauen kann.
     const tipW = Math.min(420, vw - 32);
-    const tipH = 280;
-    const gap = 16;
+    const tipH = 300;
+    const margin = 16;
 
-    const spaceBelow = vh - (box.top + box.height) - gap;
-    const spaceAbove = box.top - gap;
-    const spaceRight = vw - (box.left + box.width) - gap;
-    const spaceLeft = box.left - gap;
+    // Alle 4 möglichen Ecken (fix am Viewport)
+    const corners = {
+      'bottom-right': { top: vh - tipH - margin, left: vw - tipW - margin },
+      'bottom-left':  { top: vh - tipH - margin, left: margin },
+      'top-right':    { top: margin,             left: vw - tipW - margin },
+      'top-left':     { top: margin,             left: margin }
+    };
 
-    let placement;
-    // Bevorzuge unten/oben. Wenn beide zu klein, nimm rechts/links oder fallback
-    if (spaceBelow >= tipH) {
-      placement = 'bottom';
-    } else if (spaceAbove >= tipH) {
-      placement = 'top';
-    } else if (spaceRight >= tipW) {
-      placement = 'right';
-    } else if (spaceLeft >= tipW) {
-      placement = 'left';
-    } else {
-      // Kein Platz direkt am Element – nimm die Seite mit mehr Raum
-      const max = Math.max(spaceBelow, spaceAbove, spaceRight, spaceLeft);
-      if (max === spaceBelow) placement = 'bottom';
-      else if (max === spaceAbove) placement = 'top';
-      else if (max === spaceRight) placement = 'right';
-      else placement = 'left';
-    }
+    // Prüfe Überlappung mit Spotlight – wähle die Ecke, die NICHT
+    // mit dem beleuchteten Element kollidiert (sonst würde das Popup
+    // das Highlight verdecken).
+    const overlaps = (corner) => {
+      const cRight = corner.left + tipW;
+      const cBottom = corner.top + tipH;
+      const bRight = box.left + box.width;
+      const bBottom = box.top + box.height;
+      return !(
+        corner.left > bRight ||
+        cRight < box.left ||
+        corner.top > bBottom ||
+        cBottom < box.top
+      );
+    };
 
-    let top, left;
-    if (placement === 'bottom') {
-      top = box.top + box.height + gap;
-      left = box.left + box.width / 2 - tipW / 2;
-    } else if (placement === 'top') {
-      top = box.top - gap - tipH;
-      left = box.left + box.width / 2 - tipW / 2;
-    } else if (placement === 'right') {
-      top = box.top + box.height / 2 - tipH / 2;
-      left = box.left + box.width + gap;
-    } else if (placement === 'left') {
-      top = box.top + box.height / 2 - tipH / 2;
-      left = box.left - gap - tipW;
-    } else {
-      top = vh / 2 - tipH / 2;
-      left = vw / 2 - tipW / 2;
-    }
+    // Reihenfolge: bevorzuge unten-rechts, dann die anderen Ecken
+    const order = ['bottom-right', 'bottom-left', 'top-right', 'top-left'];
+    let chosen = order.find(k => !overlaps(corners[k])) || 'bottom-right';
+    const placement = chosen;
+    let { top, left } = corners[chosen];
 
-    // Clamp innerhalb Viewport – Popup ist IMMER sichtbar
-    left = Math.max(16, Math.min(left, vw - tipW - 16));
-    top = Math.max(16, Math.min(top, vh - tipH - 16));
+    // Safety-Clamp (für kleine Viewports)
+    left = Math.max(margin, Math.min(left, vw - tipW - margin));
+    top = Math.max(margin, Math.min(top, vh - tipH - margin));
 
     setTipPos({ top, left, placement, width: tipW });
 
     // Scrolle Element NUR wenn es komplett außerhalb des Viewports ist.
-    // Niemals scrollen, wenn ein Teil bereits sichtbar ist – das Popup
-    // muss zuverlässig am Bildschirm bleiben.
+    // Ansonsten darf der User frei scrollen; Spotlight folgt mit.
     const completelyOffScreen = rect.bottom < 0 || rect.top > vh;
     if (completelyOffScreen) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -345,15 +334,9 @@ export default function ProfileTour({ run, onClose, setActiveTab, setActiveSubTa
     };
   }, [stepIndex, run, updatePosition, step]);
 
-  // Body-Scroll-Lock während Tour
-  useEffect(() => {
-    if (!run) return;
-    const original = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = original;
-    };
-  }, [run]);
+  // Während der Tour NICHT den Body-Scroll sperren – der User soll selbst
+  // scrollen können, um den Inhalt zu sehen, den die Tour erklärt.
+  // Spotlight & Tooltip folgen dem Scroll automatisch (siehe RAF-Loop oben).
 
   // Tastatur-Navigation
   useEffect(() => {
@@ -403,11 +386,11 @@ export default function ProfileTour({ run, onClose, setActiveTab, setActiveSubTa
 
   return (
     <div className="fixed inset-0 z-[9999] pointer-events-none" aria-live="polite">
-      {/* Dark Backdrop mit Spotlight-Loch */}
+      {/* Dark Backdrop mit Spotlight-Loch – pointer-events-none, damit
+          der User durch das Overlay scrollen kann */}
       <svg
-        className="absolute inset-0 w-full h-full pointer-events-auto"
-        style={{ touchAction: 'none' }}
-        onClick={(e) => e.preventDefault()}
+        className="absolute inset-0 w-full h-full pointer-events-none"
+        aria-hidden="true"
       >
         <defs>
           <mask id="tour-spotlight-mask">
