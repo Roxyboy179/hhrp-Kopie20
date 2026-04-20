@@ -4043,58 +4043,60 @@ async function handleShopPurchase(request) {
     const currentBalance = userDataObj?.money?.bank || 0;
 
     // VIP-Status prüfen und Rabatt berechnen
-    let vipType = null;
-    const vipLicenses = userDataObj?.licenses || {};
+    // WICHTIG: licenses ist ein ARRAY (nicht Object) – siehe ShopView.jsx
+    // Supports: ['vip_premium', ...] oder [{ id/name: 'vip_premium', expiresAt }, ...]
+    const userLicensesArray = Array.isArray(userDataObj?.licenses)
+      ? userDataObj.licenses
+      : (userDataObj?.licenses ? Object.values(userDataObj.licenses) : []);
     const now = Date.now();
-    
-    console.log('[SHOP] Checking VIP licenses:', Object.keys(vipLicenses));
-    
-    // Prüfe VIP-Status (expiresAt kann 0 sein = unbegrenzt, oder Timestamp)
-    if (vipLicenses['vip_elite_plus']) {
-      const license = vipLicenses['vip_elite_plus'];
-      const expires = license.expiresAt || 0;
-      if (expires === 0 || expires > now) {
-        vipType = 'elite_plus';
-        console.log('[SHOP] VIP Elite Plus erkannt, expiresAt:', expires);
-      }
-    } else if (vipLicenses['vip_ultimate']) {
-      const license = vipLicenses['vip_ultimate'];
-      const expires = license.expiresAt || 0;
-      if (expires === 0 || expires > now) {
-        vipType = 'ultimate';
-        console.log('[SHOP] VIP Ultimate erkannt, expiresAt:', expires);
-      }
-    } else if (vipLicenses['vip_platinum']) {
-      const license = vipLicenses['vip_platinum'];
-      const expires = license.expiresAt || 0;
-      if (expires === 0 || expires > now) {
-        vipType = 'platinum';
-        console.log('[SHOP] VIP Platinum erkannt, expiresAt:', expires);
-      }
-    } else if (vipLicenses['vip_premium']) {
-      const license = vipLicenses['vip_premium'];
-      const expires = license.expiresAt || 0;
-      if (expires === 0 || expires > now) {
-        vipType = 'premium';
-        console.log('[SHOP] VIP Premium erkannt, expiresAt:', expires);
-      }
-    }
 
-    // VIP-Rabatt nur für Nicht-Credit-Items
-    let finalPrice = item.price;
-    const VIP_SHOP_DISCOUNTS = {
-      elite_plus: 0.35,  // 35%
-      ultimate: 0.30,    // 30%
-      platinum: 0.25,    // 25%
-      premium: 0.20      // 20%
+    const hasLicense = (licenseId) => {
+      if (!licenseId) return false;
+      return userLicensesArray.some((l) => {
+        if (!l) return false;
+        // String-Format
+        if (typeof l === 'string') return l === licenseId;
+        // Object-Format: matche auf id/name + optional Ablauf prüfen
+        if (typeof l === 'object') {
+          const matches = l.name === licenseId || l.id === licenseId;
+          if (!matches) return false;
+          const expires = l.expiresAt || 0;
+          // 0 = unbegrenzt, sonst muss es in der Zukunft liegen
+          return expires === 0 || expires > now;
+        }
+        return false;
+      });
     };
 
-    if (vipType && VIP_SHOP_DISCOUNTS[vipType] && item.category !== 'credits') {
+    console.log('[SHOP] Checking VIP licenses in array:', userLicensesArray.length, 'entries');
+
+    // VIP-Hierarchie: Nimm den höchsten aktiven Rang
+    let vipType = null;
+    if (hasLicense('vip_elite_plus')) vipType = 'elite_plus';
+    else if (hasLicense('vip_ultimate')) vipType = 'ultimate';
+    else if (hasLicense('vip_platinum')) vipType = 'platinum';
+    else if (hasLicense('vip_premium')) vipType = 'premium';
+
+    if (vipType) console.log(`[SHOP] VIP ${vipType} erkannt`);
+
+    // VIP-Rabatt nur für Nicht-Credit-Items und Nicht-VIP-Items
+    // (VIP-Items bekommen keinen VIP-Rabatt auf sich selbst)
+    let finalPrice = item.price;
+    const VIP_SHOP_DISCOUNTS = {
+      elite_plus: 0.35, // 35%
+      ultimate:   0.20, // 20%
+      platinum:   0.10, // 10%
+      premium:    0.00  //  0% (kein Rabatt für Premium)
+    };
+
+    const isVipItem = typeof itemId === 'string' && itemId.startsWith('vip_');
+
+    if (vipType && VIP_SHOP_DISCOUNTS[vipType] > 0 && item.category !== 'credits' && !isVipItem) {
       const discount = VIP_SHOP_DISCOUNTS[vipType];
       finalPrice = Math.floor(item.price * (1 - discount));
       console.log(`[SHOP] ✅ VIP ${vipType} Rabatt angewendet: ${item.price}€ → ${finalPrice}€ (-${discount * 100}%)`);
     } else {
-      console.log(`[SHOP] ❌ Kein Rabatt: vipType=${vipType}, category=${item.category}`);
+      console.log(`[SHOP] ❌ Kein Rabatt: vipType=${vipType}, category=${item.category}, isVipItem=${isVipItem}`);
     }
 
     // Prüfe ob genug Geld vorhanden
@@ -4701,10 +4703,10 @@ async function handleGiftItem(request) {
     }
     console.log('[GIFT] ✅ User:', user.id, user.username);
 
-    const { itemId, recipientId, price } = await request.json();
-    console.log('[GIFT] 📦 Request data:', { itemId, recipientId, price });
+    const { itemId, recipientId } = await request.json();
+    console.log('[GIFT] 📦 Request data:', { itemId, recipientId });
 
-    if (!itemId || !recipientId || !price) {
+    if (!itemId || !recipientId) {
       console.log('[GIFT] ❌ Missing data');
       return NextResponse.json({ error: 'Fehlende Daten' }, { status: 400 });
     }
@@ -4730,9 +4732,50 @@ async function handleGiftItem(request) {
     }
     console.log('[GIFT] ✅ Sender data found');
 
-    const senderDataObj = typeof senderData.data === 'string' 
-      ? JSON.parse(senderData.data) 
+    const senderDataObj = typeof senderData.data === 'string'
+      ? JSON.parse(senderData.data)
       : senderData.data;
+
+    // VIP-Status & Rabatt server-seitig berechnen (Client darf den Preis NICHT vorgeben)
+    const userLicensesArray = Array.isArray(senderDataObj?.licenses)
+      ? senderDataObj.licenses
+      : (senderDataObj?.licenses ? Object.values(senderDataObj.licenses) : []);
+    const nowGift = Date.now();
+    const hasLicense = (licenseId) => {
+      if (!licenseId) return false;
+      return userLicensesArray.some((l) => {
+        if (!l) return false;
+        if (typeof l === 'string') return l === licenseId;
+        if (typeof l === 'object') {
+          const matches = l.name === licenseId || l.id === licenseId;
+          if (!matches) return false;
+          const expires = l.expiresAt || 0;
+          return expires === 0 || expires > nowGift;
+        }
+        return false;
+      });
+    };
+
+    let vipType = null;
+    if (hasLicense('vip_elite_plus')) vipType = 'elite_plus';
+    else if (hasLicense('vip_ultimate')) vipType = 'ultimate';
+    else if (hasLicense('vip_platinum')) vipType = 'platinum';
+    else if (hasLicense('vip_premium')) vipType = 'premium';
+
+    const VIP_SHOP_DISCOUNTS = {
+      elite_plus: 0.35,
+      ultimate:   0.20,
+      platinum:   0.10,
+      premium:    0.00
+    };
+    const isVipItem = typeof itemId === 'string' && itemId.startsWith('vip_');
+    let finalPrice = item.price;
+    if (vipType && VIP_SHOP_DISCOUNTS[vipType] > 0 && item.category !== 'credits' && !isVipItem) {
+      const discount = VIP_SHOP_DISCOUNTS[vipType];
+      finalPrice = Math.floor(item.price * (1 - discount));
+      console.log(`[GIFT] ✅ VIP ${vipType} Rabatt: ${item.price}€ → ${finalPrice}€ (-${discount * 100}%)`);
+    }
+    const price = finalPrice;
 
     const senderBalance = senderDataObj?.money?.bank || 0;
     console.log('[GIFT] 💰 Sender balance:', senderBalance, 'Required:', price);
@@ -4740,7 +4783,7 @@ async function handleGiftItem(request) {
     // Prüfe Guthaben
     if (senderBalance < price) {
       console.log('[GIFT] ❌ Insufficient funds');
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Nicht genug Guthaben',
         required: price,
         current: senderBalance
@@ -4772,15 +4815,16 @@ async function handleGiftItem(request) {
     const { data: purchase, error: insertError } = await supabaseAdmin
       .from('pending_shop_purchases')
       .insert({
-        buyer_discord_id: user.id, // Der Zahler
-        recipient_discord_id: recipientId, // Der Empfänger
+        buyer_discord_id: user.id,
+        recipient_discord_id: recipientId,
         item_id: itemId,
         item_name: item.name,
         item_category: item.category,
         price: price,
         status: 'pending',
         initiated_from: 'website',
-        is_gift: true
+        is_gift: true,
+        metadata: { originalPrice: item.price, vipType, discount: item.price - price }
       })
       .select()
       .single();
@@ -5708,7 +5752,3 @@ ${ticket.closedAt ? ` • Geschlossen: ${_escapeHtml(new Date(ticket.closedAt).t
 ${msgs || '<p style="color:#71717a">Keine Nachrichten gespeichert.</p>'}
 </body></html>`;
 }
-
-
-
-
