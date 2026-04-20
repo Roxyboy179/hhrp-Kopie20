@@ -3609,7 +3609,7 @@ export default function ProfilPage() {
                 </div>
               </div>
             ) : (
-              <div data-tour-card="Keine Bewerbungen|Noch keine Bewerbungen eingereicht? Klick auf „Jetzt bewerben" und starte bei Polizei, Feuerwehr, Rettungsdienst oder Staat." className="glass rounded-2xl p-12 text-center border border-white/[0.08]">
+              <div data-tour-card="Keine Bewerbungen|Noch keine Bewerbung eingereicht? Klicke auf Jetzt bewerben und starte bei Polizei, Feuerwehr, Rettungsdienst oder Staat." className="glass rounded-2xl p-12 text-center border border-white/[0.08]">
                 <FileText className="w-16 h-16 mx-auto mb-4 text-white/20" />
                 <h3 className="text-xl font-bold text-white mb-2">Keine Bewerbungen</h3>
                 <p className="text-white/40 max-w-md mx-auto mb-4">
