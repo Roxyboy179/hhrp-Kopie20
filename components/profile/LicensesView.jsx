@@ -2,26 +2,58 @@
 
 import { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { 
-  Crown, Gem, Star, Shield, Award, FileText, Car, Umbrella,
+import {
+  Crown, Gem, Shield, Car, Umbrella, Bike, Truck, Bus,
+  Wrench, Briefcase, Scale, HeartPulse, Home, FileSignature,
   CheckCircle2, XCircle, Calendar, Zap, AlertTriangle, Loader2,
-  Sparkles, ShoppingBag, RefreshCw, Infinity as InfinityIcon
+  Sparkles, ShoppingBag, RefreshCw, Infinity as InfinityIcon,
+  Info, Clock, Bell, BellOff, Ban, ShieldCheck, ShieldOff,
+  PackageOpen, Rocket
 } from 'lucide-react';
 import { SHOP_ITEMS } from '@/lib/shop-data';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 
-// Icon-Map pro Kategorie
-const CATEGORY_ICON = {
-  vip: Crown,
-  credits: Zap,
-  führerscheine: Car,
-  waffen: Shield,
-  versicherungen: Umbrella,
-  bewerbung: FileText,
-  default: ShoppingBag
+// ──────────────────────────────────────────────────────────────
+// Kategorie-Icon / Farb-Map (wiederverwendbar in Card & Popup)
+// ──────────────────────────────────────────────────────────────
+const CATEGORY_META = {
+  vip_premiums:    { icon: Crown,       color: 'from-amber-500/30 to-yellow-500/20',  label: 'VIP-Mitgliedschaft' },
+  waffen:          { icon: Shield,      color: 'from-red-500/30 to-orange-500/20',    label: 'Waffenschein' },
+  versicherungen:  { icon: Umbrella,    color: 'from-blue-500/30 to-cyan-500/20',     label: 'Versicherung' },
+  werkzeuge:       { icon: Wrench,      color: 'from-purple-500/30 to-violet-500/20', label: 'Werkzeug' },
+  schutzbriefe:    { icon: FileSignature, color: 'from-emerald-500/30 to-green-500/20', label: 'Schutzbrief' },
+  führerscheine:   { icon: Car,         color: 'from-slate-500/30 to-zinc-500/20',    label: 'Führerschein' },
+  credits:         { icon: Zap,         color: 'from-yellow-500/30 to-amber-500/20',  label: 'Credits' },
+  default:         { icon: PackageOpen, color: 'from-white/20 to-white/5',            label: 'Sonstiges' }
 };
 
+// Spezifische Item-Icons (für schönere Popups)
+const ITEM_ICON = {
+  'führerschein_pkw': Car,
+  'führerschein_motorrad': Bike,
+  'führerschein_lkw': Truck,
+  'führerschein_bus': Bus,
+  'waffenschein': Shield,
+  'jagdschein': Shield,
+  'versicherung_rechtsschutz': Scale,
+  'versicherung_kranken': HeartPulse,
+  'versicherung_pkw': Car,
+  'versicherung_lkw': Truck,
+  'versicherung_diebstahl': Home,
+  'versicherung_hars': Umbrella,
+  'werkzeug_hacking': Wrench,
+  'werkzeug_angel': Wrench,
+  'vip_premium': Gem,
+  'vip_platinum': Gem,
+  'vip_ultimate': Crown,
+  'vip_elite_plus': Crown,
+  'luxus_pass': Crown
+};
+
+// ──────────────────────────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────────────────────────
 function formatDate(ts) {
   if (!ts || ts === 0) return 'Unbegrenzt';
   const d = typeof ts === 'number' ? new Date(ts) : new Date(ts);
@@ -37,9 +69,12 @@ function daysLeft(ts) {
   return Math.ceil(diff / (24 * 60 * 60 * 1000));
 }
 
+// ──────────────────────────────────────────────────────────────
+// Main Component
+// ──────────────────────────────────────────────────────────────
 export default function LicensesView({ userData, refreshUserData }) {
-  const [processing, setProcessing] = useState({}); // { [licenseId]: true }
-  const [confirmCancel, setConfirmCancel] = useState(null); // { licenseId, itemName }
+  const [processing, setProcessing] = useState({});
+  const [confirmCancel, setConfirmCancel] = useState(null); // {license, item}
 
   // Normalisiere die Licenses zu Objekten
   const licenses = useMemo(() => {
@@ -63,20 +98,31 @@ export default function LicensesView({ userData, refreshUserData }) {
       .filter(l => l.id && !l.id.startsWith('credits_') && !l.id.startsWith('credit_'));
   }, [userData]);
 
-  // Sortiere: Aktive zuerst (nach Ablaufdatum aufsteigend), dann Unbegrenzte, dann Abgelaufene
-  const sortedLicenses = useMemo(() => {
+  // NUR kündbare Lizenzen: haben Ablaufdatum + autoRenewable + nicht abgelaufen
+  // Bereits gekündigte bleiben sichtbar, damit der User die Kündigung rückgängig machen kann.
+  const cancellableLicenses = useMemo(() => {
     const now = Date.now();
-    const active = [];
-    const unlimited = [];
-    const expired = [];
-    licenses.forEach(l => {
-      if (!l.expiresAt || l.expiresAt === 0) unlimited.push(l);
-      else if (l.expiresAt > now) active.push(l);
-      else expired.push(l);
+    return licenses.filter(l => {
+      const item = SHOP_ITEMS[l.id];
+      const autoRenewSupported = item?.autoRenewable !== false;
+      const hasExpiry = l.expiresAt && l.expiresAt > 0;
+      const notExpired = hasExpiry && l.expiresAt > now;
+      return autoRenewSupported && hasExpiry && notExpired;
     });
-    active.sort((a, b) => a.expiresAt - b.expiresAt);
-    return [...active, ...unlimited, ...expired];
   }, [licenses]);
+
+  // Sortiere: bald ablaufende zuerst, gekündigte ans Ende
+  const sortedLicenses = useMemo(() => {
+    return [...cancellableLicenses].sort((a, b) => {
+      const aCanceled = a.canceledAt && !a.autoRenew;
+      const bCanceled = b.canceledAt && !b.autoRenew;
+      if (aCanceled !== bCanceled) return aCanceled ? 1 : -1;
+      return a.expiresAt - b.expiresAt;
+    });
+  }, [cancellableLicenses]);
+
+  const totalLicensesCount = licenses.length;
+  const hiddenCount = totalLicensesCount - cancellableLicenses.length;
 
   const submitLicenseAction = async (licenseId, action) => {
     setProcessing(prev => ({ ...prev, [licenseId]: true }));
@@ -86,19 +132,22 @@ export default function LicensesView({ userData, refreshUserData }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ licenseId, action })
       });
-      const data = await res.json();
+      // Sicher gegen leere Body
+      const text = await res.text();
+      let data = {};
+      try { data = text ? JSON.parse(text) : {}; } catch { /* ignore */ }
+
       if (res.ok) {
-        const msg = action === 'enable_autorenew' ? 'Auto-Renew aktiviert'
-          : action === 'disable_autorenew' ? 'Auto-Renew deaktiviert'
+        const msg = action === 'enable_autorenew' ? 'Auto-Verlängerung aktiviert'
+          : action === 'disable_autorenew' ? 'Auto-Verlängerung deaktiviert'
           : action === 'cancel' ? 'Lizenz gekündigt (läuft bis Ablauf)'
           : 'Aktion ausgeführt';
-        toast.success(msg, { description: 'Der Discord Bot wird die Änderung in Kürze übernehmen.' });
-        // Daten neu laden
+        toast.success(msg, { description: 'Der Discord-Bot übernimmt die Änderung in Kürze.' });
         if (typeof refreshUserData === 'function') {
           await refreshUserData();
         }
       } else {
-        toast.error('Fehler', { description: data.error || 'Aktion fehlgeschlagen' });
+        toast.error('Fehler', { description: data.error || `HTTP ${res.status}` });
       }
     } catch (e) {
       toast.error('Netzwerkfehler', { description: e.message });
@@ -114,7 +163,6 @@ export default function LicensesView({ userData, refreshUserData }) {
   const toggleAutoRenew = async (license) => {
     const newValue = !license.autoRenew;
     const action = newValue ? 'enable_autorenew' : 'disable_autorenew';
-    // Keine Confirm für Toggle - sofort durchführen
     await submitLicenseAction(license.id, action);
   };
 
@@ -127,71 +175,86 @@ export default function LicensesView({ userData, refreshUserData }) {
     <div className="space-y-6">
       {/* Info-Banner */}
       <div className="p-4 rounded-xl border border-blue-500/20 bg-blue-500/[0.03] flex items-start gap-3">
-        <Sparkles className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-        <div>
-          <h3 className="text-sm font-semibold text-white">Lizenz-Verwaltung</h3>
+        <ShieldCheck className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+        <div className="flex-1">
+          <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+            Kündbare Lizenzen
+            <span className="text-[10px] font-medium text-blue-300/80 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-full">
+              {cancellableLicenses.length} von {totalLicensesCount}
+            </span>
+          </h3>
           <p className="text-xs text-white/50 mt-1 leading-relaxed">
-            Hier siehst du alle deine aktiven Lizenzen. Du kannst die automatische Verlängerung aktivieren oder deaktivieren — oder eine Lizenz kündigen. Bei einer Kündigung bleibt die Lizenz bis zum Ablaufdatum aktiv, wird aber nicht automatisch verlängert. Änderungen werden vom Discord-Bot innerhalb weniger Sekunden übernommen.
+            Hier siehst du ausschließlich Lizenzen, die <strong>kündbar</strong> oder in der Auto-Verlängerung anpassbar sind.
+            Unbegrenzte oder abgelaufene Lizenzen werden ausgeblendet.
+            Änderungen übernimmt der Discord-Bot innerhalb weniger Sekunden.
           </p>
+          {hiddenCount > 0 && (
+            <p className="text-[11px] text-white/30 mt-2 flex items-center gap-1.5">
+              <Info className="w-3 h-3" />
+              {hiddenCount} Lizenz{hiddenCount !== 1 ? 'en' : ''} ausgeblendet (permanent / abgelaufen / Credits).
+            </p>
+          )}
         </div>
       </div>
 
       {sortedLicenses.length === 0 ? (
         <div className="p-12 rounded-2xl border border-white/[0.08] bg-white/[0.02] text-center">
-          <ShoppingBag className="w-12 h-12 text-white/20 mx-auto mb-4" />
-          <p className="text-white/50 font-medium">Du besitzt aktuell keine Lizenzen</p>
-          <p className="text-xs text-white/30 mt-1">Besuche den Shop, um welche zu erwerben.</p>
+          <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center mx-auto mb-4">
+            <ShieldOff className="w-7 h-7 text-white/30" />
+          </div>
+          <p className="text-white/70 font-medium">Keine kündbaren Lizenzen</p>
+          <p className="text-xs text-white/40 mt-1.5 max-w-md mx-auto">
+            Du besitzt derzeit keine Lizenzen mit laufender Auto-Verlängerung.
+            Besuche den Shop, um Versicherungen, Waffenscheine oder VIP-Mitgliedschaften zu erwerben.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {sortedLicenses.map(license => {
             const item = SHOP_ITEMS[license.id] || null;
             const displayName = item?.name || license.name || license.id;
-            const emoji = item?.emoji || '📜';
             const category = item?.category || 'default';
-            const CategoryIcon = CATEGORY_ICON[category] || ShoppingBag;
-            const autoRenewSupported = item?.autoRenewable !== false; // default true für Legacy
-            const hasExpiry = license.expiresAt && license.expiresAt > 0;
-            const days = hasExpiry ? daysLeft(license.expiresAt) : null;
-            const isExpired = hasExpiry && license.expiresAt <= Date.now();
+            const catMeta = CATEGORY_META[category] || CATEGORY_META.default;
+            const CategoryIcon = catMeta.icon;
+            const ItemIcon = ITEM_ICON[license.id] || CategoryIcon;
+
+            const days = daysLeft(license.expiresAt);
             const isCanceled = license.canceledAt && !license.autoRenew;
             const isProcessing = !!processing[license.id];
 
-            const statusColor = isExpired ? 'red' : isCanceled ? 'orange' : (days !== null && days <= 7) ? 'yellow' : 'green';
+            const statusColor = isCanceled ? 'orange' : (days !== null && days <= 7) ? 'yellow' : 'green';
             const statusColorMap = {
-              green: { bg: 'bg-green-500/10', border: 'border-green-500/20', text: 'text-green-400' },
-              yellow: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', text: 'text-yellow-400' },
-              orange: { bg: 'bg-orange-500/10', border: 'border-orange-500/20', text: 'text-orange-400' },
-              red: { bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-400' }
+              green:  { bg: 'bg-green-500/10',  border: 'border-green-500/20',  text: 'text-green-400',  accent: 'bg-green-500/40' },
+              yellow: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/20', text: 'text-yellow-400', accent: 'bg-yellow-500/40' },
+              orange: { bg: 'bg-orange-500/10', border: 'border-orange-500/20', text: 'text-orange-400', accent: 'bg-orange-500/40' }
             };
             const c = statusColorMap[statusColor];
 
             return (
               <div
                 key={`${license.id}-${license._idx}`}
-                className={`p-5 rounded-2xl border ${c.border} bg-white/[0.02] relative overflow-hidden transition-all hover:bg-white/[0.04]`}
+                className={`group p-5 rounded-2xl border ${c.border} bg-white/[0.02] relative overflow-hidden transition-all hover:bg-white/[0.04] hover:border-white/10`}
               >
-                {/* Farbiger Akzent-Streifen links */}
-                <div className={`absolute left-0 top-0 bottom-0 w-1 ${c.bg.replace('/10', '/40')}`} />
-                
+                {/* Farb-Akzent links */}
+                <div className={`absolute left-0 top-0 bottom-0 w-1 ${c.accent}`} />
+
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className={`w-10 h-10 rounded-xl ${c.bg} flex items-center justify-center flex-shrink-0 text-xl`}>
-                      {emoji}
+                    <div className={`relative w-11 h-11 rounded-xl bg-gradient-to-br ${catMeta.color} border border-white/10 flex items-center justify-center flex-shrink-0`}>
+                      <ItemIcon className="w-5 h-5 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-white truncate">{displayName}</h3>
-                      <div className="flex items-center gap-1.5 mt-0.5">
+                      <h3 className="font-semibold text-white truncate leading-tight">{displayName}</h3>
+                      <div className="flex items-center gap-1.5 mt-1">
                         <CategoryIcon className="w-3 h-3 text-white/30" />
-                        <span className="text-xs text-white/40 capitalize">{category}</span>
+                        <span className="text-[11px] text-white/40">{catMeta.label}</span>
                       </div>
                     </div>
                   </div>
                   <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wider ${c.bg} ${c.text} border ${c.border} flex-shrink-0`}>
-                    {isExpired ? <><XCircle className="w-3 h-3" /> Abgelaufen</>
-                      : isCanceled ? <><AlertTriangle className="w-3 h-3" /> Gekündigt</>
-                      : days !== null && days <= 7 ? <><AlertTriangle className="w-3 h-3" /> Bald</>
+                    {isCanceled ? <><AlertTriangle className="w-3 h-3" /> Gekündigt</>
+                      : days !== null && days <= 7 ? <><Clock className="w-3 h-3" /> Bald</>
                       : <><CheckCircle2 className="w-3 h-3" /> Aktiv</>}
                   </span>
                 </div>
@@ -204,75 +267,54 @@ export default function LicensesView({ userData, refreshUserData }) {
                       Läuft ab
                     </span>
                     <span className="text-white/80 font-medium">
-                      {hasExpiry ? (
-                        <>
-                          {formatDate(license.expiresAt)}
-                          {days !== null && !isExpired && (
-                            <span className={`ml-1.5 ${days <= 3 ? 'text-red-400' : days <= 7 ? 'text-yellow-400' : 'text-white/40'}`}>
-                              ({days} Tag{days !== 1 ? 'e' : ''})
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-blue-300">
-                          <InfinityIcon className="w-3 h-3" /> Unbegrenzt
+                      {formatDate(license.expiresAt)}
+                      {days !== null && (
+                        <span className={`ml-1.5 ${days <= 3 ? 'text-red-400' : days <= 7 ? 'text-yellow-400' : 'text-white/40'}`}>
+                          ({days} Tag{days !== 1 ? 'e' : ''})
                         </span>
                       )}
                     </span>
                   </div>
 
-                  {hasExpiry && autoRenewSupported && (
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-white/40 flex items-center gap-1.5">
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        Auto-Verlängerung
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-white/40 flex items-center gap-1.5">
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Auto-Verlängerung
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-medium flex items-center gap-1 ${license.autoRenew ? 'text-green-400' : 'text-white/40'}`}>
+                        {license.autoRenew ? <Bell className="w-3 h-3" /> : <BellOff className="w-3 h-3" />}
+                        {license.autoRenew ? 'Aktiv' : 'Deaktiviert'}
                       </span>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xs font-medium ${license.autoRenew ? 'text-green-400' : 'text-white/40'}`}>
-                          {license.autoRenew ? 'Aktiv' : 'Deaktiviert'}
-                        </span>
-                        <Switch
-                          checked={license.autoRenew}
-                          disabled={isProcessing || isExpired}
-                          onCheckedChange={() => toggleAutoRenew(license)}
-                          aria-label="Auto-Renew umschalten"
-                        />
-                      </div>
+                      <Switch
+                        checked={license.autoRenew}
+                        disabled={isProcessing}
+                        onCheckedChange={() => toggleAutoRenew(license)}
+                        aria-label="Auto-Verlängerung umschalten"
+                      />
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Actions */}
-                {!isExpired && hasExpiry && (
-                  <div className="flex gap-2 pt-3 border-t border-white/[0.06]">
-                    {!isCanceled ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setConfirmCancel({ licenseId: license.id, itemName: displayName })}
-                        disabled={isProcessing}
-                        className="flex-1 rounded-xl border-red-500/20 text-red-300 hover:bg-red-500/10 hover:text-red-200"
-                      >
-                        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><XCircle className="w-4 h-4 mr-1.5" /> Jetzt kündigen</>}
-                      </Button>
-                    ) : (
-                      <div className="flex-1 text-xs text-orange-300 flex items-center gap-1.5 justify-center py-2">
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                        Gekündigt — Lizenz läuft am {formatDate(license.expiresAt)} ab
-                      </div>
-                    )}
-                  </div>
-                )}
-                {!hasExpiry && (
-                  <div className="pt-3 border-t border-white/[0.06] text-xs text-white/30 text-center">
-                    Dauerhafte Lizenz — keine Aktionen nötig
-                  </div>
-                )}
-                {isExpired && (
-                  <div className="pt-3 border-t border-white/[0.06] text-xs text-red-300 text-center">
-                    Lizenz abgelaufen
-                  </div>
-                )}
+                <div className="flex gap-2 pt-3 border-t border-white/[0.06]">
+                  {!isCanceled ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setConfirmCancel({ license, item: { name: displayName, emoji: item?.emoji, category, ItemIcon } })}
+                      disabled={isProcessing}
+                      className="flex-1 rounded-xl border-red-500/20 text-red-300 hover:bg-red-500/10 hover:text-red-200 hover:border-red-500/40"
+                    >
+                      {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Ban className="w-4 h-4 mr-1.5" /> Jetzt kündigen</>}
+                    </Button>
+                  ) : (
+                    <div className="flex-1 text-[11px] text-orange-300 flex items-center gap-1.5 justify-center py-2 bg-orange-500/5 rounded-lg border border-orange-500/10">
+                      <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>Aktiv bis {formatDate(license.expiresAt)} — danach Ablauf</span>
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -281,45 +323,123 @@ export default function LicensesView({ userData, refreshUserData }) {
 
       {/* Confirm-Dialog für Kündigung */}
       {confirmCancel && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-[#0A0B0F] border border-red-500/20 rounded-2xl max-w-md w-full p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-500/10 rounded-lg">
-                <AlertTriangle className="w-6 h-6 text-red-400" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-white">Lizenz kündigen?</h3>
-                <p className="text-sm text-white/40">{confirmCancel.itemName}</p>
+        <CancelConfirmDialog
+          data={confirmCancel}
+          isProcessing={!!processing[confirmCancel.license.id]}
+          onClose={() => setConfirmCancel(null)}
+          onConfirm={() => cancelLicense(confirmCancel.license)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────
+// Cancel Confirm Dialog — modernisiert mit Icons
+// ──────────────────────────────────────────────────────────────
+function CancelConfirmDialog({ data, isProcessing, onClose, onConfirm }) {
+  const { license, item } = data;
+  const ItemIcon = item.ItemIcon || ShoppingBag;
+  const catMeta = CATEGORY_META[item.category] || CATEGORY_META.default;
+  const days = daysLeft(license.expiresAt);
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-in fade-in duration-200"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isProcessing) onClose();
+      }}
+    >
+      <div className="bg-[#0A0B0F] border border-red-500/20 rounded-2xl max-w-md w-full overflow-hidden shadow-2xl shadow-red-500/10 animate-in zoom-in-95 duration-200">
+        {/* Header mit Hintergrund-Gradient */}
+        <div className="relative p-6 border-b border-white/[0.06] bg-gradient-to-br from-red-500/10 via-red-500/5 to-transparent">
+          <div className="flex items-start gap-4">
+            <div className={`relative w-14 h-14 rounded-2xl bg-gradient-to-br ${catMeta.color} border border-white/10 flex items-center justify-center flex-shrink-0`}>
+              <ItemIcon className="w-6 h-6 text-white" />
+              {/* Ban-Overlay */}
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-red-500 border-2 border-[#0A0B0F] flex items-center justify-center">
+                <Ban className="w-3 h-3 text-white" />
               </div>
             </div>
-            <div className="p-3 rounded-xl bg-orange-500/10 border border-orange-500/20">
-              <p className="text-xs text-orange-200 leading-relaxed">
-                Die Lizenz bleibt bis zum Ablaufdatum aktiv, wird aber nicht automatisch verlängert. 
-                Es erfolgt <strong>keine Rückerstattung</strong>. Du kannst die Kündigung jederzeit 
-                rückgängig machen, indem du die Auto-Verlängerung wieder aktivierst.
-              </p>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <Button 
-                variant="outline" 
-                onClick={() => setConfirmCancel(null)} 
-                className="flex-1 rounded-xl border-white/10"
-                disabled={!!processing[confirmCancel.licenseId]}
-              >
-                Abbrechen
-              </Button>
-              <Button 
-                onClick={() => cancelLicense({ id: confirmCancel.licenseId })} 
-                className="flex-1 bg-red-600 hover:bg-red-700 rounded-xl"
-                disabled={!!processing[confirmCancel.licenseId]}
-              >
-                {processing[confirmCancel.licenseId] ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
-                Ja, kündigen
-              </Button>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-semibold text-white leading-tight">Lizenz kündigen?</h3>
+              <p className="text-sm text-white/50 mt-0.5 truncate">{item.name}</p>
+              <div className="flex items-center gap-1.5 mt-2 text-[11px] text-white/40">
+                <catMeta.icon className="w-3 h-3" />
+                {catMeta.label}
+              </div>
             </div>
           </div>
         </div>
-      )}
+
+        {/* Body */}
+        <div className="p-6 space-y-4">
+          {/* Was passiert? */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-white/60 uppercase tracking-wider flex items-center gap-1.5">
+              <Info className="w-3 h-3" />
+              Was passiert bei der Kündigung?
+            </p>
+            <div className="space-y-2">
+              <div className="flex items-start gap-2.5 text-xs">
+                <div className="w-5 h-5 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <CheckCircle2 className="w-3 h-3 text-green-400" />
+                </div>
+                <span className="text-white/70 leading-relaxed">
+                  Die Lizenz bleibt bis zum <strong className="text-white">{formatDate(license.expiresAt)}</strong> aktiv
+                  {days !== null && <span className="text-white/40"> (noch {days} Tag{days !== 1 ? 'e' : ''})</span>}.
+                </span>
+              </div>
+              <div className="flex items-start gap-2.5 text-xs">
+                <div className="w-5 h-5 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <BellOff className="w-3 h-3 text-red-400" />
+                </div>
+                <span className="text-white/70 leading-relaxed">
+                  Keine automatische Verlängerung mehr — danach endgültig abgelaufen.
+                </span>
+              </div>
+              <div className="flex items-start gap-2.5 text-xs">
+                <div className="w-5 h-5 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <XCircle className="w-3 h-3 text-orange-400" />
+                </div>
+                <span className="text-white/70 leading-relaxed">
+                  <strong className="text-white">Keine Rückerstattung</strong> für den bereits laufenden Zeitraum.
+                </span>
+              </div>
+              <div className="flex items-start gap-2.5 text-xs">
+                <div className="w-5 h-5 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <RefreshCw className="w-3 h-3 text-blue-400" />
+                </div>
+                <span className="text-white/70 leading-relaxed">
+                  Rückgängig machbar durch Reaktivieren der Auto-Verlängerung.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="flex gap-2 pt-2">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              className="flex-1 rounded-xl border-white/10 hover:bg-white/[0.04]"
+              disabled={isProcessing}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              onClick={onConfirm}
+              className="flex-1 bg-red-600 hover:bg-red-700 rounded-xl shadow-lg shadow-red-600/20"
+              disabled={isProcessing}
+            >
+              {isProcessing
+                ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Wird gekündigt…</>
+                : <><Ban className="w-4 h-4 mr-2" /> Ja, kündigen</>
+              }
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
