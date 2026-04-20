@@ -541,51 +541,105 @@ export function KrediteDetailView({ userData, onRefresh }) {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* REPAY MODAL */}
+      {/* REPAY MODAL - Verbessert mit Icons */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       {showRepayModal && selectedKredit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div 
-            className="w-full max-w-md rounded-2xl border shadow-2xl"
+            className="w-full max-w-md rounded-2xl border shadow-2xl overflow-hidden"
             style={{
               background: 'linear-gradient(135deg, rgba(40, 40, 40, 0.95), rgba(20, 20, 20, 0.98))',
               borderColor: 'rgba(16, 185, 129, 0.3)'
             }}
           >
-            <div className="p-6 border-b border-white/10">
+            {/* Header mit Gradient */}
+            <div 
+              className="p-6 border-b border-white/10"
+              style={{
+                background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.1))'
+              }}
+            >
               <div className="flex items-center gap-3">
-                <CheckCircle className="w-6 h-6 text-green-400" />
-                <h3 className="text-xl font-bold text-white">Kredit zurückzahlen</h3>
+                <div className="w-12 h-12 rounded-xl bg-green-500/20 border border-green-500/30 flex items-center justify-center">
+                  <CheckCircle className="w-6 h-6 text-green-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Kredit zurückzahlen</h3>
+                  <p className="text-sm text-white/60">Kredit #{selectedKredit.kreditId}</p>
+                </div>
               </div>
             </div>
 
             <div className="p-6 space-y-4">
-              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]">
-                <p className="text-sm text-white/60 mb-2">Kredit #{selectedKredit.kreditId}</p>
-                <p className="text-2xl font-bold text-white mb-4">
+              {/* Rückzahlungs-Betrag Karte */}
+              <div 
+                className="p-5 rounded-xl border"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))',
+                  borderColor: 'rgba(255, 255, 255, 0.1)'
+                }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-white/60">Rückzahlungsbetrag</span>
+                  <CreditCard className="w-4 h-4 text-white/40" />
+                </div>
+                <p className="text-3xl font-bold text-white mb-1">
                   {selectedKredit.rueckzahlungsBetrag?.toLocaleString('de-DE')} €
                 </p>
-                <div className="flex items-center gap-2 text-sm">
-                  <AlertTriangle className="w-4 h-4 text-yellow-400" />
-                  <p className="text-yellow-400">
-                    Dieser Betrag wird von deinem Bankkonto abgebucht.
-                  </p>
+                <div className="flex items-center gap-2 text-xs text-white/50">
+                  <div className="flex items-center gap-1">
+                    <span>Kreditbetrag:</span>
+                    <span className="text-white">{selectedKredit.betrag?.toLocaleString('de-DE')} €</span>
+                  </div>
+                  <span>+</span>
+                  <div className="flex items-center gap-1">
+                    <span>Gebühr:</span>
+                    <span className="text-orange-400">{selectedKredit.gebuehr?.toLocaleString('de-DE')} €</span>
+                  </div>
                 </div>
               </div>
 
+              {/* Warnung */}
+              <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-300 mb-1">Wichtig</p>
+                    <p className="text-xs text-yellow-400/80">
+                      Der Betrag wird sofort von deinem Bankkonto abgebucht. Stelle sicher, dass du genug Guthaben hast.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Erfolgs-Info */}
               <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
-                <p className="text-sm text-green-300">
-                  ✓ Nach der Rückzahlung ist dieser Kredit abgeschlossen und du bist schuldenfrei.
-                </p>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle className="w-4 h-4 text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-green-300 mb-1">Nach der Rückzahlung</p>
+                    <p className="text-xs text-green-400/80">
+                      Der Kredit wird als abgeschlossen markiert und du bist schuldenfrei. Du kannst jederzeit einen neuen Kredit beantragen.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="p-6 border-t border-white/10 flex gap-3">
+            {/* Actions */}
+            <div 
+              className="p-6 border-t border-white/10 flex gap-3"
+              style={{
+                background: 'rgba(0, 0, 0, 0.2)'
+              }}
+            >
               <Button
                 onClick={() => setShowRepayModal(false)}
                 variant="outline"
                 disabled={processing}
-                className="flex-1 rounded-xl h-12"
+                className="flex-1 rounded-xl h-12 border-white/20 hover:bg-white/5"
               >
                 Abbrechen
               </Button>
@@ -594,15 +648,23 @@ export function KrediteDetailView({ userData, onRefresh }) {
                 disabled={processing}
                 className="flex-1 rounded-xl h-12"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.4))',
+                  background: processing 
+                    ? 'rgba(100, 100, 100, 0.3)'
+                    : 'linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.4))',
                   border: '1px solid rgba(16, 185, 129, 0.5)',
                   color: '#fff'
                 }}
               >
                 {processing ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verarbeite...</>
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Verarbeite...
+                  </>
                 ) : (
-                  <><CheckCircle className="w-4 h-4 mr-2" /> Zurückzahlen</>
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Jetzt zurückzahlen
+                  </>
                 )}
               </Button>
             </div>
@@ -611,55 +673,98 @@ export function KrediteDetailView({ userData, onRefresh }) {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════ */}
-      {/* EXTEND MODAL */}
+      {/* EXTEND MODAL - Verbessert mit Icons */}
       {/* ═══════════════════════════════════════════════════════════════ */}
       {showExtendModal && selectedKredit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div 
-            className="w-full max-w-md rounded-2xl border shadow-2xl"
+            className="w-full max-w-md rounded-2xl border shadow-2xl overflow-hidden"
             style={{
               background: 'linear-gradient(135deg, rgba(40, 40, 40, 0.95), rgba(20, 20, 20, 0.98))',
               borderColor: 'rgba(59, 130, 246, 0.3)'
             }}
           >
-            <div className="p-6 border-b border-white/10">
+            {/* Header mit Gradient */}
+            <div 
+              className="p-6 border-b border-white/10"
+              style={{
+                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1))'
+              }}
+            >
               <div className="flex items-center gap-3">
-                <Clock className="w-6 h-6 text-blue-400" />
-                <h3 className="text-xl font-bold text-white">Kredit verlängern</h3>
+                <div className="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
+                  <Clock className="w-6 h-6 text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Kredit verlängern</h3>
+                  <p className="text-sm text-white/60">Kredit #{selectedKredit.kreditId}</p>
+                </div>
               </div>
             </div>
 
             <div className="p-6 space-y-4">
-              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]">
-                <p className="text-sm text-white/60 mb-2">Kredit #{selectedKredit.kreditId}</p>
-                <p className="text-lg font-bold text-white">
-                  Rückzahlung: {selectedKredit.rueckzahlungsBetrag?.toLocaleString('de-DE')} €
-                </p>
+              {/* Aktuelle Kredit-Info */}
+              <div 
+                className="p-4 rounded-xl border"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))',
+                  borderColor: 'rgba(255, 255, 255, 0.1)'
+                }}
+              >
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-white/60">Aktueller Rückzahlungsbetrag</span>
+                  <span className="font-bold text-white">
+                    {selectedKredit.rueckzahlungsBetrag?.toLocaleString('de-DE')} €
+                  </span>
+                </div>
               </div>
 
+              {/* Verlängerungsoptionen */}
               <div className="space-y-2">
-                <p className="text-sm text-white/60 mb-2">Verlängerungsoption wählen:</p>
+                <div className="flex items-center gap-2 mb-3">
+                  <Calendar className="w-4 h-4 text-blue-400" />
+                  <p className="text-sm font-medium text-white">Verlängerungsoption wählen:</p>
+                </div>
                 {extensionOptions.map((opt) => {
                   const gebuehr = Math.ceil((selectedKredit.rueckzahlungsBetrag || 0) * opt.percent);
+                  const isSelected = extendDays === opt.days;
                   return (
                     <button
                       key={opt.days}
                       onClick={() => setExtendDays(opt.days)}
                       className={`w-full p-4 rounded-xl border transition-all ${
-                        extendDays === opt.days
-                          ? 'bg-blue-500/20 border-blue-500/50'
-                          : 'bg-white/[0.03] border-white/[0.08] hover:border-white/20'
+                        isSelected
+                          ? 'bg-blue-500/20 border-blue-500/50 shadow-lg shadow-blue-500/20'
+                          : 'bg-white/[0.03] border-white/[0.08] hover:border-white/20 hover:bg-white/[0.05]'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <div className="text-left">
-                          <p className="font-semibold text-white">{opt.label}</p>
-                          <p className="text-xs text-white/50">
-                            Gebühr: {(opt.percent * 100).toFixed(0)}% = {gebuehr.toLocaleString('de-DE')} €
-                          </p>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                            isSelected ? 'bg-blue-500/30' : 'bg-white/5'
+                          }`}>
+                            <Calendar className={`w-5 h-5 ${isSelected ? 'text-blue-400' : 'text-white/50'}`} />
+                          </div>
+                          <div className="text-left">
+                            <p className={`font-semibold ${isSelected ? 'text-blue-300' : 'text-white'}`}>
+                              {opt.label}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs mt-1">
+                              <span className="text-white/50">Gebühr:</span>
+                              <span className={isSelected ? 'text-blue-400' : 'text-white/70'}>
+                                {(opt.percent * 100).toFixed(0)}%
+                              </span>
+                              <span className="text-white/30">•</span>
+                              <span className={`font-bold ${isSelected ? 'text-blue-300' : 'text-white'}`}>
+                                {gebuehr.toLocaleString('de-DE')} €
+                              </span>
+                            </div>
+                          </div>
                         </div>
-                        {extendDays === opt.days && (
-                          <CheckCircle className="w-5 h-5 text-blue-400" />
+                        {isSelected && (
+                          <div className="w-8 h-8 rounded-lg bg-blue-500/30 flex items-center justify-center">
+                            <CheckCircle className="w-5 h-5 text-blue-400" />
+                          </div>
                         )}
                       </div>
                     </button>
@@ -667,19 +772,34 @@ export function KrediteDetailView({ userData, onRefresh }) {
                 })}
               </div>
 
+              {/* Info */}
               <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                <p className="text-sm text-blue-300">
-                  ℹ️ Nach der Verlängerung kann dieser Kredit nicht erneut verlängert werden.
-                </p>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-blue-300 mb-1">Einmalige Verlängerung</p>
+                    <p className="text-xs text-blue-400/80">
+                      Jeder Kredit kann nur einmal verlängert werden. Die Gebühr wird sofort von deinem Bankkonto abgebucht.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="p-6 border-t border-white/10 flex gap-3">
+            {/* Actions */}
+            <div 
+              className="p-6 border-t border-white/10 flex gap-3"
+              style={{
+                background: 'rgba(0, 0, 0, 0.2)'
+              }}
+            >
               <Button
                 onClick={() => setShowExtendModal(false)}
                 variant="outline"
                 disabled={processing}
-                className="flex-1 rounded-xl h-12"
+                className="flex-1 rounded-xl h-12 border-white/20 hover:bg-white/5"
               >
                 Abbrechen
               </Button>
@@ -688,15 +808,23 @@ export function KrediteDetailView({ userData, onRefresh }) {
                 disabled={processing}
                 className="flex-1 rounded-xl h-12"
                 style={{
-                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.4))',
+                  background: processing
+                    ? 'rgba(100, 100, 100, 0.3)'
+                    : 'linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.4))',
                   border: '1px solid rgba(59, 130, 246, 0.5)',
                   color: '#fff'
                 }}
               >
                 {processing ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verarbeite...</>
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Verarbeite...
+                  </>
                 ) : (
-                  <><Clock className="w-4 h-4 mr-2" /> Verlängern</>
+                  <>
+                    <Clock className="w-4 h-4 mr-2" />
+                    Jetzt verlängern
+                  </>
                 )}
               </Button>
             </div>
