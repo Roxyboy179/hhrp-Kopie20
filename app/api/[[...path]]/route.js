@@ -2353,6 +2353,7 @@ export async function GET(request) {
     case 'licenses/pending-actions': return handleGetPendingLicenseActions(request);
     case 'shop/pending-purchases': return handleGetPendingShopPurchases(request);
     case 'transfer/pending': return handleGetPendingTransfers(request);
+    case 'credits/pending': return handleGetPendingCreditActions(request);
     default: break;
   }
 
@@ -2799,7 +2800,6 @@ export async function POST(request) {
     case 'licenses/action': return handleLicenseAction(request);
     case 'credits/repay': return handleCreditRepay(request);
     case 'credits/extend': return handleCreditExtend(request);
-    case 'credits/pending': return handleGetPendingCreditActions(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
