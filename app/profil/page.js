@@ -1610,6 +1610,7 @@ export default function ProfilPage() {
                       ueberfall: { label: 'Überfall', icon: AlertCircle, color: 'red', duration: 24 * 60 * 60 * 1000 },
                       rob: { label: 'Rob', icon: AlertCircle, color: 'red', duration: 24 * 60 * 60 * 1000 },
                       elitePlusDaily: { label: 'Elite+ Daily', icon: Star, color: 'purple', duration: 24 * 60 * 60 * 1000 },
+                      luxusPassDaily: { label: 'Luxus-Pass Daily', icon: Crown, color: 'yellow', duration: 24 * 60 * 60 * 1000 },
                       work: { label: 'Arbeiten', icon: Building2, color: 'orange', duration: 1 * 60 * 60 * 1000 }
                     };
                     
