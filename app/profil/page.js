@@ -1041,12 +1041,29 @@ export default function ProfilPage() {
 
   // Handler für Haupt-Tab Wechsel
   const handleMainTabChange = (tabId) => {
+    // Prüfe ob User einen Charakter hat - wenn nicht, sind alle Tabs außer 'overview' gesperrt
+    const hasChar = !!(userData?.character?.name || userData?.characterName);
+    if (!hasChar && tabId !== 'overview') {
+      toast.error('🔒 Kein Charakter vorhanden', {
+        description: 'Du musst erst einen Charakter erstellen (im Discord mit /charakter-erstellen), um diesen Bereich zu nutzen.'
+      });
+      return;
+    }
     setActiveTab(tabId);
     // Setze Default Sub-Tab wenn Kategorie Sub-Tabs hat
     if (subTabs[tabId]) {
       setActiveSubTab(subTabs[tabId][0].id);
     }
   };
+
+  // Auto-Redirect: Wenn User keinen Charakter hat und gerade auf gesperrtem Tab ist
+  useEffect(() => {
+    if (!userData) return;
+    const hasChar = !!(userData?.character?.name || userData?.characterName);
+    if (!hasChar && activeTab !== 'overview') {
+      setActiveTab('overview');
+    }
+  }, [userData, activeTab]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [botStatus, setBotStatus] = useState({ isOnline: true, checking: true, error: null });
 
@@ -1354,24 +1371,56 @@ export default function ProfilPage() {
         {/* Profil-Inhalte NUR wenn verifiziert */}
         {!nichtVerifiziert && (
         <>
+        {/* Character-Locked-Warning Banner - nur anzeigen wenn kein Charakter */}
+        {userData && !(userData?.character?.name || userData?.characterName) && (
+          <div 
+            className="glass rounded-2xl p-5 border"
+            style={{
+              background: 'linear-gradient(135deg, rgba(251, 146, 60, 0.08), rgba(234, 88, 12, 0.05))',
+              borderColor: 'rgba(251, 146, 60, 0.3)'
+            }}
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center flex-shrink-0">
+                <Lock className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-bold text-white mb-1">🔒 Kein Charakter vorhanden</h3>
+                <p className="text-sm text-white/70 leading-relaxed">
+                  Du hast noch keinen Charakter auf dem Server. Alle Bereiche außer der <span className="font-semibold text-white">Übersicht</span> sind daher gesperrt.
+                </p>
+                <p className="text-xs text-white/50 mt-2">
+                  💡 Erstelle deinen Charakter im Discord mit dem Command <code className="px-1.5 py-0.5 rounded bg-white/10 text-orange-300 font-mono">/charakter-erstellen</code>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tab Navigation - Haupt-Tabs */}
         <div data-tour="main-tabs" className="glass rounded-2xl p-2 border border-white/[0.08]">
           {/* Mobile: Horizontal Scrollable */}
           <div className="flex lg:hidden gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
             {mainTabs.map((tab) => {
               const Icon = tab.icon;
+              const hasChar = !!(userData?.character?.name || userData?.characterName);
+              const isLocked = !hasChar && tab.id !== 'overview';
               return (
                 <button
                   key={tab.id}
                   onClick={() => handleMainTabChange(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-3 rounded-xl transition-all text-sm whitespace-nowrap snap-center flex-shrink-0 ${
+                  disabled={isLocked}
+                  className={`flex items-center gap-2 px-4 py-3 rounded-xl transition-all text-sm whitespace-nowrap snap-center flex-shrink-0 relative ${
                     activeTab === tab.id
                       ? 'bg-white/10 text-white border border-white/20 shadow-lg'
+                      : isLocked
+                      ? 'text-white/25 bg-white/[0.02] border border-white/5 cursor-not-allowed'
                       : 'text-white/50 hover:text-white/70 hover:bg-white/5 border border-transparent'
                   }`}
                 >
                   <Icon className="w-4 h-4 flex-shrink-0" />
                   <span className="font-medium">{tab.label}</span>
+                  {isLocked && <Lock className="w-3 h-3 ml-0.5 flex-shrink-0" />}
                 </button>
               );
             })}
@@ -1381,18 +1430,25 @@ export default function ProfilPage() {
           <div className="hidden lg:grid grid-cols-5 gap-2">
             {mainTabs.map((tab) => {
               const Icon = tab.icon;
+              const hasChar = !!(userData?.character?.name || userData?.characterName);
+              const isLocked = !hasChar && tab.id !== 'overview';
               return (
                 <button
                   key={tab.id}
                   onClick={() => handleMainTabChange(tab.id)}
-                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all text-base ${
+                  disabled={isLocked}
+                  title={isLocked ? 'Charakter erforderlich – erstelle einen im Discord' : tab.label}
+                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all text-base relative ${
                     activeTab === tab.id
                       ? 'bg-white/10 text-white border border-white/20'
+                      : isLocked
+                      ? 'text-white/25 bg-white/[0.02] cursor-not-allowed'
                       : 'text-white/50 hover:text-white/70 hover:bg-white/5'
                   }`}
                 >
                   <Icon className="w-5 h-5 flex-shrink-0" />
                   <span className="font-medium">{tab.label}</span>
+                  {isLocked && <Lock className="w-3.5 h-3.5 ml-0.5 flex-shrink-0 opacity-60" />}
                 </button>
               );
             })}
