@@ -228,11 +228,15 @@ export default function ProfileTour({ run, onClose, setActiveTab, setActiveSubTa
 
     const rect = el.getBoundingClientRect();
     const padding = 8;
+    // Begrenze Spotlight-Höhe, damit bei großen Tab-Inhalten nur der obere,
+    // relevante Teil hervorgehoben wird (User kann trotzdem den Rest erkennen)
+    const MAX_SPOTLIGHT_HEIGHT = 420;
+    const visibleHeight = Math.min(rect.height, MAX_SPOTLIGHT_HEIGHT);
     const box = {
       top: rect.top - padding,
       left: rect.left - padding,
       width: rect.width + padding * 2,
-      height: rect.height + padding * 2
+      height: visibleHeight + padding * 2
     };
     setTargetRect(box);
 
@@ -277,9 +281,11 @@ export default function ProfileTour({ run, onClose, setActiveTab, setActiveSubTa
     setTipPos({ top, left, placement, width: tipW });
 
     // Scrolle Element in den sichtbaren Bereich
-    const inView = rect.top >= 0 && rect.bottom <= vh;
+    // Bei großen Elementen: scroll an den Anfang, sonst zur Mitte
+    const inView = rect.top >= 0 && rect.top <= vh * 0.3;
     if (!inView) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const scrollBlock = rect.height > MAX_SPOTLIGHT_HEIGHT ? 'start' : 'center';
+      el.scrollIntoView({ behavior: 'smooth', block: scrollBlock });
     }
   }, [run, step]);
 
