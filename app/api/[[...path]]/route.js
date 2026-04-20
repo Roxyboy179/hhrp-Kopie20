@@ -3838,7 +3838,16 @@ async function handleTransferMoney(request) {
       return licenses.some(l => {
         if (!l) return false;
         if (typeof l === 'string') return l === licenseId;
-        if (typeof l === 'object') return (l.name === licenseId || l.id === licenseId);
+        if (typeof l === 'object') {
+          const id = l.name || l.id;
+          if (id !== licenseId) return false;
+          // Prüfe ob Lizenz noch gültig ist
+          if (l.expiresAt && l.expiresAt !== 0 && l.expiresAt < Date.now()) {
+            console.log(`[TRANSFER] License ${licenseId} expired (expiresAt: ${l.expiresAt})`);
+            return false;
+          }
+          return true;
+        }
         return false;
       });
     };
