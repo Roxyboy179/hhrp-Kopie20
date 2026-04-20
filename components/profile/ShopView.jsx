@@ -8,7 +8,7 @@ import {
   Plus, Minus, KeyRound, Info, Loader2, CheckCircle2, Calculator, Coins,
   // Icons für Credit-Spend + Mystery Boxes
   Hash, RotateCcw, Receipt, Zap, Rocket, Award, ShieldPlus, Unlock,
-  ShieldCheck, Dice5, Ticket, Crown, Gem, Package, Gift, Glasses
+  ShieldCheck, Dice5, Ticket, Crown, Gem, Package, Gift, Glasses, Bus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -93,6 +93,7 @@ export function ShopView({ user, userData, onRefresh }) {
     'führerschein_pkw': Car,
     'führerschein_motorrad': Bike,
     'führerschein_lkw': Truck,
+    'führerschein_bus': Bus,
     'waffenschein': Shield,
     'jagdschein': Crosshair,
     'versicherung_rechtsschutz': Scale,
@@ -592,9 +593,10 @@ export function ShopView({ user, userData, onRefresh }) {
         {vipDiscount > 0 && (
           <div className="mt-3 pt-3 border-t border-white/10">
             <p className="text-sm text-white/70">
-              {hasVIPElitePlus && '🏆 VIP ELITE PLUS'}
-              {hasVIPUltimate && !hasVIPElitePlus && '⚡ VIP Ultimate'}
-              {hasVIPPlatinum && !hasVIPUltimate && !hasVIPElitePlus && '💎 VIP Platinum'}
+              {hasLuxusPass && '🎩 Luxus-Pass'}
+              {hasVIPElitePlus && !hasLuxusPass && '🏆 VIP ELITE PLUS'}
+              {hasVIPUltimate && !hasVIPElitePlus && !hasLuxusPass && '⚡ VIP Ultimate'}
+              {hasVIPPlatinum && !hasVIPUltimate && !hasVIPElitePlus && !hasLuxusPass && '💎 VIP Platinum'}
               <span className="text-green-400 ml-2">-{(vipDiscount * 100).toFixed(0)}% auf alle Käufe</span>
             </p>
           </div>
@@ -983,14 +985,53 @@ export function ShopView({ user, userData, onRefresh }) {
             const canBuyThisVIP = canPurchaseVIP(id);
             const isLowerVIP = isVIPItem && !canBuyThisVIP && !hasItem;
             
-            // Im Verschenken-Modus: Prüfe ob Empfänger Item hat (unterstützt String und Object Format)
-            const recipientHasItem = giftMode && giftRecipient?.licenses?.some(l => {
-              if (!l) return false; // Sicherheitscheck
+            // Im Verschenken-Modus: Prüfe VIP-Upgrade-Logik
+            let recipientCanReceiveVIP = true;
+            let recipientHighestVIP = -1;
+            
+            if (giftMode && giftRecipient && isVIPItem) {
+              // Ermittle höchstes VIP des Empfängers
+              if (giftRecipient.licenses?.some(l => 
+                (typeof l === 'string' && l === 'luxus_pass') || 
+                (typeof l === 'object' && (l.name === 'luxus_pass' || l.id === 'luxus_pass'))
+              )) {
+                recipientHighestVIP = 4;
+              } else if (giftRecipient.licenses?.some(l => 
+                (typeof l === 'string' && l === 'vip_elite_plus') || 
+                (typeof l === 'object' && (l.name === 'vip_elite_plus' || l.id === 'vip_elite_plus'))
+              )) {
+                recipientHighestVIP = 3;
+              } else if (giftRecipient.licenses?.some(l => 
+                (typeof l === 'string' && l === 'vip_ultimate') || 
+                (typeof l === 'object' && (l.name === 'vip_ultimate' || l.id === 'vip_ultimate'))
+              )) {
+                recipientHighestVIP = 2;
+              } else if (giftRecipient.licenses?.some(l => 
+                (typeof l === 'string' && l === 'vip_platinum') || 
+                (typeof l === 'object' && (l.name === 'vip_platinum' || l.id === 'vip_platinum'))
+              )) {
+                recipientHighestVIP = 1;
+              } else if (giftRecipient.licenses?.some(l => 
+                (typeof l === 'string' && l === 'vip_premium') || 
+                (typeof l === 'object' && (l.name === 'vip_premium' || l.id === 'vip_premium'))
+              )) {
+                recipientHighestVIP = 0;
+              }
+              
+              // Kann nur VIPs verschenken, die höher sind als das aktuelle VIP des Empfängers
+              const vipLevel = vipHierarchy[id];
+              recipientCanReceiveVIP = vipLevel > recipientHighestVIP;
+            }
+            
+            // Im Verschenken-Modus: Prüfe ob Empfänger NICHT-VIP-Item hat
+            const recipientHasItem = giftMode && !isVIPItem && giftRecipient?.licenses?.some(l => {
+              if (!l) return false;
               if (typeof l === 'string') return l === id;
               if (typeof l === 'object') return (l.name === id || l.id === id);
               return false;
             });
-            const isDisabledInGiftMode = giftMode && recipientHasItem;
+            
+            const isDisabledInGiftMode = giftMode && (recipientHasItem || (isVIPItem && !recipientCanReceiveVIP));
             
             const originalPrice = item.price;
             const discountedPrice = calculatePrice(originalPrice, id);
@@ -1035,6 +1076,22 @@ export function ShopView({ user, userData, onRefresh }) {
                     <span className="text-xs text-orange-300 font-medium flex items-center gap-1">
                       <Check className="w-3 h-3" />
                       Hat Empfänger
+                    </span>
+                  </div>
+                )}
+                {isVIPItem && giftMode && !recipientCanReceiveVIP && recipientHighestVIP >= 0 && (
+                  <div className="absolute top-2 right-2 bg-red-500/20 border border-red-500/50 rounded-lg px-2 py-1 z-10">
+                    <span className="text-xs text-red-300 font-medium flex items-center gap-1">
+                      <X className="w-3 h-3" />
+                      Kein Upgrade
+                    </span>
+                  </div>
+                )}
+                {isVIPItem && giftMode && recipientCanReceiveVIP && recipientHighestVIP >= 0 && (
+                  <div className="absolute top-2 right-2 bg-green-500/20 border border-green-500/50 rounded-lg px-2 py-1 z-10">
+                    <span className="text-xs text-green-300 font-medium flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3" />
+                      Upgrade
                     </span>
                   </div>
                 )}
