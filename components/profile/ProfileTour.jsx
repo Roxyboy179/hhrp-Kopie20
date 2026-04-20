@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, X, HelpCircle, Sparkles } from 'lucide-react';
+import {
+  ChevronLeft, ChevronRight, X, HelpCircle, Sparkles,
+  Hand, UserCircle2, LayoutGrid, Activity, Smartphone, Crown,
+  Wallet, Send, ArrowLeftRight, IdCard, ShoppingCart, Building2,
+  ClipboardList, Settings, PartyPopper
+} from 'lucide-react';
 
 /**
  * ProfileTour – Interaktive Schritt-für-Schritt-Anleitung für die Profilseite.
@@ -17,13 +22,15 @@ import { ChevronLeft, ChevronRight, X, HelpCircle, Sparkles } from 'lucide-react
 const TOUR_STEPS = [
   {
     id: 'welcome',
-    title: 'Willkommen in deinem Profil! 👋',
-    body: 'Diese kurze Tour zeigt dir in wenigen Schritten alle Funktionen deines Profils. Du kannst sie jederzeit überspringen oder pausieren. Let\'s go!',
-    target: null, // Zentriert, kein Highlight
+    icon: Hand,
+    title: 'Willkommen in deinem Profil!',
+    body: 'Diese kurze Tour zeigt dir in wenigen Schritten alle Funktionen deines Profils. Du kannst sie jederzeit überspringen oder pausieren. Los geht\'s!',
+    target: null,
     placement: 'center'
   },
   {
     id: 'header',
+    icon: UserCircle2,
     title: 'Dein Profil-Header',
     body: 'Hier siehst du deinen Discord-Avatar, deinen Namen, deine ID und den Zeitpunkt der letzten Synchronisation mit unserem System.',
     target: '[data-tour="profile-header"]',
@@ -31,6 +38,7 @@ const TOUR_STEPS = [
   },
   {
     id: 'main-tabs',
+    icon: LayoutGrid,
     title: 'Hauptnavigation',
     body: 'Über diese 8 Tabs erreichst du alle Bereiche deines Profils: Übersicht, Vorteile, Finanzen, Dokumente, Shop, Hamburg Horizon, Bewerbungen und Einstellungen.',
     target: '[data-tour="main-tabs"]',
@@ -39,6 +47,7 @@ const TOUR_STEPS = [
   },
   {
     id: 'overview',
+    icon: Activity,
     title: 'Übersicht & Status',
     body: 'Das ist deine Kommandozentrale. Hier siehst du auf einen Blick deinen Kontostand, die wichtigsten Statistiken, deine Lizenzen und den allgemeinen Status deines Accounts.',
     target: '[data-tour="overview-content"]',
@@ -47,7 +56,8 @@ const TOUR_STEPS = [
   },
   {
     id: 'benefits-pwa',
-    title: 'PWA-Vorteile 📱',
+    icon: Smartphone,
+    title: 'PWA-Vorteile',
     body: 'Installiere die App auf deinem Handy und erhalte exklusive Vorteile: tägliche Boni, Push-Benachrichtigungen, Offline-Zugriff und einen festen Login-Streak.',
     target: '[data-tour="overview-content"]',
     placement: 'top',
@@ -56,7 +66,8 @@ const TOUR_STEPS = [
   },
   {
     id: 'benefits-discord',
-    title: 'Discord-Vorteile 👑',
+    icon: Crown,
+    title: 'Discord-Vorteile',
     body: 'Premium-Member, Booster und verifizierte Spieler erhalten hier besondere Boni, Rabatte und Sonderrollen. Alles synchronisiert direkt mit dem Discord-Server.',
     target: '[data-tour="overview-content"]',
     placement: 'top',
@@ -65,7 +76,8 @@ const TOUR_STEPS = [
   },
   {
     id: 'finance-overview',
-    title: 'Finanzen – Übersicht 💰',
+    icon: Wallet,
+    title: 'Finanzen – Übersicht',
     body: 'Alle deine Finanzen an einem Ort: Bargeld, Bank und Sparkonto. Inklusive Schnellzugriff auf Überweisungen, Rechnungen und Karten.',
     target: '[data-tour="overview-content"]',
     placement: 'top',
@@ -74,7 +86,8 @@ const TOUR_STEPS = [
   },
   {
     id: 'finance-transfer',
-    title: 'Geld überweisen 💸',
+    icon: Send,
+    title: 'Geld überweisen',
     body: 'Überweise Geld an andere Spieler. Wähle den Empfänger, gib den Betrag ein und optional eine Nachricht. Sicher und schnell.',
     target: '[data-tour="overview-content"]',
     placement: 'top',
@@ -83,6 +96,7 @@ const TOUR_STEPS = [
   },
   {
     id: 'finance-transactions',
+    icon: ArrowLeftRight,
     title: 'Transaktionen & Rechnungen',
     body: 'Alle deine Zahlungen übersichtlich aufgelistet. Filtere nach Typ, Status oder Datum. Auch deine offenen und bezahlten Rechnungen findest du hier.',
     target: '[data-tour="overview-content"]',
@@ -92,7 +106,8 @@ const TOUR_STEPS = [
   },
   {
     id: 'documents',
-    title: 'Dokumente & Ausweise 🪪',
+    icon: IdCard,
+    title: 'Dokumente & Ausweise',
     body: 'Hier findest du alle deine offiziellen Dokumente: Personalausweis, Führerschein, Waffenschein und weitere Lizenzen. Digital und immer griffbereit.',
     target: '[data-tour="overview-content"]',
     placement: 'top',
@@ -101,7 +116,8 @@ const TOUR_STEPS = [
   },
   {
     id: 'shop',
-    title: 'Shop 🛒',
+    icon: ShoppingCart,
+    title: 'Shop',
     body: 'Entdecke exklusive Items, Premium-Pakete und Sonderangebote. Mit deinen Rewards und Bonuspunkten kannst du dir hier besondere Vorteile sichern.',
     target: '[data-tour="overview-content"]',
     placement: 'top',
@@ -109,7 +125,8 @@ const TOUR_STEPS = [
   },
   {
     id: 'hamburg-horizon',
-    title: 'Hamburg Horizon ✨',
+    icon: Building2,
+    title: 'Hamburg Horizon',
     body: 'Dein Tor zur Stadt: Stadtkarte, Fraktionen, Events und aktuelle Statistiken unserer Server-Welt Hamburg Horizon.',
     target: '[data-tour="overview-content"]',
     placement: 'top',
@@ -117,7 +134,8 @@ const TOUR_STEPS = [
   },
   {
     id: 'applications',
-    title: 'Bewerbungen 📋',
+    icon: ClipboardList,
+    title: 'Bewerbungen',
     body: 'Hier verwaltest du alle deine Bewerbungen bei Fraktionen (Polizei, Feuerwehr, Rettungsdienst, Staat). Verfolge den Status und erhalte Updates in Echtzeit.',
     target: '[data-tour="overview-content"]',
     placement: 'top',
@@ -125,7 +143,8 @@ const TOUR_STEPS = [
   },
   {
     id: 'settings',
-    title: 'Einstellungen ⚙️',
+    icon: Settings,
+    title: 'Einstellungen',
     body: 'Personalisiere dein Erlebnis: Theme, Hintergrundbild, Textgröße, Benachrichtigungen, Kompakt-Modus, Datenspar-Modus und vieles mehr.',
     target: '[data-tour="overview-content"]',
     placement: 'top',
@@ -133,7 +152,8 @@ const TOUR_STEPS = [
   },
   {
     id: 'finish',
-    title: 'Du bist startklar! 🎉',
+    icon: PartyPopper,
+    title: 'Du bist startklar!',
     body: 'Das war\'s schon! Du kennst jetzt alle Bereiche deines Profils. Viel Spaß beim Erkunden – und falls du die Tour erneut brauchst, klicke einfach auf "Tour starten".',
     target: null,
     placement: 'center'
@@ -379,7 +399,7 @@ export default function ProfileTour({ run, onClose, setActiveTab, setActiveSubTa
           y="0"
           width="100%"
           height="100%"
-          fill="rgba(0,0,0,0.78)"
+          fill="rgba(0,0,0,0.55)"
           mask="url(#tour-spotlight-mask)"
           style={{ transition: 'all 0.3s ease' }}
         />
@@ -448,8 +468,12 @@ export default function ProfileTour({ run, onClose, setActiveTab, setActiveSubTa
 
           {/* Content */}
           <div className="px-5 pt-4 pb-5">
-            <h3 className="text-xl font-bold text-white mb-2 flex items-center gap-2">
-              {stepIndex === 0 && <Sparkles className="w-5 h-5 text-purple-400 flex-shrink-0" />}
+            {step.icon && (
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 mb-3">
+                <step.icon className="w-5 h-5 text-white" />
+              </div>
+            )}
+            <h3 className="text-xl font-bold text-white mb-2">
               {step.title}
             </h3>
             <p className="text-sm text-white/70 leading-relaxed">{step.body}</p>
