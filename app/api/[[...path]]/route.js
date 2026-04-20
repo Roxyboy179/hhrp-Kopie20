@@ -4869,6 +4869,7 @@ async function handleGiftItem(request) {
     console.error('[GIFT] Stack:', e.stack);
     return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
   }
+}
 
 // =============================================================
 // ===== LICENSE MANAGEMENT (Auto-Renew / Cancel) =========
@@ -4958,8 +4959,6 @@ async function handleLicenseAction(request) {
     console.error('[LICENSE-ACTION] ❌ Error:', e);
     return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
   }
-}
-
 }
 
 // =============================================================
