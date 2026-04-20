@@ -4997,11 +4997,11 @@ async function handleCreditRepay(request) {
     const { data: userRow } = await supabaseAdmin
       .from('user_data')
       .select('data')
-      .eq('discord_id', user.id)
+      .eq('discord_user_id', user.id)
       .single();
 
     const kredite = userRow?.data?.kredite || [];
-    const kredit = kredite.find(k => k.id === kreditId);
+    const kredit = kredite.find(k => k.kreditId === kreditId);
 
     if (!kredit) {
       return NextResponse.json({ error: 'Kredit nicht gefunden' }, { status: 404 });
@@ -5091,11 +5091,11 @@ async function handleCreditExtend(request) {
     const { data: userRow } = await supabaseAdmin
       .from('user_data')
       .select('data')
-      .eq('discord_id', user.id)
+      .eq('discord_user_id', user.id)
       .single();
 
     const kredite = userRow?.data?.kredite || [];
-    const kredit = kredite.find(k => k.id === kreditId);
+    const kredit = kredite.find(k => k.kreditId === kreditId);
 
     if (!kredit) return NextResponse.json({ error: 'Kredit nicht gefunden' }, { status: 404 });
     if (kredit.status !== 'aktiv') return NextResponse.json({ error: 'Kredit ist nicht aktiv' }, { status: 400 });
