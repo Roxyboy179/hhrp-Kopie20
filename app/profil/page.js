@@ -1501,6 +1501,7 @@ export default function ProfilPage() {
             ) : (
               <>
                 {/* Daily Bonus Card */}
+                <div data-tour-card="Täglicher Bonus|Hole jeden Tag deinen kostenlosen Bonus ab. Je länger dein Streak, desto höher die Belohnung – plus spezielle VIP-Bonis für Premium-Mitglieder.">
                 <DailyBonusCard 
                   userId={user?.id}
                   onSuccess={() => {
@@ -1508,6 +1509,7 @@ export default function ProfilPage() {
                     loadData();
                   }}
                 />
+                </div>
 
             {/* Money Overview */}
             {!botStatus.isOnline ? null : loading ? (
@@ -1518,7 +1520,7 @@ export default function ProfilPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="glass rounded-xl p-6 border border-white/[0.08]">
+                <div data-tour-card="Bank-Limit|Das maximale Guthaben, das deine Bank halten kann. VIP-Mitglieder haben höhere Limits." className="glass rounded-xl p-6 border border-white/[0.08]">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
                       <TrendingUp className="w-6 h-6 text-purple-400" />
@@ -1532,7 +1534,7 @@ export default function ProfilPage() {
                   </div>
                 </div>
 
-                <div className="glass rounded-xl p-6 border border-white/[0.08]">
+                <div data-tour-card="Bank-Guthaben|Dein aktuelles Geld auf der Bank. Hier parkst du dein Vermögen sicher und verdienst bei VIP-Zinsen." className="glass rounded-xl p-6 border border-white/[0.08]">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
                       <CreditCard className="w-6 h-6 text-blue-400" />
@@ -1550,7 +1552,7 @@ export default function ProfilPage() {
                   </div>
                 </div>
 
-                <div className="glass rounded-xl p-6 border border-white/[0.08] sm:col-span-2 md:col-span-1">
+                <div data-tour-card="Gesamtvermögen|Dein komplettes Vermögen: Bargeld, Bank und Sparkonto zusammen. So siehst du auf einen Blick, wie reich du wirklich bist." className="glass rounded-xl p-6 border border-white/[0.08] sm:col-span-2 md:col-span-1">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
                       <TrendingUp className="w-6 h-6 text-purple-400" />
@@ -1572,7 +1574,7 @@ export default function ProfilPage() {
 
             {/* Cooldowns Section */}
             {userData?.cooldowns && Object.keys(userData.cooldowns).length > 0 && (
-              <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+              <div data-tour-card="Aktive Cooldowns|Hier siehst du alle laufenden Wartezeiten (z. B. bis du wieder deinen Collect-Bonus abholen kannst). VIPs haben kürzere Cooldowns." className="glass rounded-2xl p-6 border border-white/[0.08]">
                 <div className="flex items-center gap-3 mb-6">
                   <Clock className="w-6 h-6 text-white/60" />
                   <h2 className="text-xl font-bold text-white">Aktive Cooldowns</h2>
@@ -1645,7 +1647,7 @@ export default function ProfilPage() {
               {!botStatus.isOnline ? null : loading ? (
                 <SkeletonCard />
               ) : character && Object.keys(character).length > 0 ? (
-                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                <div data-tour-card="Charakter|Die Stammdaten deines Ingame-Charakters: Name, Vorname, Alter, Geschlecht, Herkunft, Job und Fraktion." className="glass rounded-2xl p-6 border border-white/[0.08]">
                   <div className="flex items-center gap-3 mb-4">
                     <User className="w-6 h-6 text-white/60" />
                     <h2 className="text-xl font-bold text-white">Charakter</h2>
@@ -1707,7 +1709,7 @@ export default function ProfilPage() {
               {!botStatus.isOnline ? null : loading ? (
                 <SkeletonCard />
               ) : stats && Object.keys(stats).length > 0 ? (
-                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                <div data-tour-card="Statistiken|Level, XP, Nachrichten und weitere Stats deines Charakters. Je aktiver du bist, desto mehr sammelst du an." className="glass rounded-2xl p-6 border border-white/[0.08]">
                   <div className="flex items-center gap-3 mb-4">
                     <Trophy className="w-6 h-6 text-white/60" />
                     <h2 className="text-xl font-bold text-white">Statistiken</h2>
@@ -1750,7 +1752,7 @@ export default function ProfilPage() {
 
             {/* Licenses - Detaillierte Ansicht mit Ablaufdaten */}
             {licenses.length > 0 && (
-              <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+              <div data-tour-card="Lizenzen & Versicherungen|Alle deine aktiven Lizenzen (Führerschein, Waffenschein, VIP-Status, etc.) mit Ablaufdaten und Details." className="glass rounded-2xl p-6 border border-white/[0.08]">
                 <div className="flex items-center gap-3 mb-4">
                   <Award className="w-6 h-6 text-white/60" />
                   <h2 className="text-xl font-bold text-white">Lizenzen & Versicherungen</h2>
@@ -1913,7 +1915,7 @@ export default function ProfilPage() {
                     {/* Grid: Bankkarte & Personalausweis */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Bankkarte */}
-                      <div>
+                      <div data-tour-card="Bankkarte|Deine digitale Bankkarte mit Kartennummer, Inhaber-Name und Guthaben. Dreh sie um, um die Details zu sehen.">
                         <h3 className="text-sm font-semibold text-white/70 mb-3 flex items-center gap-2">
                           <CreditCard className="w-4 h-4" />
                           Bankkarte
@@ -1936,7 +1938,7 @@ export default function ProfilPage() {
                       </div>
 
                       {/* Personalausweis */}
-                      <div>
+                      <div data-tour-card="Personalausweis|Dein digitaler Personalausweis mit allen Stammdaten (Name, Alter, Geschlecht, Herkunft). Musst du bei Polizei-Kontrollen vorzeigen.">
                         <h3 className="text-sm font-semibold text-white/70 mb-3 flex items-center gap-2">
                           <IdCard className="w-4 h-4" />
                           Personalausweis
@@ -1954,7 +1956,7 @@ export default function ProfilPage() {
                     {/* Grid: Führerschein & Waffenschein */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
                       {/* Führerschein */}
-                      <div>
+                      <div data-tour-card="Führerschein|Dein Führerschein mit allen Fahrzeug-Klassen. Ohne gültigen Schein drohen bei Polizei-Kontrollen Bußgelder.">
                         <h3 className="text-sm font-semibold text-white/70 mb-3 flex items-center gap-2">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -1972,7 +1974,7 @@ export default function ProfilPage() {
                       </div>
 
                       {/* Waffenschein */}
-                      <div>
+                      <div data-tour-card="Waffenschein|Berechtigt dich zum Besitz und Tragen von Schusswaffen. Ohne gültigen Waffenschein drohen bei Polizei-Kontrollen schwere Strafen.">
                         <h3 className="text-sm font-semibold text-white/70 mb-3 flex items-center gap-2">
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -2005,7 +2007,7 @@ export default function ProfilPage() {
             <PWANotifications userData={userData} isPWA={isPWA} discordUserId={user?.id} />
             
             {/* PWA Status Card */}
-            <div className={`glass rounded-2xl p-6 border ${isPWA ? 'border-green-500/30 bg-gradient-to-br from-green-500/10 to-emerald-500/10' : 'border-orange-500/30 bg-gradient-to-br from-orange-500/10 to-yellow-500/10'}`}>
+            <div data-tour-card="PWA-Status|Zeigt dir an, ob du Hamburg Horizon als App auf deinem Gerät installiert hast. Falls nicht, kannst du die App direkt hier installieren." className={`glass rounded-2xl p-6 border ${isPWA ? 'border-green-500/30 bg-gradient-to-br from-green-500/10 to-emerald-500/10' : 'border-orange-500/30 bg-gradient-to-br from-orange-500/10 to-yellow-500/10'}`}>
               <div className="flex items-start gap-4">
                 <div className={`w-16 h-16 rounded-2xl ${isPWA ? 'bg-green-500/20' : 'bg-orange-500/20'} flex items-center justify-center flex-shrink-0`}>
                   {isPWA ? (
@@ -2046,7 +2048,7 @@ export default function ProfilPage() {
             </div>
 
             {/* PWA Vorteile Liste */}
-            <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+            <div data-tour-card="Exklusive PWA-Vorteile|Alle Bonis, die du durch die App-Installation erhältst: Push-Nachrichten, Offline-Modus, tägliche Extra-Boni und mehr." className="glass rounded-2xl p-6 border border-white/[0.08]">
               <div className="flex items-center gap-3 mb-6">
                 <Sparkles className="w-6 h-6 text-purple-400" />
                 <h2 className="text-xl font-bold text-white">Exklusive PWA-Vorteile</h2>
@@ -2137,7 +2139,7 @@ export default function ProfilPage() {
 
             {/* Installations-Anleitung für Nicht-PWA User */}
             {!isPWA && (
-              <div className="glass rounded-2xl p-6 border border-blue-500/15 bg-gradient-to-br from-blue-500/5 to-indigo-500/5">
+              <div data-tour-card="App-Installation|Schritt-für-Schritt-Anleitung, wie du Hamburg Horizon als App auf deinem Handy installierst. In 3 Schritten erledigt." className="glass rounded-2xl p-6 border border-blue-500/15 bg-gradient-to-br from-blue-500/5 to-indigo-500/5">
                 <div className="flex items-center gap-3 mb-5">
                   <Monitor className="w-6 h-6 text-blue-400" />
                   <h2 className="text-lg font-bold text-white">So installierst du die App</h2>
@@ -2173,7 +2175,7 @@ export default function ProfilPage() {
             ) : (
               <>
                 {/* VIP Status Card */}
-                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                <div data-tour-card="VIP-Status|Dein aktueller VIP-Rang (Premium, Platinum, Ultimate oder Elite+). Jede Stufe bringt kürzere Cooldowns, höhere Boni und exklusive Perks." className="glass rounded-2xl p-6 border border-white/[0.08]">
                   <div className="flex items-center gap-3 mb-6">
                     <Crown className="w-6 h-6 text-yellow-400" />
                     <h2 className="text-xl font-bold text-white">Dein VIP-Status</h2>
@@ -2250,7 +2252,7 @@ export default function ProfilPage() {
                 </div>
 
                 {/* Server Booster Status - vom Bot geprüft */}
-                <div className={`glass rounded-2xl p-6 border ${userHasLicense('server_booster') ? 'border-pink-500/20 bg-gradient-to-br from-pink-500/10 to-purple-500/10' : 'border-white/[0.08]'}`}>
+                <div data-tour-card="Server Booster|Boostest du den Discord-Server, siehst du hier deine zusätzlichen Boni: +5.000 bei jedem /collect plus eine exklusive Booster-Rolle." className={`glass rounded-2xl p-6 border ${userHasLicense('server_booster') ? 'border-pink-500/20 bg-gradient-to-br from-pink-500/10 to-purple-500/10' : 'border-white/[0.08]'}`}>
                   <div className="flex items-start gap-4">
                     <div className={`w-16 h-16 rounded-2xl ${userHasLicense('server_booster') ? 'bg-pink-500/20' : 'bg-white/[0.04]'} flex items-center justify-center flex-shrink-0`}>
                       <Rocket className={`w-8 h-8 ${userHasLicense('server_booster') ? 'text-pink-400' : 'text-white/20'}`} />
@@ -2290,7 +2292,7 @@ export default function ProfilPage() {
                 </div>
 
                 {/* ========= DISCORD SERVER VORTEILE ========= */}
-                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                <div data-tour-card="Discord Server Vorteile|Übersicht aller Commands und Vorteile, die du im Discord-Server nutzen kannst: /collect, Giveaways, Spiele und mehr." className="glass rounded-2xl p-6 border border-white/[0.08]">
                   <div className="flex items-center gap-3 mb-2">
                     <MessageSquare className="w-6 h-6 text-indigo-400" />
                     <h2 className="text-xl font-bold text-white">Discord Server Vorteile</h2>
@@ -2440,7 +2442,7 @@ export default function ProfilPage() {
                 </div>
 
                 {/* ========= WEBSEITE VORTEILE ========= */}
-                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                <div data-tour-card="Webseite Vorteile|Features, die du exklusiv auf dieser Webseite nutzen kannst: Profil-Dashboard, Transaktions-Verlauf, Sparkonto und Bewerbungen." className="glass rounded-2xl p-6 border border-white/[0.08]">
                   <div className="flex items-center gap-3 mb-2">
                     <Globe className="w-6 h-6 text-cyan-400" />
                     <h2 className="text-xl font-bold text-white">Webseite Vorteile</h2>
@@ -2553,7 +2555,7 @@ export default function ProfilPage() {
                 </div>
 
                 {/* Aktive Events Card */}
-                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                <div data-tour-card="Aktive Events|Laufende Events mit Sonderboni, Rabatten oder Aktionen. Schau immer mal rein – Events sind oft zeitlich begrenzt." className="glass rounded-2xl p-6 border border-white/[0.08]">
                   <div className="flex items-center gap-3 mb-6">
                     <Sparkles className="w-6 h-6 text-orange-400" />
                     <h2 className="text-xl font-bold text-white">Aktive Events</h2>
@@ -2672,7 +2674,7 @@ export default function ProfilPage() {
                   </div>
 
                   {/* Vermögensaufteilung */}
-                  <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                  <div data-tour-card="Vermögensaufteilung|Visualisiert, wie sich dein Vermögen auf Bargeld, Bank und Sparkonto verteilt. Progress-Bars zeigen dir auf einen Blick die Verteilung." className="glass rounded-2xl p-6 border border-white/[0.08]">
                     <div className="flex items-center gap-3 mb-6">
                       <PieChart className="w-6 h-6 text-white/60" />
                       <h3 className="text-xl font-bold text-white">Vermögensaufteilung</h3>
@@ -2734,7 +2736,7 @@ export default function ProfilPage() {
 
                   {/* Schulden-Übersicht */}
                   {totalSchulden > 0 && (
-                    <div className="glass rounded-2xl p-6 border border-red-500/20 bg-red-500/5">
+                    <div data-tour-card="Offene Schulden|Deine aktuellen Schulden aus Krediten und Rechnungen. Behalte sie im Auge und bezahle sie zeitnah, um Mahngebühren zu vermeiden." className="glass rounded-2xl p-6 border border-red-500/20 bg-red-500/5">
                       <div className="flex items-center gap-3 mb-6">
                         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
                           <AlertTriangle className="w-6 h-6 text-white" />
@@ -2774,7 +2776,7 @@ export default function ProfilPage() {
                   )}
 
                   {/* Finanz-Tipps */}
-                  <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                  <div data-tour-card="Finanz-Tipps|Personalisierte Tipps basierend auf deiner finanziellen Situation. Zum Beispiel Hinweise zu hohen Schulden oder zu wenig Sparguthaben." className="glass rounded-2xl p-6 border border-white/[0.08]">
                     <div className="flex items-center gap-3 mb-4">
                       <Lightbulb className="w-6 h-6 text-yellow-400" />
                       <h3 className="text-lg font-bold text-white">Finanz-Tipps</h3>
@@ -2811,6 +2813,7 @@ export default function ProfilPage() {
 
         {/* Überweisung Tab */}
         {activeTab === 'finance' && activeSubTab === 'transfer' && (
+          <div data-tour-card="Geld überweisen|Sende Geld an andere Spieler. Wähle den Empfänger, gib den Betrag ein und optional einen Verwendungszweck. Schnell und sicher.">
           <TransferMoneyView 
             userData={userData}
             onTransferComplete={() => {
@@ -2818,20 +2821,25 @@ export default function ProfilPage() {
               loadData();
             }}
           />
+          </div>
         )}
 
         {/* Statistiken Tab - NEU */}
         {activeTab === 'finance' && activeSubTab === 'statistics' && (
+          <div data-tour-card="Finanz-Statistiken|Detaillierte Charts und Auswertungen zu deinen Einnahmen und Ausgaben über Zeit.">
           <FinanzStatistikenView userData={userData} />
+          </div>
         )}
 
         {/* Transaktionen Tab */}
         {activeTab === 'finance' && activeSubTab === 'transactions' && (
+          <div data-tour-card="Transaktionen|Alle deine Ein- und Ausgänge. Filtere nach Typ, Datum oder Betrag und sieh dir Details zu jeder Buchung an.">
           <ErweiterteTransaktionenView 
             userData={userData} 
             filter={transactionFilter}
             setFilter={setTransactionFilter}
           />
+          </div>
         )}
 
         {/* Rechnungen Tab */}
@@ -2842,7 +2850,7 @@ export default function ProfilPage() {
             ) : loading ? (
               <SkeletonCard />
             ) : (
-              <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
+              <div data-tour-card="Meine Rechnungen|Alle deine offenen und bezahlten Rechnungen (Polizei, Feuerwehr, Rettungsdienst, Staat). Filtere nach Status und Fraktion." className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
                 <div className="flex items-center gap-3 mb-4 sm:mb-6">
                   <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-white/60" />
                   <h2 className="text-lg sm:text-xl font-bold text-white">Meine Rechnungen</h2>
@@ -3051,7 +3059,7 @@ export default function ProfilPage() {
             ) : loading ? (
               <SkeletonCard />
             ) : (
-              <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
+              <div data-tour-card="Personalakte|Alle Einträge in deiner Personalakte: Strafen, Vermerke, Auszeichnungen und besondere Vorkommnisse. Mit Filter nach Status." className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
                 <div className="flex items-center gap-3 mb-4 sm:mb-6">
                   <Award className="w-5 h-5 sm:w-6 sm:h-6 text-white/60" />
                   <h2 className="text-lg sm:text-xl font-bold text-white">Meine Personalakte</h2>
@@ -3351,7 +3359,7 @@ export default function ProfilPage() {
 
         {/* Shop Tab */}
         {activeTab === 'shop' && (
-          <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
+          <div data-tour-card="Hamburg Horizon RP Shop|Exklusive Items, Premium-Pakete und Sonderangebote. Mit deinen Rewards & Bonuspunkten kannst du dir hier besondere Vorteile sichern." className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
             <div className="flex items-center gap-3 mb-6">
               <ShoppingCart className="w-6 h-6 text-white/60" />
               <h2 className="text-lg sm:text-xl font-bold text-white">Hamburg Horizon RP Shop</h2>
@@ -3366,21 +3374,27 @@ export default function ProfilPage() {
 
         {/* Hamburg Horizon Tab (ersetzt den alten Marktplatz-Tab) */}
         {activeTab === 'hamburg-horizon' && (
+          <div data-tour-card="Hamburg Horizon|Die komplette Server-Welt: Stadtkarte, Fraktionen, Events, Statistiken und aktuelle News aus Hamburg Horizon.">
           <HamburgHorizonTab currentUser={user} />
+          </div>
         )}
 
         {/* Sparkonto Tab - NEU */}
         {activeTab === 'finance' && activeSubTab === 'savings' && (
+          <div data-tour-card="Sparkonto|Dein Sparkonto mit Zinsen. Setze dir Sparziele, zahle ein oder hebe Geld ab. Je länger du sparst, desto mehr Zinsen gibt's.">
           <SparkontoManagementView 
             userData={userData}
             savingsGoal={savingsGoal}
             setSavingsGoal={setSavingsGoal}
           />
+          </div>
         )}
 
         {/* Kredite Tab - NEU */}
         {activeTab === 'finance' && activeSubTab === 'kredite' && (
+          <div data-tour-card="Kredite|Deine laufenden Kredite mit Laufzeit, Zinssatz und Rückzahlungsplan. Hier kannst du auch Sondertilgungen machen.">
           <KrediteDetailView userData={userData} />
+          </div>
         )}
 
         {/* Steuer-Records Tab */}
@@ -3389,7 +3403,7 @@ export default function ProfilPage() {
           <div className="space-y-6">
             {/* Steuer-Übersicht Card */}
             {userData?.taxSummary && userData.taxSummary.gesamtGezahlt > 0 && (
-              <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+              <div data-tour-card="Steuer-Übersicht|Wie viel Steuern du bereits gezahlt hast und wie viel du per Steuererklärung zurückbekommen kannst (bis zu 45%)." className="glass rounded-2xl p-6 border border-white/[0.08]">
                 <div className="flex items-center gap-3 mb-6">
                   <Receipt className="w-6 h-6 text-white/60" />
                   <h2 className="text-xl font-bold text-white">Steuer-Übersicht</h2>
@@ -3456,7 +3470,7 @@ export default function ProfilPage() {
             )}
             
             {/* Steuer-Records Liste */}
-            <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
+            <div data-tour-card="Steuereinträge|Jeder einzelne Steuer-Eintrag: Wann du Steuer gezahlt hast, wofür (Collect, Bank, Shop) und wie viel." className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
               <div className="flex items-center gap-3 mb-6">
                 <FileText className="w-6 h-6 text-white/60" />
                 <h2 className="text-lg sm:text-xl font-bold text-white">Alle Steuereinträge</h2>
@@ -3559,7 +3573,7 @@ export default function ProfilPage() {
             {!botStatus.isOnline ? null : loading ? (
               <SkeletonCard />
             ) : bewerbungen.length > 0 ? (
-              <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+              <div data-tour-card="Meine Bewerbungen|Alle deine eingereichten Bewerbungen (Polizei, Feuerwehr, Rettungsdienst, Staat) mit Status, Typ (Normal/Praktikum/Uprank) und Bearbeiter." className="glass rounded-2xl p-6 border border-white/[0.08]">
                 <div className="flex items-center gap-3 mb-4">
                   <FileText className="w-6 h-6 text-white/60" />
                   <h2 className="text-xl font-bold text-white">Meine Bewerbungen</h2>
@@ -3595,7 +3609,7 @@ export default function ProfilPage() {
                 </div>
               </div>
             ) : (
-              <div className="glass rounded-2xl p-12 text-center border border-white/[0.08]">
+              <div data-tour-card="Keine Bewerbungen|Noch keine Bewerbungen eingereicht? Klick auf „Jetzt bewerben" und starte bei Polizei, Feuerwehr, Rettungsdienst oder Staat." className="glass rounded-2xl p-12 text-center border border-white/[0.08]">
                 <FileText className="w-16 h-16 mx-auto mb-4 text-white/20" />
                 <h3 className="text-xl font-bold text-white mb-2">Keine Bewerbungen</h3>
                 <p className="text-white/40 max-w-md mx-auto mb-4">
@@ -3617,7 +3631,7 @@ export default function ProfilPage() {
           <div className="space-y-6">
 
             {/* === DARSTELLUNG === */}
-            <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+            <div data-tour-card="Darstellung|Personalisiere das Aussehen: Kompaktmodus, Textgröße, Benachrichtigungs-Stil und weitere visuelle Optionen." className="glass rounded-2xl p-6 border border-white/[0.08]">
               <div className="flex items-center gap-3 mb-6">
                 <Monitor className="w-6 h-6 text-cyan-400" />
                 <div>
@@ -3811,7 +3825,7 @@ export default function ProfilPage() {
               }
 
               return (
-                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                <div data-tour-card="Hintergrundbild|Wähle aus verschiedenen Hintergründen oder lade dein eigenes hoch. Premium-Nutzer haben Zugriff auf exklusive Designs." className="glass rounded-2xl p-6 border border-white/[0.08]">
                   <div className="flex items-center gap-3 mb-5">
                     <ImagePlus className="w-6 h-6 text-purple-400" />
                     <div>
@@ -4003,7 +4017,7 @@ export default function ProfilPage() {
 
             {/* === PWA EINSTELLUNGEN === */}
             {isPWA && (
-              <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+              <div data-tour-card="PWA-Einstellungen|Optimierungen für die App-Nutzung: Schnellstart, Offline-Modus, Datenspar-Modus und Push-Benachrichtigungen." className="glass rounded-2xl p-6 border border-white/[0.08]">
                 <div className="flex items-center gap-3 mb-5">
                   <AppWindow className="w-6 h-6 text-blue-400" />
                   <div>
@@ -4098,7 +4112,7 @@ export default function ProfilPage() {
             )}
 
             {/* === ÜBER === */}
-            <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+            <div data-tour-card="Über|Informationen zur App-Version, dem Modus (PWA/Browser) und Optionen zum Zurücksetzen deiner Einstellungen." className="glass rounded-2xl p-6 border border-white/[0.08]">
               <div className="flex items-center gap-3 mb-4">
                 <Globe className="w-6 h-6 text-white/40" />
                 <h2 className="text-xl font-bold text-white">Über</h2>
