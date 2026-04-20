@@ -37,6 +37,7 @@ import { ErweiterteTransaktionenView, SparkontoManagementView } from '@/componen
 import { TransferMoneyView } from '@/components/profile/TransferMoneyView';
 import { ShopView } from '@/components/profile/ShopView';
 import HamburgHorizonTab from '@/components/profile/HamburgHorizonTab';
+import ProfileTour, { TourStartButton, hasCompletedProfileTour } from '@/components/profile/ProfileTour';
 
 function SkeletonCard({ className = "" }) {
   return (
@@ -969,6 +970,9 @@ export default function ProfilPage() {
   // PWA Detection
   const [isPWA, setIsPWA] = useState(false);
   
+  // Tour State
+  const [tourRunning, setTourRunning] = useState(false);
+  
   useEffect(() => {
     // Check if app is installed as PWA
     const checkPWA = () => {
@@ -985,6 +989,15 @@ export default function ProfilPage() {
       window.matchMedia('(display-mode: standalone)').removeEventListener('change', checkPWA);
     };
   }, []);
+
+  // Auto-Start der Tour beim ersten Besuch (erst wenn User geladen & verifiziert ist)
+  useEffect(() => {
+    if (!user || nichtVerifiziert || loading) return;
+    if (!hasCompletedProfileTour()) {
+      const t = setTimeout(() => setTourRunning(true), 1500);
+      return () => clearTimeout(t);
+    }
+  }, [user, nichtVerifiziert, loading]);
 
   // Tab-Konfiguration mit Kategorien
   const mainTabs = [
@@ -1265,7 +1278,7 @@ export default function ProfilPage() {
     <div className="min-h-screen px-4 py-8 pt-24">
       <div className="max-w-6xl mx-auto space-y-6">
         {/* Header mit Discord Avatar */}
-        <div className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
+        <div data-tour="profile-header" className="glass rounded-2xl p-4 sm:p-6 border border-white/[0.08]">
           <div className="flex flex-col sm:flex-row items-center gap-4">
             {avatarUrl ? (
               <img 
@@ -1289,6 +1302,9 @@ export default function ProfilPage() {
                   {new Date(userData.lastSync).toLocaleString('de-DE')}
                 </p>
               </div>
+            )}
+            {!nichtVerifiziert && (
+              <TourStartButton onStart={() => setTourRunning(true)} />
             )}
           </div>
         </div>
@@ -1332,7 +1348,7 @@ export default function ProfilPage() {
         {!nichtVerifiziert && (
         <>
         {/* Tab Navigation - Haupt-Tabs */}
-        <div className="glass rounded-2xl p-2 border border-white/[0.08]">
+        <div data-tour="main-tabs" className="glass rounded-2xl p-2 border border-white/[0.08]">
           {/* Mobile: Horizontal Scrollable */}
           <div className="flex lg:hidden gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
             {mainTabs.map((tab) => {
@@ -1476,6 +1492,7 @@ export default function ProfilPage() {
         )}
 
         {/* Tab Content */}
+        <div data-tour="overview-content" className="space-y-6">
         {activeTab === 'overview' && (
           <>
             {/* Bot Status Check - zeige Error wenn Bot offline (auch während checking) */}
@@ -4142,9 +4159,18 @@ export default function ProfilPage() {
 
           </div>
         )}
+        </div>
         </>
         )}
       </div>
+
+      {/* Profile Tour */}
+      <ProfileTour
+        run={tourRunning}
+        onClose={() => setTourRunning(false)}
+        setActiveTab={setActiveTab}
+        setActiveSubTab={setActiveSubTab}
+      />
     </div>
   );
 }
