@@ -36,6 +36,7 @@ import { KrediteDetailView, FinanzStatistikenView } from '@/components/profile/F
 import { ErweiterteTransaktionenView, SparkontoManagementView } from '@/components/profile/FinanceTabsContent2';
 import { TransferMoneyView } from '@/components/profile/TransferMoneyView';
 import { ShopView } from '@/components/profile/ShopView';
+import { CharacterManagementView } from '@/components/profile/CharacterManagementView';
 import HamburgHorizonTab from '@/components/profile/HamburgHorizonTab';
 import LicensesView from '@/components/profile/LicensesView';
 import ProfileTour, { TourStartButton, hasCompletedProfileTour } from '@/components/profile/ProfileTour';
@@ -1007,6 +1008,7 @@ export default function ProfilPage() {
     { id: 'finance', label: 'Finanzen', icon: Wallet, hasSubTabs: true },
     { id: 'documents', label: 'Dokumente', icon: IdCard, hasSubTabs: true },
     { id: 'shop', label: 'Shop', icon: ShoppingCart },
+    { id: 'character', label: 'Charakter-Verwaltung', icon: User },
     { id: 'hamburg-horizon', label: 'Mein Profil', icon: Sparkles, hasSubTabs: true },
     { id: 'applications', label: 'Bewerbungen', icon: ClipboardList },
     { id: 'settings', label: 'Einstellungen', icon: Settings }
@@ -3376,6 +3378,16 @@ export default function ProfilPage() {
             </div>
             <ShopView 
               user={user} 
+              userData={userData} 
+              onRefresh={loadData}
+            />
+          </div>
+        )}
+
+        {/* Charakter-Verwaltung Tab */}
+        {activeTab === 'character' && (
+          <div data-tour-card="Charakter-Verwaltung|Bearbeite oder lösche deinen Charakter. Alle Änderungen müssen von einem Admin genehmigt werden.">
+            <CharacterManagementView 
               userData={userData} 
               onRefresh={loadData}
             />

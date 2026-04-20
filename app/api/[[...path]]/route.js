@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
+import fs from 'fs';
+import path from 'path';
 import webpush from 'web-push';
 import { supabaseAdmin } from '@/lib/supabase';
 import { readStats, writeStats, incrementStat } from '@/lib/stats-file';
@@ -2354,6 +2356,7 @@ export async function GET(request) {
     case 'shop/pending-purchases': return handleGetPendingShopPurchases(request);
     case 'transfer/pending': return handleGetPendingTransfers(request);
     case 'credits/pending': return handleGetPendingCreditActions(request);
+    case 'character/pending': return handleGetPendingCharacterActions(request);
     default: break;
   }
 
@@ -2800,6 +2803,8 @@ export async function POST(request) {
     case 'licenses/action': return handleLicenseAction(request);
     case 'credits/repay': return handleCreditRepay(request);
     case 'credits/extend': return handleCreditExtend(request);
+    case 'character/edit-request': return handleCharacterEditRequest(request);
+    case 'character/delete-request': return handleCharacterDeleteRequest(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 }
@@ -5208,6 +5213,257 @@ async function handleGetPendingCreditActions(request) {
 
 // GET /api/licenses/pending-actions - Holt noch nicht verarbeitete License-Actions des Users
 // Nutzung: Das Frontend pollt diese Route, um zu sehen, ob der Bot eine Action schon verarbeitet hat.
+
+// ══════════════════════════════════════════════════════════════════════════
+// CHARACTER MANAGEMENT: Bearbeiten & Löschen mit Antrag-System
+// ══════════════════════════════════════════════════════════════════════════
+
+// POST /api/character/edit-request - Antrag zum Bearbeiten des Charakters
+async function handleCharacterEditRequest(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+
+    const body = await request.json();
+    const { vorname, nachname, herkunft, geschlecht, grund } = body || {};
+
+    // Validierung
+    if (!grund || (!vorname && !nachname && !herkunft && !geschlecht)) {
+      return NextResponse.json({ 
+        error: 'Bitte fülle mindestens ein Feld aus und gib eine Begründung an' 
+      }, { status: 400 });
+    }
+
+    // Hole aktuelle Charakterdaten
+    const { data: userRow } = await supabaseAdmin
+      .from('user_data')
+      .select('data')
+      .eq('discord_user_id', user.id)
+      .single();
+
+    const currentData = userRow?.data || {};
+    
+    // Erstelle Request ID wie im Bot
+    const requestId = `EDIT-${Date.now().toString(36).toUpperCase()}`;
+    
+    // Speichere in Supabase (Bridge zwischen Website und Bot)
+    const { data: insertData, error: insertErr } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .insert({
+        buyer_discord_id: user.id,
+        recipient_discord_id: user.id,
+        item_id: requestId,
+        item_name: 'Charakter-Bearbeitung',
+        item_category: 'character_edit',
+        price: 0,
+        status: 'pending',
+        metadata: {
+          source: 'web',
+          currentChar: {
+            name: currentData.characterName || 'Unbekannt',
+            vorname: currentData.characterName?.split(' ')[0] || '',
+            nachname: currentData.characterName?.split(' ').slice(1).join(' ') || '',
+            herkunft: currentData.origin || 'Unbekannt',
+            geschlecht: currentData.gender || 'Unbekannt'
+          },
+          newVorname: vorname || null,
+          newNachname: nachname || null,
+          newHerkunft: herkunft || null,
+          newGeschlecht: geschlecht || null,
+          grund,
+          createdAt: new Date().toISOString()
+        }
+      })
+      .select()
+      .single();
+
+    if (insertErr) throw insertErr;
+
+    console.log(`[CHAR-EDIT-REQUEST] ✅ Antrag ${requestId} für User ${user.id} in Supabase erstellt`);
+
+    return NextResponse.json({
+      success: true,
+      requestId,
+      message: 'Antrag wurde erstellt. Ein Admin wird ihn im Discord prüfen.'
+    });
+  } catch (e) {
+    console.error('[CHAR-EDIT-REQUEST] ❌ Error:', e);
+    return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
+  }
+}
+
+// POST /api/character/delete-request - Antrag zum Löschen des Charakters
+async function handleCharacterDeleteRequest(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+
+    const body = await request.json();
+    const { confirmText, reason } = body || {};
+
+    // Sicherheits-Bestätigung
+    if (confirmText !== 'LÖSCHEN') {
+      return NextResponse.json({ 
+        error: 'Bestätigung fehlerhaft. Bitte tippe "LÖSCHEN" ein.' 
+      }, { status: 400 });
+    }
+
+    // Hole Charakterdaten für Backup
+    const { data: userRow } = await supabaseAdmin
+      .from('user_data')
+      .select('data')
+      .eq('discord_user_id', user.id)
+      .single();
+
+    const userData = userRow?.data || {};
+    const requestId = `DELETE-${Date.now().toString(36).toUpperCase()}`;
+
+    // Erstelle Lösch-Antrag in Supabase
+    const { data: insertData, error: insertErr } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .insert({
+        buyer_discord_id: user.id,
+        recipient_discord_id: user.id,
+        item_id: requestId,
+        item_name: 'Charakter-Löschung',
+        item_category: 'character_delete',
+        price: 0,
+        status: 'pending',
+        metadata: {
+          source: 'web',
+          character_backup: {
+            characterName: userData.characterName,
+            origin: userData.origin,
+            gender: userData.gender,
+            birthPlace: userData.birthPlace,
+            money: userData.money,
+            credits: userData.credits
+          },
+          reason: reason || 'Keine Begründung angegeben',
+          requested_at: new Date().toISOString()
+        }
+      })
+      .select()
+      .single();
+
+    if (insertErr) throw insertErr;
+
+    console.log(`[CHAR-DELETE-REQUEST] ⚠️ Lösch-Antrag ${requestId} für User ${user.id} erstellt`);
+
+    return NextResponse.json({
+      success: true,
+      requestId,
+      message: 'Lösch-Antrag wurde erstellt. Ein Admin wird deinen Antrag prüfen. ACHTUNG: Bei Genehmigung werden ALLE Daten gelöscht!'
+    });
+  } catch (e) {
+    console.error('[CHAR-DELETE-REQUEST] ❌ Error:', e);
+    return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
+  }
+}
+
+// POST /api/character/delete-request - Antrag zum Löschen des Charakters
+async function handleCharacterDeleteRequest(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+
+    const body = await request.json();
+    const { confirmText, reason } = body || {};
+
+    // Sicherheits-Bestätigung
+    if (confirmText !== 'LÖSCHEN') {
+      return NextResponse.json({ 
+        error: 'Bestätigung fehlerhaft. Bitte tippe "LÖSCHEN" ein.' 
+      }, { status: 400 });
+    }
+
+    // Hole Charakterdaten für Backup
+    const { data: userRow } = await supabaseAdmin
+      .from('user_data')
+      .select('data')
+      .eq('discord_user_id', user.id)
+      .single();
+
+    const userData = userRow?.data || {};
+
+    // Erstelle Lösch-Antrag
+    const { data: insertData, error: insertErr } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .insert({
+        buyer_discord_id: user.id,
+        recipient_discord_id: user.id,
+        item_id: `CHAR_DELETE_${Date.now()}`,
+        item_name: 'Charakter-Löschung',
+        item_category: 'character_delete',
+        price: 0,
+        status: 'pending',
+        metadata: {
+          character_backup: {
+            characterName: userData.characterName,
+            origin: userData.origin,
+            gender: userData.gender,
+            birthPlace: userData.birthPlace,
+            money: userData.money,
+            credits: userData.credits
+          },
+          reason: reason || 'Keine Begründung angegeben',
+          requested_at: new Date().toISOString()
+        }
+      })
+      .select()
+      .single();
+
+    if (insertErr) throw insertErr;
+
+    console.log(`[CHAR-DELETE-REQUEST] ⚠️ Lösch-Antrag erstellt für User ${user.id}`);
+
+    return NextResponse.json({
+      success: true,
+      requestId: insertData.id,
+      message: 'Lösch-Antrag wurde erstellt. Ein Admin wird deinen Antrag prüfen. ACHTUNG: Bei Genehmigung werden ALLE Daten gelöscht!'
+    });
+  } catch (e) {
+    console.error('[CHAR-DELETE-REQUEST] ❌ Error:', e);
+    return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
+  }
+}
+
+// GET /api/character/pending - Holt pending Character-Änderungen aus Supabase
+async function handleGetPendingCharacterActions(request) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('pending_shop_purchases')
+      .select('id, item_id, item_name, item_category, status, metadata, created_at')
+      .eq('buyer_discord_id', user.id)
+      .in('item_category', ['character_edit', 'character_delete'])
+      .in('status', ['pending', 'processing'])
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[CHAR-PENDING] ❌ Fetch error:', error);
+      return NextResponse.json({ error: 'DB error', details: error.message }, { status: 500 });
+    }
+
+    const pending = (data || []).map(row => ({
+      requestId: row.item_id,
+      type: row.item_category === 'character_edit' ? 'edit' : 'delete',
+      status: row.status,
+      metadata: row.metadata,
+      requestedAt: row.created_at
+    }));
+
+    return NextResponse.json({ pending });
+  } catch (e) {
+    console.error('[CHAR-PENDING] ❌ Error:', e);
+    return NextResponse.json({ error: 'Server error', details: e.message }, { status: 500 });
+  }
+}
+
 // Sobald ein Eintrag fehlt (= vom Bot gelöscht), gilt die Action als abgeschlossen.
 async function handleGetPendingLicenseActions(request) {
   try {
