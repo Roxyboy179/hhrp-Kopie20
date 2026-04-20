@@ -45,7 +45,24 @@ import { Label } from '@/components/ui/label';
 // ──────────────────────────────────────────────────────────────
 // Bot-Pending Overlay — sperrt die Karte mit Spinner während Verarbeitung
 // ──────────────────────────────────────────────────────────────
-function ShopPendingOverlay({ queuedAt, isGift }) {
+const PENDING_OVERLAY_VARIANTS = {
+  purchase:    { Icon: ShoppingBag,  label: 'Kauf wird verarbeitet …',      color: 'amber' },
+  gift:        { Icon: Gift,         label: 'Geschenk wird versendet …',    color: 'amber' },
+  credits:     { Icon: Coins,        label: 'Credits werden gutgeschrieben …', color: 'emerald' },
+  bank_limit:  { Icon: TrendingUp,   label: 'Bank-Limit wird erhöht …',     color: 'cyan' },
+  credit_spend:{ Icon: Sparkles,     label: 'Wird aktiviert …',             color: 'purple' },
+  mystery_box: { Icon: Package,      label: 'Box wird geöffnet …',          color: 'pink' }
+};
+
+const OVERLAY_COLOR_MAP = {
+  amber:   { border: 'rgba(245, 158, 11, 0.3)', ring: '#f59e0b', ringBg: 'rgba(245, 158, 11, 0.1)', icon: '#fbbf24', text: '#fcd34d' },
+  emerald: { border: 'rgba(16, 185, 129, 0.3)', ring: '#10b981', ringBg: 'rgba(16, 185, 129, 0.1)', icon: '#34d399', text: '#6ee7b7' },
+  cyan:    { border: 'rgba(6, 182, 212, 0.3)',  ring: '#06b6d4', ringBg: 'rgba(6, 182, 212, 0.1)',  icon: '#22d3ee', text: '#67e8f9' },
+  purple:  { border: 'rgba(147, 51, 234, 0.3)', ring: '#9333ea', ringBg: 'rgba(147, 51, 234, 0.1)', icon: '#a855f7', text: '#c084fc' },
+  pink:    { border: 'rgba(236, 72, 153, 0.3)', ring: '#ec4899', ringBg: 'rgba(236, 72, 153, 0.1)', icon: '#f472b6', text: '#f9a8d4' }
+};
+
+function ShopPendingOverlay({ queuedAt, isGift, variant }) {
   const [elapsedSec, setElapsedSec] = useState(0);
 
   useEffect(() => {
@@ -57,36 +74,41 @@ function ShopPendingOverlay({ queuedAt, isGift }) {
     return () => clearInterval(id);
   }, [queuedAt]);
 
+  const variantKey = variant || (isGift ? 'gift' : 'purchase');
+  const meta = PENDING_OVERLAY_VARIANTS[variantKey] || PENDING_OVERLAY_VARIANTS.purchase;
+  const colors = OVERLAY_COLOR_MAP[meta.color] || OVERLAY_COLOR_MAP.amber;
+  const IconComp = meta.Icon;
+
   return (
     <div
       className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 rounded-xl animate-in fade-in duration-200"
       style={{
         background: 'rgba(10, 11, 15, 0.88)',
         backdropFilter: 'blur(3px)',
-        border: '1px solid rgba(245, 158, 11, 0.3)'
+        border: `1px solid ${colors.border}`
       }}
     >
       {/* Spinning Ring mit Icon in der Mitte */}
       <div className="relative w-14 h-14">
-        <div className="absolute inset-0 rounded-full border-2 border-amber-500/10" />
-        <div className="absolute inset-0 rounded-full border-2 border-amber-500 border-t-transparent animate-spin" />
+        <div
+          className="absolute inset-0 rounded-full border-2"
+          style={{ borderColor: colors.ringBg }}
+        />
+        <div
+          className="absolute inset-0 rounded-full border-2 border-t-transparent animate-spin"
+          style={{ borderColor: colors.ring, borderTopColor: 'transparent' }}
+        />
         <div className="absolute inset-0 flex items-center justify-center">
-          {isGift ? (
-            <Gift className="w-5 h-5 text-amber-400" />
-          ) : (
-            <ShoppingBag className="w-5 h-5 text-amber-400" />
-          )}
+          <IconComp className="w-5 h-5" style={{ color: colors.icon }} />
         </div>
       </div>
 
       <div className="text-center px-3 max-w-[90%]">
-        <p className="text-xs font-semibold text-white">
-          {isGift ? 'Geschenk wird versendet …' : 'Kauf wird verarbeitet …'}
-        </p>
+        <p className="text-xs font-semibold text-white">{meta.label}</p>
         <p className="text-[10px] text-white/60 mt-0.5 leading-snug">
           Bitte einen kurzen Moment Geduld.
         </p>
-        <p className="text-[10px] text-amber-300/80 mt-1.5 flex items-center justify-center gap-1">
+        <p className="text-[10px] mt-1.5 flex items-center justify-center gap-1" style={{ color: colors.text }}>
           <Clock className="w-2.5 h-2.5" />
           {elapsedSec}s in Warteschlange
         </p>
@@ -148,12 +170,21 @@ export function ShopView({ user, userData, onRefresh }) {
       (data.pending || []).forEach(p => {
         // Bei mehreren Einträgen zum selben Item → neuester gewinnt
         if (!map[p.itemId] || new Date(p.queuedAt) > new Date(map[p.itemId].queuedAt)) {
+          // Variant anhand Kategorie bestimmen (für Overlay-Icon/Text)
+          const variant =
+            p.category === 'credits' ? 'credits'
+            : p.category === 'bank_limit' ? 'bank_limit'
+            : p.category === 'credit_spend' ? 'credit_spend'
+            : p.category === 'mystery_box' ? 'mystery_box'
+            : p.isGift ? 'gift'
+            : 'purchase';
           map[p.itemId] = {
             queuedId: p.queuedId,
             queuedAt: p.queuedAt,
             category: p.category,
             isGift: p.isGift,
-            status: p.status
+            status: p.status,
+            variant
           };
         }
       });
@@ -217,14 +248,16 @@ export function ShopView({ user, userData, onRefresh }) {
   // Helper: markiere Items als pending (optimistic update nach Kauf/Gift)
   const markItemsPending = (itemIds, opts = {}) => {
     const now = new Date().toISOString();
+    const variant = opts.variant || (opts.isGift ? 'gift' : 'purchase');
     setPendingPurchases(prev => {
       const next = { ...prev };
       itemIds.forEach(itemId => {
         next[itemId] = {
           queuedId: `optimistic_${itemId}_${Date.now()}`,
           queuedAt: now,
-          category: shopItems[itemId]?.category || 'unknown',
+          category: opts.category || shopItems[itemId]?.category || 'unknown',
           isGift: opts.isGift === true,
+          variant,
           status: 'pending'
         };
       });
@@ -337,8 +370,12 @@ export function ShopView({ user, userData, onRefresh }) {
       if (!res.ok) {
         toast.error(data.error || 'Kauf fehlgeschlagen');
       } else {
-        toast.success(`${item.label} wird aktiviert!`);
-        onRefresh?.();
+        toast.info(`${item.label} wird aktiviert …`);
+        // Karte bis Bot-Verarbeitung sperren
+        markItemsPending([item.id], {
+          variant: 'credit_spend',
+          category: 'credit_spend'
+        });
       }
     } catch (e) {
       toast.error('Netzwerkfehler');
@@ -366,8 +403,12 @@ export function ShopView({ user, userData, onRefresh }) {
       if (!res.ok) {
         toast.error(data.error || 'Box konnte nicht geöffnet werden');
       } else {
-        toast.success(`${crate.name} geöffnet – das Ergebnis siehst du gleich auf deinem Konto!`);
-        onRefresh?.();
+        toast.info(`${crate.name} wird geöffnet …`);
+        // Karte bis Bot-Verarbeitung sperren
+        markItemsPending([`crate_${crate.id}`], {
+          variant: 'mystery_box',
+          category: 'mystery_box'
+        });
       }
     } catch (e) {
       toast.error('Netzwerkfehler');
@@ -481,6 +522,7 @@ export function ShopView({ user, userData, onRefresh }) {
         clearCart();
         setShowCart(false);
       } else if (pendingPurchase.type === 'credits') {
+        const option = creditOptions[pendingPurchase.optionIndex];
         const res = await fetch('/api/shop/purchase-credits', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -489,11 +531,18 @@ export function ShopView({ user, userData, onRefresh }) {
 
         const data = await res.json();
         if (res.ok) {
-          toast.success(data.message);
+          toast.info(data.message || 'Credits werden gutgeschrieben …');
+          if (option) {
+            markItemsPending([`credits_${option.credits}`], {
+              variant: 'credits',
+              category: 'credits'
+            });
+          }
         } else {
           toast.error(data.error);
         }
       } else if (pendingPurchase.type === 'bank_limit') {
+        const upgrade = bankLimitUpgrades[pendingPurchase.upgradeIndex];
         const res = await fetch('/api/shop/upgrade-bank-limit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -502,7 +551,13 @@ export function ShopView({ user, userData, onRefresh }) {
 
         const data = await res.json();
         if (res.ok) {
-          toast.success(data.message);
+          toast.info(data.message || 'Bank-Limit wird erhöht …');
+          if (upgrade) {
+            markItemsPending([`bank_limit_${upgrade.addLimit}`], {
+              variant: 'bank_limit',
+              category: 'bank_limit'
+            });
+          }
         } else {
           toast.error(data.error);
         }
@@ -859,13 +914,17 @@ export function ShopView({ user, userData, onRefresh }) {
       {/* Credits kaufen */}
       {selectedCategory === 'credits' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {creditOptions.map((option, index) => (
+          {creditOptions.map((option, index) => {
+            const pendingId = `credits_${option.credits}`;
+            const pending = pendingPurchases[pendingId] || null;
+            const isBotLocked = !!pending;
+            return (
             <div
               key={index}
-              className="p-4 rounded-xl border"
+              className={`p-4 rounded-xl border relative ${isBotLocked ? 'overflow-hidden pointer-events-none' : ''}`}
               style={{
                 background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
-                borderColor: 'rgba(255, 255, 255, 0.08)'
+                borderColor: isBotLocked ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255, 255, 255, 0.08)'
               }}
             >
               <div className="flex items-start justify-between mb-3">
@@ -879,7 +938,7 @@ export function ShopView({ user, userData, onRefresh }) {
                 <span className="text-white/60 text-sm">{option.cost.toLocaleString('de-DE')}€</span>
                 <Button
                   onClick={() => openPinModal({ type: 'credits', optionIndex: index })}
-                  disabled={purchasing || userBalance < option.cost}
+                  disabled={purchasing || userBalance < option.cost || isBotLocked}
                   size="sm"
                   className="rounded-lg"
                   style={{
@@ -888,25 +947,39 @@ export function ShopView({ user, userData, onRefresh }) {
                     color: '#fff'
                   }}
                 >
-                  <ShoppingBag className="w-4 h-4 mr-1" />
-                  Kaufen
+                  {isBotLocked ? (
+                    <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Verarbeitung</>
+                  ) : (
+                    <><ShoppingBag className="w-4 h-4 mr-1" /> Kaufen</>
+                  )}
                 </Button>
               </div>
+              {isBotLocked && (
+                <ShopPendingOverlay
+                  queuedAt={pending.queuedAt}
+                  variant="credits"
+                />
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {/* Bank Limit Upgrades */}
       {selectedCategory === 'bank_limit' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {bankLimitUpgrades.map((upgrade, index) => (
+          {bankLimitUpgrades.map((upgrade, index) => {
+            const pendingId = `bank_limit_${upgrade.addLimit}`;
+            const pending = pendingPurchases[pendingId] || null;
+            const isBotLocked = !!pending;
+            return (
             <div
               key={index}
-              className="p-4 rounded-xl border"
+              className={`p-4 rounded-xl border relative ${isBotLocked ? 'overflow-hidden pointer-events-none' : ''}`}
               style={{
                 background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
-                borderColor: 'rgba(255, 255, 255, 0.08)'
+                borderColor: isBotLocked ? 'rgba(6, 182, 212, 0.4)' : 'rgba(255, 255, 255, 0.08)'
               }}
             >
               <div className="flex items-start justify-between mb-3">
@@ -920,7 +993,7 @@ export function ShopView({ user, userData, onRefresh }) {
                 <span className="text-white/60 text-sm">{upgrade.creditCost} Credits</span>
                 <Button
                   onClick={() => openPinModal({ type: 'bank_limit', upgradeIndex: index })}
-                  disabled={purchasing || userCredits < upgrade.creditCost}
+                  disabled={purchasing || userCredits < upgrade.creditCost || isBotLocked}
                   size="sm"
                   className="rounded-lg"
                   style={{
@@ -929,12 +1002,22 @@ export function ShopView({ user, userData, onRefresh }) {
                     color: '#fff'
                   }}
                 >
-                  <ShoppingBag className="w-4 h-4 mr-1" />
-                  Kaufen
+                  {isBotLocked ? (
+                    <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Verarbeitung</>
+                  ) : (
+                    <><ShoppingBag className="w-4 h-4 mr-1" /> Kaufen</>
+                  )}
                 </Button>
               </div>
+              {isBotLocked && (
+                <ShopPendingOverlay
+                  queuedAt={pending.queuedAt}
+                  variant="bank_limit"
+                />
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -971,11 +1054,15 @@ export function ShopView({ user, userData, onRefresh }) {
             }
             const pending = item.id === 'gehalt_multiplikator' && !!buffs?.gehaltMultiplikatorNext;
 
+            // Bot-Pending (Kauf läuft noch)
+            const botPending = pendingPurchases[item.id] || null;
+            const isBotLocked = !!botPending;
+
             // Dynamischer Preis: base * 1.10^purchases
             const purchases = buffs?.creditPurchases?.[item.id] || 0;
             const dynamicPrice = Math.ceil(item.creditCost * Math.pow(1.10, purchases));
 
-            const blocked = isActive || cooldownLeft > 0 || pending;
+            const blocked = isActive || cooldownLeft > 0 || pending || isBotLocked;
             const canAfford = userCredits >= dynamicPrice;
             const canBuy = !blocked && canAfford;
 
@@ -991,12 +1078,16 @@ export function ShopView({ user, userData, onRefresh }) {
             return (
               <div
                 key={item.id}
-                className="p-4 rounded-xl border flex flex-col"
+                className={`p-4 rounded-xl border flex flex-col relative ${isBotLocked ? 'overflow-hidden pointer-events-none' : ''}`}
                 style={{
                   background: blocked
                     ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.06), rgba(255,255,255,0.01))'
                     : 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
-                  borderColor: blocked ? 'rgba(245, 158, 11, 0.25)' : 'rgba(255, 255, 255, 0.08)'
+                  borderColor: isBotLocked
+                    ? 'rgba(147, 51, 234, 0.4)'
+                    : blocked
+                      ? 'rgba(245, 158, 11, 0.25)'
+                      : 'rgba(255, 255, 255, 0.08)'
                 }}
               >
                 <div className="flex items-start justify-between mb-2">
@@ -1070,9 +1161,15 @@ export function ShopView({ user, userData, onRefresh }) {
                     }}
                   >
                     <Sparkles className="w-4 h-4 mr-1" />
-                    {isActive ? 'Aktiv' : cooldownLeft > 0 ? 'Cooldown' : pending ? 'Ungenutzt' : !canAfford ? 'Zu wenig' : 'Aktivieren'}
+                    {isBotLocked ? 'Verarbeitung' : isActive ? 'Aktiv' : cooldownLeft > 0 ? 'Cooldown' : pending ? 'Ungenutzt' : !canAfford ? 'Zu wenig' : 'Aktivieren'}
                   </Button>
                 </div>
+                {isBotLocked && (
+                  <ShopPendingOverlay
+                    queuedAt={botPending.queuedAt}
+                    variant="credit_spend"
+                  />
+                )}
               </div>
             );
           })}
@@ -1088,13 +1185,17 @@ export function ShopView({ user, userData, onRefresh }) {
             const { Icon: CrateIcon } = iconMeta;
             const color = crate.color || iconMeta.color;
 
+            const pendingId = `crate_${crate.id}`;
+            const botPending = pendingPurchases[pendingId] || null;
+            const isBotLocked = !!botPending;
+
             return (
               <div
                 key={crate.id}
-                className="p-5 rounded-xl border relative overflow-hidden flex flex-col"
+                className={`p-5 rounded-xl border relative overflow-hidden flex flex-col ${isBotLocked ? 'pointer-events-none' : ''}`}
                 style={{
                   background: `linear-gradient(135deg, ${color}18, rgba(255,255,255,0.02))`,
-                  borderColor: `${color}55`
+                  borderColor: isBotLocked ? 'rgba(236, 72, 153, 0.5)' : `${color}55`
                 }}
               >
                 <div className="text-center mb-3">
@@ -1124,7 +1225,7 @@ export function ShopView({ user, userData, onRefresh }) {
                   </span>
                   <Button
                     onClick={() => handleOpenCrate(crate)}
-                    disabled={purchasing || !canAfford}
+                    disabled={purchasing || !canAfford || isBotLocked}
                     size="sm"
                     className="rounded-lg"
                     style={{
@@ -1135,10 +1236,19 @@ export function ShopView({ user, userData, onRefresh }) {
                       color: '#fff'
                     }}
                   >
-                    <Gift className="w-4 h-4 mr-1" />
-                    Öffnen
+                    {isBotLocked ? (
+                      <><Loader2 className="w-4 h-4 mr-1 animate-spin" /> Öffnet…</>
+                    ) : (
+                      <><Gift className="w-4 h-4 mr-1" /> Öffnen</>
+                    )}
                   </Button>
                 </div>
+                {isBotLocked && (
+                  <ShopPendingOverlay
+                    queuedAt={botPending.queuedAt}
+                    variant="mystery_box"
+                  />
+                )}
               </div>
             );
           })}
