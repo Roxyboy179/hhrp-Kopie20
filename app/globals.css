@@ -335,6 +335,7 @@ select option:hover {
 
 /* ═══════════════════════════════════════════════════════════════
    🎉 PROMO-KARTEN Animationen (für Aktions-Items im Shop)
+   🚀 PERFORMANCE: Verwende nur transform/opacity für GPU-Beschleunigung
    ═══════════════════════════════════════════════════════════════ */
 @keyframes promo-border-glow {
   0%, 100% {
@@ -347,9 +348,9 @@ select option:hover {
   }
 }
 @keyframes promo-gradient-pan {
-  0%   { background-position:   0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position:   0% 50%; }
+  0%   { transform: translateX(0); }
+  50%  { transform: translateX(10%); }
+  100% { transform: translateX(0); }
 }
 @keyframes promo-shimmer-sweep {
   0%   { transform: translateX(-120%) skewX(-20deg); opacity: 0; }
@@ -389,6 +390,7 @@ select option:hover {
   border: 1.5px solid rgba(245, 158, 11, 0.55) !important;
   overflow: hidden;
   transition: transform 0.25s ease;
+  will-change: transform; /* GPU hint */
 }
 .promo-card:hover {
   transform: translateY(-2px) scale(1.015);
@@ -411,6 +413,7 @@ select option:hover {
   animation: promo-shimmer-sweep 3.8s ease-in-out infinite;
   pointer-events: none;
   z-index: 1;
+  will-change: transform; /* GPU hint */
 }
 .promo-card > * {
   position: relative;
@@ -418,9 +421,11 @@ select option:hover {
 }
 .promo-badge-animated {
   animation: promo-badge-pulse 2.2s ease-in-out infinite;
+  will-change: transform; /* GPU hint */
 }
 .promo-sparkle {
   animation: promo-sparkle-float 2.8s ease-in-out infinite;
+  will-change: transform, opacity; /* GPU hint */
 }
 
 .delay-100 { animation-delay: 0.1s; }

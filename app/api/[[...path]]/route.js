@@ -6,7 +6,7 @@ import webpush from 'web-push';
 import { supabaseAdmin } from '@/lib/supabase';
 import { readStats, writeStats, incrementStat } from '@/lib/stats-file';
 import { SHOP_ITEMS, CREDIT_PURCHASE_OPTIONS, BANK_LIMIT_UPGRADES, CREDIT_SPEND_ITEMS, CREDIT_CRATES } from '@/lib/shop-data';
-import { findActivePromotion } from '@/lib/shop-promotions';
+import { findActivePromotion, findActiveCreditBonus } from '@/lib/shop-promotions';
 import { 
   createBewerbung, 
   getUserBewerbungen, 
@@ -4262,17 +4262,43 @@ async function handlePurchaseCredits(request) {
       }, { status: 400 });
     }
 
+    // 🎉 Credit-Bonus-Aktion prüfen (z.B. +35% ab 200 Credits)
+    // eligibility 'all' → für alle User, daher userHighestVIP egal (-1 default)
+    const bonusResult = findActiveCreditBonus(option.credits, -1);
+    const finalCredits = bonusResult ? bonusResult.totalCredits : option.credits;
+    const bonusCredits = bonusResult ? bonusResult.bonusCredits : 0;
+    const activePromo = bonusResult?.promo || null;
+
+    const itemName = bonusResult
+      ? `${option.credits} Credits + ${bonusCredits} Bonus (${Math.round(activePromo.bonusPercent * 100)}% Aktion)`
+      : `${option.credits} Credits`;
+
+    if (bonusResult) {
+      console.log(
+        `[SHOP] 🎁 Credit-Bonus: ${option.credits} → ${finalCredits} (+${bonusCredits}) ` +
+        `[promo:${activePromo.id}]`
+      );
+    }
+
     // Erstelle Special Purchase für Credits
+    // item_id enthält die FINALEN Credits (inkl. Bonus) – Bot verarbeitet das direkt
     const { data: purchase, error: insertError } = await supabaseAdmin
       .from('pending_shop_purchases')
       .insert({
         buyer_discord_id: user.id,
-        item_id: `credits_${option.credits}`,
-        item_name: `${option.credits} Credits`,
+        item_id: `credits_${finalCredits}`,
+        item_name: itemName,
         item_category: 'credits',
         price: option.cost,
         status: 'pending',
-        initiated_from: 'website'
+        initiated_from: 'website',
+        metadata: bonusResult ? {
+          original_credits: option.credits,
+          bonus_credits: bonusCredits,
+          final_credits: finalCredits,
+          promo_id: activePromo.id,
+          promo_bonus_percent: activePromo.bonusPercent,
+        } : {}
       })
       .select()
       .single();
@@ -4284,11 +4310,16 @@ async function handlePurchaseCredits(request) {
 
     return NextResponse.json({
       success: true,
-      message: `${option.credits} Credits werden gutgeschrieben...`,
+      message: bonusResult
+        ? `${finalCredits} Credits werden gutgeschrieben (${option.credits} + ${bonusCredits} Bonus)!`
+        : `${option.credits} Credits werden gutgeschrieben...`,
       purchase: {
         id: purchase.id,
-        credits: option.credits,
+        credits: finalCredits,
+        originalCredits: bonusResult ? option.credits : undefined,
+        bonusCredits: bonusResult ? bonusCredits : undefined,
         cost: option.cost,
+        promoId: activePromo?.id,
         status: 'pending'
       }
     });

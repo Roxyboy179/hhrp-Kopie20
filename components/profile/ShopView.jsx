@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   ShoppingCart, CreditCard, TrendingUp, Check, X, Clock, 
@@ -45,6 +45,7 @@ const CRATE_ICONS = {
 import {
   findActivePromotion,
   getActiveBannerPromotions,
+  findActiveCreditBonus,
 } from '@/lib/shop-promotions';
 import { PromoBanner } from '@/components/shop/PromoBanner';
 
@@ -761,7 +762,10 @@ export function ShopView({ user, userData, onRefresh }) {
   else if (hasVIPUltimate) vipDiscount = 0.20; // 20%
   else if (hasVIPPlatinum) vipDiscount = 0.10; // 10%
   
-  const calculatePrice = (basePrice, itemId = null) => {
+  // ═══════════════════════════════════════════════════════════════
+  // 🚀 PERFORMANCE: Memoize calculatePrice um unnötige Re-Renders zu vermeiden
+  // ═══════════════════════════════════════════════════════════════
+  const calculatePrice = useCallback((basePrice, itemId = null) => {
     // Credits bekommen NIE einen Rabatt
     const itemObj = itemId ? shopItems[itemId] : null;
     if (itemObj && itemObj.category === 'credits') return basePrice;
@@ -786,7 +790,12 @@ export function ShopView({ user, userData, onRefresh }) {
       return Math.floor(basePrice * (1 - bestDiscount));
     }
     return basePrice;
-  };
+  }, [shopItems, userHighestVIP, hasLuxusPass, vipDiscount]);
+
+  // 🚀 PERFORMANCE: Credit-Bonus Lookup memoized
+  const creditBonusLookup = useCallback((creditsAmount) => {
+    return findActiveCreditBonus(creditsAmount, userHighestVIP);
+  }, [userHighestVIP]);
 
   if (loading) {
     return (
@@ -797,7 +806,10 @@ export function ShopView({ user, userData, onRefresh }) {
   }
 
   // 🎉 Alle aktuell aktiven Aktionen ermitteln (Slider zeigt alle durch)
-  const activeBannerPromos = getActiveBannerPromotions(userHighestVIP);
+  // 🚀 PERFORMANCE: Memoize um unnötige Neuberechnungen zu vermeiden
+  const activeBannerPromos = useMemo(() => {
+    return getActiveBannerPromotions(userHighestVIP);
+  }, [userHighestVIP]);
 
   return (
     <div className="space-y-6">
@@ -941,23 +953,60 @@ export function ShopView({ user, userData, onRefresh }) {
             const pendingId = `credits_${option.credits}`;
             const pending = pendingPurchases[pendingId] || null;
             const isBotLocked = !!pending;
+            // 🎉 Credit-Bonus-Aktion (für alle User, ab minCredits Schwelle)
+            const bonusInfo = creditBonusLookup(option.credits);
+            const hasBonus = !!bonusInfo && !isBotLocked;
             return (
             <div
               key={index}
-              className={`p-4 rounded-xl border relative ${isBotLocked ? 'overflow-hidden pointer-events-none' : ''}`}
+              className={`p-4 rounded-xl border relative ${isBotLocked ? 'overflow-hidden pointer-events-none' : ''} ${hasBonus ? 'promo-card' : ''}`}
               style={{
-                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
-                borderColor: isBotLocked ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255, 255, 255, 0.08)'
+                background: hasBonus
+                  ? undefined
+                  : 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
+                borderColor: hasBonus
+                  ? undefined
+                  : (isBotLocked ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255, 255, 255, 0.08)'),
               }}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Coins className="w-5 h-5 text-emerald-400" />
-                  <h3 className="font-semibold text-white">{option.label}</h3>
+              <div className="flex items-start justify-between mb-3 relative z-10">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Coins className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <h3 className="font-semibold text-white truncate">{option.label}</h3>
                 </div>
+                {hasBonus && (
+                  <span
+                    className="promo-badge-animated text-[10px] font-bold tracking-wider uppercase px-2 py-1 rounded-md shrink-0 shadow-lg flex items-center gap-1"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(236, 72, 153, 0.85))',
+                      color: '#fff',
+                      border: '1px solid rgba(253, 224, 71, 0.7)',
+                    }}
+                    title={bonusInfo.promo.title}
+                  >
+                    <Sparkles className="w-3 h-3 promo-sparkle" strokeWidth={2.5} />
+                    {bonusInfo.promo.badgeLabel || `+${Math.round(bonusInfo.promo.bonusPercent * 100)}%`}
+                  </span>
+                )}
               </div>
-              <p className="text-2xl font-bold text-white mb-4">{option.credits} Credits</p>
-              <div className="flex items-center justify-between">
+              {hasBonus ? (
+                <div className="relative z-10 mb-4">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-2xl font-bold text-white">
+                      {bonusInfo.totalCredits} Credits
+                    </span>
+                    <span className="text-sm text-white/50 line-through">
+                      {option.credits}
+                    </span>
+                  </div>
+                  <div className="text-xs text-amber-300 font-semibold mt-0.5">
+                    + {bonusInfo.bonusCredits} Bonus
+                  </div>
+                </div>
+              ) : (
+                <p className="text-2xl font-bold text-white mb-4 relative z-10">{option.credits} Credits</p>
+              )}
+              <div className="flex items-center justify-between relative z-10">
                 <span className="text-white/60 text-sm">{option.cost.toLocaleString('de-DE')}€</span>
                 <Button
                   onClick={() => openPinModal({ type: 'credits', optionIndex: index })}

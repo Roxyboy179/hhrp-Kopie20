@@ -13,6 +13,7 @@ import {
   Ticket,
   Tag,
   Percent,
+  Coins,
 } from 'lucide-react';
 import { formatPromoDate, getPromoCountdown } from '@/lib/shop-promotions';
 
@@ -29,6 +30,7 @@ const PROMO_ICON_MAP = {
   Tag,
   Percent,
   Flame,
+  Coins,
 };
 const resolveIcon = (iconName) => PROMO_ICON_MAP[iconName] || Tag;
 
