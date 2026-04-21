@@ -3540,11 +3540,8 @@ async function handleCreateBetaFeedback(request) {
       return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
     }
 
-    // Check if user is Beta Tester (Role ID: 1494434149623136276)
-    const isBetaTester = user.roles?.includes('1494434149623136276');
-    if (!isBetaTester) {
-      return NextResponse.json({ error: 'Nur Beta Tester können Feedback einreichen' }, { status: 403 });
-    }
+    // Beta-Feedback für alle eingeloggten User verfügbar
+    // (Rollen-Prüfung entfernt)
 
     const body = await request.json();
     const { type, title, description, priority, page } = body;
