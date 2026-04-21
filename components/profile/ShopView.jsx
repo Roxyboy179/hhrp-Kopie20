@@ -272,19 +272,16 @@ export function ShopView({ user, userData, onRefresh }) {
     }
   ], []);
 
-  // Gefilterte Shop-Items
+  // Gefilterte Shop-Items — korrektes Filtering nach Kategorie
   const filteredShopItems = useMemo(() => {
-    if (selectedCategory !== 'all' || selectedFilter === 'all') {
-      return Object.entries(shopItems);
+    const entries = Object.entries(shopItems);
+    if (selectedCategory === 'all') return entries;
+    // Spezial-Kategorien (credits/bank_limit/credit_spend/mystery_box) haben eigene Renderings
+    if (['credits', 'bank_limit', 'credit_spend', 'mystery_box'].includes(selectedCategory)) {
+      return [];
     }
-    
-    const category = shopFilterCategories.find(c => c.id === selectedFilter);
-    if (!category) return Object.entries(shopItems);
-    
-    return Object.entries(shopItems).filter(([id, item]) => 
-      category.filter({ ...item, id })
-    );
-  }, [shopItems, selectedFilter, selectedCategory, shopFilterCategories]);
+    return entries.filter(([id, item]) => item.category === selectedCategory);
+  }, [shopItems, selectedCategory]);
 
   const [giftError, setGiftError] = useState('');
   const [checkingRecipient, setCheckingRecipient] = useState(false);
@@ -1129,252 +1126,151 @@ export function ShopView({ user, userData, onRefresh }) {
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════
-          ACTION BAR: Mobile Filter + Verschenken + Warenkorb
+          ACTION BAR: Verschenken + Warenkorb
           ═══════════════════════════════════════════════════════════════ */}
-      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-        {/* Mobile Filter Dropdown (< lg) */}
-        <div className="lg:hidden w-full sm:w-[280px]">
-          <Select
-            value={selectedCategory}
-            onValueChange={(v) => {
-              setSelectedCategory(v);
-              setSelectedFilter('all');
-            }}
-          >
-            <SelectTrigger
-              className="h-12 rounded-xl text-white w-full"
+      <div className="flex items-center gap-3 flex-wrap justify-end">
+        {giftMode ? (
+          <>
+            <div
+              className="px-4 py-2 rounded-xl border flex items-center gap-2"
               style={{
-                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02))',
-                borderColor: 'rgba(255, 255, 255, 0.1)'
+                background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(126, 34, 206, 0.08))',
+                borderColor: 'rgba(147, 51, 234, 0.35)'
               }}
             >
-              <SelectValue placeholder="Kategorie wählen" />
-            </SelectTrigger>
-            <SelectContent
-              className="border-white/10"
-              style={{ background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.98), rgba(15, 15, 15, 0.98))' }}
-            >
-              <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-white/40 font-semibold">Shop Items</div>
-              {SHOP_SECTION_CATEGORIES.map(cat => {
-                const Icon = cat.icon;
-                const count = categoryCounts[cat.id] || 0;
-                return (
-                  <SelectItem key={cat.id} value={cat.id} className="text-white">
-                    <div className="flex items-center gap-2">
-                      <Icon className="w-4 h-4" style={{ color: cat.color }} />
-                      <span>{cat.name}</span>
-                      {cat.id !== 'all' && count > 0 && (
-                        <span className="text-[10px] text-white/40 ml-auto">({count})</span>
-                      )}
-                    </div>
-                  </SelectItem>
-                );
-              })}
-              <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-white/40 font-semibold mt-1 border-t border-white/10">Credits &amp; Bank</div>
-              {CREDITS_BANK_CATEGORIES.map(cat => {
-                const Icon = cat.icon;
-                return (
-                  <SelectItem key={cat.id} value={cat.id} className="text-white">
-                    <div className="flex items-center gap-2">
-                      <Icon className="w-4 h-4" style={{ color: cat.color }} />
-                      <span>{cat.name}</span>
-                    </div>
-                  </SelectItem>
-                );
-              })}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Actions: Verschenken + Warenkorb */}
-        <div className="flex items-center gap-3 sm:ml-auto flex-wrap">
-          {giftMode ? (
-            <>
-              <div
-                className="px-4 py-2 rounded-xl border flex items-center gap-2"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(126, 34, 206, 0.08))',
-                  borderColor: 'rgba(147, 51, 234, 0.35)'
-                }}
-              >
-                <Heart className="w-4 h-4 text-purple-300 flex-shrink-0" />
-                <p className="text-sm text-purple-200 truncate">
-                  An: <span className="font-bold text-white">{giftRecipient?.displayName}</span>
-                </p>
-              </div>
-              <Button
-                onClick={cancelGiftMode}
-                variant="outline"
-                className="rounded-xl h-11 px-4 border-white/10 hover:bg-white/5"
-              >
-                <X className="w-4 h-4 mr-1.5" />
-                Beenden
-              </Button>
-            </>
-          ) : (
+              <Heart className="w-4 h-4 text-purple-300 flex-shrink-0" />
+              <p className="text-sm text-purple-200 truncate">
+                An: <span className="font-bold text-white">{giftRecipient?.displayName}</span>
+              </p>
+            </div>
             <Button
-              onClick={openGiftMode}
-              className="rounded-xl h-11 px-5"
-              style={{
-                background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.25), rgba(126, 34, 206, 0.35))',
-                border: '1px solid rgba(147, 51, 234, 0.45)',
-                color: '#fff'
-              }}
+              onClick={cancelGiftMode}
+              variant="outline"
+              className="rounded-xl h-11 px-4 border-white/10 hover:bg-white/5"
             >
-              <Heart className="w-4 h-4 mr-2" />
-              Verschenken
+              <X className="w-4 h-4 mr-1.5" />
+              Beenden
             </Button>
-          )}
-
+          </>
+        ) : (
           <Button
-            onClick={() => setShowCart(true)}
-            className="rounded-xl h-11 px-5 relative"
+            onClick={openGiftMode}
+            className="rounded-xl h-11 px-5"
             style={{
-              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
+              background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.25), rgba(126, 34, 206, 0.35))',
+              border: '1px solid rgba(147, 51, 234, 0.45)',
               color: '#fff'
             }}
           >
-            <ShoppingCart className="w-4 h-4 mr-2" />
-            Warenkorb
-            {cart.length > 0 && (
-              <span
-                className="ml-2 min-w-[22px] h-[22px] px-1.5 rounded-full flex items-center justify-center text-[11px] font-bold"
+            <Heart className="w-4 h-4 mr-2" />
+            Verschenken
+          </Button>
+        )}
+
+        <Button
+          onClick={() => setShowCart(true)}
+          className="rounded-xl h-11 px-5 relative"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: '#fff'
+          }}
+        >
+          <ShoppingCart className="w-4 h-4 mr-2" />
+          Warenkorb
+          {cart.length > 0 && (
+            <span
+              className="ml-2 min-w-[22px] h-[22px] px-1.5 rounded-full flex items-center justify-center text-[11px] font-bold"
+              style={{
+                background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                color: '#1a1a1a'
+              }}
+            >
+              {cart.length}
+            </span>
+          )}
+        </Button>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          KATEGORIEN - Horizontale Scroll-Tabs (über den Items)
+          ═══════════════════════════════════════════════════════════════ */}
+      <div className="relative -mx-1">
+        <div
+          className="flex gap-2 overflow-x-auto pb-2 px-1 scroll-smooth"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255,255,255,0.15) transparent'
+          }}
+        >
+          {ALL_CATEGORIES.map(cat => {
+            const Icon = cat.icon;
+            const isActive = selectedCategory === cat.id;
+            const count = categoryCounts[cat.id];
+            return (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  setSelectedCategory(cat.id);
+                  setSelectedFilter('all');
+                }}
+                className="flex items-center gap-2 px-4 h-11 rounded-xl transition-all flex-shrink-0 whitespace-nowrap text-sm font-medium"
                 style={{
-                  background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
-                  color: '#1a1a1a'
+                  background: isActive
+                    ? `linear-gradient(135deg, ${cat.color}33, ${cat.color}15)`
+                    : 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))',
+                  border: isActive
+                    ? `1px solid ${cat.color}88`
+                    : '1px solid rgba(255, 255, 255, 0.08)',
+                  color: isActive ? '#fff' : 'rgba(255,255,255,0.7)',
+                  boxShadow: isActive ? `0 0 20px ${cat.color}33` : 'none'
                 }}
               >
-                {cart.length}
-              </span>
-            )}
-          </Button>
+                <Icon
+                  className="w-4 h-4 flex-shrink-0"
+                  style={{ color: isActive ? cat.color : 'rgba(255,255,255,0.5)' }}
+                />
+                <span>{cat.name}</span>
+                {cat.id !== 'all' && count !== undefined && count > 0 && (
+                  <span
+                    className="text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center"
+                    style={{
+                      background: isActive ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)',
+                      color: isActive ? '#fff' : 'rgba(255,255,255,0.5)'
+                    }}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════
-          MAIN LAYOUT: Sidebar (Desktop) + Content
+          CONTENT: Section Header + Items
           ═══════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
+      <div className="space-y-5">
 
-        {/* Desktop Sidebar (lg+) */}
-        <aside className="hidden lg:block">
-          <div className="glass rounded-2xl p-3 border border-white/[0.08] sticky top-24">
-            <p className="text-[10px] uppercase tracking-wider text-white/40 px-3 pt-2 pb-2 font-semibold">Shop Items</p>
-            {SHOP_SECTION_CATEGORIES.map(cat => {
-              const Icon = cat.icon;
-              const isActive = selectedCategory === cat.id;
-              const count = categoryCounts[cat.id];
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => {
-                    setSelectedCategory(cat.id);
-                    setSelectedFilter('all');
-                  }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all mb-1 group ${
-                    isActive ? 'bg-white/10' : 'hover:bg-white/[0.04]'
-                  }`}
-                  style={{
-                    border: isActive
-                      ? `1px solid ${cat.color}55`
-                      : '1px solid transparent',
-                    boxShadow: isActive ? `0 0 20px ${cat.color}22` : 'none'
-                  }}
-                >
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
-                    style={{
-                      background: isActive ? `${cat.color}33` : `${cat.color}1a`,
-                      border: `1px solid ${cat.color}${isActive ? '66' : '2a'}`
-                    }}
-                  >
-                    <Icon className="w-4 h-4" style={{ color: cat.color }} />
-                  </div>
-                  <span className={`text-sm flex-1 text-left truncate ${isActive ? 'text-white font-semibold' : 'text-white/70 group-hover:text-white/90'}`}>
-                    {cat.name}
-                  </span>
-                  {cat.id !== 'all' && count !== undefined && count > 0 && (
-                    <span className={`text-[10px] rounded-full px-2 py-0.5 flex-shrink-0 ${
-                      isActive ? 'text-white bg-white/10' : 'text-white/40 bg-white/5'
-                    }`}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-
-            <div className="h-px bg-white/10 my-3 mx-2" />
-
-            <p className="text-[10px] uppercase tracking-wider text-white/40 px-3 pt-1 pb-2 font-semibold">Credits &amp; Bank</p>
-            {CREDITS_BANK_CATEGORIES.map(cat => {
-              const Icon = cat.icon;
-              const isActive = selectedCategory === cat.id;
-              const count = categoryCounts[cat.id];
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => {
-                    setSelectedCategory(cat.id);
-                    setSelectedFilter('all');
-                  }}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all mb-1 group ${
-                    isActive ? 'bg-white/10' : 'hover:bg-white/[0.04]'
-                  }`}
-                  style={{
-                    border: isActive
-                      ? `1px solid ${cat.color}55`
-                      : '1px solid transparent',
-                    boxShadow: isActive ? `0 0 20px ${cat.color}22` : 'none'
-                  }}
-                >
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
-                    style={{
-                      background: isActive ? `${cat.color}33` : `${cat.color}1a`,
-                      border: `1px solid ${cat.color}${isActive ? '66' : '2a'}`
-                    }}
-                  >
-                    <Icon className="w-4 h-4" style={{ color: cat.color }} />
-                  </div>
-                  <span className={`text-sm flex-1 text-left truncate ${isActive ? 'text-white font-semibold' : 'text-white/70 group-hover:text-white/90'}`}>
-                    {cat.name}
-                  </span>
-                  {count !== undefined && count > 0 && (
-                    <span className={`text-[10px] rounded-full px-2 py-0.5 flex-shrink-0 ${
-                      isActive ? 'text-white bg-white/10' : 'text-white/40 bg-white/5'
-                    }`}>
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+        {/* Section Header */}
+        <div className="flex items-center gap-3 pb-3 border-b border-white/[0.08]">
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{
+              background: `${currentCategoryMeta.color}22`,
+              border: `1px solid ${currentCategoryMeta.color}44`
+            }}
+          >
+            <currentCategoryMeta.icon className="w-5 h-5" style={{ color: currentCategoryMeta.color }} />
           </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="space-y-5 min-w-0">
-
-          {/* Section Header */}
-          <div className="flex items-center gap-3 pb-3 border-b border-white/[0.08]">
-            <div
-              className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{
-                background: `${currentCategoryMeta.color}22`,
-                border: `1px solid ${currentCategoryMeta.color}44`
-              }}
-            >
-              <currentCategoryMeta.icon className="w-5 h-5" style={{ color: currentCategoryMeta.color }} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-bold text-white leading-tight">{currentCategoryMeta.name}</h2>
-              {categoryCounts[selectedCategory] !== undefined && categoryCounts[selectedCategory] > 0 && (
-                <p className="text-xs text-white/40">{categoryCounts[selectedCategory]} Artikel</p>
-              )}
-            </div>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-lg font-bold text-white leading-tight">{currentCategoryMeta.name}</h2>
+            {categoryCounts[selectedCategory] !== undefined && categoryCounts[selectedCategory] > 0 && (
+              <p className="text-xs text-white/40">{categoryCounts[selectedCategory]} Artikel</p>
+            )}
           </div>
+        </div>
 
 
       {/* Credits kaufen */}
@@ -1835,7 +1731,7 @@ export function ShopView({ user, userData, onRefresh }) {
 
       {/* Mystery Boxes */}
       {selectedCategory === 'mystery_box' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {creditCrates.map((crate) => {
             // 💳 Credits-Pass Rabatt (creditsSpendingDiscount)
             const activePass = getActiveCreditsPass();
@@ -2142,14 +2038,23 @@ export function ShopView({ user, userData, onRefresh }) {
                   />
                 )}
                 
-                {/* Badges */}
+                {/* ═══ STATUS-BADGES (oberhalb Icon/Titel, als Ribbon) ═══ */}
+                {(
+                  (hasItem && !giftMode) ||
+                  (hasActiveCreditsPass && !hasItem && !giftMode) ||
+                  (alreadyHadFreePass && !hasItem && !hasActiveCreditsPass && !giftMode) ||
+                  (recipientHasItem && giftMode) ||
+                  (id === 'credits_free_pass' && giftMode) ||
+                  (isVIPItem && giftMode && recipientHighestVIP >= 0) ||
+                  isLowerVIP
+                ) && (
+                  <div className="flex flex-wrap gap-2 mb-3 relative z-10">
                 {hasItem && !giftMode && isCreditsPass && (
-                  <div className="absolute top-2 right-2 bg-green-500/20 border border-green-500/50 rounded-lg px-2.5 py-1.5 z-10 max-w-[180px]">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs text-green-300 font-semibold flex items-center gap-1">
-                        <ItemIcon className="w-3 h-3" />
-                        Aktiv
-                      </span>
+                  <div className="bg-green-500/15 border border-green-500/50 rounded-lg px-3 py-1.5 inline-flex items-center gap-2 max-w-full backdrop-blur-sm">
+                    <span className="text-xs text-green-300 font-semibold flex items-center gap-1.5 whitespace-nowrap">
+                      <ItemIcon className="w-3 h-3" />
+                      Aktiv
+                    </span>
                       {(() => {
                         const expiry = getLicenseExpiry(id);
                         if (expiry) {
@@ -2158,7 +2063,7 @@ export function ShopView({ user, userData, onRefresh }) {
                           
                           if (isExpired) {
                             return (
-                              <span className="text-[9px] text-red-400/70 flex items-center gap-0.5">
+                            <span className="text-[10px] text-red-400/80 flex items-center gap-0.5 border-l border-white/10 pl-2">
                                 <XCircle className="w-2.5 h-2.5" />
                                 Abgelaufen am {expiryDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                               </span>
@@ -2167,112 +2072,89 @@ export function ShopView({ user, userData, onRefresh }) {
                           
                           const daysLeft = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
                           return (
-                            <span className="text-[9px] text-green-400/70 flex items-center gap-0.5">
+                          <span className="text-[10px] text-green-400/80 flex items-center gap-0.5 border-l border-white/10 pl-2">
                               <Clock className="w-2.5 h-2.5" />
-                              Noch {daysLeft} Tag{daysLeft !== 1 ? 'e' : ''} • Bis {expiryDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
+                              Noch {daysLeft} Tag{daysLeft !== 1 ? 'e' : ''}
                             </span>
                           );
                         }
                         return null;
                       })()}
-                    </div>
                   </div>
                 )}
                 {hasItem && !giftMode && !isCreditsPass && (
-                  <div className="absolute top-2 right-2 bg-green-500/20 border border-green-500/50 rounded-lg px-2 py-1 z-10">
-                    <span className="text-xs text-green-300 font-medium flex items-center gap-1">
+                  <div className="bg-green-500/15 border border-green-500/50 rounded-lg px-3 py-1.5 inline-flex items-center backdrop-blur-sm">
+                    <span className="text-xs text-green-300 font-semibold flex items-center gap-1.5">
                       <Check className="w-3 h-3" />
                       Aktiv
                     </span>
                   </div>
                 )}
                 {hasActiveCreditsPass && !hasItem && !giftMode && (
-                  <div className="absolute top-2 right-2 bg-orange-500/20 border border-orange-500/50 rounded-lg px-2.5 py-1.5 z-10 max-w-[180px]">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs text-orange-300 font-semibold flex items-center gap-1">
+                  <div className="bg-orange-500/15 border border-orange-500/50 rounded-lg px-3 py-1.5 inline-flex items-center gap-2 max-w-full backdrop-blur-sm">
+                    <span className="text-xs text-orange-300 font-semibold flex items-center gap-1.5 whitespace-nowrap">
                         <Lock className="w-3 h-3" />
                         Anderer Pass aktiv
                       </span>
                       {(() => {
-                        // Hole das Icon für den aktiven Pass
                         const PassIcon = itemIcons[activeCreditsPassInfo.id] || CreditCard;
                         return (
-                          <span className="text-[10px] text-orange-400/80 leading-tight flex items-center gap-1">
+                        <span className="text-[10px] text-orange-400/80 leading-tight flex items-center gap-1 border-l border-white/10 pl-2">
                             <PassIcon className="w-3 h-3" />
                             {activeCreditsPassInfo.name.replace('Credits ', '')}
                           </span>
                         );
                       })()}
-                      {activeCreditsPassInfo.expiresAt && (() => {
-                        const expiryDate = new Date(activeCreditsPassInfo.expiresAt);
-                        const isExpired = expiryDate <= now;
-                        
-                        if (isExpired) {
-                          return (
-                            <span className="text-[9px] text-red-500/60 flex items-center gap-0.5">
-                              <XCircle className="w-2.5 h-2.5" />
-                              Abgelaufen am {expiryDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
-                            </span>
-                          );
-                        }
-                        
-                        return (
-                          <span className="text-[9px] text-orange-500/60 flex items-center gap-0.5">
-                            <Clock className="w-2.5 h-2.5" />
-                            Läuft bis {expiryDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
-                          </span>
-                        );
-                      })()}
-                    </div>
                   </div>
                 )}
                 {alreadyHadFreePass && !hasItem && !hasActiveCreditsPass && !giftMode && (
-                  <div className="absolute top-2 right-2 bg-yellow-500/20 border border-yellow-500/50 rounded-lg px-2 py-1 z-10">
-                    <span className="text-xs text-yellow-300 font-medium flex items-center gap-1">
+                  <div className="bg-yellow-500/15 border border-yellow-500/50 rounded-lg px-3 py-1.5 inline-flex items-center backdrop-blur-sm">
+                    <span className="text-xs text-yellow-300 font-semibold flex items-center gap-1.5">
                       <AlertTriangle className="w-3 h-3" />
                       Bereits genutzt
                     </span>
                   </div>
                 )}
                 {recipientHasItem && giftMode && (
-                  <div className="absolute top-2 right-2 bg-orange-500/20 border border-orange-500/50 rounded-lg px-2 py-1 z-10">
-                    <span className="text-xs text-orange-300 font-medium flex items-center gap-1">
+                  <div className="bg-orange-500/15 border border-orange-500/50 rounded-lg px-3 py-1.5 inline-flex items-center backdrop-blur-sm">
+                    <span className="text-xs text-orange-300 font-semibold flex items-center gap-1.5">
                       <Check className="w-3 h-3" />
-                      Hat Empfänger
+                      Empfänger hat Item
                     </span>
                   </div>
                 )}
-                {/* Free Pass kann nicht verschenkt werden */}
                 {id === 'credits_free_pass' && giftMode && (
-                  <div className="absolute top-2 right-2 bg-red-500/20 border border-red-500/50 rounded-lg px-2 py-1 z-10">
-                    <span className="text-xs text-red-300 font-medium flex items-center gap-1">
+                  <div className="bg-red-500/15 border border-red-500/50 rounded-lg px-3 py-1.5 inline-flex items-center backdrop-blur-sm">
+                    <span className="text-xs text-red-300 font-semibold flex items-center gap-1.5">
                       <X className="w-3 h-3" />
                       Nicht verschenkbar
                     </span>
                   </div>
                 )}
                 {isVIPItem && giftMode && !recipientCanReceiveVIP && recipientHighestVIP >= 0 && (
-                  <div className="absolute top-2 right-2 bg-red-500/20 border border-red-500/50 rounded-lg px-2 py-1 z-10">
-                    <span className="text-xs text-red-300 font-medium flex items-center gap-1">
+                  <div className="bg-red-500/15 border border-red-500/50 rounded-lg px-3 py-1.5 inline-flex items-center backdrop-blur-sm">
+                    <span className="text-xs text-red-300 font-semibold flex items-center gap-1.5">
                       <X className="w-3 h-3" />
                       Kein Upgrade
                     </span>
                   </div>
                 )}
                 {isVIPItem && giftMode && recipientCanReceiveVIP && recipientHighestVIP >= 0 && (
-                  <div className="absolute top-2 right-2 bg-green-500/20 border border-green-500/50 rounded-lg px-2 py-1 z-10">
-                    <span className="text-xs text-green-300 font-medium flex items-center gap-1">
+                  <div className="bg-green-500/15 border border-green-500/50 rounded-lg px-3 py-1.5 inline-flex items-center backdrop-blur-sm">
+                    <span className="text-xs text-green-300 font-semibold flex items-center gap-1.5">
                       <TrendingUp className="w-3 h-3" />
                       Upgrade
                     </span>
                   </div>
                 )}
                 {isLowerVIP && (
-                  <div className="absolute top-2 right-2 bg-red-500/20 border border-red-500/50 rounded-lg px-2 py-1 z-10">
-                    <span className="text-xs text-red-300 font-medium flex items-center gap-1">
+                  <div className="bg-red-500/15 border border-red-500/50 rounded-lg px-3 py-1.5 inline-flex items-center backdrop-blur-sm">
+                    <span className="text-xs text-red-300 font-semibold flex items-center gap-1.5">
                       <X className="w-3 h-3" />
                       Nicht verfügbar
                     </span>
+                  </div>
+                )}
                   </div>
                 )}
                 
@@ -2430,7 +2312,6 @@ export function ShopView({ user, userData, onRefresh }) {
           })}
         </div>
       )}
-        </main>
       </div>
 
 
