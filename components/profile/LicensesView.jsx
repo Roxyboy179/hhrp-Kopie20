@@ -8,7 +8,7 @@ import {
   CheckCircle2, XCircle, Calendar, Zap, AlertTriangle, Loader2,
   ShoppingBag, RefreshCw,
   Info, Clock, Bell, BellOff, Ban, ShieldCheck, ShieldOff,
-  PackageOpen, Lock
+  PackageOpen, Lock, Gift, CreditCard, Star
 } from 'lucide-react';
 import { SHOP_ITEMS } from '@/lib/shop-data';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ const CATEGORY_META = {
   schutzbriefe:    { icon: FileSignature, color: 'from-emerald-500/30 to-green-500/20', label: 'Schutzbrief' },
   führerscheine:   { icon: Car,           color: 'from-slate-500/30 to-zinc-500/20',    label: 'Führerschein' },
   credits:         { icon: Zap,           color: 'from-yellow-500/30 to-amber-500/20',  label: 'Credits' },
+  credits_passes:  { icon: CreditCard,    color: 'from-pink-500/30 to-rose-500/20',     label: 'Credits-Pass' },
   default:         { icon: PackageOpen,   color: 'from-white/20 to-white/5',            label: 'Sonstiges' }
 };
 
@@ -47,7 +48,11 @@ const ITEM_ICON = {
   'vip_platinum': Gem,
   'vip_ultimate': Crown,
   'vip_elite_plus': Crown,
-  'luxus_pass': Crown
+  'luxus_pass': Crown,
+  'credits_free_pass': Gift,
+  'credits_basic_pass': CreditCard,
+  'credits_standard_pass': Star,
+  'credits_elite_plus_pass': Crown
 };
 
 // Action → User-freundlicher Text
@@ -106,7 +111,13 @@ export default function LicensesView({ userData, refreshUserData }) {
           ...l
         };
       })
-      .filter(l => l.id && !l.id.startsWith('credits_') && !l.id.startsWith('credit_'));
+      .filter(l => {
+        if (!l.id) return false;
+        // Credits-Bundles (credits_10, credits_50, …) sind keine Lizenzen – nur Credits-Pässe anzeigen
+        if (l.id.startsWith('credits_') && !l.id.includes('_pass')) return false;
+        if (l.id.startsWith('credit_') && !l.id.includes('_pass')) return false;
+        return true;
+      });
   }, [userData]);
 
   // Nur kündbare Lizenzen

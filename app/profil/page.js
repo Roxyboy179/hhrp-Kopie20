@@ -1264,7 +1264,10 @@ export default function ProfilPage() {
         if (!l) return false;
         const name = typeof l === 'string' ? l : (l.name || l.id);
         if (!name || typeof name !== 'string') return false;
-        return !name.startsWith('credits_') && !name.startsWith('credit_');
+        // Credits-Bundles (credits_10, credits_50) ausblenden – aber Credits-Pässe BEHALTEN
+        if (name.startsWith('credits_') && !name.includes('_pass')) return false;
+        if (name.startsWith('credit_') && !name.includes('_pass')) return false;
+        return true;
       })
     : [];
   
