@@ -21,8 +21,11 @@ import {
   CircleDollarSign, BellRing, AppWindow, Settings, ImagePlus, 
   Trash2, Upload, BellOff, ZoomIn, ZoomOut, PieChart, BarChart3,
   Lightbulb, Filter, Search, ArrowLeftRight, Target, Calculator,
-  TrendingUpIcon, BarChart2, Send, XCircle, Infinity, Car
+  TrendingUpIcon, BarChart2, Send, XCircle, Infinity, Car, Coins
 } from 'lucide-react';
+import { LicenseBadge } from '@/components/profile/LicenseBadge';
+import { LevelProgress } from '@/components/profile/LevelProgress';
+import { StatsCard } from '@/components/profile/StatsCard';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { getDiscordAvatarUrl } from '@/lib/discord-utils';
@@ -55,9 +58,9 @@ function BotStatusCard({ status, onRetry }) {
   if (!status.isOnline || status.error || status.checking) {
     // Error State - NUR GELBE KARTE
     return (
-      <div className="glass rounded-2xl p-8 border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-orange-500/10">
+      <div className="glass-card animate-fade-in-scale rounded-2xl p-8 border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-orange-500/10">
         <div className="flex flex-col items-center justify-center text-center space-y-6">
-          <div className="w-24 h-24 rounded-full bg-yellow-500/20 flex items-center justify-center">
+          <div className="w-24 h-24 rounded-full bg-yellow-500/20 flex items-center justify-center animate-pulse-soft">
             <svg 
               className="w-12 h-12 text-yellow-400" 
               fill="none" 
@@ -74,9 +77,9 @@ function BotStatusCard({ status, onRetry }) {
           </div>
           
           <div className="space-y-3">
-            <h3 className="text-2xl font-bold text-white">Verbindungsproblem</h3>
+            <h3 className="text-2xl font-bold text-white">Oops! Kurze Kaffeepause... ☕</h3>
             <p className="text-white/70 max-w-lg">
-              Wir haben derzeit Probleme, die Daten vom Discord Bot Server zu laden.
+              Unser Discord-Bot macht gerade eine kleine Pause. Keine Sorge, wir versuchen es automatisch weiter!
             </p>
             {status.error && (
               <div className="glass rounded-lg p-4 border border-white/10 bg-white/5">
@@ -103,7 +106,7 @@ function BotStatusCard({ status, onRetry }) {
             <Button
               onClick={onRetry}
               variant="outline"
-              className="w-full border-white/10 hover:bg-white/5"
+              className="w-full button-hover border-white/10 hover:bg-white/5"
             >
               <svg 
                 className="w-5 h-5 mr-2" 
@@ -2751,24 +2754,67 @@ export default function ProfilPage() {
                         </div>
                       </div>
 
-                      {/* Quick Stats */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]">
-                          <div className="text-2xl font-bold text-white">{cash.toLocaleString('de-DE')} €</div>
-                          <div className="text-xs text-white/40 mt-1">Bargeld</div>
+
+                      {/* Führerschein-Badges */}
+                      {userData.licenses && userData.licenses.filter(l => {
+                        const id = typeof l === 'string' ? l : l.id;
+                        return id?.startsWith('license_');
+                      }).length > 0 && (
+                        <div className="mt-6">
+                          <h4 className="text-sm font-medium text-white/60 mb-3 flex items-center gap-2">
+                            <FileText className="w-4 h-4" />
+                            Führerscheine
+                          </h4>
+                          <div className="flex flex-wrap gap-2">
+                            {userData.licenses
+                              .filter(l => {
+                                const id = typeof l === 'string' ? l : l.id;
+                                return id?.startsWith('license_');
+                              })
+                              .map((license, idx) => (
+                                <LicenseBadge key={idx} licenseId={license} index={idx} />
+                              ))}
+                          </div>
                         </div>
-                        <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]">
-                          <div className="text-2xl font-bold text-white">{bank.toLocaleString('de-DE')} €</div>
-                          <div className="text-xs text-white/40 mt-1">Bank</div>
+                      )}
+
+                      {/* Level/XP Progress */}
+                      {(userData.level || userData.xp) && (
+                        <div className="mt-6">
+                          <LevelProgress 
+                            level={userData.level || 1}
+                            xp={userData.xp || 0}
+                            nextLevelXP={userData.nextLevelXP || 1000}
+                          />
                         </div>
-                        <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08]">
-                          <div className="text-2xl font-bold text-white">{savings.toLocaleString('de-DE')} €</div>
-                          <div className="text-xs text-white/40 mt-1">Sparkonto</div>
-                        </div>
-                        <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30">
-                          <div className="text-2xl font-bold text-red-400">{totalSchulden.toLocaleString('de-DE')} €</div>
-                          <div className="text-xs text-red-400/60 mt-1">Schulden</div>
-                        </div>
+                      )}
+
+                      {/* Quick Stats mit neuen Komponenten */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+                        <StatsCard 
+                          icon={DollarSign}
+                          value={`${(cash + bank + savings).toLocaleString('de-DE')}€`}
+                          label="Vermögen"
+                          color="green"
+                        />
+                        <StatsCard 
+                          icon={Coins}
+                          value={(userData.credits || 0).toLocaleString('de-DE')}
+                          label="Credits"
+                          color="blue"
+                        />
+                        <StatsCard 
+                          icon={Car}
+                          value={userData.vehicles?.length || 0}
+                          label="Fahrzeuge"
+                          color="purple"
+                        />
+                        <StatsCard 
+                          icon={Shield}
+                          value={userData.vipTier || 'Keine'}
+                          label="VIP Status"
+                          color="gold"
+                        />
                       </div>
                     </div>
                   </div>
@@ -4000,7 +4046,7 @@ export default function ProfilPage() {
                       {hasVipForCustomBg ? (
                         <div className="space-y-4">
                           {/* Vorinstallierte Bilder Grid */}
-                          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                             {presetBackgrounds.map((bg) => (
                               <div
                                 key={bg.id}
@@ -4106,7 +4152,7 @@ export default function ProfilPage() {
                       ) : (
                         <div className="space-y-3">
                           {/* Gesperrte Vorschau */}
-                          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 opacity-40 pointer-events-none">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 opacity-40 pointer-events-none">
                             {presetBackgrounds.map((bg) => (
                               <div key={bg.id} className="relative rounded-xl overflow-hidden border border-white/10 aspect-[4/3]">
                                 <img src={bg.src} alt={bg.name} className="w-full h-full object-cover blur-[2px]" />

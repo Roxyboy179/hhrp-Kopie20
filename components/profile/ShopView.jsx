@@ -9,7 +9,7 @@ import {
   // Icons für Credit-Spend + Mystery Boxes
   Hash, RotateCcw, Receipt, Zap, Rocket, Award, ShieldPlus, Unlock,
   ShieldCheck, Dice5, Ticket, Crown, Gem, Package, Gift, Glasses, Bus, Star,
-  XCircle
+  XCircle, Grid, DollarSign
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -134,6 +134,7 @@ export function ShopView({ user, userData, onRefresh }) {
   const [creditSpendItems, setCreditSpendItems] = useState([]);
   const [creditCrates, setCreditCrates] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedFilter, setSelectedFilter] = useState('all'); // NEU: Filter State
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
 
@@ -157,6 +158,67 @@ export function ShopView({ user, userData, onRefresh }) {
   const [giftFirstName, setGiftFirstName] = useState('');
   const [giftLastName, setGiftLastName] = useState('');
   const [giftRecipient, setGiftRecipient] = useState(null); // Empfänger-Daten nach Prüfung
+
+  // Filter-Kategorien für Shop
+  const shopFilterCategories = useMemo(() => [
+    { 
+      id: 'all', 
+      name: 'Alle', 
+      icon: Grid,
+      filter: () => true 
+    },
+    { 
+      id: 'vip', 
+      name: 'VIP-Pässe', 
+      icon: Crown,
+      filter: item => item.category === 'vip_subscription'
+    },
+    { 
+      id: 'vehicles', 
+      name: 'Fahrzeuge', 
+      icon: Car,
+      filter: item => item.category === 'vehicle'
+    },
+    { 
+      id: 'credits_passes', 
+      name: 'Credits-Pässe', 
+      icon: CreditCard,
+      filter: item => item.id?.startsWith('credits_') && item.id.includes('_pass')
+    },
+    { 
+      id: 'licenses', 
+      name: 'Lizenzen', 
+      icon: FileText,
+      filter: item => item.category === 'license'
+    },
+    { 
+      id: 'insurance', 
+      name: 'Versicherungen', 
+      icon: Shield,
+      filter: item => item.category === 'insurance'
+    },
+    { 
+      id: 'weapons', 
+      name: 'Waffen', 
+      icon: Crosshair,
+      filter: item => item.category === 'weapon'
+    }
+  ], []);
+
+  // Gefilterte Shop-Items
+  const filteredShopItems = useMemo(() => {
+    if (selectedCategory !== 'all' || selectedFilter === 'all') {
+      return Object.entries(shopItems);
+    }
+    
+    const category = shopFilterCategories.find(c => c.id === selectedFilter);
+    if (!category) return Object.entries(shopItems);
+    
+    return Object.entries(shopItems).filter(([id, item]) => 
+      category.filter({ ...item, id })
+    );
+  }, [shopItems, selectedFilter, selectedCategory, shopFilterCategories]);
+
   const [giftError, setGiftError] = useState('');
   const [checkingRecipient, setCheckingRecipient] = useState(false);
 
@@ -983,7 +1045,10 @@ export function ShopView({ user, userData, onRefresh }) {
           return (
             <button
               key={key}
-              onClick={() => setSelectedCategory(key)}
+              onClick={() => {
+                setSelectedCategory(key);
+                setSelectedFilter('all'); // Filter zurücksetzen
+              }}
               className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
               style={{
                 background: isActive 
@@ -1539,7 +1604,55 @@ export function ShopView({ user, userData, onRefresh }) {
       {/* Shop Items */}
       {selectedCategory !== 'credits' && selectedCategory !== 'bank_limit' && selectedCategory !== 'credit_spend' && selectedCategory !== 'mystery_box' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredItems.map(([id, item]) => {
+
+          {/* Filter Pills - nur im "Alle" Tab */}
+          {selectedCategory === 'all' && (
+            <div className="mb-6 animate-slide-in">
+              <div className="flex flex-wrap gap-2">
+                {shopFilterCategories.map(cat => {
+                  const isActive = selectedFilter === cat.id;
+                  const Icon = cat.icon;
+                  
+                  // Zähle Items in dieser Kategorie
+                  const count = cat.id === 'all' 
+                    ? Object.keys(shopItems).length 
+                    : Object.entries(shopItems).filter(([id, item]) => cat.filter({ ...item, id })).length;
+                  
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setSelectedFilter(cat.id)}
+                      className={`
+                        button-hover px-4 py-2.5 rounded-xl flex items-center gap-2 transition-smooth
+                        ${isActive 
+                          ? 'bg-white/20 border-2 border-white/40 shadow-lg scale-105' 
+                          : 'bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20'
+                        }
+                      `}
+                    >
+                      <Icon className={`w-4 h-4 transition-smooth ${isActive ? 'text-white' : 'text-white/60'}`} />
+                      <span className={`text-sm font-medium transition-smooth ${isActive ? 'text-white' : 'text-white/70'}`}>
+                        {cat.name}
+                      </span>
+                      {count > 0 && (
+                        <span className={`
+                          ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition-smooth
+                          ${isActive 
+                            ? 'bg-white/30 text-white' 
+                            : 'bg-white/10 text-white/50'
+                          }
+                        `}>
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {filteredShopItems.map(([id, item]) => {
             const ItemIcon = itemIcons[id] || ShoppingBag;
             
             const hasItem = hasLicense(id); // Verwende die neue Hilfsfunktion
