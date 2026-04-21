@@ -8,7 +8,7 @@ import {
   Plus, Minus, KeyRound, Info, Loader2, CheckCircle2, Calculator, Coins,
   // Icons für Credit-Spend + Mystery Boxes
   Hash, RotateCcw, Receipt, Zap, Rocket, Award, ShieldPlus, Unlock,
-  ShieldCheck, Dice5, Ticket, Crown, Gem, Package, Gift, Glasses, Bus
+  ShieldCheck, Dice5, Ticket, Crown, Gem, Package, Gift, Glasses, Bus, Star
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
