@@ -6,7 +6,7 @@ import webpush from 'web-push';
 import { supabaseAdmin } from '@/lib/supabase';
 import { readStats, writeStats, incrementStat } from '@/lib/stats-file';
 import { SHOP_ITEMS, CREDIT_PURCHASE_OPTIONS, BANK_LIMIT_UPGRADES, CREDIT_SPEND_ITEMS, CREDIT_CRATES } from '@/lib/shop-data';
-import { findActivePromotion, findActiveCreditBonus } from '@/lib/shop-promotions';
+import { findActivePromotion, findActiveCreditBonus, getCreditsSpendingDiscount } from '@/lib/shop-promotions';
 import { 
   createBewerbung, 
   getUserBewerbungen, 
@@ -4360,11 +4360,17 @@ async function handleUpgradeBankLimit(request) {
 
     const currentCredits = userDataObj?.credits || 0;
 
+    // ── Credits-Pass Rabatt anwenden (5%/15%/25%/35%) ──
+    const userLicensesBL = Array.isArray(userDataObj?.licenses) ? userDataObj.licenses : [];
+    const creditsDiscountBL = getCreditsSpendingDiscount(userLicensesBL, new Date());
+    const baseCostBL = upgrade.creditCost;
+    const finalCostBL = Math.max(1, Math.ceil(baseCostBL * (1 - creditsDiscountBL)));
+
     // Prüfe Credits
-    if (currentCredits < upgrade.creditCost) {
+    if (currentCredits < finalCostBL) {
       return NextResponse.json({ 
         error: 'Nicht genug Credits',
-        required: upgrade.creditCost,
+        required: finalCostBL,
         current: currentCredits
       }, { status: 400 });
     }
@@ -4379,7 +4385,8 @@ async function handleUpgradeBankLimit(request) {
         item_category: 'bank_limit',
         price: 0, // Kosten in Credits, nicht Geld
         status: 'pending',
-        initiated_from: 'website'
+        initiated_from: 'website',
+        metadata: { creditCost: finalCostBL, baseCreditCost: baseCostBL, creditsDiscount: creditsDiscountBL }
       })
       .select()
       .single();
@@ -4391,11 +4398,15 @@ async function handleUpgradeBankLimit(request) {
 
     return NextResponse.json({
       success: true,
-      message: `Bank Limit wird um ${upgrade.addLimit.toLocaleString('de-DE')}€ erhöht...`,
+      message: creditsDiscountBL > 0
+        ? `Bank Limit wird um ${upgrade.addLimit.toLocaleString('de-DE')}€ erhöht... (${Math.round(creditsDiscountBL * 100)}% Credits-Pass Rabatt)`
+        : `Bank Limit wird um ${upgrade.addLimit.toLocaleString('de-DE')}€ erhöht...`,
       purchase: {
         id: purchase.id,
         addLimit: upgrade.addLimit,
-        creditCost: upgrade.creditCost,
+        creditCost: finalCostBL,
+        baseCreditCost: baseCostBL,
+        creditsDiscount: creditsDiscountBL,
         status: 'pending'
       }
     });
@@ -4442,7 +4453,12 @@ async function handleSpendCredits(request) {
 
     // ── Dynamischer Preis (wie Bot: base * 1.10^purchases) ──
     const purchases = buffs?.creditPurchases?.[item.id] || 0;
-    const dynamicPrice = Math.ceil(item.creditCost * Math.pow(1.10, purchases));
+    const basePrice = Math.ceil(item.creditCost * Math.pow(1.10, purchases));
+
+    // ── Credits-Pass Rabatt anwenden (5%/15%/25%/35% via credits_*_pass) ──
+    const userLicenses = Array.isArray(userDataObj?.licenses) ? userDataObj.licenses : [];
+    const creditsDiscount = getCreditsSpendingDiscount(userLicenses, new Date(now));
+    const dynamicPrice = Math.max(1, Math.ceil(basePrice * (1 - creditsDiscount)));
 
     // ── Pre-Check: Ist der Buff bereits aktiv? (= kein doppelter Kauf) ──
     const activeFlagMap = {
@@ -4576,7 +4592,7 @@ async function handleSpendCredits(request) {
     }
 
     // Custom Title-Validierung
-    const meta = { price: dynamicPrice };
+    const meta = { price: dynamicPrice, basePrice, creditsDiscount };
     if (item.id === 'custom_kontonummer') {
       meta.customKontonummer = String(customValue).trim();
     } else if (item.id === 'bank_pin_change') {
@@ -4624,11 +4640,15 @@ async function handleSpendCredits(request) {
 
     return NextResponse.json({
       success: true,
-      message: `${item.label} wird aktiviert...`,
+      message: creditsDiscount > 0
+        ? `${item.label} wird aktiviert... (${Math.round(creditsDiscount * 100)}% Credits-Pass Rabatt)`
+        : `${item.label} wird aktiviert...`,
       purchase: {
         id: purchase.id,
         item: item.label,
         creditCost: dynamicPrice,
+        basePrice,
+        creditsDiscount,
         status: 'pending'
       }
     });
@@ -4668,10 +4688,16 @@ async function handleOpenCrate(request) {
     const userDataObj = typeof userData.data === 'string' ? JSON.parse(userData.data) : userData.data;
     const currentCredits = userDataObj?.credits || 0;
 
-    if (currentCredits < crate.creditCost) {
+    // ── Credits-Pass Rabatt anwenden (5%/15%/25%/35%) ──
+    const userLicensesCrate = Array.isArray(userDataObj?.licenses) ? userDataObj.licenses : [];
+    const creditsDiscountCrate = getCreditsSpendingDiscount(userLicensesCrate, new Date());
+    const baseCostCrate = crate.creditCost;
+    const finalCostCrate = Math.max(1, Math.ceil(baseCostCrate * (1 - creditsDiscountCrate)));
+
+    if (currentCredits < finalCostCrate) {
       return NextResponse.json({
         error: 'Nicht genug Credits',
-        required: crate.creditCost,
+        required: finalCostCrate,
         current: currentCredits
       }, { status: 400 });
     }
@@ -4685,7 +4711,8 @@ async function handleOpenCrate(request) {
         item_category: 'mystery_box',
         price: 0, // Kosten in Credits
         status: 'pending',
-        initiated_from: 'website'
+        initiated_from: 'website',
+        metadata: { creditCost: finalCostCrate, baseCreditCost: baseCostCrate, creditsDiscount: creditsDiscountCrate }
       })
       .select()
       .single();
@@ -4697,11 +4724,15 @@ async function handleOpenCrate(request) {
 
     return NextResponse.json({
       success: true,
-      message: `${crate.name} wird geöffnet...`,
+      message: creditsDiscountCrate > 0
+        ? `${crate.name} wird geöffnet... (${Math.round(creditsDiscountCrate * 100)}% Credits-Pass Rabatt)`
+        : `${crate.name} wird geöffnet...`,
       purchase: {
         id: purchase.id,
         crate: crate.name,
-        creditCost: crate.creditCost,
+        creditCost: finalCostCrate,
+        baseCreditCost: baseCostCrate,
+        creditsDiscount: creditsDiscountCrate,
         status: 'pending'
       }
     });
