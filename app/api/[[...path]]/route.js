@@ -5033,7 +5033,7 @@ async function handleLicenseAction(request) {
     }
 
     const { licenseId, action } = await request.json();
-    const ALLOWED = ['enable_autorenew', 'disable_autorenew', 'cancel'];
+    const ALLOWED = ['enable_autorenew', 'disable_autorenew', 'cancel', 'expire'];
     if (!licenseId || !ALLOWED.includes(action)) {
       return NextResponse.json({ error: 'Ungültige Parameter' }, { status: 400 });
     }

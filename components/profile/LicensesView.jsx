@@ -58,6 +58,7 @@ const ITEM_ICON = {
 // Action → User-freundlicher Text
 const ACTION_LABEL = {
   cancel:             { title: 'Lizenz wird gekündigt …',      sub: 'Der Discord-Bot übernimmt die Änderung gleich.' },
+  expire:             { title: 'Pass wird beendet …',          sub: 'Der Pass läuft jetzt ab.' },
   disable_autorenew:  { title: 'Auto-Verlängerung deaktivieren …', sub: 'Bitte einen kurzen Moment Geduld.' },
   enable_autorenew:   { title: 'Auto-Verlängerung aktivieren …',   sub: 'Bitte einen kurzen Moment Geduld.' }
 };
@@ -128,6 +129,13 @@ export default function LicensesView({ userData, refreshUserData }) {
       const autoRenewSupported = item?.autoRenewable !== false;
       const hasExpiry = l.expiresAt && l.expiresAt > 0;
       const notExpired = hasExpiry && l.expiresAt > now;
+      
+      // Credits-Pässe IMMER anzeigen (auch abgelaufen), damit man sieht dass Free Pass schon genutzt wurde
+      const isCreditsPass = l.id && l.id.startsWith('credits_') && l.id.includes('_pass');
+      if (isCreditsPass) {
+        return autoRenewSupported && hasExpiry; // Auch abgelaufene anzeigen
+      }
+      
       return autoRenewSupported && hasExpiry && notExpired;
     });
   }, [licenses]);
@@ -287,6 +295,11 @@ export default function LicensesView({ userData, refreshUserData }) {
     await submitLicenseAction(license.id, 'cancel');
     setConfirmCancel(null);
   };
+  
+  const expireLicense = async (license) => {
+    // Für Free Pass: expiresAt auf 0 setzen (nicht löschen!)
+    await submitLicenseAction(license.id, 'expire');
+  };
 
   // ──────────────────────────────────────────────────────────────
   // Render
@@ -426,16 +439,36 @@ export default function LicensesView({ userData, refreshUserData }) {
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-3 border-t border-white/[0.06]">
-                  {!isCanceled ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setConfirmCancel({ license, item: { name: displayName, emoji: item?.emoji, category, ItemIcon } })}
-                      disabled={isProcessing || isLocked}
-                      className="flex-1 rounded-xl border-red-500/20 text-red-300 hover:bg-red-500/10 hover:text-red-200 hover:border-red-500/40 disabled:opacity-40"
-                    >
-                      {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Ban className="w-4 h-4 mr-1.5" /> Jetzt kündigen</>}
-                    </Button>
+                  {!isCanceled && !isExpired ? (
+                    <>
+                      {/* Free Pass: Ablaufen lassen (expiresAt = 0) */}
+                      {license.id === 'credits_free_pass' ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => expireLicense(license)}
+                          disabled={isProcessing || isLocked}
+                          className="flex-1 rounded-xl border-orange-500/20 text-orange-300 hover:bg-orange-500/10 hover:text-orange-200 hover:border-orange-500/40 disabled:opacity-40"
+                        >
+                          {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Ban className="w-4 h-4 mr-1.5" /> Jetzt beenden</>}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setConfirmCancel({ license, item: { name: displayName, emoji: item?.emoji, category, ItemIcon } })}
+                          disabled={isProcessing || isLocked}
+                          className="flex-1 rounded-xl border-red-500/20 text-red-300 hover:bg-red-500/10 hover:text-red-200 hover:border-red-500/40 disabled:opacity-40"
+                        >
+                          {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Ban className="w-4 h-4 mr-1.5" /> Jetzt kündigen</>}
+                        </Button>
+                      )}
+                    </>
+                  ) : isExpired ? (
+                    <div className="flex-1 text-[11px] text-red-300 flex items-center gap-1.5 justify-center py-2 bg-red-500/5 rounded-lg border border-red-500/10">
+                      <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>Abgelaufen am {formatDate(license.expiresAt)}</span>
+                    </div>
                   ) : (
                     <div className="flex-1 text-[11px] text-orange-300 flex items-center gap-1.5 justify-center py-2 bg-orange-500/5 rounded-lg border border-orange-500/10">
                       <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
