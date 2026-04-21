@@ -1813,59 +1813,8 @@ export function ShopView({ user, userData, onRefresh }) {
                   )}
                 </div>
                 
-                {/* Credits-Pass Vorteile Badge-Style */}
-                {isCreditsPass && item.metadata && (
-                  <div className="mb-3 space-y-2 relative z-10">
-                    <div className="grid grid-cols-2 gap-2">
-                      {/* Rabatt */}
-                      {item.metadata.creditsSpendingDiscount > 0 && (
-                        <div className="flex items-center gap-1.5 bg-purple-500/15 border border-purple-500/30 rounded-lg px-2 py-1.5">
-                          <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                          <div className="flex flex-col">
-                            <span className="text-[10px] text-purple-300/70 leading-none">Rabatt</span>
-                            <span className="text-xs font-bold text-purple-300">{Math.round(item.metadata.creditsSpendingDiscount * 100)}%</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Monatliche Credits */}
-                      {item.metadata.monthlyCredits > 0 && (
-                        <div className="flex items-center gap-1.5 bg-blue-500/15 border border-blue-500/30 rounded-lg px-2 py-1.5">
-                          <Coins className="w-3.5 h-3.5 text-blue-400" />
-                          <div className="flex flex-col">
-                            <span className="text-[10px] text-blue-300/70 leading-none">Pro Monat</span>
-                            <span className="text-xs font-bold text-blue-300">{item.metadata.monthlyCredits}</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Bonus Credits beim Kauf */}
-                      {item.metadata.bonusCreditsOnPurchase > 0 && (
-                        <div className="flex items-center gap-1.5 bg-green-500/15 border border-green-500/30 rounded-lg px-2 py-1.5">
-                          <Gift className="w-3.5 h-3.5 text-green-400" />
-                          <div className="flex flex-col">
-                            <span className="text-[10px] text-green-300/70 leading-none">Bonus</span>
-                            <span className="text-xs font-bold text-green-300">+{item.metadata.bonusCreditsOnPurchase}</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Kauf-Bonus */}
-                      {item.metadata.creditsPurchaseBonus > 0 && (
-                        <div className="flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 rounded-lg px-2 py-1.5">
-                          <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
-                          <div className="flex flex-col">
-                            <span className="text-[10px] text-amber-300/70 leading-none">Kauf-Bonus</span>
-                            <span className="text-xs font-bold text-amber-300">+{Math.round(item.metadata.creditsPurchaseBonus * 100)}%</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Normale Beschreibung für nicht-Credits-Items */}
-                {!isCreditsPass && item.description && (
+                {/* Normale Beschreibung für alle Items */}
+                {item.description && (
                   <div className="text-sm text-white/50 mb-3 relative z-10">
                     {item.description.includes('\n') ? (
                       <div className="space-y-1">
