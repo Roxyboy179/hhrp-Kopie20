@@ -128,14 +128,16 @@ export default function LicensesView({ userData, refreshUserData }) {
       const item = SHOP_ITEMS[l.id];
       const autoRenewSupported = item?.autoRenewable !== false;
       const hasExpiry = l.expiresAt && l.expiresAt > 0;
-      const notExpired = hasExpiry && l.expiresAt > now;
       
       // Credits-Pässe IMMER anzeigen (auch abgelaufen), damit man sieht dass Free Pass schon genutzt wurde
       const isCreditsPass = l.id && l.id.startsWith('credits_') && l.id.includes('_pass');
       if (isCreditsPass) {
-        return autoRenewSupported && hasExpiry; // Auch abgelaufene anzeigen
+        // Credits-Pass muss nur autoRenewable sein, egal ob abgelaufen
+        return autoRenewSupported;
       }
       
+      // Andere Lizenzen: nur anzeigen wenn nicht abgelaufen
+      const notExpired = hasExpiry && l.expiresAt > now;
       return autoRenewSupported && hasExpiry && notExpired;
     });
   }, [licenses]);
