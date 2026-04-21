@@ -805,3 +805,248 @@ input, textarea, select, button, a, [role="button"] {
 .button-hover:active:not(:disabled) {
   transform: translateY(0);
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   🎨 ERWEITERTE UI-EFFEKTE (togglebar über Einstellungen)
+   Alle Klassen werden am Root-Wrapper gesetzt (hhrp-fx-*)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ---- 1. Shimmer-Skeletons (Facebook/LinkedIn-Stil) ---- */
+.hhrp-fx-shimmer .animate-pulse {
+  position: relative;
+  overflow: hidden;
+}
+.hhrp-fx-shimmer .animate-pulse::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    transparent 100%
+  );
+  animation: hhrp-shimmer-sweep 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes hhrp-shimmer-sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%);  }
+}
+
+/* ---- 2. Hover-Glow auf Cards ---- */
+.hhrp-fx-hover-glow .glass {
+  transition: box-shadow 0.4s ease, border-color 0.4s ease, transform 0.3s ease;
+}
+.hhrp-fx-hover-glow .glass:hover {
+  box-shadow: 0 0 0 1px rgba(var(--theme-accent-rgb, 255,255,255), 0.12),
+              0 10px 40px -10px rgba(var(--theme-accent-rgb, 255,255,255), 0.18),
+              inset 0 0 24px rgba(var(--theme-accent-rgb, 255,255,255), 0.025);
+  border-color: rgba(var(--theme-accent-rgb, 255,255,255), 0.18) !important;
+}
+
+/* ---- 3. Animierte Zahlen (Counter-Up Fade-In) ---- */
+.hhrp-fx-anim-numbers .animated-number {
+  animation: hhrp-count-pop 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes hhrp-count-pop {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+/* ---- 4. Gradient-Borders für Premium/Pass-Items ---- */
+.hhrp-fx-gradient-borders .premium-glow {
+  position: relative;
+  border-radius: 1rem;
+}
+.hhrp-fx-gradient-borders .premium-glow::before {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    #f59e0b, #ec4899, #8b5cf6, #3b82f6, #f59e0b
+  );
+  background-size: 300% 300%;
+  animation: hhrp-grad-pan 6s ease infinite;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+  z-index: 1;
+}
+@keyframes hhrp-grad-pan {
+  0%, 100% { background-position:   0% 50%; }
+  50%      { background-position: 100% 50%; }
+}
+
+/* ---- 5. Glassmorphism-Stärken ---- */
+.hhrp-fx-glass-low .glass {
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+}
+.hhrp-fx-glass-high .glass {
+  backdrop-filter: blur(32px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(160%) !important;
+  background: rgba(var(--theme-accent-rgb, 255,255,255), 0.035) !important;
+  border-color: rgba(var(--theme-accent-rgb, 255,255,255), 0.09) !important;
+}
+
+/* ---- 6. Card-Shine beim Hover ---- */
+.hhrp-fx-card-shine .glass {
+  position: relative;
+  overflow: hidden;
+}
+.hhrp-fx-card-shine .glass::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -75%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.07) 50%,
+    transparent 100%
+  );
+  transform: translateX(0) skewX(-20deg);
+  transition: transform 0.8s ease;
+  pointer-events: none;
+  z-index: 3;
+}
+.hhrp-fx-card-shine .glass:hover::before {
+  transform: translateX(400%) skewX(-20deg);
+}
+
+/* ---- 7. Parallax (subtile Tiefe beim Scrollen) ---- */
+.hhrp-fx-parallax .parallax-layer {
+  will-change: transform;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---- 8. Bot-Status Pulse (grüner Punkt pulsiert) ---- */
+.hhrp-fx-bot-pulse .bot-status-dot.online {
+  position: relative;
+}
+.hhrp-fx-bot-pulse .bot-status-dot.online::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+  background: rgba(34, 197, 94, 0.5);
+  animation: hhrp-bot-pulse 1.8s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes hhrp-bot-pulse {
+  0%   { transform: scale(0.9); opacity: 0.7; }
+  70%  { transform: scale(2.1); opacity: 0;   }
+  100% { transform: scale(2.1); opacity: 0;   }
+}
+
+/* ---- 9. Ripple-Effekt auf Buttons ---- */
+.hhrp-fx-ripple button:not(:disabled),
+.hhrp-fx-ripple [role="button"]:not(:disabled) {
+  position: relative;
+  overflow: hidden;
+}
+.hhrp-fx-ripple button:not(:disabled)::after,
+.hhrp-fx-ripple [role="button"]:not(:disabled)::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 0; height: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.25);
+  transform: translate(-50%,-50%);
+  transition: width 0.5s ease-out, height 0.5s ease-out, opacity 0.6s;
+  opacity: 0;
+  pointer-events: none;
+}
+.hhrp-fx-ripple button:not(:disabled):active::after,
+.hhrp-fx-ripple [role="button"]:not(:disabled):active::after {
+  width: 300px; height: 300px;
+  opacity: 1;
+  transition: 0s;
+}
+
+/* ---- 10. Tab-Slide Animation beim Wechsel ---- */
+.hhrp-fx-tab-slide .tab-content {
+  animation: hhrp-tab-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes hhrp-tab-slide-in {
+  0%   { opacity: 0; transform: translateX(12px); }
+  100% { opacity: 1; transform: translateX(0);    }
+}
+
+/* ---- 11. Smooth Progress-Bars ---- */
+.hhrp-fx-progress-smooth .progress-animated {
+  transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* ---- 12. Success-Animation (Checkmark Bounce) ---- */
+.hhrp-fx-success-anim .success-badge {
+  animation: hhrp-success-bounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes hhrp-success-bounce {
+  0%   { transform: scale(0)    rotate(-180deg); opacity: 0; }
+  60%  { transform: scale(1.15) rotate(10deg);   opacity: 1; }
+  100% { transform: scale(1)    rotate(0);       opacity: 1; }
+}
+
+/* ---- 13. Top-Loader (NProgress-Style Bar) ---- */
+.hhrp-top-loader {
+  position: fixed;
+  top: 0; left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6, #ec4899);
+  background-size: 200% 100%;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.6);
+  z-index: 9999;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+  animation: hhrp-grad-pan 2s linear infinite;
+}
+
+/* ---- 14. Empty State Illustration Float ---- */
+.hhrp-empty-icon {
+  animation: hhrp-empty-float 3s ease-in-out infinite;
+}
+@keyframes hhrp-empty-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
+}
+
+/* ---- 15. Error-Shake (bei Validierungsfehlern) ---- */
+.hhrp-fx-error-shake .input-error {
+  animation: hhrp-shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+@keyframes hhrp-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(6px);  }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(4px);  }
+}
+
+/* ---- Einstellungen-Tab: Sidebar-Nav ---- */
+.settings-sidebar-item {
+  transition: all 0.25s ease;
+}
+.settings-sidebar-item:hover {
+  transform: translateX(2px);
+}
+.settings-sidebar-item.active {
+  background: rgba(var(--theme-accent-rgb, 255,255,255), 0.08) !important;
+  border-left-color: rgb(var(--theme-accent-rgb, 255,255,255)) !important;
+}
+
+/* ---- Toggle-Switch Polish (glow beim Aktivieren) ---- */
+.hhrp-toggle-switch {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.hhrp-toggle-switch.active {
+  box-shadow: 0 0 12px currentColor;
+}

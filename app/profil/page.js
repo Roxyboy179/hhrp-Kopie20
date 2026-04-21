@@ -21,7 +21,9 @@ import {
   CircleDollarSign, BellRing, AppWindow, Settings, ImagePlus, 
   Trash2, Upload, BellOff, ZoomIn, ZoomOut, PieChart, BarChart3,
   Lightbulb, Filter, Search, ArrowLeftRight, Target, Calculator,
-  TrendingUpIcon, BarChart2, Send, XCircle, Infinity, Car, Coins
+  TrendingUpIcon, BarChart2, Send, XCircle, Infinity, Car, Coins,
+  ChevronDown, ChevronRight, Palette, Wand2, Activity, Eye, EyeOff,
+  MousePointer2, Layers, Gauge
 } from 'lucide-react';
 import { LicenseBadge } from '@/components/profile/LicenseBadge';
 import { LevelProgress } from '@/components/profile/LevelProgress';
@@ -43,6 +45,7 @@ import { CharacterManagementView } from '@/components/profile/CharacterManagemen
 import HamburgHorizonTab from '@/components/profile/HamburgHorizonTab';
 import LicensesView from '@/components/profile/LicensesView';
 import ProfileTour, { TourStartButton, hasCompletedProfileTour } from '@/components/profile/ProfileTour';
+import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
 
 function SkeletonCard({ className = "" }) {
   return (
@@ -793,7 +796,7 @@ function BankCard({ card, userName, userData }) {
             <div>
               <p className="text-xs text-white/50 mb-1">Gesamt-Guthaben</p>
               <p className="text-3xl font-bold text-white tracking-tight">
-                {totalBalance.toLocaleString('de-DE')}€
+                <AnimatedNumber value={totalBalance} />€
               </p>
             </div>
             
@@ -801,15 +804,15 @@ function BankCard({ card, userName, userData }) {
             <div className="flex items-center gap-4 text-xs flex-wrap">
               <div className="flex items-center gap-1.5">
                 <Wallet className="w-3 h-3 text-white/40" />
-                <span className="text-white/60">{bankBalance.toLocaleString('de-DE')}€</span>
+                <span className="text-white/60"><AnimatedNumber value={bankBalance} duration={700} />€</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <DollarSign className="w-3 h-3 text-white/40" />
-                <span className="text-white/60">{cashBalance.toLocaleString('de-DE')}€</span>
+                <span className="text-white/60"><AnimatedNumber value={cashBalance} duration={700} />€</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <PiggyBank className="w-3 h-3 text-white/40" />
-                <span className="text-white/60">{savingsBalance.toLocaleString('de-DE')}€</span>
+                <span className="text-white/60"><AnimatedNumber value={savingsBalance} duration={700} />€</span>
               </div>
             </div>
           </div>
@@ -940,6 +943,23 @@ export default function ProfilPage() {
   const [schnellstart, setSchnellstart] = useState(false);
   const [autoSync, setAutoSync] = useState(true);
   const [offlineModus, setOfflineModus] = useState(false);
+  // ────────── Erweiterte UI-Effekte ──────────
+  const [fxShimmer, setFxShimmer]             = useState(true);
+  const [fxHoverGlow, setFxHoverGlow]         = useState(true);
+  const [fxAnimNumbers, setFxAnimNumbers]     = useState(true);
+  const [fxGradBorders, setFxGradBorders]     = useState(true);
+  const [fxGlassStrength, setFxGlassStrength] = useState('medium');
+  const [fxCardShine, setFxCardShine]         = useState(true);
+  const [fxParallax, setFxParallax]           = useState(false);
+  const [fxBotPulse, setFxBotPulse]           = useState(true);
+  const [fxRipple, setFxRipple]               = useState(false);
+  const [fxTabSlide, setFxTabSlide]           = useState(true);
+  const [fxProgressSmooth, setFxProgressSmooth] = useState(true);
+  const [fxSuccessAnim, setFxSuccessAnim]     = useState(true);
+  const [fxTopLoader, setFxTopLoader]         = useState(true);
+  // Einstellungen-UI-States
+  const [settingsSection, setSettingsSection] = useState('appearance');
+  const [settingsSearch, setSettingsSearch]   = useState('');
   const [bewerbungen, setBewerbungen] = useState([]);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(null);
@@ -1117,6 +1137,26 @@ export default function ProfilPage() {
     // Offline-Modus (PWA)
     const savedOfflineModus = localStorage.getItem('hhrp-offline');
     if (savedOfflineModus === 'true') setOfflineModus(true);
+
+    // Erweiterte UI-Effekte laden (mit Defaults)
+    const loadFxBool = (k, def) => {
+      const v = localStorage.getItem(k);
+      return v === null ? def : v === 'true';
+    };
+    setFxShimmer(loadFxBool('hhrp-fx-shimmer', true));
+    setFxHoverGlow(loadFxBool('hhrp-fx-hover-glow', true));
+    setFxAnimNumbers(loadFxBool('hhrp-fx-anim-numbers', true));
+    setFxGradBorders(loadFxBool('hhrp-fx-grad-borders', true));
+    const savedGlass = localStorage.getItem('hhrp-fx-glass-strength');
+    if (savedGlass) setFxGlassStrength(savedGlass);
+    setFxCardShine(loadFxBool('hhrp-fx-card-shine', true));
+    setFxParallax(loadFxBool('hhrp-fx-parallax', false));
+    setFxBotPulse(loadFxBool('hhrp-fx-bot-pulse', true));
+    setFxRipple(loadFxBool('hhrp-fx-ripple', false));
+    setFxTabSlide(loadFxBool('hhrp-fx-tab-slide', true));
+    setFxProgressSmooth(loadFxBool('hhrp-fx-progress-smooth', true));
+    setFxSuccessAnim(loadFxBool('hhrp-fx-success-anim', true));
+    setFxTopLoader(loadFxBool('hhrp-fx-top-loader', true));
 
     // Push Notification Status
     if ('Notification' in window && 'serviceWorker' in navigator) {
@@ -3791,9 +3831,59 @@ export default function ProfilPage() {
 
         {/* EINSTELLUNGEN TAB */}
         {activeTab === 'settings' && (
-          <div className="space-y-6">
+          <div className="space-y-6 tab-content">
 
-            {/* === DARSTELLUNG === */}
+            {/* ═══════════════════════════════════════════════════════════
+                SETTINGS HEADER - Sidebar-Nav + Suche (Sticky)
+                ═══════════════════════════════════════════════════════════ */}
+            <div className="glass rounded-2xl p-4 border border-white/[0.08] sticky top-16 z-30 backdrop-blur-xl">
+              <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+                {/* Suche */}
+                <div className="relative flex-1 min-w-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                  <input
+                    type="text"
+                    placeholder="Einstellung suchen..."
+                    value={settingsSearch}
+                    onChange={(e) => setSettingsSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-white/[0.04] border border-white/10 rounded-lg text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/25"
+                  />
+                </div>
+                {/* Sektion-Tabs */}
+                <div className="flex gap-1.5 overflow-x-auto scrollbar-hide snap-x">
+                  {[
+                    { id: 'appearance',  label: 'Darstellung', icon: Palette,    color: 'cyan' },
+                    { id: 'effects',     label: 'Effekte',     icon: Wand2,      color: 'purple' },
+                    { id: 'feedback',    label: 'Feedback',    icon: Bell,       color: 'pink' },
+                    { id: 'background',  label: 'Hintergrund', icon: ImagePlus,  color: 'indigo' },
+                    ...(isPWA ? [{ id: 'pwa', label: 'PWA', icon: AppWindow, color: 'blue' }] : []),
+                    { id: 'about',       label: 'Über',        icon: Globe,      color: 'gray' },
+                  ].map(s => {
+                    const Icon = s.icon;
+                    const isActive = settingsSection === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => setSettingsSection(s.id)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap snap-center flex-shrink-0 transition-all ${isActive ? 'bg-white/15 text-white shadow-md' : 'bg-white/[0.02] text-white/50 hover:bg-white/[0.06] hover:text-white/80'}`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Filter helper */}
+            {(() => { 
+              // Globale Filter-Hilfe: wenn Suche aktiv, zeige nur Sektionen mit Match
+              return null; 
+            })()}
+
+            {/* === DARSTELLUNG (Grundlagen) === */}
+            {(settingsSection === 'appearance' || settingsSearch) && (
             <div data-tour-card="Darstellung|Personalisiere das Aussehen: Kompaktmodus, Textgröße, Benachrichtigungs-Stil und weitere visuelle Optionen." className="glass rounded-2xl p-6 border border-white/[0.08]">
               <div className="flex items-center gap-3 mb-6">
                 <Monitor className="w-6 h-6 text-cyan-400" />
@@ -3957,8 +4047,190 @@ export default function ProfilPage() {
               </div>
             </div>
 
+            )}
+            {/* ENDE Darstellung */}
+
+            {/* ═══════════════════════════════════════════════════════════
+                EFFEKTE – Visuelle Feinheiten (NEU)
+                ═══════════════════════════════════════════════════════════ */}
+            {(settingsSection === 'effects' || settingsSearch) && (() => {
+              // Wiederverwendbarer Toggle
+              const Toggle = ({ on, color = 'purple', icon: Icon, title, desc, onToggle, search }) => {
+                if (search && !(`${title} ${desc}`.toLowerCase().includes(search.toLowerCase()))) return null;
+                return (
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.05] transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-lg ${on ? `bg-${color}-500/15` : 'bg-white/[0.06]'} flex items-center justify-center transition-all`}>
+                        <Icon className={`w-5 h-5 ${on ? `text-${color}-400` : 'text-white/30'}`} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-white text-sm">{title}</p>
+                        <p className="text-xs text-white/40">{desc}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={onToggle}
+                      className={`relative w-14 h-7 rounded-full transition-all duration-300 ${on ? `bg-${color}-500` : 'bg-white/10'} cursor-pointer`}
+                    >
+                      <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-all duration-300 ${on ? 'left-7' : 'left-0.5'}`} />
+                    </button>
+                  </div>
+                );
+              };
+              const fx = (key, val, stateSetter) => () => {
+                stateSetter(val);
+                localStorage.setItem(key, val.toString());
+                window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { [key.replace('hhrp-fx-', 'fx').replace(/-([a-z])/g, (m, c) => c.toUpperCase()).replace('fx', 'fx')]: val } }));
+              };
+              return (
+                <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
+                        <Wand2 className="w-6 h-6 text-purple-400" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold text-white">Visuelle Effekte</h2>
+                        <p className="text-xs text-white/35">Micro-Animationen, Glow & Card-Effekte</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        // Reset nur Effekte auf Defaults
+                        const defaults = {
+                          'hhrp-fx-shimmer': 'true', 'hhrp-fx-hover-glow': 'true',
+                          'hhrp-fx-anim-numbers': 'true', 'hhrp-fx-grad-borders': 'true',
+                          'hhrp-fx-glass-strength': 'medium', 'hhrp-fx-card-shine': 'true',
+                          'hhrp-fx-parallax': 'false', 'hhrp-fx-bot-pulse': 'true',
+                          'hhrp-fx-ripple': 'false', 'hhrp-fx-tab-slide': 'true',
+                          'hhrp-fx-progress-smooth': 'true', 'hhrp-fx-success-anim': 'true',
+                          'hhrp-fx-top-loader': 'true'
+                        };
+                        Object.entries(defaults).forEach(([k, v]) => localStorage.setItem(k, v));
+                        setFxShimmer(true); setFxHoverGlow(true); setFxAnimNumbers(true);
+                        setFxGradBorders(true); setFxGlassStrength('medium'); setFxCardShine(true);
+                        setFxParallax(false); setFxBotPulse(true); setFxRipple(false);
+                        setFxTabSlide(true); setFxProgressSmooth(true); setFxSuccessAnim(true);
+                        setFxTopLoader(true);
+                        window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: {
+                          fxShimmer: true, fxHoverGlow: true, fxAnimNumbers: true, fxGradBorders: true,
+                          fxGlassStrength: 'medium', fxCardShine: true, fxParallax: false, fxBotPulse: true,
+                          fxRipple: false, fxTabSlide: true, fxProgressSmooth: true, fxSuccessAnim: true,
+                          fxTopLoader: true
+                        }}));
+                        toast.success('Effekte zurückgesetzt');
+                      }}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-white/60 hover:text-white border border-white/10 transition-all"
+                    >
+                      Standard
+                    </button>
+                  </div>
+
+                  {/* Kategorie: Animationen */}
+                  <div className="mb-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-px flex-1 bg-gradient-to-r from-purple-500/30 to-transparent" />
+                      <span className="text-[10px] font-bold text-purple-400/70 uppercase tracking-widest">Animationen</span>
+                      <div className="h-px flex-1 bg-gradient-to-l from-purple-500/30 to-transparent" />
+                    </div>
+                    <div className="space-y-2.5">
+                      <Toggle on={fxShimmer} color="purple" icon={Sparkles} title="Shimmer-Skeletons" desc="Schimmernder Effekt auf Ladeplatzhaltern" search={settingsSearch}
+                        onToggle={() => { const v = !fxShimmer; setFxShimmer(v); localStorage.setItem('hhrp-fx-shimmer', v); window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { fxShimmer: v }})); toast.success(v ? 'Shimmer aktiviert' : 'Shimmer deaktiviert'); }} />
+                      <Toggle on={fxAnimNumbers} color="blue" icon={Activity} title="Animierte Zahlen" desc="Counter-Up-Effekt bei Beträgen & Statistiken" search={settingsSearch}
+                        onToggle={() => { const v = !fxAnimNumbers; setFxAnimNumbers(v); localStorage.setItem('hhrp-fx-anim-numbers', v); window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { fxAnimNumbers: v }})); toast.success(v ? 'Animierte Zahlen an' : 'Animierte Zahlen aus'); }} />
+                      <Toggle on={fxTabSlide} color="cyan" icon={ArrowLeftRight} title="Tab-Slide" desc="Sanfter Slide-In bei Tab-Wechseln" search={settingsSearch}
+                        onToggle={() => { const v = !fxTabSlide; setFxTabSlide(v); localStorage.setItem('hhrp-fx-tab-slide', v); window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { fxTabSlide: v }})); toast.success(v ? 'Tab-Slide aktiviert' : 'Tab-Slide deaktiviert'); }} />
+                      <Toggle on={fxProgressSmooth} color="green" icon={Gauge} title="Smooth Progress-Bars" desc="Fortschrittsbalken füllen sich sanft" search={settingsSearch}
+                        onToggle={() => { const v = !fxProgressSmooth; setFxProgressSmooth(v); localStorage.setItem('hhrp-fx-progress-smooth', v); window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { fxProgressSmooth: v }})); toast.success(v ? 'Smooth Progress an' : 'Smooth Progress aus'); }} />
+                      <Toggle on={fxSuccessAnim} color="emerald" icon={CheckCircle} title="Erfolgs-Animation" desc="Checkmark-Bounce nach erfolgreichen Aktionen" search={settingsSearch}
+                        onToggle={() => { const v = !fxSuccessAnim; setFxSuccessAnim(v); localStorage.setItem('hhrp-fx-success-anim', v); window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { fxSuccessAnim: v }})); toast.success(v ? 'Success-Anim aktiviert' : 'Success-Anim deaktiviert'); }} />
+                    </div>
+                  </div>
+
+                  {/* Kategorie: Card & Glow */}
+                  <div className="mb-5">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-px flex-1 bg-gradient-to-r from-pink-500/30 to-transparent" />
+                      <span className="text-[10px] font-bold text-pink-400/70 uppercase tracking-widest">Cards & Glow</span>
+                      <div className="h-px flex-1 bg-gradient-to-l from-pink-500/30 to-transparent" />
+                    </div>
+                    <div className="space-y-2.5">
+                      <Toggle on={fxHoverGlow} color="pink" icon={Sparkles} title="Hover-Glow" desc="Cards leuchten dezent beim Überfahren" search={settingsSearch}
+                        onToggle={() => { const v = !fxHoverGlow; setFxHoverGlow(v); localStorage.setItem('hhrp-fx-hover-glow', v); window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { fxHoverGlow: v }})); toast.success(v ? 'Hover-Glow an' : 'Hover-Glow aus'); }} />
+                      <Toggle on={fxCardShine} color="yellow" icon={Zap} title="Card-Shine" desc="Glanz-Effekt beim Hover über Cards" search={settingsSearch}
+                        onToggle={() => { const v = !fxCardShine; setFxCardShine(v); localStorage.setItem('hhrp-fx-card-shine', v); window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { fxCardShine: v }})); toast.success(v ? 'Card-Shine an' : 'Card-Shine aus'); }} />
+                      <Toggle on={fxGradBorders} color="orange" icon={Crown} title="Premium-Gradient-Borders" desc="Animierter Rainbow-Border auf Premium-Items" search={settingsSearch}
+                        onToggle={() => { const v = !fxGradBorders; setFxGradBorders(v); localStorage.setItem('hhrp-fx-grad-borders', v); window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { fxGradBorders: v }})); toast.success(v ? 'Gradient-Borders an' : 'Gradient-Borders aus'); }} />
+
+                      {/* Glassmorphism Stärke */}
+                      {(!settingsSearch || 'glass glassmorphism stärke'.toLowerCase().includes(settingsSearch.toLowerCase())) && (
+                      <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 rounded-lg bg-indigo-500/15 flex items-center justify-center">
+                            <Layers className="w-5 h-5 text-indigo-400" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-white text-sm">Glassmorphism-Stärke</p>
+                            <p className="text-xs text-white/40">Intensität des Glas-Effekts</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { id: 'low',    label: 'Leicht', desc: 'Minimal' },
+                            { id: 'medium', label: 'Mittel', desc: 'Standard' },
+                            { id: 'high',   label: 'Stark',  desc: 'Maximum' },
+                          ].map(g => (
+                            <button
+                              key={g.id}
+                              onClick={() => {
+                                setFxGlassStrength(g.id);
+                                localStorage.setItem('hhrp-fx-glass-strength', g.id);
+                                window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { fxGlassStrength: g.id }}));
+                                toast.success(`Glas: ${g.label}`);
+                              }}
+                              className={`p-2.5 rounded-lg border transition-all ${fxGlassStrength === g.id ? 'border-indigo-500/50 bg-indigo-500/10 text-white' : 'border-white/10 bg-white/[0.02] text-white/60 hover:bg-white/[0.05]'}`}
+                            >
+                              <p className="text-xs font-medium">{g.label}</p>
+                              <p className="text-[10px] text-white/30 mt-0.5">{g.desc}</p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Kategorie: Interaktion */}
+                  <div className="mb-2">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-px flex-1 bg-gradient-to-r from-blue-500/30 to-transparent" />
+                      <span className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest">Interaktion & Status</span>
+                      <div className="h-px flex-1 bg-gradient-to-l from-blue-500/30 to-transparent" />
+                    </div>
+                    <div className="space-y-2.5">
+                      <Toggle on={fxRipple} color="blue" icon={MousePointer2} title="Ripple-Effekt" desc="Wellen-Effekt beim Klicken auf Buttons" search={settingsSearch}
+                        onToggle={() => { const v = !fxRipple; setFxRipple(v); localStorage.setItem('hhrp-fx-ripple', v); window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { fxRipple: v }})); toast.success(v ? 'Ripple aktiviert' : 'Ripple deaktiviert'); }} />
+                      <Toggle on={fxBotPulse} color="green" icon={Activity} title="Bot-Status Pulse" desc="Grüner Status-Dot pulsiert, wenn Bot online" search={settingsSearch}
+                        onToggle={() => { const v = !fxBotPulse; setFxBotPulse(v); localStorage.setItem('hhrp-fx-bot-pulse', v); window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { fxBotPulse: v }})); toast.success(v ? 'Bot-Pulse an' : 'Bot-Pulse aus'); }} />
+                      <Toggle on={fxParallax} color="violet" icon={Eye} title="Parallax-Effekt" desc="Subtile Tiefenwirkung beim Scrollen (experimentell)" search={settingsSearch}
+                        onToggle={() => { const v = !fxParallax; setFxParallax(v); localStorage.setItem('hhrp-fx-parallax', v); window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { fxParallax: v }})); toast.success(v ? 'Parallax aktiviert' : 'Parallax deaktiviert'); }} />
+                      <Toggle on={fxTopLoader} color="cyan" icon={TrendingUp} title="Top-Progress-Loader" desc="Farbiger Balken oben bei Seitenwechseln" search={settingsSearch}
+                        onToggle={() => { const v = !fxTopLoader; setFxTopLoader(v); localStorage.setItem('hhrp-fx-top-loader', v); window.dispatchEvent(new CustomEvent('hhrp-settings-change', { detail: { fxTopLoader: v }})); toast.success(v ? 'Top-Loader an' : 'Top-Loader aus'); }} />
+                    </div>
+                  </div>
+
+                  <div className="mt-4 p-3 rounded-lg bg-blue-500/5 border border-blue-500/10">
+                    <p className="text-xs text-blue-300/70 leading-relaxed flex items-start gap-2">
+                      <Lightbulb className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <span>Tipp: Aktiviere <b>Datensparmodus</b> oder deaktiviere <b>Animationen</b> (Darstellung), um alle Effekte auf einmal auszuschalten.</span>
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* === HINTERGRUNDBILD === */}
-            {(() => {
+            {(settingsSection === 'background' || settingsSearch) && (() => {
               const licenses = (userData?.licenses || [])
                 .filter(l => l)
                       .map(l => typeof l === 'string' ? l : (l.name || l.id))
@@ -4179,7 +4451,7 @@ export default function ProfilPage() {
             })()}
 
             {/* === PWA EINSTELLUNGEN === */}
-            {isPWA && (
+            {(settingsSection === 'pwa' || settingsSearch) && isPWA && (
               <div data-tour-card="PWA-Einstellungen|Optimierungen für die App-Nutzung: Schnellstart, Offline-Modus, Datenspar-Modus und Push-Benachrichtigungen." className="glass rounded-2xl p-6 border border-white/[0.08]">
                 <div className="flex items-center gap-3 mb-5">
                   <AppWindow className="w-6 h-6 text-blue-400" />
@@ -4275,6 +4547,7 @@ export default function ProfilPage() {
             )}
 
             {/* === ÜBER === */}
+            {(settingsSection === 'about' || settingsSearch) && (
             <div data-tour-card="Über|Informationen zur App-Version, dem Modus (PWA/Browser) und Optionen zum Zurücksetzen deiner Einstellungen." className="glass rounded-2xl p-6 border border-white/[0.08]">
               <div className="flex items-center gap-3 mb-4">
                 <Globe className="w-6 h-6 text-white/40" />
@@ -4302,6 +4575,11 @@ export default function ProfilPage() {
                       localStorage.removeItem('hhrp-schnellstart');
                       localStorage.removeItem('hhrp-autosync');
                       localStorage.removeItem('hhrp-offline');
+                      // Effekte zurücksetzen
+                      ['hhrp-fx-shimmer','hhrp-fx-hover-glow','hhrp-fx-anim-numbers','hhrp-fx-grad-borders',
+                       'hhrp-fx-glass-strength','hhrp-fx-card-shine','hhrp-fx-parallax','hhrp-fx-bot-pulse',
+                       'hhrp-fx-ripple','hhrp-fx-tab-slide','hhrp-fx-progress-smooth','hhrp-fx-success-anim',
+                       'hhrp-fx-top-loader'].forEach(k => localStorage.removeItem(k));
                       setCustomBg(null);
                       setKompaktModus(false);
                       setNotificationStyle('normal');
@@ -4311,6 +4589,11 @@ export default function ProfilPage() {
                       setSchnellstart(false);
                       setAutoSync(true);
                       setOfflineModus(false);
+                      setFxShimmer(true); setFxHoverGlow(true); setFxAnimNumbers(true);
+                      setFxGradBorders(true); setFxGlassStrength('medium'); setFxCardShine(true);
+                      setFxParallax(false); setFxBotPulse(true); setFxRipple(false);
+                      setFxTabSlide(true); setFxProgressSmooth(true); setFxSuccessAnim(true);
+                      setFxTopLoader(true);
                       window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
                       window.dispatchEvent(new CustomEvent('hhrp-settings-change', { 
                         detail: { 
@@ -4321,7 +4604,11 @@ export default function ProfilPage() {
                           schnellstart: false,
                           autosync: true,
                           offline: false,
-                          notificationStyle: 'normal'
+                          notificationStyle: 'normal',
+                          fxShimmer: true, fxHoverGlow: true, fxAnimNumbers: true, fxGradBorders: true,
+                          fxGlassStrength: 'medium', fxCardShine: true, fxParallax: false,
+                          fxBotPulse: true, fxRipple: false, fxTabSlide: true, fxProgressSmooth: true,
+                          fxSuccessAnim: true, fxTopLoader: true
                         } 
                       }));
                       toast.success('Alle Einstellungen zurückgesetzt');
@@ -4333,6 +4620,8 @@ export default function ProfilPage() {
                 </div>
               </div>
             </div>
+            )}
+            {/* ENDE Über */}
 
           </div>
         )}

@@ -31,6 +31,20 @@ export default function RootClientLayout({ children }) {
   const [autoSync, setAutoSync] = useState(true);
   const [offlineModus, setOfflineModus] = useState(false);
   const [notificationStyle, setNotificationStyle] = useState('normal');
+  // Erweiterte UI-Effekte
+  const [fxShimmer, setFxShimmer]         = useState(true);
+  const [fxHoverGlow, setFxHoverGlow]     = useState(true);
+  const [fxAnimNumbers, setFxAnimNumbers] = useState(true);
+  const [fxGradBorders, setFxGradBorders] = useState(true);
+  const [fxGlassStrength, setFxGlassStrength] = useState('medium'); // low | medium | high
+  const [fxCardShine, setFxCardShine]     = useState(true);
+  const [fxParallax, setFxParallax]       = useState(false);
+  const [fxBotPulse, setFxBotPulse]       = useState(true);
+  const [fxRipple, setFxRipple]           = useState(false);
+  const [fxTabSlide, setFxTabSlide]       = useState(true);
+  const [fxProgressSmooth, setFxProgressSmooth] = useState(true);
+  const [fxSuccessAnim, setFxSuccessAnim] = useState(true);
+  const [fxTopLoader, setFxTopLoader]     = useState(true);
   const router = useRouter();
   const pathname = usePathname();
   const isProfilePage = pathname === '/profil';
@@ -187,6 +201,26 @@ export default function RootClientLayout({ children }) {
     const savedNotificationStyle = localStorage.getItem('hhrp-notification-style');
     if (savedNotificationStyle) setNotificationStyle(savedNotificationStyle);
 
+    // Erweiterte UI-Effekte laden
+    const loadBool = (k, def) => {
+      const v = localStorage.getItem(k);
+      return v === null ? def : v === 'true';
+    };
+    setFxShimmer(loadBool('hhrp-fx-shimmer', true));
+    setFxHoverGlow(loadBool('hhrp-fx-hover-glow', true));
+    setFxAnimNumbers(loadBool('hhrp-fx-anim-numbers', true));
+    setFxGradBorders(loadBool('hhrp-fx-grad-borders', true));
+    const savedGlass = localStorage.getItem('hhrp-fx-glass-strength');
+    if (savedGlass) setFxGlassStrength(savedGlass);
+    setFxCardShine(loadBool('hhrp-fx-card-shine', true));
+    setFxParallax(loadBool('hhrp-fx-parallax', false));
+    setFxBotPulse(loadBool('hhrp-fx-bot-pulse', true));
+    setFxRipple(loadBool('hhrp-fx-ripple', false));
+    setFxTabSlide(loadBool('hhrp-fx-tab-slide', true));
+    setFxProgressSmooth(loadBool('hhrp-fx-progress-smooth', true));
+    setFxSuccessAnim(loadBool('hhrp-fx-success-anim', true));
+    setFxTopLoader(loadBool('hhrp-fx-top-loader', true));
+
     // Auf Änderungen vom Profil-Einstellungen hören
     const handleBgChange = (e) => {
       setCustomBg(e.detail?.bg || null);
@@ -200,6 +234,20 @@ export default function RootClientLayout({ children }) {
       if (e.detail?.autosync !== undefined) setAutoSync(e.detail.autosync);
       if (e.detail?.offline !== undefined) setOfflineModus(e.detail.offline);
       if (e.detail?.notificationStyle !== undefined) setNotificationStyle(e.detail.notificationStyle);
+      // Erweiterte Effekte
+      if (e.detail?.fxShimmer       !== undefined) setFxShimmer(e.detail.fxShimmer);
+      if (e.detail?.fxHoverGlow     !== undefined) setFxHoverGlow(e.detail.fxHoverGlow);
+      if (e.detail?.fxAnimNumbers   !== undefined) setFxAnimNumbers(e.detail.fxAnimNumbers);
+      if (e.detail?.fxGradBorders   !== undefined) setFxGradBorders(e.detail.fxGradBorders);
+      if (e.detail?.fxGlassStrength !== undefined) setFxGlassStrength(e.detail.fxGlassStrength);
+      if (e.detail?.fxCardShine     !== undefined) setFxCardShine(e.detail.fxCardShine);
+      if (e.detail?.fxParallax      !== undefined) setFxParallax(e.detail.fxParallax);
+      if (e.detail?.fxBotPulse      !== undefined) setFxBotPulse(e.detail.fxBotPulse);
+      if (e.detail?.fxRipple        !== undefined) setFxRipple(e.detail.fxRipple);
+      if (e.detail?.fxTabSlide      !== undefined) setFxTabSlide(e.detail.fxTabSlide);
+      if (e.detail?.fxProgressSmooth!== undefined) setFxProgressSmooth(e.detail.fxProgressSmooth);
+      if (e.detail?.fxSuccessAnim   !== undefined) setFxSuccessAnim(e.detail.fxSuccessAnim);
+      if (e.detail?.fxTopLoader     !== undefined) setFxTopLoader(e.detail.fxTopLoader);
     };
     window.addEventListener('hhrp-bg-change', handleBgChange);
     window.addEventListener('hhrp-settings-change', handleSettingsChange);
@@ -228,6 +276,7 @@ export default function RootClientLayout({ children }) {
   return (
     <AuthProvider>
       <ThemeProvider>
+        {fxTopLoader && animationen && !datensparmodus && <TopProgressLoader pathname={pathname} />}
         {!splashDone && <SplashScreen onComplete={handleSplashComplete} />}
         
         {/* Loading Spinner nach Splash Screen - Nur für PWA, im Splash-Screen-Stil */}
@@ -286,7 +335,26 @@ export default function RootClientLayout({ children }) {
         )}
 
         <div 
-          className={`${kompaktModus ? 'hhrp-compact' : ''} ${!animationen || datensparmodus ? 'hhrp-no-anim' : ''} hhrp-text-${textGroesse} ${datensparmodus ? 'hhrp-datenspar' : ''}`}
+          className={[
+            kompaktModus ? 'hhrp-compact' : '',
+            (!animationen || datensparmodus) ? 'hhrp-no-anim' : '',
+            `hhrp-text-${textGroesse}`,
+            datensparmodus ? 'hhrp-datenspar' : '',
+            // Erweiterte Effekte (nur wenn Haupt-Animationen an & nicht datensparmodus)
+            (animationen && !datensparmodus && fxShimmer) ? 'hhrp-fx-shimmer' : '',
+            (animationen && !datensparmodus && fxHoverGlow) ? 'hhrp-fx-hover-glow' : '',
+            (animationen && !datensparmodus && fxAnimNumbers) ? 'hhrp-fx-anim-numbers' : '',
+            (animationen && !datensparmodus && fxGradBorders) ? 'hhrp-fx-gradient-borders' : '',
+            (fxGlassStrength === 'low')  ? 'hhrp-fx-glass-low'  : '',
+            (fxGlassStrength === 'high') ? 'hhrp-fx-glass-high' : '',
+            (animationen && !datensparmodus && fxCardShine) ? 'hhrp-fx-card-shine' : '',
+            (animationen && !datensparmodus && fxParallax) ? 'hhrp-fx-parallax' : '',
+            (animationen && !datensparmodus && fxBotPulse) ? 'hhrp-fx-bot-pulse' : '',
+            (animationen && !datensparmodus && fxRipple) ? 'hhrp-fx-ripple' : '',
+            (animationen && !datensparmodus && fxTabSlide) ? 'hhrp-fx-tab-slide' : '',
+            (animationen && !datensparmodus && fxProgressSmooth) ? 'hhrp-fx-progress-smooth' : '',
+            (animationen && !datensparmodus && fxSuccessAnim) ? 'hhrp-fx-success-anim' : '',
+          ].filter(Boolean).join(' ')}
           style={{ 
             opacity: splashDone && !pageLoading ? 1 : 0, 
             transition: (animationen && !datensparmodus) ? 'opacity 0.5s ease' : 'none',
@@ -492,6 +560,41 @@ function WartungsmodusSeite() {
 function BetaTesterRecruitmentModalWrapper() {
   const { user } = useAuth();
   return <BetaTesterRecruitmentModal user={user} />;
+}
+
+// Top-Bar Progress Loader (NProgress-Style) bei Route-Wechseln
+function TopProgressLoader({ pathname }) {
+  const [visible, setVisible] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    let t1, t2, t3;
+    setVisible(true);
+    setProgress(15);
+    t1 = setTimeout(() => setProgress(55), 120);
+    t2 = setTimeout(() => setProgress(85), 350);
+    t3 = setTimeout(() => {
+      setProgress(100);
+      setTimeout(() => {
+        setVisible(false);
+        setProgress(0);
+      }, 350);
+    }, 600);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [pathname]);
+
+  if (!visible) return null;
+  return (
+    <div
+      className="hhrp-top-loader"
+      style={{ width: `${progress}%`, opacity: progress === 100 ? 0 : 1 }}
+      aria-hidden="true"
+    />
+  );
 }
 
 function Footer() {
