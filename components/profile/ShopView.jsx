@@ -1798,6 +1798,15 @@ export function ShopView({ user, userData, onRefresh }) {
                     </span>
                   </div>
                 )}
+                {/* Free Pass kann nicht verschenkt werden */}
+                {id === 'credits_free_pass' && giftMode && (
+                  <div className="absolute top-2 right-2 bg-red-500/20 border border-red-500/50 rounded-lg px-2 py-1 z-10">
+                    <span className="text-xs text-red-300 font-medium flex items-center gap-1">
+                      <X className="w-3 h-3" />
+                      Nicht verschenkbar
+                    </span>
+                  </div>
+                )}
                 {isVIPItem && giftMode && !recipientCanReceiveVIP && recipientHighestVIP >= 0 && (
                   <div className="absolute top-2 right-2 bg-red-500/20 border border-red-500/50 rounded-lg px-2 py-1 z-10">
                     <span className="text-xs text-red-300 font-medium flex items-center gap-1">
@@ -1876,23 +1885,43 @@ export function ShopView({ user, userData, onRefresh }) {
                   <div className="flex gap-2">
                     {/* Im Verschenken-Modus: Verschenken-Button, sonst Warenkorb-Button */}
                     {giftMode ? (
-                      <Button
-                        onClick={() => giftItem(id)}
-                        disabled={isDisabledInGiftMode || isLowerVIP || isBotLocked}
-                        size="sm"
-                        className="rounded-lg"
-                        style={{
-                          background: (isDisabledInGiftMode || isLowerVIP || isBotLocked)
-                            ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.3), rgba(80, 80, 80, 0.2))'
-                            : 'linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(126, 34, 206, 0.3))',
-                          border: '1px solid rgba(147, 51, 234, 0.4)',
-                          color: (isDisabledInGiftMode || isLowerVIP || isBotLocked) ? 'rgba(255, 255, 255, 0.4)' : '#fff',
-                          cursor: (isDisabledInGiftMode || isLowerVIP || isBotLocked) ? 'not-allowed' : 'pointer'
-                        }}
-                      >
-                        <Heart className="w-4 h-4 mr-1" />
-                        Verschenken
-                      </Button>
+                      <>
+                        {/* Free Pass kann NICHT verschenkt werden */}
+                        {id === 'credits_free_pass' ? (
+                          <Button
+                            disabled={true}
+                            size="sm"
+                            className="rounded-lg"
+                            style={{
+                              background: 'linear-gradient(135deg, rgba(100, 100, 100, 0.3), rgba(80, 80, 80, 0.2))',
+                              border: '1px solid rgba(239, 68, 68, 0.4)',
+                              color: 'rgba(255, 255, 255, 0.4)',
+                              cursor: 'not-allowed'
+                            }}
+                          >
+                            <X className="w-4 h-4 mr-1" />
+                            Nicht verschenkbar
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => giftItem(id)}
+                            disabled={isDisabledInGiftMode || isLowerVIP || isBotLocked}
+                            size="sm"
+                            className="rounded-lg"
+                            style={{
+                              background: (isDisabledInGiftMode || isLowerVIP || isBotLocked)
+                                ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.3), rgba(80, 80, 80, 0.2))'
+                                : 'linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(126, 34, 206, 0.3))',
+                              border: '1px solid rgba(147, 51, 234, 0.4)',
+                              color: (isDisabledInGiftMode || isLowerVIP || isBotLocked) ? 'rgba(255, 255, 255, 0.4)' : '#fff',
+                              cursor: (isDisabledInGiftMode || isLowerVIP || isBotLocked) ? 'not-allowed' : 'pointer'
+                            }}
+                          >
+                            <Heart className="w-4 h-4 mr-1" />
+                            Verschenken
+                          </Button>
+                        )}
+                      </>
                     ) : (
                       <Button
                         onClick={() => addToCart(id)}
