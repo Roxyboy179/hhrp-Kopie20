@@ -359,6 +359,7 @@ export default function LicensesView({ userData, refreshUserData }) {
 
             const days = daysLeft(license.expiresAt);
             const isCanceled = license.canceledAt && !license.autoRenew;
+            const isExpired = license.expiresAt && license.expiresAt > 0 && license.expiresAt <= Date.now();
             const isProcessing = !!processing[license.id];
             const pending = pendingActions[license.id] || null;
             const isLocked = !!pending;
