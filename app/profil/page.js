@@ -1081,12 +1081,12 @@ export default function ProfilPage() {
 
   // Auto-Redirect: Wenn User keinen Charakter hat und gerade auf gesperrtem Tab ist
   useEffect(() => {
-    if (!userData) return;
+    if (!userData || loading) return; // WARTEN bis Loading fertig - verhindert Flackern
     const hasChar = !!(userData?.character?.name || userData?.characterName);
     if (!hasChar && activeTab !== 'overview') {
       setActiveTab('overview');
     }
-  }, [userData, activeTab]);
+  }, [userData, activeTab, loading]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [botStatus, setBotStatus] = useState({ isOnline: true, checking: true, error: null });
 
@@ -1417,8 +1417,8 @@ export default function ProfilPage() {
         {/* Profil-Inhalte NUR wenn verifiziert */}
         {!nichtVerifiziert && (
         <>
-        {/* Character-Locked-Warning Banner - nur anzeigen wenn kein Charakter */}
-        {userData && !(userData?.character?.name || userData?.characterName) && (
+        {/* Character-Locked-Warning Banner - NUR wenn Loading fertig UND wirklich kein Charakter vorhanden (verhindert Flackern beim Laden) */}
+        {!loading && userData && !(userData?.character?.name || userData?.characterName) && (
           <div 
             className="glass rounded-2xl p-5 border"
             style={{
@@ -1450,7 +1450,8 @@ export default function ProfilPage() {
             {mainTabs.map((tab) => {
               const Icon = tab.icon;
               const hasChar = !!(userData?.character?.name || userData?.characterName);
-              const isLocked = !hasChar && tab.id !== 'overview';
+              // Während Loading NIEMALS sperren (verhindert Flackern)
+              const isLocked = !loading && userData && !hasChar && tab.id !== 'overview';
               const DisplayIcon = isLocked ? Lock : Icon;
               return (
                 <button
@@ -1477,7 +1478,7 @@ export default function ProfilPage() {
             {mainTabs.map((tab) => {
               const Icon = tab.icon;
               const hasChar = !!(userData?.character?.name || userData?.characterName);
-              const isLocked = !hasChar && tab.id !== 'overview';
+              const isLocked = !loading && userData && !hasChar && tab.id !== 'overview';
               const DisplayIcon = isLocked ? Lock : Icon;
               return (
                 <button
@@ -3834,9 +3835,9 @@ export default function ProfilPage() {
           <div className="space-y-6 tab-content">
 
             {/* ═══════════════════════════════════════════════════════════
-                SETTINGS HEADER - Sidebar-Nav + Suche (Sticky)
+                SETTINGS HEADER - Sidebar-Nav + Suche
                 ═══════════════════════════════════════════════════════════ */}
-            <div className="glass rounded-2xl p-4 border border-white/[0.08] sticky top-16 z-30 backdrop-blur-xl">
+            <div className="glass rounded-2xl p-4 border border-white/[0.08] mb-6">
               <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center">
                 {/* Suche */}
                 <div className="relative flex-1 min-w-0">
@@ -3854,7 +3855,6 @@ export default function ProfilPage() {
                   {[
                     { id: 'appearance',  label: 'Darstellung', icon: Palette,    color: 'cyan' },
                     { id: 'effects',     label: 'Effekte',     icon: Wand2,      color: 'purple' },
-                    { id: 'feedback',    label: 'Feedback',    icon: Bell,       color: 'pink' },
                     { id: 'background',  label: 'Hintergrund', icon: ImagePlus,  color: 'indigo' },
                     ...(isPWA ? [{ id: 'pwa', label: 'PWA', icon: AppWindow, color: 'blue' }] : []),
                     { id: 'about',       label: 'Über',        icon: Globe,      color: 'gray' },
