@@ -1336,9 +1336,32 @@ export function ShopView({ user, userData, onRefresh }) {
             
             const hasItem = hasLicense(id); // Verwende die neue Hilfsfunktion
             
-            // Free Pass Check: Kann nur einmal gekauft werden
+            // Credits-Pass System: Nur ein Pass gleichzeitig erlaubt
+            const isCreditsPass = id.startsWith('credits_') && id.includes('_pass');
+            const now = new Date();
+            
+            // Prüfe, ob User bereits einen AKTIVEN Credits-Pass hat
+            const hasActiveCreditsPass = isCreditsPass && userLicensesArray.some(l => {
+              // Skip wenn es das gleiche Item ist
+              if (typeof l === 'string') {
+                if (l === id) return false; // Gleiches Item = ok
+                // Prüfe ob es ein anderer Credits-Pass ist
+                return l.startsWith('credits_') && l.includes('_pass');
+              }
+              if (typeof l === 'object') {
+                const licenseId = l.id || l.name;
+                if (licenseId === id) return false; // Gleiches Item = ok
+                // Prüfe ob es ein anderer Credits-Pass ist und noch aktiv
+                const isOtherPass = licenseId && licenseId.startsWith('credits_') && licenseId.includes('_pass');
+                const isActive = !l.expiresAt || new Date(l.expiresAt) > now;
+                return isOtherPass && isActive;
+              }
+              return false;
+            });
+            
+            // Free Pass Check: Kann nur einmal gekauft werden (auch wenn abgelaufen)
             const isFreePass = id === 'credits_free_pass';
-            const alreadyHadFreePass = isFreePass && userLicenses.some(l => {
+            const alreadyHadFreePass = isFreePass && userLicensesArray.some(l => {
               if (typeof l === 'string') return l === 'credits_free_pass';
               if (typeof l === 'object') return (l.name === 'credits_free_pass' || l.id === 'credits_free_pass');
               return false;
@@ -1460,7 +1483,15 @@ export function ShopView({ user, userData, onRefresh }) {
                     </span>
                   </div>
                 )}
-                {alreadyHadFreePass && !hasItem && !giftMode && (
+                {hasActiveCreditsPass && !hasItem && !giftMode && (
+                  <div className="absolute top-2 right-2 bg-orange-500/20 border border-orange-500/50 rounded-lg px-2 py-1 z-10">
+                    <span className="text-xs text-orange-300 font-medium flex items-center gap-1">
+                      <Lock className="w-3 h-3" />
+                      Bereits aktiver Pass
+                    </span>
+                  </div>
+                )}
+                {alreadyHadFreePass && !hasItem && !hasActiveCreditsPass && !giftMode && (
                   <div className="absolute top-2 right-2 bg-yellow-500/20 border border-yellow-500/50 rounded-lg px-2 py-1 z-10">
                     <span className="text-xs text-yellow-300 font-medium flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3" />
@@ -1560,16 +1591,16 @@ export function ShopView({ user, userData, onRefresh }) {
                     ) : (
                       <Button
                         onClick={() => addToCart(id)}
-                        disabled={hasItem || isLowerVIP || isBotLocked || alreadyHadFreePass}
+                        disabled={hasItem || isLowerVIP || isBotLocked || alreadyHadFreePass || hasActiveCreditsPass}
                         size="sm"
                         className="rounded-lg"
                         style={{
-                          background: (hasItem || isLowerVIP || isBotLocked || alreadyHadFreePass)
+                          background: (hasItem || isLowerVIP || isBotLocked || alreadyHadFreePass || hasActiveCreditsPass)
                             ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.3), rgba(80, 80, 80, 0.2))'
                             : 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
                           border: '1px solid rgba(255, 255, 255, 0.2)',
-                          color: (hasItem || isLowerVIP || isBotLocked || alreadyHadFreePass) ? 'rgba(255, 255, 255, 0.4)' : '#fff',
-                          cursor: (hasItem || isLowerVIP || isBotLocked || alreadyHadFreePass) ? 'not-allowed' : 'pointer'
+                          color: (hasItem || isLowerVIP || isBotLocked || alreadyHadFreePass || hasActiveCreditsPass) ? 'rgba(255, 255, 255, 0.4)' : '#fff',
+                          cursor: (hasItem || isLowerVIP || isBotLocked || alreadyHadFreePass || hasActiveCreditsPass) ? 'not-allowed' : 'pointer'
                         }}
                       >
                         {isBotLocked ? (
@@ -1581,6 +1612,11 @@ export function ShopView({ user, userData, onRefresh }) {
                           <>
                             <Check className="w-4 h-4 mr-1" />
                             Gekauft
+                          </>
+                        ) : hasActiveCreditsPass ? (
+                          <>
+                            <Lock className="w-4 h-4 mr-1" />
+                            Pass aktiv
                           </>
                         ) : alreadyHadFreePass ? (
                           <>
