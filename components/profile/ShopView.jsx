@@ -1604,54 +1604,6 @@ export function ShopView({ user, userData, onRefresh }) {
       {/* Shop Items */}
       {selectedCategory !== 'credits' && selectedCategory !== 'bank_limit' && selectedCategory !== 'credit_spend' && selectedCategory !== 'mystery_box' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-
-          {/* Filter Pills - nur im "Alle" Tab */}
-          {selectedCategory === 'all' && (
-            <div className="mb-6 animate-slide-in">
-              <div className="flex flex-wrap gap-2">
-                {shopFilterCategories.map(cat => {
-                  const isActive = selectedFilter === cat.id;
-                  const Icon = cat.icon;
-                  
-                  // Zähle Items in dieser Kategorie
-                  const count = cat.id === 'all' 
-                    ? Object.keys(shopItems).length 
-                    : Object.entries(shopItems).filter(([id, item]) => cat.filter({ ...item, id })).length;
-                  
-                  return (
-                    <button
-                      key={cat.id}
-                      onClick={() => setSelectedFilter(cat.id)}
-                      className={`
-                        button-hover px-4 py-2.5 rounded-xl flex items-center gap-2 transition-smooth
-                        ${isActive 
-                          ? 'bg-white/20 border-2 border-white/40 shadow-lg scale-105' 
-                          : 'bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20'
-                        }
-                      `}
-                    >
-                      <Icon className={`w-4 h-4 transition-smooth ${isActive ? 'text-white' : 'text-white/60'}`} />
-                      <span className={`text-sm font-medium transition-smooth ${isActive ? 'text-white' : 'text-white/70'}`}>
-                        {cat.name}
-                      </span>
-                      {count > 0 && (
-                        <span className={`
-                          ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold transition-smooth
-                          ${isActive 
-                            ? 'bg-white/30 text-white' 
-                            : 'bg-white/10 text-white/50'
-                          }
-                        `}>
-                          {count}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
           {filteredShopItems.map(([id, item]) => {
             const ItemIcon = itemIcons[id] || ShoppingBag;
             
