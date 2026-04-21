@@ -311,6 +311,10 @@ export function ShopView({ user, userData, onRefresh }) {
     'vip_ultimate': Sparkles,
     'vip_elite_plus': Sparkles,
     'luxus_pass': Crown,
+    'credits_free_pass': Gift,
+    'credits_basic_pass': CreditCard,
+    'credits_standard_pass': Star,
+    'credits_elite_plus_pass': Crown,
     'werkzeug_angel': Fish,
     'werkzeug_hacking': Laptop,
     'schutzbrief_polizei': Shield,
@@ -772,14 +776,15 @@ export function ShopView({ user, userData, onRefresh }) {
     if (itemObj && itemObj.category === 'credits') return basePrice;
 
     const isVipItem = itemId && (itemId.startsWith('vip_') || itemId === 'luxus_pass');
+    const isCreditsPass = itemId && itemId.startsWith('credits_') && itemId.includes('_pass');
 
     // 🎉 Aktions-Rabatt (kann AUCH auf VIP-Items greifen, wenn die Aktion es vorsieht)
     const activePromo = findActivePromotion(itemObj, itemId, userHighestVIP);
     const promoDiscount = activePromo ? activePromo.discount : 0;
 
-    // VIP-Rabatt (greift NICHT auf VIP-Items selbst – du bekommst keinen VIP-Rabatt auf ein VIP-Abo)
+    // VIP-Rabatt (greift NICHT auf VIP-Items oder Credits-Pässe)
     let vipDiscountPercent = 0;
-    if (!isVipItem) {
+    if (!isVipItem && !isCreditsPass) {
       if (hasLuxusPass) vipDiscountPercent = 0.50;
       else if (vipDiscount > 0) vipDiscountPercent = vipDiscount;
     }
@@ -1555,7 +1560,19 @@ export function ShopView({ user, userData, onRefresh }) {
                   )}
                 </div>
                 {item.description && (
-                  <p className="text-sm text-white/50 mb-3 relative z-10">{item.description}</p>
+                  <div className="text-sm text-white/50 mb-3 relative z-10">
+                    {item.description.includes('\n') ? (
+                      <div className="space-y-1">
+                        {item.description.split('\n').map((line, idx) => (
+                          <div key={idx} className={line.startsWith('Vorteile:') ? 'font-semibold text-white/70 mb-1' : ''}>
+                            {line}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p>{item.description}</p>
+                    )}
+                  </div>
                 )}
                 <div className="flex items-center justify-between relative z-10">
                   <div>
