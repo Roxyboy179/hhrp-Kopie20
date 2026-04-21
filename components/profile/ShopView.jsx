@@ -732,6 +732,55 @@ export function ShopView({ user, userData, onRefresh }) {
     });
   };
   
+  // Hilfsfunktion: Hole Ablaufdatum einer Lizenz
+  const getLicenseExpiry = (licenseId) => {
+    if (!licenseId) return null;
+    const license = userLicensesArray.find(l => {
+      if (!l) return false;
+      if (typeof l === 'string') return l === licenseId;
+      if (typeof l === 'object') return (l.name === licenseId || l.id === licenseId);
+      return false;
+    });
+    if (!license || typeof license === 'string') return null;
+    return license.expiresAt || null;
+  };
+  
+  // Hilfsfunktion: Hole aktiven Credits-Pass und dessen Vorteile
+  const getActiveCreditsPass = () => {
+    const now = Date.now();
+    for (const l of userLicensesArray) {
+      let licenseId = null;
+      let expiresAt = null;
+      
+      if (typeof l === 'string') {
+        licenseId = l;
+      } else if (typeof l === 'object') {
+        licenseId = l.id || l.name;
+        expiresAt = l.expiresAt;
+      }
+      
+      // Ist es ein Credits-Pass?
+      const isCreditsPass = licenseId && licenseId.startsWith('credits_') && licenseId.includes('_pass');
+      if (!isCreditsPass) continue;
+      
+      // Ist er noch aktiv?
+      const isActive = !expiresAt || expiresAt > now;
+      if (!isActive) continue;
+      
+      // Hole die Metadata aus shopItems
+      const passItem = shopItems[licenseId];
+      if (passItem && passItem.metadata) {
+        return {
+          id: licenseId,
+          name: passItem.name,
+          creditsSpendingDiscount: passItem.metadata.creditsSpendingDiscount || 0,
+          creditsPurchaseBonus: passItem.metadata.creditsPurchaseBonus || 0
+        };
+      }
+    }
+    return null;
+  };
+  
   const hasVIPPremium = hasLicense('vip_premium');
   const hasVIPPlatinum = hasLicense('vip_platinum');
   const hasVIPUltimate = hasLicense('vip_ultimate');
@@ -959,18 +1008,42 @@ export function ShopView({ user, userData, onRefresh }) {
             const pendingId = `credits_${option.credits}`;
             const pending = pendingPurchases[pendingId] || null;
             const isBotLocked = !!pending;
+            
             // 🎉 Credit-Bonus-Aktion (für alle User, ab minCredits Schwelle)
             const bonusInfo = creditBonusLookup(option.credits);
-            const hasBonus = !!bonusInfo && !isBotLocked;
+            const hasPromoBonus = !!bonusInfo && !isBotLocked;
+            
+            // 💳 Credits-Pass Bonus (creditsPurchaseBonus)
+            const activePass = getActiveCreditsPass();
+            const passBonus = activePass && activePass.creditsPurchaseBonus > 0
+              ? Math.floor(option.credits * activePass.creditsPurchaseBonus)
+              : 0;
+            
+            // Gesamt-Credits (Basis + Promo-Bonus + Pass-Bonus)
+            let totalCredits = option.credits;
+            let totalBonusCredits = 0;
+            
+            if (hasPromoBonus) {
+              totalCredits = bonusInfo.totalCredits;
+              totalBonusCredits = bonusInfo.bonusCredits;
+            }
+            
+            if (passBonus > 0) {
+              totalCredits += passBonus;
+              totalBonusCredits += passBonus;
+            }
+            
+            const hasAnyBonus = totalBonusCredits > 0;
+            
             return (
             <div
               key={index}
-              className={`p-4 rounded-xl border relative ${isBotLocked ? 'overflow-hidden pointer-events-none' : ''} ${hasBonus ? 'promo-card' : ''}`}
+              className={`p-4 rounded-xl border relative ${isBotLocked ? 'overflow-hidden pointer-events-none' : ''} ${hasPromoBonus ? 'promo-card' : ''}`}
               style={{
-                background: hasBonus
+                background: hasPromoBonus
                   ? undefined
                   : 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
-                borderColor: hasBonus
+                borderColor: hasPromoBonus
                   ? undefined
                   : (isBotLocked ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255, 255, 255, 0.08)'),
               }}
@@ -980,7 +1053,7 @@ export function ShopView({ user, userData, onRefresh }) {
                   <Coins className="w-5 h-5 text-emerald-400 shrink-0" />
                   <h3 className="font-semibold text-white truncate">{option.label}</h3>
                 </div>
-                {hasBonus && (
+                {hasPromoBonus && (
                   <span
                     className="promo-badge-animated text-[10px] font-bold tracking-wider uppercase px-2 py-1 rounded-md shrink-0 shadow-lg flex items-center gap-1"
                     style={{
@@ -995,23 +1068,37 @@ export function ShopView({ user, userData, onRefresh }) {
                   </span>
                 )}
               </div>
-              {hasBonus ? (
+              
+              {hasAnyBonus ? (
                 <div className="relative z-10 mb-4">
                   <div className="flex items-baseline gap-2 flex-wrap">
                     <span className="text-2xl font-bold text-white">
-                      {bonusInfo.totalCredits} Credits
+                      {totalCredits} Credits
                     </span>
                     <span className="text-sm text-white/50 line-through">
                       {option.credits}
                     </span>
                   </div>
-                  <div className="text-xs text-amber-300 font-semibold mt-0.5">
-                    + {bonusInfo.bonusCredits} Bonus
+                  <div className="text-xs space-y-0.5 mt-1">
+                    {hasPromoBonus && (
+                      <div className="text-amber-300 font-semibold">
+                        🎉 Aktion: +{bonusInfo.bonusCredits} Bonus
+                      </div>
+                    )}
+                    {passBonus > 0 && (
+                      <div className="text-purple-300 font-semibold">
+                        💳 {activePass.name.replace('Credits ', '')}: +{passBonus} Bonus (+{Math.round(activePass.creditsPurchaseBonus * 100)}%)
+                      </div>
+                    )}
+                    <div className="text-green-400 font-bold mt-1">
+                      = {totalCredits} Credits total
+                    </div>
                   </div>
                 </div>
               ) : (
                 <p className="text-2xl font-bold text-white mb-4 relative z-10">{option.credits} Credits</p>
               )}
+              
               <div className="flex items-center justify-between relative z-10">
                 <span className="text-white/60 text-sm">{option.cost.toLocaleString('de-DE')}€</span>
                 <Button
@@ -1051,6 +1138,17 @@ export function ShopView({ user, userData, onRefresh }) {
             const pendingId = `bank_limit_${upgrade.addLimit}`;
             const pending = pendingPurchases[pendingId] || null;
             const isBotLocked = !!pending;
+            
+            // 💳 Credits-Pass Rabatt (creditsSpendingDiscount)
+            const activePass = getActiveCreditsPass();
+            const discount = activePass && activePass.creditsSpendingDiscount > 0
+              ? activePass.creditsSpendingDiscount
+              : 0;
+            
+            const originalCost = upgrade.creditCost;
+            const discountAmount = discount > 0 ? Math.floor(originalCost * discount) : 0;
+            const finalCost = originalCost - discountAmount;
+            
             return (
             <div
               key={index}
@@ -1067,11 +1165,38 @@ export function ShopView({ user, userData, onRefresh }) {
                 </div>
               </div>
               <p className="text-sm text-white/60 mb-3">{upgrade.description}</p>
+              
+              {/* Credits-Pass Rabatt-Anzeige */}
+              {discount > 0 && (
+                <div className="mb-3 p-2 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                    <span className="text-xs font-semibold text-purple-300">
+                      {activePass.name.replace('Credits ', '')} Rabatt
+                    </span>
+                  </div>
+                  <div className="text-[11px] space-y-0.5 text-white/70">
+                    <div>Kosten: {originalCost} Credits</div>
+                    <div className="text-purple-300">- {Math.round(discount * 100)}% Rabatt: -{discountAmount} Credits</div>
+                    <div className="text-green-400 font-bold">= {finalCost} Credits</div>
+                  </div>
+                </div>
+              )}
+              
               <div className="flex items-center justify-between">
-                <span className="text-white/60 text-sm">{upgrade.creditCost} Credits</span>
+                <div>
+                  {discount > 0 ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-white/40 line-through text-sm">{originalCost} Credits</span>
+                      <span className="text-purple-400 font-bold">{finalCost} Credits</span>
+                    </div>
+                  ) : (
+                    <span className="text-white/60 text-sm">{originalCost} Credits</span>
+                  )}
+                </div>
                 <Button
                   onClick={() => openPinModal({ type: 'bank_limit', upgradeIndex: index })}
-                  disabled={purchasing || userCredits < upgrade.creditCost || isBotLocked}
+                  disabled={purchasing || userCredits < finalCost || isBotLocked}
                   size="sm"
                   className="rounded-lg"
                   style={{
@@ -1138,7 +1263,16 @@ export function ShopView({ user, userData, onRefresh }) {
 
             // Dynamischer Preis: base * 1.10^purchases
             const purchases = buffs?.creditPurchases?.[item.id] || 0;
-            const dynamicPrice = Math.ceil(item.creditCost * Math.pow(1.10, purchases));
+            let dynamicPrice = Math.ceil(item.creditCost * Math.pow(1.10, purchases));
+            
+            // 💳 Credits-Pass Rabatt (creditsSpendingDiscount)
+            const activePass = getActiveCreditsPass();
+            const discount = activePass && activePass.creditsSpendingDiscount > 0
+              ? activePass.creditsSpendingDiscount
+              : 0;
+            
+            const discountAmount = discount > 0 ? Math.floor(dynamicPrice * discount) : 0;
+            const finalPrice = dynamicPrice - discountAmount;
 
             const blocked = isActive || cooldownLeft > 0 || pending || isBotLocked;
             const canAfford = userCredits >= dynamicPrice;
@@ -1189,6 +1323,23 @@ export function ShopView({ user, userData, onRefresh }) {
                 </div>
                 <p className="text-sm text-white/60 mb-2 flex-1">{item.description}</p>
 
+                {/* Credits-Pass Rabatt-Anzeige */}
+                {discount > 0 && !blocked && (
+                  <div className="mb-2 p-2 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Sparkles className="w-3 h-3 text-purple-400" />
+                      <span className="text-xs font-semibold text-purple-300">
+                        {activePass.name.replace('Credits ', '')}
+                      </span>
+                    </div>
+                    <div className="text-[10px] space-y-0.5 text-white/70">
+                      <div>Kosten: {dynamicPrice} Credits</div>
+                      <div className="text-purple-300">- {Math.round(discount * 100)}% Rabatt: -{discountAmount} Credits</div>
+                      <div className="text-green-400 font-bold">= {finalPrice} Credits</div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Status-Hinweis */}
                 {isActive && (
                   <div className="mb-2 px-2 py-1 rounded-md bg-green-500/10 border border-green-500/20 text-[11px] text-green-300 flex items-center gap-1">
@@ -1213,14 +1364,28 @@ export function ShopView({ user, userData, onRefresh }) {
 
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col">
-                    <span className="text-white/80 text-sm font-medium flex items-center gap-1">
-                      <Coins className="w-3.5 h-3.5 text-yellow-400" />
-                      {dynamicPrice.toLocaleString('de-DE')} Credits
-                    </span>
-                    {dynamicPrice !== item.creditCost && (
-                      <span className="text-[10px] text-white/30 line-through">
-                        {item.creditCost.toLocaleString('de-DE')}
-                      </span>
+                    {discount > 0 && !blocked ? (
+                      <>
+                        <span className="text-white/80 text-sm font-medium flex items-center gap-1">
+                          <Coins className="w-3.5 h-3.5 text-yellow-400" />
+                          {finalPrice.toLocaleString('de-DE')} Credits
+                        </span>
+                        <span className="text-[10px] text-white/30 line-through">
+                          {dynamicPrice.toLocaleString('de-DE')} Credits
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-white/80 text-sm font-medium flex items-center gap-1">
+                          <Coins className="w-3.5 h-3.5 text-yellow-400" />
+                          {dynamicPrice.toLocaleString('de-DE')} Credits
+                        </span>
+                        {dynamicPrice !== item.creditCost && (
+                          <span className="text-[10px] text-white/30 line-through">
+                            {item.creditCost.toLocaleString('de-DE')}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
                   <Button
@@ -1258,7 +1423,17 @@ export function ShopView({ user, userData, onRefresh }) {
       {selectedCategory === 'mystery_box' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {creditCrates.map((crate) => {
-            const canAfford = userCredits >= crate.creditCost;
+            // 💳 Credits-Pass Rabatt (creditsSpendingDiscount)
+            const activePass = getActiveCreditsPass();
+            const discount = activePass && activePass.creditsSpendingDiscount > 0
+              ? activePass.creditsSpendingDiscount
+              : 0;
+            
+            const originalCost = crate.creditCost;
+            const discountAmount = discount > 0 ? Math.floor(originalCost * discount) : 0;
+            const finalCost = originalCost - discountAmount;
+            
+            const canAfford = userCredits >= finalCost;
             const iconMeta = CRATE_ICONS[crate.id] || { Icon: Package, color: '#ffffff' };
             const { Icon: CrateIcon } = iconMeta;
             const color = crate.color || iconMeta.color;
@@ -1290,6 +1465,24 @@ export function ShopView({ user, userData, onRefresh }) {
                   <h3 className="font-bold text-white text-lg">{crate.name}</h3>
                 </div>
                 <p className="text-xs text-white/60 text-center mb-3">{crate.description}</p>
+                
+                {/* Credits-Pass Rabatt-Anzeige */}
+                {discount > 0 && (
+                  <div className="mb-2 p-2 bg-purple-500/10 border border-purple-500/30 rounded-lg">
+                    <div className="flex items-center gap-1 justify-center mb-1">
+                      <Sparkles className="w-3 h-3 text-purple-400" />
+                      <span className="text-[10px] font-semibold text-purple-300">
+                        {activePass.name.replace('Credits ', '')}
+                      </span>
+                    </div>
+                    <div className="text-[10px] space-y-0.5 text-white/70 text-center">
+                      <div>{originalCost} Credits</div>
+                      <div className="text-purple-300">-{Math.round(discount * 100)}%: -{discountAmount}</div>
+                      <div className="text-green-400 font-bold">= {finalCost} Credits</div>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="mb-3 p-2 rounded-lg bg-white/[0.04] border border-white/10 text-center">
                   <div className="text-[10px] uppercase tracking-wider text-white/40 mb-1">Max-Gewinn</div>
                   <div className="text-sm text-white font-semibold">
@@ -1297,10 +1490,22 @@ export function ShopView({ user, userData, onRefresh }) {
                   </div>
                 </div>
                 <div className="mt-auto flex items-center justify-between gap-2">
-                  <span className="text-white/80 text-sm font-medium flex items-center gap-1">
-                    <Coins className="w-3.5 h-3.5 text-yellow-400" />
-                    {crate.creditCost.toLocaleString('de-DE')}
-                  </span>
+                  {discount > 0 ? (
+                    <div className="flex flex-col">
+                      <span className="text-white/80 text-sm font-medium flex items-center gap-1">
+                        <Coins className="w-3.5 h-3.5 text-yellow-400" />
+                        {finalCost.toLocaleString('de-DE')}
+                      </span>
+                      <span className="text-[10px] text-white/30 line-through">
+                        {originalCost.toLocaleString('de-DE')}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-white/80 text-sm font-medium flex items-center gap-1">
+                      <Coins className="w-3.5 h-3.5 text-yellow-400" />
+                      {originalCost.toLocaleString('de-DE')}
+                    </span>
+                  )}
                   <Button
                     onClick={() => handleOpenCrate(crate)}
                     disabled={purchasing || !canAfford || isBotLocked}
@@ -1345,24 +1550,40 @@ export function ShopView({ user, userData, onRefresh }) {
             const isCreditsPass = id.startsWith('credits_') && id.includes('_pass');
             const now = new Date();
             
-            // Prüfe, ob User bereits einen AKTIVEN Credits-Pass hat
-            const hasActiveCreditsPass = isCreditsPass && userLicensesArray.some(l => {
-              // Skip wenn es das gleiche Item ist
-              if (typeof l === 'string') {
-                if (l === id) return false; // Gleiches Item = ok
-                // Prüfe ob es ein anderer Credits-Pass ist
-                return l.startsWith('credits_') && l.includes('_pass');
-              }
-              if (typeof l === 'object') {
-                const licenseId = l.id || l.name;
-                if (licenseId === id) return false; // Gleiches Item = ok
-                // Prüfe ob es ein anderer Credits-Pass ist und noch aktiv
+            // Prüfe, ob User bereits einen AKTIVEN Credits-Pass hat (und finde welchen)
+            let activeCreditsPassInfo = null;
+            if (isCreditsPass) {
+              for (const l of userLicensesArray) {
+                let licenseId = null;
+                let expiresAt = null;
+                
+                if (typeof l === 'string') {
+                  licenseId = l;
+                } else if (typeof l === 'object') {
+                  licenseId = l.id || l.name;
+                  expiresAt = l.expiresAt;
+                }
+                
+                // Skip wenn es das gleiche Item ist
+                if (licenseId === id) continue;
+                
+                // Ist es ein anderer Credits-Pass?
                 const isOtherPass = licenseId && licenseId.startsWith('credits_') && licenseId.includes('_pass');
-                const isActive = !l.expiresAt || new Date(l.expiresAt) > now;
-                return isOtherPass && isActive;
+                if (!isOtherPass) continue;
+                
+                // Ist er noch aktiv?
+                const isActive = !expiresAt || new Date(expiresAt) > now;
+                if (isActive) {
+                  activeCreditsPassInfo = {
+                    id: licenseId,
+                    expiresAt: expiresAt,
+                    name: shopItems[licenseId]?.name || licenseId
+                  };
+                  break;
+                }
               }
-              return false;
-            });
+            }
+            const hasActiveCreditsPass = !!activeCreditsPassInfo;
             
             // Free Pass Check: Kann nur einmal gekauft werden (auch wenn abgelaufen)
             const isFreePass = id === 'credits_free_pass';
@@ -1480,20 +1701,55 @@ export function ShopView({ user, userData, onRefresh }) {
                 )}
                 
                 {/* Badges */}
-                {hasItem && !giftMode && (
+                {hasItem && !giftMode && isCreditsPass && (
+                  <div className="absolute top-2 right-2 bg-green-500/20 border border-green-500/50 rounded-lg px-2.5 py-1.5 z-10 max-w-[180px]">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs text-green-300 font-semibold flex items-center gap-1">
+                        <Check className="w-3 h-3" />
+                        ✅ Aktiv
+                      </span>
+                      {(() => {
+                        const expiry = getLicenseExpiry(id);
+                        if (expiry) {
+                          const expiryDate = new Date(expiry);
+                          const daysLeft = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24));
+                          return (
+                            <span className="text-[9px] text-green-400/70 flex items-center gap-0.5">
+                              <Clock className="w-2.5 h-2.5" />
+                              Noch {daysLeft} Tag{daysLeft !== 1 ? 'e' : ''} • Läuft bis {expiryDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                  </div>
+                )}
+                {hasItem && !giftMode && !isCreditsPass && (
                   <div className="absolute top-2 right-2 bg-green-500/20 border border-green-500/50 rounded-lg px-2 py-1 z-10">
                     <span className="text-xs text-green-300 font-medium flex items-center gap-1">
                       <Check className="w-3 h-3" />
-                      Besitzt du
+                      Aktiv
                     </span>
                   </div>
                 )}
                 {hasActiveCreditsPass && !hasItem && !giftMode && (
-                  <div className="absolute top-2 right-2 bg-orange-500/20 border border-orange-500/50 rounded-lg px-2 py-1 z-10">
-                    <span className="text-xs text-orange-300 font-medium flex items-center gap-1">
-                      <Lock className="w-3 h-3" />
-                      Bereits aktiver Pass
-                    </span>
+                  <div className="absolute top-2 right-2 bg-orange-500/20 border border-orange-500/50 rounded-lg px-2.5 py-1.5 z-10 max-w-[180px]">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs text-orange-300 font-semibold flex items-center gap-1">
+                        <Lock className="w-3 h-3" />
+                        Anderer Pass aktiv
+                      </span>
+                      <span className="text-[10px] text-orange-400/80 leading-tight">
+                        {activeCreditsPassInfo.name.replace('Credits ', '')}
+                      </span>
+                      {activeCreditsPassInfo.expiresAt && (
+                        <span className="text-[9px] text-orange-500/60 flex items-center gap-0.5">
+                          <Clock className="w-2.5 h-2.5" />
+                          Läuft bis {new Date(activeCreditsPassInfo.expiresAt).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
                 {alreadyHadFreePass && !hasItem && !hasActiveCreditsPass && !giftMode && (
@@ -1559,7 +1815,60 @@ export function ShopView({ user, userData, onRefresh }) {
                     </span>
                   )}
                 </div>
-                {item.description && (
+                
+                {/* Credits-Pass Vorteile Badge-Style */}
+                {isCreditsPass && item.metadata && (
+                  <div className="mb-3 space-y-2 relative z-10">
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Rabatt */}
+                      {item.metadata.creditsSpendingDiscount > 0 && (
+                        <div className="flex items-center gap-1.5 bg-purple-500/15 border border-purple-500/30 rounded-lg px-2 py-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-purple-300/70 leading-none">Rabatt</span>
+                            <span className="text-xs font-bold text-purple-300">{Math.round(item.metadata.creditsSpendingDiscount * 100)}%</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Monatliche Credits */}
+                      {item.metadata.monthlyCredits > 0 && (
+                        <div className="flex items-center gap-1.5 bg-blue-500/15 border border-blue-500/30 rounded-lg px-2 py-1.5">
+                          <Coins className="w-3.5 h-3.5 text-blue-400" />
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-blue-300/70 leading-none">Pro Monat</span>
+                            <span className="text-xs font-bold text-blue-300">{item.metadata.monthlyCredits}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Bonus Credits beim Kauf */}
+                      {item.metadata.bonusCreditsOnPurchase > 0 && (
+                        <div className="flex items-center gap-1.5 bg-green-500/15 border border-green-500/30 rounded-lg px-2 py-1.5">
+                          <Gift className="w-3.5 h-3.5 text-green-400" />
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-green-300/70 leading-none">Bonus</span>
+                            <span className="text-xs font-bold text-green-300">+{item.metadata.bonusCreditsOnPurchase}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Kauf-Bonus */}
+                      {item.metadata.creditsPurchaseBonus > 0 && (
+                        <div className="flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 rounded-lg px-2 py-1.5">
+                          <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-amber-300/70 leading-none">Kauf-Bonus</span>
+                            <span className="text-xs font-bold text-amber-300">+{Math.round(item.metadata.creditsPurchaseBonus * 100)}%</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Normale Beschreibung für nicht-Credits-Items */}
+                {!isCreditsPass && item.description && (
                   <div className="text-sm text-white/50 mb-3 relative z-10">
                     {item.description.includes('\n') ? (
                       <div className="space-y-1">
