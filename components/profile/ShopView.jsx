@@ -325,6 +325,7 @@ export function ShopView({ user, userData, onRefresh }) {
     'waffen': { name: 'Waffenscheine', icon: Shield },
     'versicherungen': { name: 'Versicherungen', icon: Briefcase },
     'vip_premiums': { name: 'VIP', icon: Sparkles },
+    'credits_passes': { name: 'Credits Pässe', icon: CreditCard },
     'werkzeuge': { name: 'Werkzeuge', icon: Wrench },
     'schutzbriefe': { name: 'Schutzbriefe', icon: FileText }
   };
@@ -1334,6 +1335,15 @@ export function ShopView({ user, userData, onRefresh }) {
             const ItemIcon = itemIcons[id] || ShoppingBag;
             
             const hasItem = hasLicense(id); // Verwende die neue Hilfsfunktion
+            
+            // Free Pass Check: Kann nur einmal gekauft werden
+            const isFreePass = id === 'credits_free_pass';
+            const alreadyHadFreePass = isFreePass && userLicenses.some(l => {
+              if (typeof l === 'string') return l === 'credits_free_pass';
+              if (typeof l === 'object') return (l.name === 'credits_free_pass' || l.id === 'credits_free_pass');
+              return false;
+            });
+            
             const isVIPItem = id.startsWith('vip_') || id === 'luxus_pass';
             const canBuyThisVIP = canPurchaseVIP(id);
             // Im Gift-Mode ist der eigene VIP-Level irrelevant — nur die Empfänger-Hierarchie zählt
@@ -1450,6 +1460,14 @@ export function ShopView({ user, userData, onRefresh }) {
                     </span>
                   </div>
                 )}
+                {alreadyHadFreePass && !hasItem && !giftMode && (
+                  <div className="absolute top-2 right-2 bg-yellow-500/20 border border-yellow-500/50 rounded-lg px-2 py-1 z-10">
+                    <span className="text-xs text-yellow-300 font-medium flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" />
+                      Bereits genutzt
+                    </span>
+                  </div>
+                )}
                 {recipientHasItem && giftMode && (
                   <div className="absolute top-2 right-2 bg-orange-500/20 border border-orange-500/50 rounded-lg px-2 py-1 z-10">
                     <span className="text-xs text-orange-300 font-medium flex items-center gap-1">
@@ -1542,16 +1560,16 @@ export function ShopView({ user, userData, onRefresh }) {
                     ) : (
                       <Button
                         onClick={() => addToCart(id)}
-                        disabled={hasItem || isLowerVIP || isBotLocked}
+                        disabled={hasItem || isLowerVIP || isBotLocked || alreadyHadFreePass}
                         size="sm"
                         className="rounded-lg"
                         style={{
-                          background: (hasItem || isLowerVIP || isBotLocked)
+                          background: (hasItem || isLowerVIP || isBotLocked || alreadyHadFreePass)
                             ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.3), rgba(80, 80, 80, 0.2))'
                             : 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
                           border: '1px solid rgba(255, 255, 255, 0.2)',
-                          color: (hasItem || isLowerVIP || isBotLocked) ? 'rgba(255, 255, 255, 0.4)' : '#fff',
-                          cursor: (hasItem || isLowerVIP || isBotLocked) ? 'not-allowed' : 'pointer'
+                          color: (hasItem || isLowerVIP || isBotLocked || alreadyHadFreePass) ? 'rgba(255, 255, 255, 0.4)' : '#fff',
+                          cursor: (hasItem || isLowerVIP || isBotLocked || alreadyHadFreePass) ? 'not-allowed' : 'pointer'
                         }}
                       >
                         {isBotLocked ? (
@@ -1563,6 +1581,11 @@ export function ShopView({ user, userData, onRefresh }) {
                           <>
                             <Check className="w-4 h-4 mr-1" />
                             Gekauft
+                          </>
+                        ) : alreadyHadFreePass ? (
+                          <>
+                            <AlertTriangle className="w-4 h-4 mr-1" />
+                            Bereits genutzt
                           </>
                         ) : isLowerVIP ? (
                           <>

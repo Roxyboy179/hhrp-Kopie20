@@ -4259,21 +4259,21 @@ async function handlePurchaseCredits(request) {
       }, { status: 400 });
     }
 
-    // 🎉 Credit-Bonus-Aktion prüfen (z.B. +35% ab 200 Credits)
-    // eligibility 'all' → für alle User, daher userHighestVIP egal (-1 default)
-    const bonusResult = findActiveCreditBonus(option.credits, -1);
+    // 🎉 Credit-Bonus prüfen: Credits-Pässe haben Vorrang vor zeitbasierten Promotions
+    const userLicenses = userDataObj?.licenses || [];
+    const bonusResult = findActiveCreditBonus(option.credits, -1, userLicenses);
     const finalCredits = bonusResult ? bonusResult.totalCredits : option.credits;
     const bonusCredits = bonusResult ? bonusResult.bonusCredits : 0;
     const activePromo = bonusResult?.promo || null;
 
     const itemName = bonusResult
-      ? `${option.credits} Credits + ${bonusCredits} Bonus (${Math.round(activePromo.bonusPercent * 100)}% Aktion)`
+      ? `${option.credits} Credits + ${bonusCredits} Bonus (${Math.round(activePromo.bonusPercent * 100)}% ${activePromo.id.includes('pass') ? 'Pass' : 'Aktion'})`
       : `${option.credits} Credits`;
 
     if (bonusResult) {
       console.log(
         `[SHOP] 🎁 Credit-Bonus: ${option.credits} → ${finalCredits} (+${bonusCredits}) ` +
-        `[promo:${activePromo.id}]`
+        `[source:${activePromo.id}]`
       );
     }
 
