@@ -150,7 +150,16 @@ export default function LicensesView({ userData, refreshUserData }) {
   }, [cancellableLicenses]);
 
   const totalLicensesCount = licenses.length;
-  const hiddenCount = totalLicensesCount - cancellableLicenses.length;
+  
+  // Hidden Count: NUR Nicht-Credits-Pässe zählen
+  const hiddenCount = useMemo(() => {
+    const hidden = licenses.filter(l => !cancellableLicenses.find(c => c.id === l.id));
+    // Credits-Pässe ausschließen aus Hidden Count
+    return hidden.filter(l => {
+      const isCreditsPass = l.id && l.id.startsWith('credits_') && l.id.includes('_pass');
+      return !isCreditsPass;
+    }).length;
+  }, [licenses, cancellableLicenses]);
 
   // ──────────────────────────────────────────────────────────────
   // Pending Actions Polling
@@ -318,13 +327,13 @@ export default function LicensesView({ userData, refreshUserData }) {
           </h3>
           <p className="text-xs text-white/50 mt-1 leading-relaxed">
             Hier siehst du ausschließlich Lizenzen, die <strong>kündbar</strong> oder in der Auto-Verlängerung anpassbar sind.
-            Unbegrenzte oder abgelaufene Lizenzen werden ausgeblendet.
+            Unbegrenzte oder abgelaufene Lizenzen werden ausgeblendet. <strong>Credits-Pässe werden immer angezeigt</strong> (auch abgelaufen).
             Änderungen übernimmt der Discord-Bot innerhalb weniger Sekunden.
           </p>
           {hiddenCount > 0 && (
             <p className="text-[11px] text-white/30 mt-2 flex items-center gap-1.5">
               <Info className="w-3 h-3" />
-              {hiddenCount} Lizenz{hiddenCount !== 1 ? 'en' : ''} ausgeblendet (permanent / abgelaufen / Credits).
+              {hiddenCount} Lizenz{hiddenCount !== 1 ? 'en' : ''} ausgeblendet (permanent / abgelaufen).
             </p>
           )}
           {Object.keys(pendingActions).length > 0 && (
