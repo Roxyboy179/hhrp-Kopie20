@@ -1019,21 +1019,21 @@ export function ShopView({ user, userData, onRefresh }) {
               ? Math.floor(option.credits * activePass.creditsPurchaseBonus)
               : 0;
             
-            // Gesamt-Credits (Basis + Promo-Bonus + Pass-Bonus)
+            // Gesamt-Credits berechnen
             let totalCredits = option.credits;
-            let totalBonusCredits = 0;
+            let promoBonusCredits = 0;
             
             if (hasPromoBonus) {
               totalCredits = bonusInfo.totalCredits;
-              totalBonusCredits = bonusInfo.bonusCredits;
+              promoBonusCredits = bonusInfo.bonusCredits;
             }
             
+            // Pass-Bonus ZUSÄTZLICH zur Promo
             if (passBonus > 0) {
               totalCredits += passBonus;
-              totalBonusCredits += passBonus;
             }
             
-            const hasAnyBonus = totalBonusCredits > 0;
+            const hasAnyBonus = promoBonusCredits > 0 || passBonus > 0;
             
             return (
             <div
@@ -1080,19 +1080,16 @@ export function ShopView({ user, userData, onRefresh }) {
                     </span>
                   </div>
                   <div className="text-xs space-y-0.5 mt-1">
-                    {hasPromoBonus && (
+                    {promoBonusCredits > 0 && (
                       <div className="text-amber-300 font-semibold">
-                        🎉 Aktion: +{bonusInfo.bonusCredits} Bonus
+                        + {promoBonusCredits} Bonus
                       </div>
                     )}
                     {passBonus > 0 && (
                       <div className="text-purple-300 font-semibold">
-                        💳 {activePass.name.replace('Credits ', '')}: +{passBonus} Bonus (+{Math.round(activePass.creditsPurchaseBonus * 100)}%)
+                        + {passBonus} {activePass.name.replace('Credits ', '').replace(' Pass', '')}
                       </div>
                     )}
-                    <div className="text-green-400 font-bold mt-1">
-                      = {totalCredits} Credits total
-                    </div>
                   </div>
                 </div>
               ) : (
