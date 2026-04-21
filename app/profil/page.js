@@ -1614,9 +1614,11 @@ export default function ProfilPage() {
                 <div data-tour-card="Täglicher Bonus|Hole jeden Tag deinen kostenlosen Bonus ab. Je länger dein Streak, desto höher die Belohnung – plus spezielle VIP-Bonis für Premium-Mitglieder." className="relative">
                 {(() => {
                   const hasChar = !!(userData?.character?.name || userData?.characterName);
+                  // Während Loading NIE das Lock-Overlay zeigen (verhindert Flackern)
+                  const showLock = !loading && userData && !hasChar;
                   return (
                     <>
-                      <div className={hasChar ? '' : 'pointer-events-none select-none'}>
+                      <div className={showLock ? 'pointer-events-none select-none' : ''}>
                         <DailyBonusCard 
                           userId={user?.id}
                           onSuccess={() => {
@@ -1625,7 +1627,7 @@ export default function ProfilPage() {
                           }}
                         />
                       </div>
-                      {!hasChar && (
+                      {showLock && (
                         <div
                           className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 rounded-2xl"
                           style={{
