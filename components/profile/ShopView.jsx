@@ -14,6 +14,13 @@ import {
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // Icon-Map für Credit-Spend Items (ersetzt Emojis)
 const SPEND_ITEM_ICONS = {
@@ -40,6 +47,66 @@ const CRATE_ICONS = {
   silber:  { Icon: Package, color: '#C0C0C0' },
   gold:    { Icon: Gift,    color: '#FFD700' },
   diamond: { Icon: Gem,     color: '#22D3EE' }
+};
+
+// ──────────────────────────────────────────────────────────────
+// Einheitliche Kategorien-Konfiguration (Single Source of Truth)
+// Benutzt von Sidebar, Dropdown und Section-Header
+// ──────────────────────────────────────────────────────────────
+const SHOP_SECTION_CATEGORIES = [
+  { id: 'all',            name: 'Alle Items',      icon: Grid,      color: '#ffffff' },
+  { id: 'vip_premiums',   name: 'VIP Pässe',       icon: Crown,     color: '#fbbf24' },
+  { id: 'credits_passes', name: 'Credits Pässe',   icon: CreditCard, color: '#8b5cf6' },
+  { id: 'führerscheine',  name: 'Führerscheine',   icon: Car,       color: '#3b82f6' },
+  { id: 'waffen',         name: 'Waffenscheine',   icon: Crosshair, color: '#ef4444' },
+  { id: 'versicherungen', name: 'Versicherungen',  icon: Shield,    color: '#06b6d4' },
+  { id: 'werkzeuge',      name: 'Werkzeuge',       icon: Wrench,    color: '#f97316' },
+  { id: 'schutzbriefe',   name: 'Schutzbriefe',    icon: FileText,  color: '#10b981' },
+];
+
+const CREDITS_BANK_CATEGORIES = [
+  { id: 'credits',      name: 'Credits kaufen',  icon: Coins,      color: '#facc15' },
+  { id: 'bank_limit',   name: 'Bank Limit',      icon: TrendingUp, color: '#22d3ee' },
+  { id: 'credit_spend', name: 'Credits-Extras',  icon: Sparkles,   color: '#a855f7' },
+  { id: 'mystery_box',  name: 'Mystery Boxes',   icon: Package,    color: '#ec4899' },
+];
+
+const ALL_CATEGORIES = [...SHOP_SECTION_CATEGORIES, ...CREDITS_BANK_CATEGORIES];
+
+const getCategoryMeta = (id) =>
+  ALL_CATEGORIES.find(c => c.id === id) || SHOP_SECTION_CATEGORIES[0];
+
+// ──────────────────────────────────────────────────────────────
+// Color-Map pro Item (für farbige Icon-Tiles in den Karten)
+// Wird per Item-ID oder Kategorie ausgewertet
+// ──────────────────────────────────────────────────────────────
+const ITEM_CATEGORY_COLORS = {
+  führerscheine:   '#3b82f6', // Blau
+  waffen:          '#ef4444', // Rot
+  versicherungen:  '#06b6d4', // Cyan
+  vip_premiums:    '#fbbf24', // Gold
+  credits_passes:  '#8b5cf6', // Violett
+  werkzeuge:       '#f97316', // Orange
+  schutzbriefe:    '#10b981', // Emerald
+  credits:         '#facc15', // Yellow
+  bank_limit:      '#22d3ee', // Sky
+  credit_spend:    '#a855f7', // Purple
+  mystery_box:     '#ec4899', // Pink
+};
+
+// Spezielle Farben für einzelne VIP-Items (premium look)
+const VIP_ITEM_COLORS = {
+  vip_premium:    '#a78bfa',
+  vip_platinum:   '#c084fc',
+  vip_ultimate:   '#9333ea',
+  vip_elite_plus: '#f472b6',
+  luxus_pass:     '#fbbf24',
+};
+
+const getItemColor = (id, category) => {
+  if (VIP_ITEM_COLORS[id]) return VIP_ITEM_COLORS[id];
+  if (ITEM_CATEGORY_COLORS[category]) return ITEM_CATEGORY_COLORS[category];
+  return '#ffffff';
 };
 
 // Shop-Aktionen (Single Source of Truth – shared mit Backend)
@@ -921,6 +988,35 @@ export function ShopView({ user, userData, onRefresh }) {
     return getActiveBannerPromotions(userHighestVIP);
   }, [userHighestVIP]);
 
+  // ═══════════════════════════════════════════════════════════════
+  // 🗂️ Zählung pro Kategorie (für Sidebar-Badges)
+  // ═══════════════════════════════════════════════════════════════
+  const categoryCounts = useMemo(() => {
+    const counts = { all: 0 };
+    Object.entries(shopItems).forEach(([id, item]) => {
+      counts.all += 1;
+      const cat = item.category;
+      if (cat) {
+        counts[cat] = (counts[cat] || 0) + 1;
+      }
+    });
+    // Spezial-Kategorien zählen ihre eigenen Items
+    counts.credits      = creditOptions.length;
+    counts.bank_limit   = bankLimitUpgrades.length;
+    counts.credit_spend = creditSpendItems.length;
+    counts.mystery_box  = creditCrates.length;
+    return counts;
+  }, [shopItems, creditOptions, bankLimitUpgrades, creditSpendItems, creditCrates]);
+
+  // Aktuelle Kategorie-Meta (für Section-Header)
+  const currentCategoryMeta = useMemo(
+    () => getCategoryMeta(selectedCategory),
+    [selectedCategory]
+  );
+
+  // Helper: Ist die aktuelle Kategorie eine der Spezial-Kategorien (credits/bank/spend/mystery)?
+  const isSpecialCategory = CREDITS_BANK_CATEGORIES.some(c => c.id === selectedCategory);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -934,138 +1030,352 @@ export function ShopView({ user, userData, onRefresh }) {
       {/* 🎉 Aktions-Banner (Slider bei mehreren aktiven Aktionen) */}
       <PromoBanner promos={activeBannerPromos} variant="shop" />
 
-      {/* Info Banner - Überweisung-Stil */}
-      <div 
-        className="p-4 rounded-xl border backdrop-blur-sm"
-        style={{
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))',
-          borderColor: 'rgba(255, 255, 255, 0.1)'
-        }}
-      >
-        <div className="flex items-start gap-3">
-          <ShoppingBag className="w-5 h-5 text-white/60 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-white/70">
-            <p className="font-medium text-white mb-1">Willkommen im HHRP Shop</p>
-            <p>Kaufe Lizenzen, Versicherungen, VIP-Upgrades und mehr. VIP-Mitglieder erhalten automatische Rabatte!</p>
+      {/* ═══════════════════════════════════════════════════════════════
+          HERO HEADER: Guthaben + Credits + VIP-Status (Glass-Stil)
+          ═══════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Bank-Guthaben */}
+        <div className="glass glass-card-hover rounded-2xl p-5 border border-white/[0.08]">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+              <CreditCard className="w-6 h-6 text-emerald-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-white/40">Dein Guthaben</p>
+              <p className="text-2xl font-bold text-white truncate">{userBalance.toLocaleString('de-DE')} €</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Credits */}
+        <div className="glass glass-card-hover rounded-2xl p-5 border border-white/[0.08]">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+              <Coins className="w-6 h-6 text-yellow-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-white/40">Credits</p>
+              <p className="text-2xl font-bold text-white truncate">{userCredits.toLocaleString('de-DE')}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* VIP-Status / Rabatt */}
+        <div className="glass glass-card-hover rounded-2xl p-5 border border-white/[0.08] sm:col-span-2 lg:col-span-1">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{
+                background: hasLuxusPass ? 'rgba(251, 191, 36, 0.2)'
+                         : hasVIPElitePlus ? 'rgba(168, 85, 247, 0.2)'
+                         : hasVIPUltimate ? 'rgba(168, 85, 247, 0.2)'
+                         : hasVIPPlatinum ? 'rgba(147, 51, 234, 0.2)'
+                         : hasVIPPremium ? 'rgba(147, 51, 234, 0.2)'
+                         : 'rgba(255, 255, 255, 0.06)'
+              }}
+            >
+              {hasLuxusPass ? <Crown className="w-6 h-6 text-yellow-400" />
+               : hasVIPElitePlus ? <Award className="w-6 h-6 text-purple-400" />
+               : hasVIPUltimate ? <Zap className="w-6 h-6 text-purple-400" />
+               : hasVIPPlatinum ? <Gem className="w-6 h-6 text-purple-300" />
+               : hasVIPPremium ? <Sparkles className="w-6 h-6 text-purple-300" />
+               : <Shield className="w-6 h-6 text-white/40" />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-white/40">VIP-Status</p>
+              {hasLuxusPass ? (
+                <>
+                  <p className="text-lg font-bold text-white leading-tight">Luxus-Pass</p>
+                  <p className="text-xs text-green-400 font-semibold">-50% auf Käufe</p>
+                </>
+              ) : hasVIPElitePlus ? (
+                <>
+                  <p className="text-lg font-bold text-white leading-tight">Elite Plus</p>
+                  <p className="text-xs text-green-400 font-semibold">-35% auf Käufe</p>
+                </>
+              ) : hasVIPUltimate ? (
+                <>
+                  <p className="text-lg font-bold text-white leading-tight">VIP Ultimate</p>
+                  <p className="text-xs text-green-400 font-semibold">-20% auf Käufe</p>
+                </>
+              ) : hasVIPPlatinum ? (
+                <>
+                  <p className="text-lg font-bold text-white leading-tight">VIP Platinum</p>
+                  <p className="text-xs text-green-400 font-semibold">-10% auf Käufe</p>
+                </>
+              ) : hasVIPPremium ? (
+                <p className="text-lg font-bold text-white leading-tight">VIP Premium</p>
+              ) : (
+                <p className="text-sm text-white/60 mt-0.5">Kein VIP aktiv</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Guthaben Info - Überweisung-Stil */}
-      <div 
-        className="p-4 rounded-xl border"
-        style={{
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
-          borderColor: 'rgba(255, 255, 255, 0.08)'
-        }}
-      >
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-white/50 mb-1">Dein Guthaben</p>
-            <p className="text-white font-bold text-lg">{userBalance.toLocaleString('de-DE')}€</p>
+      {/* Info Banner (Glass) */}
+      <div className="glass rounded-2xl p-4 border border-white/[0.08]">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+            <Info className="w-5 h-5 text-blue-400" />
           </div>
-          <div className="text-right">
-            <p className="text-sm text-white/50 mb-1">Credits</p>
-            <p className="text-white font-bold text-lg">{userCredits}</p>
-          </div>
-        </div>
-        {vipDiscount > 0 && (
-          <div className="mt-3 pt-3 border-t border-white/10">
-            <p className="text-sm text-white/70">
-              {hasLuxusPass && '🎩 Luxus-Pass'}
-              {hasVIPElitePlus && !hasLuxusPass && '🏆 VIP ELITE PLUS'}
-              {hasVIPUltimate && !hasVIPElitePlus && !hasLuxusPass && '⚡ VIP Ultimate'}
-              {hasVIPPlatinum && !hasVIPUltimate && !hasVIPElitePlus && !hasLuxusPass && '💎 VIP Platinum'}
-              <span className="text-green-400 ml-2">-{(vipDiscount * 100).toFixed(0)}% auf alle Käufe</span>
+          <div className="text-sm flex-1 min-w-0">
+            <p className="font-semibold text-white mb-0.5">Willkommen im HHRP Shop</p>
+            <p className="text-white/60 leading-relaxed">
+              Kaufe Lizenzen, Versicherungen, VIP-Upgrades und mehr. VIP-Mitglieder erhalten automatische Rabatte!
             </p>
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Warenkorb & Verschenken Buttons */}
-      <div className="flex justify-end gap-3">
-        {/* Verschenken-Modus Button */}
-        {giftMode ? (
-          <div className="flex items-center gap-3">
-            <div 
-              className="px-4 py-2 rounded-xl border"
-              style={{
-                background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.1), rgba(126, 34, 206, 0.05))',
-                borderColor: 'rgba(147, 51, 234, 0.3)'
-              }}
-            >
-              <p className="text-sm text-purple-300">
-                <Heart className="w-4 h-4 inline mr-2" />
-                Verschenken an: <span className="font-bold">{giftRecipient?.displayName}</span>
-              </p>
-            </div>
-            <Button
-              onClick={cancelGiftMode}
-              variant="outline"
-              className="rounded-xl h-12 px-4"
-            >
-              <X className="w-4 h-4 mr-2" />
-              Beenden
-            </Button>
-          </div>
-        ) : (
-          <Button
-            onClick={openGiftMode}
-            className="rounded-xl h-12 px-6"
-            style={{
-              background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(126, 34, 206, 0.3))',
-              border: '1px solid rgba(147, 51, 234, 0.4)',
-              color: '#fff'
+      {/* ═══════════════════════════════════════════════════════════════
+          ACTION BAR: Mobile Filter + Verschenken + Warenkorb
+          ═══════════════════════════════════════════════════════════════ */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        {/* Mobile Filter Dropdown (< lg) */}
+        <div className="lg:hidden w-full sm:w-[280px]">
+          <Select
+            value={selectedCategory}
+            onValueChange={(v) => {
+              setSelectedCategory(v);
+              setSelectedFilter('all');
             }}
           >
-            <Heart className="w-5 h-5 mr-2" />
-            Verschenken
-          </Button>
-        )}
-        
-        <Button
-          onClick={() => setShowCart(true)}
-          className="rounded-xl h-12 px-6"
-          style={{
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            color: '#fff'
-          }}
-        >
-          <ShoppingCart className="w-5 h-5 mr-2" />
-          Warenkorb ({cart.length})
-        </Button>
-      </div>
-
-      {/* Kategorien - Überweisung-Stil */}
-      <div className="flex flex-wrap gap-2">
-        {Object.entries({ ...categories, ...specialCategories }).map(([key, cat]) => {
-          const Icon = cat.icon;
-          const isActive = selectedCategory === key;
-          return (
-            <button
-              key={key}
-              onClick={() => {
-                setSelectedCategory(key);
-                setSelectedFilter('all'); // Filter zurücksetzen
-              }}
-              className="px-4 py-2 rounded-xl text-sm font-medium transition-all"
+            <SelectTrigger
+              className="h-12 rounded-xl text-white w-full"
               style={{
-                background: isActive 
-                  ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))'
-                  : 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))',
-                border: isActive 
-                  ? '1px solid rgba(255, 255, 255, 0.25)'
-                  : '1px solid rgba(255, 255, 255, 0.08)',
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02))',
+                borderColor: 'rgba(255, 255, 255, 0.1)'
+              }}
+            >
+              <SelectValue placeholder="Kategorie wählen" />
+            </SelectTrigger>
+            <SelectContent
+              className="border-white/10"
+              style={{ background: 'linear-gradient(135deg, rgba(30, 30, 30, 0.98), rgba(15, 15, 15, 0.98))' }}
+            >
+              <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-white/40 font-semibold">Shop Items</div>
+              {SHOP_SECTION_CATEGORIES.map(cat => {
+                const Icon = cat.icon;
+                const count = categoryCounts[cat.id] || 0;
+                return (
+                  <SelectItem key={cat.id} value={cat.id} className="text-white">
+                    <div className="flex items-center gap-2">
+                      <Icon className="w-4 h-4" style={{ color: cat.color }} />
+                      <span>{cat.name}</span>
+                      {cat.id !== 'all' && count > 0 && (
+                        <span className="text-[10px] text-white/40 ml-auto">({count})</span>
+                      )}
+                    </div>
+                  </SelectItem>
+                );
+              })}
+              <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-white/40 font-semibold mt-1 border-t border-white/10">Credits &amp; Bank</div>
+              {CREDITS_BANK_CATEGORIES.map(cat => {
+                const Icon = cat.icon;
+                return (
+                  <SelectItem key={cat.id} value={cat.id} className="text-white">
+                    <div className="flex items-center gap-2">
+                      <Icon className="w-4 h-4" style={{ color: cat.color }} />
+                      <span>{cat.name}</span>
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Actions: Verschenken + Warenkorb */}
+        <div className="flex items-center gap-3 sm:ml-auto flex-wrap">
+          {giftMode ? (
+            <>
+              <div
+                className="px-4 py-2 rounded-xl border flex items-center gap-2"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.15), rgba(126, 34, 206, 0.08))',
+                  borderColor: 'rgba(147, 51, 234, 0.35)'
+                }}
+              >
+                <Heart className="w-4 h-4 text-purple-300 flex-shrink-0" />
+                <p className="text-sm text-purple-200 truncate">
+                  An: <span className="font-bold text-white">{giftRecipient?.displayName}</span>
+                </p>
+              </div>
+              <Button
+                onClick={cancelGiftMode}
+                variant="outline"
+                className="rounded-xl h-11 px-4 border-white/10 hover:bg-white/5"
+              >
+                <X className="w-4 h-4 mr-1.5" />
+                Beenden
+              </Button>
+            </>
+          ) : (
+            <Button
+              onClick={openGiftMode}
+              className="rounded-xl h-11 px-5"
+              style={{
+                background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.25), rgba(126, 34, 206, 0.35))',
+                border: '1px solid rgba(147, 51, 234, 0.45)',
                 color: '#fff'
               }}
             >
-              <Icon className="w-4 h-4 inline mr-2" />
-              {cat.name}
-            </button>
-          );
-        })}
+              <Heart className="w-4 h-4 mr-2" />
+              Verschenken
+            </Button>
+          )}
+
+          <Button
+            onClick={() => setShowCart(true)}
+            className="rounded-xl h-11 px-5 relative"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08))',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              color: '#fff'
+            }}
+          >
+            <ShoppingCart className="w-4 h-4 mr-2" />
+            Warenkorb
+            {cart.length > 0 && (
+              <span
+                className="ml-2 min-w-[22px] h-[22px] px-1.5 rounded-full flex items-center justify-center text-[11px] font-bold"
+                style={{
+                  background: 'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                  color: '#1a1a1a'
+                }}
+              >
+                {cart.length}
+              </span>
+            )}
+          </Button>
+        </div>
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════════
+          MAIN LAYOUT: Sidebar (Desktop) + Content
+          ═══════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
+
+        {/* Desktop Sidebar (lg+) */}
+        <aside className="hidden lg:block">
+          <div className="glass rounded-2xl p-3 border border-white/[0.08] sticky top-24">
+            <p className="text-[10px] uppercase tracking-wider text-white/40 px-3 pt-2 pb-2 font-semibold">Shop Items</p>
+            {SHOP_SECTION_CATEGORIES.map(cat => {
+              const Icon = cat.icon;
+              const isActive = selectedCategory === cat.id;
+              const count = categoryCounts[cat.id];
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    setSelectedCategory(cat.id);
+                    setSelectedFilter('all');
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all mb-1 group ${
+                    isActive ? 'bg-white/10' : 'hover:bg-white/[0.04]'
+                  }`}
+                  style={{
+                    border: isActive
+                      ? `1px solid ${cat.color}55`
+                      : '1px solid transparent',
+                    boxShadow: isActive ? `0 0 20px ${cat.color}22` : 'none'
+                  }}
+                >
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+                    style={{
+                      background: isActive ? `${cat.color}33` : `${cat.color}1a`,
+                      border: `1px solid ${cat.color}${isActive ? '66' : '2a'}`
+                    }}
+                  >
+                    <Icon className="w-4 h-4" style={{ color: cat.color }} />
+                  </div>
+                  <span className={`text-sm flex-1 text-left truncate ${isActive ? 'text-white font-semibold' : 'text-white/70 group-hover:text-white/90'}`}>
+                    {cat.name}
+                  </span>
+                  {cat.id !== 'all' && count !== undefined && count > 0 && (
+                    <span className={`text-[10px] rounded-full px-2 py-0.5 flex-shrink-0 ${
+                      isActive ? 'text-white bg-white/10' : 'text-white/40 bg-white/5'
+                    }`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+
+            <div className="h-px bg-white/10 my-3 mx-2" />
+
+            <p className="text-[10px] uppercase tracking-wider text-white/40 px-3 pt-1 pb-2 font-semibold">Credits &amp; Bank</p>
+            {CREDITS_BANK_CATEGORIES.map(cat => {
+              const Icon = cat.icon;
+              const isActive = selectedCategory === cat.id;
+              const count = categoryCounts[cat.id];
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    setSelectedCategory(cat.id);
+                    setSelectedFilter('all');
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all mb-1 group ${
+                    isActive ? 'bg-white/10' : 'hover:bg-white/[0.04]'
+                  }`}
+                  style={{
+                    border: isActive
+                      ? `1px solid ${cat.color}55`
+                      : '1px solid transparent',
+                    boxShadow: isActive ? `0 0 20px ${cat.color}22` : 'none'
+                  }}
+                >
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+                    style={{
+                      background: isActive ? `${cat.color}33` : `${cat.color}1a`,
+                      border: `1px solid ${cat.color}${isActive ? '66' : '2a'}`
+                    }}
+                  >
+                    <Icon className="w-4 h-4" style={{ color: cat.color }} />
+                  </div>
+                  <span className={`text-sm flex-1 text-left truncate ${isActive ? 'text-white font-semibold' : 'text-white/70 group-hover:text-white/90'}`}>
+                    {cat.name}
+                  </span>
+                  {count !== undefined && count > 0 && (
+                    <span className={`text-[10px] rounded-full px-2 py-0.5 flex-shrink-0 ${
+                      isActive ? 'text-white bg-white/10' : 'text-white/40 bg-white/5'
+                    }`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="space-y-5 min-w-0">
+
+          {/* Section Header */}
+          <div className="flex items-center gap-3 pb-3 border-b border-white/[0.08]">
+            <div
+              className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{
+                background: `${currentCategoryMeta.color}22`,
+                border: `1px solid ${currentCategoryMeta.color}44`
+              }}
+            >
+              <currentCategoryMeta.icon className="w-5 h-5" style={{ color: currentCategoryMeta.color }} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg font-bold text-white leading-tight">{currentCategoryMeta.name}</h2>
+              {categoryCounts[selectedCategory] !== undefined && categoryCounts[selectedCategory] > 0 && (
+                <p className="text-xs text-white/40">{categoryCounts[selectedCategory]} Artikel</p>
+              )}
+            </div>
+          </div>
+
 
       {/* Credits kaufen */}
       {selectedCategory === 'credits' && (
@@ -1104,20 +1414,33 @@ export function ShopView({ user, userData, onRefresh }) {
             return (
             <div
               key={index}
-              className={`p-4 rounded-xl border relative ${isBotLocked ? 'overflow-hidden pointer-events-none' : ''} ${hasPromoBonus ? 'promo-card' : ''}`}
+              className={`p-5 rounded-2xl border relative transition-all duration-300 ${isBotLocked ? 'overflow-hidden pointer-events-none' : 'glass glass-card-hover'} ${hasPromoBonus ? 'promo-card' : ''}`}
               style={{
                 background: hasPromoBonus
                   ? undefined
-                  : 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
+                  : isBotLocked
+                    ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(16, 185, 129, 0.02))'
+                    : undefined,
                 borderColor: hasPromoBonus
                   ? undefined
-                  : (isBotLocked ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255, 255, 255, 0.08)'),
+                  : (isBotLocked ? 'rgba(16, 185, 129, 0.4)' : undefined),
               }}
             >
-              <div className="flex items-start justify-between mb-3 relative z-10">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Coins className="w-5 h-5 text-emerald-400 shrink-0" />
-                  <h3 className="font-semibold text-white truncate">{option.label}</h3>
+              <div className="flex items-start justify-between mb-4 relative z-10">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div
+                    className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{
+                      background: 'rgba(250, 204, 21, 0.15)',
+                      border: '1px solid rgba(250, 204, 21, 0.35)'
+                    }}
+                  >
+                    <Coins className="w-5 h-5 text-yellow-400" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-white truncate">{option.label}</h3>
+                    <p className="text-[11px] text-white/40">Credits-Paket</p>
+                  </div>
                 </div>
                 {hasPromoBonus && (
                   <span
@@ -1215,16 +1538,27 @@ export function ShopView({ user, userData, onRefresh }) {
             return (
             <div
               key={index}
-              className={`p-4 rounded-xl border relative ${isBotLocked ? 'overflow-hidden pointer-events-none' : ''}`}
+              className={`p-5 rounded-2xl border relative transition-all duration-300 ${isBotLocked ? 'overflow-hidden pointer-events-none' : 'glass glass-card-hover'}`}
               style={{
-                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
-                borderColor: isBotLocked ? 'rgba(6, 182, 212, 0.4)' : 'rgba(255, 255, 255, 0.08)'
+                background: isBotLocked
+                  ? 'linear-gradient(135deg, rgba(6, 182, 212, 0.08), rgba(6, 182, 212, 0.02))'
+                  : undefined,
+                borderColor: isBotLocked ? 'rgba(6, 182, 212, 0.4)' : undefined
               }}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
+              <div className="flex items-start gap-3 mb-3">
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: 'rgba(34, 211, 238, 0.15)',
+                    border: '1px solid rgba(34, 211, 238, 0.35)'
+                  }}
+                >
                   <TrendingUp className="w-5 h-5 text-cyan-400" />
-                  <h3 className="font-semibold text-white">{upgrade.label}</h3>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold text-white truncate">{upgrade.label}</h3>
+                  <p className="text-[11px] text-white/40">Bank-Upgrade</p>
                 </div>
               </div>
               <p className="text-sm text-white/60 mb-3">{upgrade.description}</p>
@@ -1353,28 +1687,45 @@ export function ShopView({ user, userData, onRefresh }) {
             return (
               <div
                 key={item.id}
-                className={`p-4 rounded-xl border flex flex-col relative ${isBotLocked ? 'overflow-hidden pointer-events-none' : ''}`}
+                className={`p-5 rounded-2xl border flex flex-col relative transition-all duration-300 ${
+                  isBotLocked ? 'overflow-hidden pointer-events-none' : 'glass glass-card-hover'
+                }`}
                 style={{
-                  background: blocked
-                    ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.06), rgba(255,255,255,0.01))'
-                    : 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
+                  background: isBotLocked
+                    ? 'linear-gradient(135deg, rgba(147, 51, 234, 0.12), rgba(147, 51, 234, 0.04))'
+                    : isActive
+                      ? `linear-gradient(135deg, ${iconColor}22, ${iconColor}08)`
+                      : blocked
+                        ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.08), rgba(255,255,255,0.01))'
+                        : undefined,
                   borderColor: isBotLocked
                     ? 'rgba(147, 51, 234, 0.4)'
-                    : blocked
-                      ? 'rgba(245, 158, 11, 0.25)'
-                      : 'rgba(255, 255, 255, 0.08)'
+                    : isActive
+                      ? `${iconColor}55`
+                      : blocked
+                        ? 'rgba(245, 158, 11, 0.3)'
+                        : undefined,
+                  boxShadow: isActive ? `0 0 24px ${iconColor}33` : undefined,
                 }}
               >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2 min-w-0">
+                {/* Schimmer für aktive Items */}
+                {isActive && (
+                  <div
+                    className="absolute inset-0 rounded-2xl pointer-events-none opacity-40"
+                    style={{ background: `radial-gradient(circle at top right, ${iconColor}2a, transparent 60%)` }}
+                  />
+                )}
+                <div className="flex items-start justify-between mb-2 relative z-10">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div
-                      className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 border"
+                      className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
                       style={{
-                        background: `${iconColor}18`,
-                        borderColor: `${iconColor}33`
+                        background: `${iconColor}22`,
+                        border: `1px solid ${iconColor}44`,
+                        boxShadow: isActive ? `0 0 12px ${iconColor}55` : 'none'
                       }}
                     >
-                      <ItemIcon className="w-4 h-4" style={{ color: iconColor }} />
+                      <ItemIcon className="w-5 h-5" style={{ color: iconColor }} />
                     </div>
                     <h3 className="font-semibold text-white truncate">{item.label}</h3>
                   </div>
@@ -1384,7 +1735,7 @@ export function ShopView({ user, userData, onRefresh }) {
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-white/60 mb-2 flex-1">{item.description}</p>
+                <p className="text-sm text-white/60 mb-2 flex-1 relative z-10">{item.description}</p>
 
                 {/* Credits-Pass Rabatt-Anzeige */}
                 {discount > 0 && !blocked && (
@@ -1508,26 +1859,32 @@ export function ShopView({ user, userData, onRefresh }) {
             return (
               <div
                 key={crate.id}
-                className={`p-5 rounded-xl border relative overflow-hidden flex flex-col ${isBotLocked ? 'pointer-events-none' : ''}`}
+                className={`p-5 rounded-2xl border relative overflow-hidden flex flex-col transition-all duration-300 ${isBotLocked ? 'pointer-events-none' : 'glass glass-card-hover'}`}
                 style={{
-                  background: `linear-gradient(135deg, ${color}18, rgba(255,255,255,0.02))`,
-                  borderColor: isBotLocked ? 'rgba(236, 72, 153, 0.5)' : `${color}55`
+                  background: `linear-gradient(135deg, ${color}1f, ${color}05)`,
+                  borderColor: isBotLocked ? 'rgba(236, 72, 153, 0.5)' : `${color}55`,
+                  boxShadow: isBotLocked ? undefined : `0 0 20px ${color}22`
                 }}
               >
-                <div className="text-center mb-3">
+                {/* Hintergrund-Schimmer */}
+                <div
+                  className="absolute inset-0 pointer-events-none opacity-40"
+                  style={{ background: `radial-gradient(circle at top, ${color}2a, transparent 70%)` }}
+                />
+                <div className="text-center mb-3 relative z-10">
                   <div
-                    className="w-16 h-16 mx-auto mb-3 rounded-xl flex items-center justify-center border-2"
+                    className="w-16 h-16 mx-auto mb-3 rounded-2xl flex items-center justify-center border-2 transition-transform group-hover:scale-110"
                     style={{
-                      background: `${color}22`,
-                      borderColor: `${color}66`,
-                      boxShadow: `0 0 30px ${color}33`
+                      background: `${color}2a`,
+                      borderColor: `${color}77`,
+                      boxShadow: `0 0 30px ${color}44`
                     }}
                   >
                     <CrateIcon className="w-9 h-9" style={{ color }} strokeWidth={1.5} />
                   </div>
                   <h3 className="font-bold text-white text-lg">{crate.name}</h3>
                 </div>
-                <p className="text-xs text-white/60 text-center mb-3">{crate.description}</p>
+                <p className="text-xs text-white/60 text-center mb-3 relative z-10">{crate.description}</p>
                 
                 {/* Credits-Pass Rabatt-Anzeige */}
                 {discount > 0 && (
@@ -1724,31 +2081,53 @@ export function ShopView({ user, userData, onRefresh }) {
             // 🎉 Ist für diese Karte die Aktions-Optik aktiv? (nicht bei Locked/Besitz/Gift-Mode)
             const showPromoStyling = !!activePromoForItem && !hasItem && !visuallyLocked && !isBotLocked;
 
+            // 🎨 Item-Farbe (aus Kategorie oder VIP-Mapping)
+            const itemColor = getItemColor(id, item.category);
+            const isOwnedActive = hasItem && !giftMode;
+
             return (
               <div
                 key={id}
-                className={`p-4 rounded-xl border relative ${isBotLocked ? 'overflow-hidden pointer-events-none' : ''} ${showPromoStyling ? 'promo-card' : ''}`}
+                className={`group relative p-5 rounded-2xl border transition-all duration-300 ${
+                  isBotLocked ? 'overflow-hidden pointer-events-none' : ''
+                } ${showPromoStyling ? 'promo-card' : ''} ${
+                  !visuallyLocked && !isBotLocked && !showPromoStyling ? 'glass glass-card-hover' : ''
+                }`}
                 style={{
                   background: showPromoStyling
                     ? undefined  // promo-card CSS übernimmt (via !important)
-                    : (visuallyLocked
-                        ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.15), rgba(80, 80, 80, 0.1))'
-                        : 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))'),
+                    : isOwnedActive
+                      ? `linear-gradient(135deg, ${itemColor}22, ${itemColor}08)`
+                      : (visuallyLocked
+                          ? 'linear-gradient(135deg, rgba(100, 100, 100, 0.12), rgba(80, 80, 80, 0.06))'
+                          : undefined),  // glass class handles default
                   borderColor: showPromoStyling
                     ? undefined  // promo-card CSS übernimmt
-                    : (isBotLocked
-                        ? 'rgba(245, 158, 11, 0.4)'
-                        : visuallyLocked
-                          ? 'rgba(150, 150, 150, 0.2)'
-                          : 'rgba(255, 255, 255, 0.08)'),
-                  opacity: visuallyLocked ? 0.7 : 1,
-                  position: 'relative'
+                    : isOwnedActive
+                      ? `${itemColor}55`
+                      : (isBotLocked
+                          ? 'rgba(245, 158, 11, 0.4)'
+                          : visuallyLocked
+                            ? 'rgba(150, 150, 150, 0.25)'
+                            : undefined),  // glass class handles default
+                  opacity: visuallyLocked && !isOwnedActive ? 0.7 : 1,
+                  boxShadow: isOwnedActive ? `0 0 28px ${itemColor}22` : undefined,
                 }}
               >
-                {/* Sperr-Overlay */}
-                {visuallyLocked && (
+                {/* Schimmernder Glanz für "Aktiv"-Karten (eigene Items) */}
+                {isOwnedActive && (
+                  <div
+                    className="absolute inset-0 rounded-2xl pointer-events-none opacity-50"
+                    style={{
+                      background: `radial-gradient(circle at top right, ${itemColor}2a, transparent 60%)`
+                    }}
+                  />
+                )}
+
+                {/* Sperr-Overlay für gesperrte Karten (Streifenmuster) */}
+                {visuallyLocked && !isOwnedActive && (
                   <div 
-                    className="absolute inset-0 rounded-xl pointer-events-none"
+                    className="absolute inset-0 rounded-2xl pointer-events-none"
                     style={{
                       background: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(0,0,0,0.05) 10px, rgba(0,0,0,0.05) 20px)'
                     }}
@@ -1898,9 +2277,18 @@ export function ShopView({ user, userData, onRefresh }) {
                 )}
                 
                 <div className="flex items-start justify-between mb-3 relative z-10">
-                  <div className="flex items-center gap-2">
-                    <ItemIcon className="w-5 h-5 text-white/70" />
-                    <h3 className="font-semibold text-white">{item.name}</h3>
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div
+                      className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+                      style={{
+                        background: `${itemColor}1f`,
+                        border: `1px solid ${itemColor}44`,
+                        boxShadow: isOwnedActive ? `0 0 16px ${itemColor}44` : 'none'
+                      }}
+                    >
+                      <ItemIcon className="w-5 h-5" style={{ color: itemColor }} />
+                    </div>
+                    <h3 className="font-semibold text-white truncate">{item.name}</h3>
                   </div>
                   {/* 🎉 Aktions-Badge (z.B. "-25% Aktion") */}
                   {activePromoForItem && !hasItem && (
@@ -2042,6 +2430,9 @@ export function ShopView({ user, userData, onRefresh }) {
           })}
         </div>
       )}
+        </main>
+      </div>
+
 
       {/* Warenkorb Modal - Überweisung-Stil mit Portal */}
       {showCart && createPortal(
