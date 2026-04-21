@@ -3541,21 +3541,21 @@ async function handleCreateBetaFeedback(request) {
     }
 
     // Check if user is Beta Tester (Role ID: 1494434149623136276)
-    console.log('[BETA FEEDBACK] User:', user.username);
+    // TEMPORÄR DEAKTIVIERT - Alle User können Feedback senden
+    console.log('[BETA FEEDBACK] User:', user.username || user.globalName);
     console.log('[BETA FEEDBACK] User Roles:', user.roles);
-    console.log('[BETA FEEDBACK] Hat Beta Tester Rolle?', user.roles?.includes('1494434149623136276'));
     
-    const isBetaTester = user.roles?.includes('1494434149623136276');
-    if (!isBetaTester) {
-      return NextResponse.json({ 
-        error: 'Nur Beta Tester können Feedback einreichen',
-        debug: {
-          yourRoles: user.roles || [],
-          requiredRole: '1494434149623136276',
-          hint: 'Bitte logge dich neu ein, damit deine Discord-Rollen aktualisiert werden'
-        }
-      }, { status: 403 });
-    }
+    // const isBetaTester = user.roles?.includes('1494434149623136276');
+    // if (!isBetaTester) {
+    //   return NextResponse.json({ 
+    //     error: 'Nur Beta Tester können Feedback einreichen',
+    //     debug: {
+    //       yourRoles: user.roles || [],
+    //       requiredRole: '1494434149623136276',
+    //       hint: 'Bitte logge dich neu ein, damit deine Discord-Rollen aktualisiert werden'
+    //     }
+    //   }, { status: 403 });
+    // }
 
     const body = await request.json();
     const { type, title, description, priority, page } = body;
