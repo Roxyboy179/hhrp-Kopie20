@@ -23,7 +23,7 @@ import {
   Lightbulb, Filter, Search, ArrowLeftRight, Target, Calculator,
   TrendingUpIcon, BarChart2, Send, XCircle, Infinity, Car, Coins,
   ChevronDown, ChevronRight, Palette, Wand2, Activity, Eye, EyeOff,
-  MousePointer2, Layers, Gauge
+  MousePointer2, Layers, Gauge, Percent, ArrowRight
 } from 'lucide-react';
 import { LicenseBadge } from '@/components/profile/LicenseBadge';
 import { LevelProgress } from '@/components/profile/LevelProgress';
@@ -964,6 +964,8 @@ export default function ProfilPage() {
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  // Optional: Ziel-Kategorie für den Shop-Tab (wird beim Tab-Wechsel gesetzt, z.B. Free-Pass-Banner)
+  const [shopJumpToCategory, setShopJumpToCategory] = useState(null);
   const [activeSubTab, setActiveSubTab] = useState('transactions'); // Default Sub-Tab
   
   // Filter States für Transaktionen
@@ -1610,6 +1612,152 @@ export default function ProfilPage() {
               <BotStatusCard status={botStatus} onRetry={loadData} />
             ) : (
               <>
+                {/* ═══════════════════════════════════════════════════════════════
+                    🎁 GRATIS 7-TAGE FREE-PASS PROMO-BANNER
+                    Zeigt sich NUR, wenn Nutzer den Free Pass noch NIE hatte
+                    (einmal pro Account — auch abgelaufen blockt erneut)
+                    ═══════════════════════════════════════════════════════════════ */}
+                {(() => {
+                  // Prüfen: Hat der User den Free Pass jemals gehabt? (auch abgelaufen)
+                  const hadFreePass = licenses.some(l => {
+                    if (!l) return false;
+                    const name = typeof l === 'string' ? l : (l?.name || l?.id);
+                    return name === 'credits_free_pass';
+                  });
+                  if (hadFreePass) return null;
+
+                  // Charakter-Check (nur wenn Char vorhanden, kann man Pass nutzen)
+                  const hasChar = !!(userData?.character?.name || userData?.characterName);
+                  if (!hasChar) return null;
+
+                  return (
+                    <div
+                      data-tour-card="Gratis 7-Tage Pass|Hole dir kostenlos einen 7-Tage-Pass mit +20 Bonus-Credits beim Kauf und 5% Rabatt beim Ausgeben. Einmalig pro Account."
+                      className="relative overflow-hidden rounded-2xl p-5 sm:p-6 border group cursor-pointer transition-all hover:scale-[1.01]"
+                      style={{
+                        background:
+                          'linear-gradient(135deg, rgba(147, 51, 234, 0.18), rgba(236, 72, 153, 0.12), rgba(59, 130, 246, 0.08))',
+                        borderColor: 'rgba(168, 85, 247, 0.45)',
+                        boxShadow:
+                          '0 0 40px rgba(168, 85, 247, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+                      }}
+                      onClick={() => {
+                        setShopJumpToCategory('credits_passes');
+                        setActiveTab('shop');
+                      }}
+                    >
+                      {/* Animierte Schimmer-Overlay */}
+                      <div
+                        className="absolute inset-0 pointer-events-none opacity-50"
+                        style={{
+                          background:
+                            'radial-gradient(ellipse at top right, rgba(251, 191, 36, 0.18), transparent 60%), radial-gradient(ellipse at bottom left, rgba(236, 72, 153, 0.2), transparent 60%)',
+                        }}
+                      />
+
+                      {/* GRATIS-Badge (top-right) */}
+                      <div
+                        className="absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase flex items-center gap-1 shadow-lg"
+                        style={{
+                          background:
+                            'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                          color: '#1a1a1a',
+                          border: '1px solid rgba(253, 224, 71, 0.8)',
+                        }}
+                      >
+                        <Sparkles className="w-3 h-3" strokeWidth={3} />
+                        Gratis
+                      </div>
+
+                      <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
+                        {/* Icon */}
+                        <div
+                          className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 group-hover:rotate-6"
+                          style={{
+                            background:
+                              'linear-gradient(135deg, rgba(168, 85, 247, 0.5), rgba(236, 72, 153, 0.4))',
+                            border: '1px solid rgba(253, 224, 71, 0.5)',
+                            boxShadow: '0 0 24px rgba(168, 85, 247, 0.5)',
+                          }}
+                        >
+                          <Gift className="w-7 h-7 sm:w-8 sm:h-8 text-white" strokeWidth={2} />
+                        </div>
+
+                        {/* Text */}
+                        <div className="flex-1 min-w-0 pr-20 sm:pr-24">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-yellow-300">
+                              Exklusiv · Einmalig pro Account
+                            </span>
+                          </div>
+                          <h3 className="text-lg sm:text-xl font-black text-white leading-tight mb-1.5">
+                            7 Tage Credits Free Pass{' '}
+                            <span className="text-yellow-300">Gratis</span>
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-white/80">
+                            <span className="flex items-center gap-1.5">
+                              <Coins className="w-3.5 h-3.5 text-yellow-400" />
+                              <span>
+                                <b className="text-white">+20</b> Bonus-Credits pro Kauf
+                              </span>
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <Percent className="w-3.5 h-3.5 text-green-400" />
+                              <span>
+                                <b className="text-white">-5%</b> beim Credit-Ausgeben
+                              </span>
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-blue-400" />
+                              <span>
+                                <b className="text-white">7 Tage</b> Laufzeit
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* CTA (Desktop) */}
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShopJumpToCategory('credits_passes');
+                            setActiveTab('shop');
+                          }}
+                          className="hidden sm:flex rounded-xl h-11 px-5 font-bold items-center gap-2 shadow-lg transition-all hover:shadow-xl flex-shrink-0"
+                          style={{
+                            background:
+                              'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                            color: '#1a1a1a',
+                            border: '1px solid rgba(253, 224, 71, 0.8)',
+                          }}
+                        >
+                          Jetzt holen
+                          <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+                        </Button>
+                      </div>
+
+                      {/* Mobile CTA (unter dem Text) */}
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShopJumpToCategory('credits_passes');
+                          setActiveTab('shop');
+                        }}
+                        className="sm:hidden w-full mt-4 rounded-xl h-11 font-bold flex items-center justify-center gap-2 shadow-lg"
+                        style={{
+                          background:
+                            'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                          color: '#1a1a1a',
+                          border: '1px solid rgba(253, 224, 71, 0.8)',
+                        }}
+                      >
+                        Jetzt gratis holen
+                        <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+                      </Button>
+                    </div>
+                  );
+                })()}
+
                 {/* Daily Bonus Card */}
                 <div data-tour-card="Täglicher Bonus|Hole jeden Tag deinen kostenlosen Bonus ab. Je länger dein Streak, desto höher die Belohnung – plus spezielle VIP-Bonis für Premium-Mitglieder." className="relative">
                 {(() => {
@@ -3557,6 +3705,8 @@ export default function ProfilPage() {
               user={user} 
               userData={userData} 
               onRefresh={loadData}
+              jumpToCategory={shopJumpToCategory}
+              onJumpHandled={() => setShopJumpToCategory(null)}
             />
           </div>
         )}

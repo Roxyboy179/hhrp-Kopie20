@@ -194,7 +194,7 @@ function ShopPendingOverlay({ queuedAt, isGift, variant }) {
   );
 }
 
-export function ShopView({ user, userData, onRefresh }) {
+export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJumpHandled = null }) {
   const [shopItems, setShopItems] = useState({});
   const [creditOptions, setCreditOptions] = useState([]);
   const [bankLimitUpgrades, setBankLimitUpgrades] = useState([]);
@@ -202,6 +202,19 @@ export function ShopView({ user, userData, onRefresh }) {
   const [creditCrates, setCreditCrates] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedFilter, setSelectedFilter] = useState('all'); // NEU: Filter State
+
+  // 🎁 Jump-To-Category: von außen (z.B. Free-Pass-Banner) wird Shop direkt auf
+  // die richtige Kategorie gesprungen. Nach Übernahme wird der Handler zurückgesetzt.
+  useEffect(() => {
+    if (jumpToCategory) {
+      setSelectedCategory(jumpToCategory);
+      setSelectedFilter('all');
+      if (typeof onJumpHandled === 'function') {
+        onJumpHandled();
+      }
+    }
+  }, [jumpToCategory, onJumpHandled]);
+
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
 
