@@ -1614,8 +1614,8 @@ export default function ProfilPage() {
               <>
                 {/* ═══════════════════════════════════════════════════════════════
                     🎁 GRATIS 7-TAGE FREE-PASS PROMO-BANNER
-                    Zeigt sich NUR, wenn Nutzer den Free Pass noch NIE hatte
-                    (einmal pro Account — auch abgelaufen blockt erneut)
+                    Variante A: User hatte den Pass NOCH NIE → Promo "Jetzt gratis holen"
+                    Variante B: User HATTE den Pass schon → Hinweis + Upsell zu anderen Pässen
                     ═══════════════════════════════════════════════════════════════ */}
                 {(() => {
                   // Prüfen: Hat der User den Free Pass jemals gehabt? (auch abgelaufen)
@@ -1624,12 +1624,124 @@ export default function ProfilPage() {
                     const name = typeof l === 'string' ? l : (l?.name || l?.id);
                     return name === 'credits_free_pass';
                   });
-                  if (hadFreePass) return null;
 
-                  // Charakter-Check (nur wenn Char vorhanden, kann man Pass nutzen)
+                  // Charakter-Check (nur wenn Char vorhanden, macht der Pass Sinn)
                   const hasChar = !!(userData?.character?.name || userData?.characterName);
                   if (!hasChar) return null;
 
+                  // ───── Variante B: User HATTE den Pass schon ─────
+                  if (hadFreePass) {
+                    // Prüfen, ob User aktuell einen anderen Credits-Pass aktiv hat
+                    const activeCreditsPass = licenses.find(l => {
+                      if (!l) return false;
+                      const name = typeof l === 'string' ? l : (l?.name || l?.id);
+                      return ['credits_starter_pass', 'credits_power_pass', 'credits_elite_pass'].includes(name);
+                    });
+                    // Wenn bereits ein anderer Credits-Pass aktiv ist → Banner nicht mehr nötig
+                    if (activeCreditsPass) return null;
+
+                    return (
+                      <div
+                        data-tour-card="Credits Pässe|Der 7-Tage Free Pass ist einmalig pro Account. Schau dir unsere anderen Credits-Pässe mit noch mehr Vorteilen an."
+                        className="relative overflow-hidden rounded-2xl p-5 sm:p-6 border group cursor-pointer transition-all hover:scale-[1.01]"
+                        style={{
+                          background:
+                            'linear-gradient(135deg, rgba(100, 116, 139, 0.15), rgba(71, 85, 105, 0.08), rgba(59, 130, 246, 0.06))',
+                          borderColor: 'rgba(148, 163, 184, 0.25)',
+                          boxShadow:
+                            '0 0 30px rgba(100, 116, 139, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                        }}
+                        onClick={() => {
+                          setShopJumpToCategory('credits_passes');
+                          setActiveTab('shop');
+                        }}
+                      >
+                        {/* Info-Badge top-right */}
+                        <div
+                          className="absolute top-4 right-4 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase flex items-center gap-1 shadow-md"
+                          style={{
+                            background:
+                              'linear-gradient(135deg, rgba(100, 116, 139, 0.6), rgba(71, 85, 105, 0.5))',
+                            color: '#fff',
+                            border: '1px solid rgba(148, 163, 184, 0.4)',
+                          }}
+                        >
+                          <Check className="w-3 h-3" strokeWidth={3} />
+                          Bereits genutzt
+                        </div>
+
+                        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
+                          {/* Icon (gedämpft) */}
+                          <div
+                            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+                            style={{
+                              background:
+                                'linear-gradient(135deg, rgba(100, 116, 139, 0.35), rgba(71, 85, 105, 0.25))',
+                              border: '1px solid rgba(148, 163, 184, 0.35)',
+                              boxShadow: '0 0 16px rgba(100, 116, 139, 0.2)',
+                            }}
+                          >
+                            <Gift className="w-7 h-7 sm:w-8 sm:h-8 text-slate-200" strokeWidth={2} />
+                          </div>
+
+                          {/* Text */}
+                          <div className="flex-1 min-w-0 pr-24 sm:pr-32">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-blue-300/80">
+                                Tipp · Andere Credits-Pässe verfügbar
+                              </span>
+                            </div>
+                            <h3 className="text-base sm:text-lg font-bold text-white/90 leading-tight mb-1.5">
+                              7 Tage Free Pass bereits eingelöst
+                            </h3>
+                            <p className="text-xs sm:text-sm text-white/60 leading-relaxed">
+                              Du hast die <span className="text-white/80 font-semibold">kostenlose 7-Tage Testversion</span> bereits beansprucht und kannst sie nicht erneut nutzen. Schau dir unsere anderen <span className="text-blue-300 font-semibold">Credits-Pässe</span> mit noch mehr Vorteilen an.
+                            </p>
+                          </div>
+
+                          {/* CTA (Desktop) */}
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShopJumpToCategory('credits_passes');
+                              setActiveTab('shop');
+                            }}
+                            className="hidden sm:flex rounded-xl h-11 px-5 font-semibold items-center gap-2 transition-all flex-shrink-0"
+                            style={{
+                              background:
+                                'linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(99, 102, 241, 0.2))',
+                              color: '#fff',
+                              border: '1px solid rgba(99, 102, 241, 0.45)',
+                            }}
+                          >
+                            Pässe ansehen
+                            <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+                          </Button>
+                        </div>
+
+                        {/* Mobile CTA */}
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShopJumpToCategory('credits_passes');
+                            setActiveTab('shop');
+                          }}
+                          className="sm:hidden w-full mt-4 rounded-xl h-11 font-semibold flex items-center justify-center gap-2"
+                          style={{
+                            background:
+                              'linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(99, 102, 241, 0.2))',
+                            color: '#fff',
+                            border: '1px solid rgba(99, 102, 241, 0.45)',
+                          }}
+                        >
+                          Andere Pässe ansehen
+                          <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+                        </Button>
+                      </div>
+                    );
+                  }
+
+                  // ───── Variante A: User hatte den Pass noch NIE → Promo ─────
                   return (
                     <div
                       data-tour-card="Gratis 7-Tage Pass|Hole dir kostenlos einen 7-Tage-Pass mit +20 Bonus-Credits beim Kauf und 5% Rabatt beim Ausgeben. Einmalig pro Account."
