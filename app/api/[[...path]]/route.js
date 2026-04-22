@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { readStats, writeStats, incrementStat } from '@/lib/stats-file';
 import { SHOP_ITEMS, CREDIT_PURCHASE_OPTIONS, BANK_LIMIT_UPGRADES, CREDIT_SPEND_ITEMS, CREDIT_CRATES } from '@/lib/shop-data';
 import { findActivePromotion, findActiveCreditBonus, getCreditsSpendingDiscount } from '@/lib/shop-promotions';
+import { calculateVipUpgradePrice } from '@/lib/vip-upgrade';
 import { 
   createBewerbung, 
   getUserBewerbungen, 
@@ -4115,6 +4116,10 @@ async function handleShopPurchase(request) {
 
     const isVipItem = typeof itemId === 'string' && (itemId.startsWith('vip_') || itemId === 'luxus_pass');
 
+    // 🚀 VIP UPGRADE PRICING: Prüfe ob das ein Upgrade ist (höhere VIP-Stufe mit aktivem niedrigerem VIP)
+    const vipUpgradeInfo = isVipItem ? calculateVipUpgradePrice(itemId, userLicensesArray) : null;
+    const isVipUpgrade = vipUpgradeInfo?.isUpgrade || false;
+    
     // VIP-Rabatt-Prozent ermitteln (nur auf Nicht-VIP-Items)
     let vipDiscountPercent = 0;
     if (vipType && VIP_SHOP_DISCOUNTS[vipType] > 0 && item.category !== 'credits' && !isVipItem) {
@@ -4132,21 +4137,37 @@ async function handleShopPurchase(request) {
       if (activePromo) promoDiscountPercent = activePromo.discount;
     }
 
-    // Besserer Rabatt gewinnt (VIP vs. Promo)
-    const bestDiscount = Math.max(vipDiscountPercent, promoDiscountPercent);
-    const appliedDiscountSource =
-      bestDiscount === 0 ? null :
-      (promoDiscountPercent > vipDiscountPercent ? 'promo' : 'vip');
-
-    if (bestDiscount > 0) {
-      finalPrice = Math.floor(item.price * (1 - bestDiscount));
+    // 💎 WICHTIG: VIP-Upgrade hat Priorität vor allen anderen Rabatten
+    let bestDiscount = 0;
+    let appliedDiscountSource = null;
+    let upgradeDiscountAmount = 0;
+    
+    if (isVipUpgrade && vipUpgradeInfo) {
+      // Upgrade-Rabatt hat absolute Priorität
+      finalPrice = vipUpgradeInfo.discountedPrice;
+      upgradeDiscountAmount = vipUpgradeInfo.discountAmount;
+      appliedDiscountSource = 'vip_upgrade';
       console.log(
-        `[SHOP] ✅ Rabatt angewendet (${appliedDiscountSource}): ` +
-        `${item.price}€ → ${finalPrice}€ (-${(bestDiscount * 100).toFixed(0)}%) ` +
-        `[vip:${vipType || 'none'}, promo:${activePromo?.id || 'none'}]`
+        `[SHOP] 💎 VIP UPGRADE: ${vipUpgradeInfo.currentVip.name} (${vipUpgradeInfo.daysLeft} Tage) → ${item.name} | ` +
+        `${item.price}€ - ${upgradeDiscountAmount}€ = ${finalPrice}€ (-${(vipUpgradeInfo.discountPercent * 100).toFixed(0)}%)`
       );
     } else {
-      console.log(`[SHOP] ❌ Kein Rabatt: vipType=${vipType}, category=${item.category}, isVipItem=${isVipItem}`);
+      // Normale Rabatt-Logik: Besserer Rabatt gewinnt (VIP vs. Promo)
+      bestDiscount = Math.max(vipDiscountPercent, promoDiscountPercent);
+      appliedDiscountSource =
+        bestDiscount === 0 ? null :
+        (promoDiscountPercent > vipDiscountPercent ? 'promo' : 'vip');
+
+      if (bestDiscount > 0) {
+        finalPrice = Math.floor(item.price * (1 - bestDiscount));
+        console.log(
+          `[SHOP] ✅ Rabatt angewendet (${appliedDiscountSource}): ` +
+          `${item.price}€ → ${finalPrice}€ (-${(bestDiscount * 100).toFixed(0)}%) ` +
+          `[vip:${vipType || 'none'}, promo:${activePromo?.id || 'none'}]`
+        );
+      } else {
+        console.log(`[SHOP] ❌ Kein Rabatt: vipType=${vipType}, category=${item.category}, isVipItem=${isVipItem}`);
+      }
     }
 
     // Prüfe ob genug Geld vorhanden
@@ -4160,19 +4181,31 @@ async function handleShopPurchase(request) {
 
     // Metadata für den Kauf
     const purchaseMetadata = {};
-    if (vipType) {
+    if (isVipUpgrade && vipUpgradeInfo) {
       purchaseMetadata.original_price = item.price;
-      purchaseMetadata.vip_status = vipType;
-      purchaseMetadata.vip_discount = VIP_SHOP_DISCOUNTS[vipType];
-    }
-    if (activePromo) {
-      purchaseMetadata.original_price = item.price;
-      purchaseMetadata.promo_id = activePromo.id;
-      purchaseMetadata.promo_discount = activePromo.discount;
-    }
-    if (appliedDiscountSource) {
-      purchaseMetadata.applied_discount = appliedDiscountSource;
-      purchaseMetadata.applied_discount_percent = bestDiscount;
+      purchaseMetadata.vip_upgrade = true;
+      purchaseMetadata.upgrade_from = vipUpgradeInfo.currentVip.vipId;
+      purchaseMetadata.upgrade_from_name = vipUpgradeInfo.currentVip.name;
+      purchaseMetadata.days_left = vipUpgradeInfo.daysLeft;
+      purchaseMetadata.upgrade_discount_percent = vipUpgradeInfo.discountPercent;
+      purchaseMetadata.upgrade_discount_amount = upgradeDiscountAmount;
+      purchaseMetadata.applied_discount = 'vip_upgrade';
+      purchaseMetadata.applied_discount_percent = vipUpgradeInfo.discountPercent;
+    } else {
+      if (vipType) {
+        purchaseMetadata.original_price = item.price;
+        purchaseMetadata.vip_status = vipType;
+        purchaseMetadata.vip_discount = VIP_SHOP_DISCOUNTS[vipType];
+      }
+      if (activePromo) {
+        purchaseMetadata.original_price = item.price;
+        purchaseMetadata.promo_id = activePromo.id;
+        purchaseMetadata.promo_discount = activePromo.discount;
+      }
+      if (appliedDiscountSource) {
+        purchaseMetadata.applied_discount = appliedDiscountSource;
+        purchaseMetadata.applied_discount_percent = bestDiscount;
+      }
     }
 
     // Erstelle Eintrag in pending_shop_purchases
@@ -4198,12 +4231,15 @@ async function handleShopPurchase(request) {
 
     return NextResponse.json({
       success: true,
-      message: 'Kauf wird verarbeitet...',
+      message: isVipUpgrade ? 'VIP-Upgrade wird verarbeitet...' : 'Kauf wird verarbeitet...',
       purchase: {
         id: purchase.id,
         item: item.name,
         price: finalPrice,
-        originalPrice: appliedDiscountSource ? item.price : undefined,
+        originalPrice: (appliedDiscountSource || isVipUpgrade) ? item.price : undefined,
+        isUpgrade: isVipUpgrade,
+        upgradeFrom: isVipUpgrade ? vipUpgradeInfo.currentVip.name : undefined,
+        upgradeDiscount: isVipUpgrade ? upgradeDiscountAmount : undefined,
         vipDiscount: appliedDiscountSource === 'vip' ? vipDiscountPercent : undefined,
         promoDiscount: appliedDiscountSource === 'promo' ? promoDiscountPercent : undefined,
         promoId: activePromo?.id,

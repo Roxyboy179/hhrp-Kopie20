@@ -117,6 +117,9 @@ import {
 } from '@/lib/shop-promotions';
 import { PromoBanner } from '@/components/shop/PromoBanner';
 
+// 🚀 VIP Upgrade Pricing System
+import { calculateVipUpgradePrice } from '@/lib/vip-upgrade';
+
 import { Label } from '@/components/ui/label';
 
 // ──────────────────────────────────────────────────────────────
@@ -583,7 +586,21 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
     }
 
     const originalPrice = item.price;
-    const discountedPrice = calculatePrice(originalPrice, itemId); // ItemId mitgeben!
+    
+    // 🚀 VIP UPGRADE: Prüfe ob Upgrade-Preis angewendet werden soll
+    const isVIPItem = itemId.startsWith('vip_') || itemId === 'luxus_pass';
+    let discountedPrice = calculatePrice(originalPrice, itemId);
+    let isUpgrade = false;
+    let upgradeInfo = null;
+    
+    if (isVIPItem) {
+      const vipUpgradeInfo = calculateVipUpgradePrice(itemId, userLicensesArray);
+      if (vipUpgradeInfo?.isUpgrade) {
+        discountedPrice = vipUpgradeInfo.discountedPrice;
+        isUpgrade = true;
+        upgradeInfo = vipUpgradeInfo;
+      }
+    }
 
     const cartItem = {
       id: itemId,
@@ -591,12 +608,14 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
       originalPrice: originalPrice,
       price: discountedPrice,
       hasDiscount: discountedPrice < originalPrice,
+      isUpgrade: isUpgrade,
+      upgradeInfo: upgradeInfo,
       type: 'item',
       icon: itemIcons[itemId]
     };
 
     setCart(prev => [...prev, cartItem]);
-    toast.success(`${item.name} zum Warenkorb hinzugefügt`);
+    toast.success(`${item.name} zum Warenkorb hinzugefügt${isUpgrade ? ' (Upgrade)' : ''}`);
   };
 
   const removeFromCart = (index) => {
@@ -1927,6 +1946,10 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
             // Im Gift-Mode ist der eigene VIP-Level irrelevant — nur die Empfänger-Hierarchie zählt
             const isLowerVIP = !giftMode && isVIPItem && !canBuyThisVIP && !hasItem;
             
+            // 🚀 VIP UPGRADE PRICING: Berechne Upgrade-Rabatt wenn User einen niedrigeren aktiven VIP-Pass hat
+            const vipUpgradeInfo = isVIPItem ? calculateVipUpgradePrice(id, userLicensesArray) : null;
+            const isVipUpgrade = vipUpgradeInfo?.isUpgrade || false;
+            
             // Im Verschenken-Modus: Prüfe VIP-Upgrade-Logik
             let recipientCanReceiveVIP = true;
             let recipientHighestVIP = -1;
@@ -1982,8 +2005,17 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
             const itemPending = pendingPurchases[id] || null;
             const isBotLocked = !!itemPending;
             
+            // 💰 PREISBERECHNUNG (mit VIP-Upgrade-Rabatt)
             const originalPrice = item.price;
-            const discountedPrice = calculatePrice(originalPrice, id);
+            let discountedPrice = calculatePrice(originalPrice, id);
+            let upgradeDiscount = 0;
+            
+            // Wenn VIP-Upgrade: Überschreibe den Rabatt-Preis mit Upgrade-Preis
+            if (isVipUpgrade && vipUpgradeInfo) {
+              discountedPrice = vipUpgradeInfo.discountedPrice;
+              upgradeDiscount = vipUpgradeInfo.discountAmount;
+            }
+            
             const hasDiscount = discountedPrice < originalPrice;
             // 🎉 Prüfen ob für dieses Item eine Aktion aktiv ist
             const activePromoForItem = findActivePromotion(item, id, userHighestVIP);
@@ -2059,9 +2091,25 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
                   (recipientHasItem && giftMode) ||
                   (id === 'credits_free_pass' && giftMode) ||
                   (isVIPItem && giftMode && recipientHighestVIP >= 0) ||
-                  isLowerVIP
+                  isLowerVIP ||
+                  isVipUpgrade
                 ) && (
                   <div className="flex flex-wrap gap-2 mb-3 relative z-10">
+                {/* 💎 VIP UPGRADE BADGE */}
+                {isVipUpgrade && !hasItem && !giftMode && vipUpgradeInfo && (
+                  <div className="bg-gradient-to-r from-amber-500/20 to-purple-500/20 border border-amber-400/50 rounded-lg px-3 py-1.5 inline-flex items-center gap-2 max-w-full backdrop-blur-sm">
+                    <span className="text-xs text-amber-300 font-semibold flex items-center gap-1.5 whitespace-nowrap">
+                      <TrendingUp className="w-3 h-3" />
+                      Upgrade verfügbar
+                    </span>
+                    {vipUpgradeInfo.currentVip && (
+                      <span className="text-[10px] text-amber-400/80 leading-tight flex items-center gap-1 border-l border-white/10 pl-2">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        {vipUpgradeInfo.daysLeft} Tag{vipUpgradeInfo.daysLeft !== 1 ? 'e' : ''} übrig = {Math.round(vipUpgradeInfo.discountPercent * 100)}% Rabatt
+                      </span>
+                    )}
+                  </div>
+                )}
                 {hasItem && !giftMode && isCreditsPass && (
                   <div className="bg-green-500/15 border border-green-500/50 rounded-lg px-3 py-1.5 inline-flex items-center gap-2 max-w-full backdrop-blur-sm">
                     <span className="text-xs text-green-300 font-semibold flex items-center gap-1.5 whitespace-nowrap">
@@ -2221,7 +2269,19 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
                 )}
                 <div className="flex items-center justify-between relative z-10">
                   <div>
-                    {hasDiscount ? (
+                    {/* 💎 VIP UPGRADE: Zeige detaillierte Rabatt-Berechnung */}
+                    {isVipUpgrade && vipUpgradeInfo ? (
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-white/40 line-through text-sm">{originalPrice.toLocaleString('de-DE')}€</span>
+                          <span className="text-amber-400 font-bold">{discountedPrice.toLocaleString('de-DE')}€</span>
+                        </div>
+                        <div className="text-[10px] text-white/50 space-y-0.5">
+                          <div>Von: {vipUpgradeInfo.currentVip.name} ({vipUpgradeInfo.daysLeft} Tage)</div>
+                          <div className="text-amber-400">Rabatt: -{upgradeDiscount.toLocaleString('de-DE')}€ ({Math.round(vipUpgradeInfo.discountPercent * 100)}%)</div>
+                        </div>
+                      </div>
+                    ) : hasDiscount ? (
                       <div className="flex items-center gap-2">
                         <span className="text-white/40 line-through text-sm">{originalPrice.toLocaleString('de-DE')}€</span>
                         <span className="text-green-400 font-bold">{discountedPrice.toLocaleString('de-DE')}€</span>
@@ -2310,6 +2370,11 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
                             <Lock className="w-4 h-4 mr-1" />
                             Gesperrt
                           </>
+                        ) : isVipUpgrade ? (
+                          <>
+                            <TrendingUp className="w-4 h-4 mr-1" />
+                            Upgraden
+                          </>
                         ) : (
                           <>
                             <Plus className="w-4 h-4 mr-1" />
@@ -2367,21 +2432,41 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
                       key={index}
                       className="p-4 rounded-xl border"
                       style={{
-                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02))',
-                        borderColor: 'rgba(255, 255, 255, 0.1)'
+                        background: item.isUpgrade 
+                          ? 'linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(168, 85, 247, 0.08))'
+                          : 'linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.02))',
+                        borderColor: item.isUpgrade 
+                          ? 'rgba(251, 191, 36, 0.3)'
+                          : 'rgba(255, 255, 255, 0.1)'
                       }}
                     >
                       <div className="flex items-start gap-3">
                         <Icon className="w-5 h-5 text-white/70 flex-shrink-0 mt-1" />
                         <div className="flex-1">
-                          <h4 className="font-medium text-white mb-1">{item.name}</h4>
-                          {item.hasDiscount && (
+                          <div className="flex items-center gap-2 mb-1">
+                            <h4 className="font-medium text-white">{item.name}</h4>
+                            {item.isUpgrade && (
+                              <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                                Upgrade
+                              </span>
+                            )}
+                          </div>
+                          {item.isUpgrade && item.upgradeInfo ? (
+                            <div className="space-y-0.5 mb-1">
+                              <div className="flex items-center gap-2 text-sm">
+                                <span className="text-white/40 line-through">{item.originalPrice.toLocaleString('de-DE')}€</span>
+                                <span className="text-amber-400 font-medium">{item.price.toLocaleString('de-DE')}€</span>
+                              </div>
+                              <div className="text-[10px] text-white/50">
+                                Von: {item.upgradeInfo.currentVip.name} ({item.upgradeInfo.daysLeft} Tage) → {Math.round(item.upgradeInfo.discountPercent * 100)}% Rabatt
+                              </div>
+                            </div>
+                          ) : item.hasDiscount ? (
                             <div className="flex items-center gap-2 text-sm mb-1">
                               <span className="text-white/40 line-through">{item.originalPrice.toLocaleString('de-DE')}€</span>
                               <span className="text-green-400 font-medium">{item.price.toLocaleString('de-DE')}€</span>
                             </div>
-                          )}
-                          {!item.hasDiscount && (
+                          ) : (
                             <p className="text-sm text-white/50">{item.price.toLocaleString('de-DE')}€</p>
                           )}
                         </div>
