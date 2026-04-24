@@ -1261,12 +1261,19 @@ async function handleAdminVerwarnungenSuche(request) {
     
     // Discord Members laden für Discord IDs
     console.log('[Verwarnungen] Loading Discord members...');
-    const members = await _loadDiscordMembers();
-    console.log('[Verwarnungen] Loaded', members.length, 'members');
+    let members = [];
+    try {
+      const membersResult = await _loadDiscordMembers();
+      members = Array.isArray(membersResult) ? membersResult : [];
+      console.log('[Verwarnungen] Loaded', members.length, 'members');
+    } catch (err) {
+      console.error('[Verwarnungen] Failed to load Discord members:', err);
+      members = [];
+    }
     
     const memberMap = new Map();
     for (const m of members) {
-      if (m.user && m.user.id) {
+      if (m && m.user && m.user.id) {
         memberMap.set(m.user.id, m.user.username);
       }
     }

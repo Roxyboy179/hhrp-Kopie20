@@ -9,11 +9,6 @@ import { Search, AlertTriangle, Loader2, User, Hash, Calendar, FileText } from '
 
 const inputClass = "bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/25 focus:border-white/30 focus:ring-white/10 rounded-xl h-11";
 
-const cardStyle = {
-  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
-  border: '1px solid rgba(255, 255, 255, 0.08)',
-};
-
 function formatDate(dateStr) {
   if (!dateStr) return '-';
   return new Date(dateStr).toLocaleDateString('de-DE', { 
@@ -43,7 +38,6 @@ export default function VerwarnungenPage() {
           router.push('/admin');
           return;
         }
-        // Level 1-4 können alle zugreifen
         setAdmin(data.admin);
         setLoading(false);
       } catch (e) {
@@ -117,15 +111,7 @@ export default function VerwarnungenPage() {
         </div>
 
         {/* Suchformular */}
-        <div 
-          className="rounded-2xl p-5 sm:p-6 mb-6 relative overflow-hidden"
-          style={cardStyle}
-        >
-          <div
-            aria-hidden="true"
-            className="absolute inset-x-0 top-0 h-px"
-            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }}
-          />
+        <div className="glass rounded-2xl p-5 sm:p-6 mb-6">
           <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
               <Input
@@ -166,30 +152,16 @@ export default function VerwarnungenPage() {
         {hasSearched && (
           <div className="space-y-4">
             {searchResults.length === 0 ? (
-              <div className="rounded-2xl p-12 text-center relative overflow-hidden" style={cardStyle}>
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-x-0 top-0 h-px"
-                  style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }}
-                />
+              <div className="glass rounded-2xl p-12 text-center">
                 <Search className="w-16 h-16 text-white/15 mx-auto mb-4" />
                 <p className="text-white/40 text-lg font-medium">Keine Benutzer mit Verwarnungen gefunden</p>
                 <p className="text-white/25 text-sm mt-2">Versuche einen anderen Suchbegriff</p>
               </div>
             ) : (
               searchResults.map((user, index) => (
-                <div
-                  key={index}
-                  className="rounded-2xl p-5 sm:p-6 relative overflow-hidden"
-                  style={cardStyle}
-                >
-                  <div
-                    aria-hidden="true"
-                    className="absolute inset-x-0 top-0 h-px"
-                    style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }}
-                  />
+                <div key={index} className="glass rounded-2xl p-5 sm:p-6">
                   {/* User Header */}
-                  <div className="flex items-start justify-between mb-5 pb-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                  <div className="flex items-start justify-between mb-5 pb-4 border-b border-white/5">
                     <div className="flex items-center gap-3">
                       <div
                         className="w-12 h-12 rounded-xl flex items-center justify-center border"
@@ -258,7 +230,7 @@ export default function VerwarnungenPage() {
                         </div>
                         
                         {warning.reason && (
-                          <div className="flex items-start gap-2 mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.03)' }}>
+                          <div className="flex items-start gap-2 mt-3 pt-3 border-t border-white/5">
                             <FileText className="w-3.5 h-3.5 text-white/25 flex-shrink-0 mt-0.5" />
                             <p className="text-white/50 text-xs leading-relaxed">{warning.reason}</p>
                           </div>
@@ -279,12 +251,7 @@ export default function VerwarnungenPage() {
         )}
 
         {!hasSearched && (
-          <div className="rounded-2xl p-12 text-center relative overflow-hidden" style={cardStyle}>
-            <div
-              aria-hidden="true"
-              className="absolute inset-x-0 top-0 h-px"
-              style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }}
-            />
+          <div className="glass rounded-2xl p-12 text-center">
             <AlertTriangle className="w-16 h-16 text-yellow-400/20 mx-auto mb-4" />
             <p className="text-white/40 text-lg font-medium">Verwende die Suche oben</p>
             <p className="text-white/25 text-sm mt-2">
