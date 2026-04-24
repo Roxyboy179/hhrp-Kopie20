@@ -118,9 +118,14 @@ export default function VerwarnungenPage() {
 
         {/* Suchformular */}
         <div 
-          className="rounded-2xl p-5 sm:p-6 mb-6 backdrop-blur-sm"
+          className="rounded-2xl p-5 sm:p-6 mb-6 relative overflow-hidden"
           style={cardStyle}
         >
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-px"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }}
+          />
           <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
               <Input
@@ -161,7 +166,12 @@ export default function VerwarnungenPage() {
         {hasSearched && (
           <div className="space-y-4">
             {searchResults.length === 0 ? (
-              <div className="rounded-2xl p-12 text-center backdrop-blur-sm" style={cardStyle}>
+              <div className="rounded-2xl p-12 text-center relative overflow-hidden" style={cardStyle}>
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-x-0 top-0 h-px"
+                  style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }}
+                />
                 <Search className="w-16 h-16 text-white/15 mx-auto mb-4" />
                 <p className="text-white/40 text-lg font-medium">Keine Benutzer mit Verwarnungen gefunden</p>
                 <p className="text-white/25 text-sm mt-2">Versuche einen anderen Suchbegriff</p>
@@ -170,9 +180,14 @@ export default function VerwarnungenPage() {
               searchResults.map((user, index) => (
                 <div
                   key={index}
-                  className="rounded-2xl p-5 sm:p-6 backdrop-blur-sm"
+                  className="rounded-2xl p-5 sm:p-6 relative overflow-hidden"
                   style={cardStyle}
                 >
+                  <div
+                    aria-hidden="true"
+                    className="absolute inset-x-0 top-0 h-px"
+                    style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }}
+                  />
                   {/* User Header */}
                   <div className="flex items-start justify-between mb-5 pb-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
                     <div className="flex items-center gap-3">
@@ -264,7 +279,12 @@ export default function VerwarnungenPage() {
         )}
 
         {!hasSearched && (
-          <div className="rounded-2xl p-12 text-center backdrop-blur-sm" style={cardStyle}>
+          <div className="rounded-2xl p-12 text-center relative overflow-hidden" style={cardStyle}>
+            <div
+              aria-hidden="true"
+              className="absolute inset-x-0 top-0 h-px"
+              style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }}
+            />
             <AlertTriangle className="w-16 h-16 text-yellow-400/20 mx-auto mb-4" />
             <p className="text-white/40 text-lg font-medium">Verwende die Suche oben</p>
             <p className="text-white/25 text-sm mt-2">

@@ -1245,87 +1245,116 @@ async function handleAdminVerwarnungenSuche(request) {
   }
 
   try {
+    console.log('[Verwarnungen] Starting search...');
     const url = new URL(request.url);
     const query = (url.searchParams.get('q') || '').trim().toLowerCase();
+    console.log('[Verwarnungen] Query:', query);
     
     if (query.length < 2) {
       return NextResponse.json({ success: true, results: [] });
     }
 
     // Alle User-Daten laden
+    console.log('[Verwarnungen] Loading all user data...');
     const all = await _loadAllUserData();
+    console.log('[Verwarnungen] Loaded', all.length, 'users');
     
     // Discord Members laden für Discord IDs
+    console.log('[Verwarnungen] Loading Discord members...');
     const members = await _loadDiscordMembers();
+    console.log('[Verwarnungen] Loaded', members.length, 'members');
+    
     const memberMap = new Map();
     for (const m of members) {
-      memberMap.set(m.user.id, m.user.username);
+      if (m.user && m.user.id) {
+        memberMap.set(m.user.id, m.user.username);
+      }
     }
 
     const results = [];
     const now = Date.now();
-    const WARN_ACTIVE_WINDOW_MS = 60 * 24 * 60 * 60 * 1000; // 60 Tage
+    const WARN_ACTIVE_WINDOW_MS = 30 * 24 * 60 * 60 * 1000; // 30 Tage (wie global definiert)
 
+    console.log('[Verwarnungen] Processing users...');
     for (const row of all) {
-      const data = row.data || {};
-      const char = data.character || {};
-      const vorname = (char.vorname || '').toLowerCase();
-      const nachname = (char.nachname || '').toLowerCase();
-      const discordUserId = row.discord_user_id || '';
-      const discordUsername = memberMap.get(discordUserId) || '';
+      try {
+        // Parse data wenn es ein String ist
+        let parsedData = row.data;
+        if (typeof parsedData === 'string') {
+          try {
+            parsedData = JSON.parse(parsedData);
+          } catch (e) {
+            console.error('[Verwarnungen] Failed to parse data for user:', row.discord_user_id);
+            continue;
+          }
+        }
 
-      // Warnings laden
-      const rawWarns = Array.isArray(data.warns) ? data.warns : [];
-      const activeWarnings = rawWarns
-        .filter(w => {
-          if (w.removed) return false;
-          const createdTs = w.createdAt ? new Date(w.createdAt).getTime() : 0;
-          const isExpired = createdTs > 0 && (now - createdTs) >= WARN_ACTIVE_WINDOW_MS;
-          return !isExpired;
-        })
-        .map(w => ({
-          timestamp: w.createdAt || null,
-          reason: w.reason || '',
-          warnedBy: w.moderatorTag || w.moderator || 'Unbekannt'
-        }))
-        .sort((a, b) => {
-          const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
-          const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
-          return tb - ta;
-        });
+        const data = parsedData || {};
+        const char = data.character || {};
+        const vorname = (char.vorname || '').toLowerCase();
+        const nachname = (char.nachname || '').toLowerCase();
+        const discordUserId = row.discord_user_id || '';
+        const discordUsername = memberMap.get(discordUserId) || '';
 
-      // Nur User mit Verwarnungen berücksichtigen
-      if (activeWarnings.length === 0) continue;
+        // Warnings laden
+        const rawWarns = Array.isArray(data.warns) ? data.warns : [];
+        const activeWarnings = rawWarns
+          .filter(w => {
+            if (!w) return false;
+            if (w.removed) return false;
+            const createdTs = w.createdAt ? new Date(w.createdAt).getTime() : 0;
+            const isExpired = createdTs > 0 && (now - createdTs) >= WARN_ACTIVE_WINDOW_MS;
+            return !isExpired;
+          })
+          .map(w => ({
+            timestamp: w.createdAt || null,
+            reason: w.reason || '',
+            warnedBy: w.moderatorTag || w.moderator || 'Unbekannt'
+          }))
+          .sort((a, b) => {
+            const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+            const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+            return tb - ta;
+          });
 
-      // Suchlogik: Vorname, Nachname, Discord User ID, Discord Username
-      const matches = 
-        vorname.includes(query) ||
-        nachname.includes(query) ||
-        discordUserId.includes(query) ||
-        discordUsername.toLowerCase().includes(query);
+        // Nur User mit Verwarnungen berücksichtigen
+        if (activeWarnings.length === 0) continue;
 
-      if (matches) {
-        results.push({
-          vorname: char.vorname || 'Unbekannt',
-          nachname: char.nachname || '',
-          discordUserId: discordUserId,
-          discordId: discordUsername,
-          warningCount: activeWarnings.length,
-          warnings: activeWarnings
-        });
+        // Suchlogik: Vorname, Nachname, Discord User ID, Discord Username
+        const matches = 
+          vorname.includes(query) ||
+          nachname.includes(query) ||
+          discordUserId.includes(query) ||
+          discordUsername.toLowerCase().includes(query);
+
+        if (matches) {
+          results.push({
+            vorname: char.vorname || 'Unbekannt',
+            nachname: char.nachname || '',
+            discordUserId: discordUserId,
+            discordId: discordUsername,
+            warningCount: activeWarnings.length,
+            warnings: activeWarnings
+          });
+        }
+      } catch (rowError) {
+        console.error('[Verwarnungen] Error processing row:', rowError);
+        // Continue mit nächstem User
       }
     }
 
     // Nach Anzahl der Verwarnungen sortieren (höchste zuerst)
     results.sort((a, b) => b.warningCount - a.warningCount);
 
+    console.log('[Verwarnungen] Found', results.length, 'users with warnings');
     return NextResponse.json({ 
       success: true, 
       results: results.slice(0, 50) // Max 50 Ergebnisse
     });
   } catch (error) {
-    console.error('Verwarnungen Suche error:', error);
-    return NextResponse.json({ error: 'Fehler bei der Suche' }, { status: 500 });
+    console.error('[Verwarnungen] Suche error:', error);
+    console.error('[Verwarnungen] Error stack:', error.stack);
+    return NextResponse.json({ error: 'Fehler bei der Suche: ' + error.message }, { status: 500 });
   }
 }
 
