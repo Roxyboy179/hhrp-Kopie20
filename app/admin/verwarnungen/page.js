@@ -111,7 +111,13 @@ export default function VerwarnungenPage() {
         </div>
 
         {/* Suchformular */}
-        <div className="glass rounded-2xl p-5 sm:p-6 mb-6">
+        <div 
+          className="glass rounded-2xl p-5 sm:p-6 mb-6"
+          style={{
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+          }}
+        >
           <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1">
               <Input
@@ -152,14 +158,27 @@ export default function VerwarnungenPage() {
         {hasSearched && (
           <div className="space-y-4">
             {searchResults.length === 0 ? (
-              <div className="glass rounded-2xl p-12 text-center">
+              <div 
+                className="glass rounded-2xl p-12 text-center"
+                style={{
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                }}
+              >
                 <Search className="w-16 h-16 text-white/15 mx-auto mb-4" />
                 <p className="text-white/40 text-lg font-medium">Keine Benutzer mit Verwarnungen gefunden</p>
                 <p className="text-white/25 text-sm mt-2">Versuche einen anderen Suchbegriff</p>
               </div>
             ) : (
               searchResults.map((user, index) => (
-                <div key={index} className="glass rounded-2xl p-5 sm:p-6">
+                <div 
+                  key={index} 
+                  className="glass rounded-2xl p-5 sm:p-6"
+                  style={{
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)',
+                  }}
+                >
                   {/* User Header */}
                   <div className="flex items-start justify-between mb-5 pb-4 border-b border-white/5">
                     <div className="flex items-center gap-3">
@@ -251,7 +270,13 @@ export default function VerwarnungenPage() {
         )}
 
         {!hasSearched && (
-          <div className="glass rounded-2xl p-12 text-center">
+          <div 
+            className="glass rounded-2xl p-12 text-center"
+            style={{
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+            }}
+          >
             <AlertTriangle className="w-16 h-16 text-yellow-400/20 mx-auto mb-4" />
             <p className="text-white/40 text-lg font-medium">Verwende die Suche oben</p>
             <p className="text-white/25 text-sm mt-2">
