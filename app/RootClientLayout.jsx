@@ -468,88 +468,196 @@ function LayoutContent({ children }) {
 
 function WartungsmodusSeite() {
   return (
-    <div className="min-h-screen flex items-center justify-center px-6" style={{ background: 'var(--theme-bg)' }}>
-      <div className="max-w-2xl w-full text-center">
-        {/* Animated Icon */}
-        <div className="relative mb-8 inline-block">
-          <div className="absolute inset-0 bg-orange-500 rounded-full blur-3xl opacity-20 animate-pulse"></div>
-          <div 
-            className="relative w-32 h-32 mx-auto rounded-3xl flex items-center justify-center"
-            style={{ 
-              background: 'linear-gradient(135deg, rgba(249,115,22,0.1) 0%, rgba(234,88,12,0.1) 100%)',
-              border: '2px solid rgba(249,115,22,0.3)',
-              boxShadow: '0 0 40px rgba(249,115,22,0.2)',
+    <div
+      className="min-h-screen flex items-center justify-center px-4 py-6 sm:py-10 relative overflow-hidden"
+      style={{ background: '#050506' }}
+    >
+      {/* Ambient background glow */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: 'radial-gradient(ellipse 60% 40% at 50% 20%, rgba(234,179,8,0.05), transparent 60%)',
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none opacity-40"
+        style={{
+          background: 'radial-gradient(ellipse 40% 30% at 50% 80%, rgba(249,115,22,0.04), transparent 60%)',
+        }}
+      />
+
+      {/* Grid Pattern */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none opacity-[0.015]"
+        style={{
+          backgroundImage: `linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)`,
+          backgroundSize: '40px 40px',
+        }}
+      />
+
+      <div className="max-w-lg w-full relative animate-[fade-in-up_0.6s_cubic-bezier(0.22,1,0.36,1)]">
+        {/* Card Container */}
+        <div
+          className="rounded-2xl sm:rounded-3xl p-6 sm:p-9 relative overflow-hidden"
+          style={{
+            background: 'linear-gradient(180deg, rgba(18,18,20,0.92) 0%, rgba(10,10,12,0.96) 100%)',
+            backdropFilter: 'blur(40px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 30px 80px -20px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.05)',
+          }}
+        >
+          {/* Top gradient line */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-px"
+            style={{
+              background: 'linear-gradient(90deg, transparent, rgba(234,179,8,0.4), transparent)',
+            }}
+          />
+
+          {/* Logo + Icon Header */}
+          <div className="flex flex-col items-center text-center">
+            {/* Server Logo with animated ring */}
+            <div className="relative mb-5">
+              {/* Outer pulsing ring */}
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 rounded-2xl animate-ping"
+                style={{
+                  background: 'rgba(234,179,8,0.15)',
+                  animationDuration: '2.5s',
+                }}
+              />
+              <div
+                className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl sm:rounded-2xl flex items-center justify-center border overflow-hidden"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(234,179,8,0.12), rgba(249,115,22,0.08))',
+                  borderColor: 'rgba(234,179,8,0.25)',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06), 0 0 30px rgba(234,179,8,0.1)',
+                }}
+              >
+                <img src="/logo.webp" alt="HHRP" className="w-full h-full object-cover" />
+              </div>
+
+              {/* Wrench badge (bottom-right) */}
+              <div
+                className="absolute -bottom-1 -right-1 sm:-bottom-1.5 sm:-right-1.5 w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center border-2 animate-[wrench-spin_4s_ease-in-out_infinite]"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(234,179,8,0.9), rgba(249,115,22,0.9))',
+                  borderColor: '#050506',
+                  boxShadow: '0 4px 12px rgba(234,179,8,0.35)',
+                }}
+              >
+                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black/85" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+            </div>
+
+            {/* Title */}
+            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              Wartungsarbeiten
+            </h1>
+
+            {/* Subtitle pill */}
+            <div
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mt-3 border"
+              style={{
+                background: 'rgba(234,179,8,0.08)',
+                borderColor: 'rgba(234,179,8,0.22)',
+              }}
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full animate-pulse"
+                style={{ background: '#eab308', boxShadow: '0 0 6px #eab308' }}
+              />
+              <span className="text-[11px] sm:text-[11.5px] font-semibold uppercase tracking-[0.1em]" style={{ color: 'rgba(253,224,71,0.95)' }}>
+                Live · Wir arbeiten daran
+              </span>
+            </div>
+          </div>
+
+          {/* Message */}
+          <div className="mt-6 sm:mt-7 text-center">
+            <p className="text-[13.5px] sm:text-[15px] text-white/70 leading-relaxed px-2">
+              Wir führen gerade wichtige Wartungsarbeiten durch, um Hamburg Horizon RP noch besser zu machen.
+            </p>
+          </div>
+
+          {/* Simple Info Box */}
+          <div
+            className="mt-5 sm:mt-6 p-3.5 sm:p-4 rounded-xl flex items-center gap-3"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.005))',
+              border: '1px solid rgba(255,255,255,0.06)',
             }}
           >
-            <svg className="w-16 h-16 text-orange-400 animate-spin" style={{ animationDuration: '3s' }} fill="none" viewBox="0 0 24 24">
-              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center border flex-shrink-0"
+              style={{ background: 'rgba(234,179,8,0.08)', borderColor: 'rgba(234,179,8,0.2)' }}
+            >
+              <svg className="w-4 h-4 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-[12.5px] sm:text-[13px] font-semibold text-white/85">Geplante Dauer</p>
+              <p className="text-[11px] sm:text-[11.5px] text-white/45 mt-0.5">Voraussichtlich 30-60 Minuten</p>
+            </div>
           </div>
+
+          {/* Action Buttons */}
+          <div className="mt-6 sm:mt-7 flex flex-col sm:flex-row gap-2">
+            {/* Refresh Button */}
+            <button
+              onClick={() => window.location.reload()}
+              className="flex-1 h-11 rounded-xl flex items-center justify-center gap-2 text-[12px] sm:text-[12.5px] font-semibold transition-all active:scale-[0.98] border"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))',
+                borderColor: 'rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.9)',
+              }}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span>Erneut versuchen</span>
+            </button>
+
+            {/* Discord Button */}
+            <a
+              href="https://discord.gg/g784tka9sh"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 h-11 rounded-xl flex items-center justify-center gap-2 text-[12px] sm:text-[12.5px] font-semibold transition-all active:scale-[0.98] border"
+              style={{
+                background: 'linear-gradient(135deg, rgba(88,101,242,0.18), rgba(88,101,242,0.08))',
+                borderColor: 'rgba(88,101,242,0.3)',
+                color: 'rgba(196,204,255,0.95)',
+                boxShadow: '0 4px 12px -4px rgba(88,101,242,0.25)',
+              }}
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z" />
+              </svg>
+              <span>Discord Updates</span>
+            </a>
+          </div>
+
+          {/* Auto-refresh Hint */}
+          <p className="mt-4 sm:mt-5 text-center text-[10px] sm:text-[10.5px] text-white/25 tracking-wide">
+            Seite aktualisiert sich beim Reload automatisch
+          </p>
         </div>
 
-        {/* Title */}
-        <h1 className="text-4xl md:text-5xl font-bold mb-6" style={{ color: 'var(--theme-accent)' }}>
-          Wartungsarbeiten
-        </h1>
-
-        {/* Description */}
-        <p className="text-lg md:text-xl mb-8 leading-relaxed" style={{ color: 'rgba(var(--theme-accent-rgb), 0.6)' }}>
-          Wir führen gerade wichtige Wartungsarbeiten durch, um Hamburg Horizon RP noch besser zu machen.
-        </p>
-
-        {/* Info Card */}
-        <div 
-          className="glass rounded-2xl p-8 mb-8 text-left"
-          style={{ 
-            border: '1px solid rgba(var(--theme-accent-rgb), 0.1)',
-            background: 'rgba(var(--theme-accent-rgb), 0.02)',
-          }}
-        >
-          <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--theme-accent)' }}>
-            Was bedeutet das?
-          </h2>
-          <ul className="space-y-3" style={{ color: 'rgba(var(--theme-accent-rgb), 0.5)' }}>
-            <li className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(249,115,22,0.2)' }}>
-                <span className="text-orange-400 text-sm">•</span>
-              </div>
-              <span>Die Seite ist vorübergehend nicht verfügbar, während wir Updates durchführen.</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(249,115,22,0.2)' }}>
-                <span className="text-orange-400 text-sm">•</span>
-              </div>
-              <span>Die Wartungsarbeiten dauern in der Regel nur wenige Minuten.</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: 'rgba(249,115,22,0.2)' }}>
-                <span className="text-orange-400 text-sm">•</span>
-              </div>
-              <span>Deine Daten und Bewerbungen sind sicher gespeichert.</span>
-            </li>
-          </ul>
-        </div>
-
-        {/* Retry Button */}
-        <button
-          onClick={() => window.location.reload()}
-          className="px-8 py-4 rounded-xl font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] inline-flex items-center gap-2"
-          style={{ 
-            background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-            color: '#fff',
-            boxShadow: '0 10px 40px rgba(249,115,22,0.3)',
-          }}
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Erneut versuchen
-        </button>
-
-        {/* Footer Info */}
-        <p className="mt-12 text-sm" style={{ color: 'rgba(var(--theme-accent-rgb), 0.3)' }}>
-          Vielen Dank für deine Geduld! Wir sind bald wieder für dich da.
+        {/* Footer Brand */}
+        <p className="text-center mt-5 sm:mt-6 text-[10.5px] sm:text-[11px] text-white/25 tracking-wide">
+          Hamburg Horizon RP · Danke für deine Geduld
         </p>
       </div>
     </div>
