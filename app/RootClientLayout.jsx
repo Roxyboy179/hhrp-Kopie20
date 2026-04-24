@@ -498,7 +498,7 @@ function WartungsmodusSeite() {
         }}
       />
 
-      <div className="max-w-lg w-full relative animate-[fade-in-up_0.6s_cubic-bezier(0.22,1,0.36,1)]">
+      <div className="max-w-xl w-full relative animate-[fade-in-up_0.6s_cubic-bezier(0.22,1,0.36,1)]">
         {/* Card Container */}
         <div
           className="rounded-2xl sm:rounded-3xl p-6 sm:p-9 relative overflow-hidden"
@@ -616,7 +616,7 @@ function WartungsmodusSeite() {
             {/* Refresh Button */}
             <button
               onClick={() => window.location.reload()}
-              className="flex-1 h-12 sm:h-[52px] px-4 sm:px-5 rounded-xl flex items-center justify-center gap-2.5 text-[13px] sm:text-[13.5px] font-semibold transition-all active:scale-[0.98] border"
+              className="flex-1 min-w-[200px] h-12 sm:h-[52px] px-5 sm:px-8 rounded-xl flex items-center justify-center gap-2.5 text-[13.5px] sm:text-[14px] font-semibold transition-all active:scale-[0.98] border"
               style={{
                 background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))',
                 borderColor: 'rgba(255,255,255,0.1)',
@@ -634,7 +634,7 @@ function WartungsmodusSeite() {
               href="https://discord.gg/g784tka9sh"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 h-12 sm:h-[52px] px-4 sm:px-5 rounded-xl flex items-center justify-center gap-2.5 text-[13px] sm:text-[13.5px] font-semibold transition-all active:scale-[0.98] border"
+              className="flex-1 min-w-[200px] h-12 sm:h-[52px] px-5 sm:px-8 rounded-xl flex items-center justify-center gap-2.5 text-[13.5px] sm:text-[14px] font-semibold transition-all active:scale-[0.98] border"
               style={{
                 background: 'linear-gradient(135deg, rgba(88,101,242,0.18), rgba(88,101,242,0.08))',
                 borderColor: 'rgba(88,101,242,0.3)',
