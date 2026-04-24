@@ -102,7 +102,7 @@ is_active: true
 
 ### 3. Login testen
 
-**URL:** https://login-callback-stuck.preview.emergentagent.com/admin
+**URL:** https://responsive-beach-run.preview.emergentagent.com/admin
 
 **Eingeben:**
 - Mitarbeiter-Nummer: `MA-001`

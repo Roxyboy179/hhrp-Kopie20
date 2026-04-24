@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime, timedelta
 
 # Configuration
-BASE_URL = "https://login-callback-stuck.preview.emergentagent.com"
+BASE_URL = "https://responsive-beach-run.preview.emergentagent.com"
 JWT_SECRET = "hhrp-jwt-secret-hamburg-horizon-2025"
 TEST_USER_ID = "test-user-123"
 TEST_APPLICATION_ID = None  # Will be set during testing
