@@ -1238,6 +1238,97 @@ async function handleAdminGetAccounts(request) {
   }
 }
 
+async function handleAdminVerwarnungenSuche(request) {
+  const admin = getAdminContext(request);
+  if (!admin) {
+    return NextResponse.json({ error: 'Nicht autorisiert' }, { status: 403 });
+  }
+
+  try {
+    const url = new URL(request.url);
+    const query = (url.searchParams.get('q') || '').trim().toLowerCase();
+    
+    if (query.length < 2) {
+      return NextResponse.json({ success: true, results: [] });
+    }
+
+    // Alle User-Daten laden
+    const all = await _loadAllUserData();
+    
+    // Discord Members laden für Discord IDs
+    const members = await _loadDiscordMembers();
+    const memberMap = new Map();
+    for (const m of members) {
+      memberMap.set(m.user.id, m.user.username);
+    }
+
+    const results = [];
+    const now = Date.now();
+    const WARN_ACTIVE_WINDOW_MS = 60 * 24 * 60 * 60 * 1000; // 60 Tage
+
+    for (const row of all) {
+      const data = row.data || {};
+      const char = data.character || {};
+      const vorname = (char.vorname || '').toLowerCase();
+      const nachname = (char.nachname || '').toLowerCase();
+      const discordUserId = row.discord_user_id || '';
+      const discordUsername = memberMap.get(discordUserId) || '';
+
+      // Warnings laden
+      const rawWarns = Array.isArray(data.warns) ? data.warns : [];
+      const activeWarnings = rawWarns
+        .filter(w => {
+          if (w.removed) return false;
+          const createdTs = w.createdAt ? new Date(w.createdAt).getTime() : 0;
+          const isExpired = createdTs > 0 && (now - createdTs) >= WARN_ACTIVE_WINDOW_MS;
+          return !isExpired;
+        })
+        .map(w => ({
+          timestamp: w.createdAt || null,
+          reason: w.reason || '',
+          warnedBy: w.moderatorTag || w.moderator || 'Unbekannt'
+        }))
+        .sort((a, b) => {
+          const ta = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+          const tb = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+          return tb - ta;
+        });
+
+      // Nur User mit Verwarnungen berücksichtigen
+      if (activeWarnings.length === 0) continue;
+
+      // Suchlogik: Vorname, Nachname, Discord User ID, Discord Username
+      const matches = 
+        vorname.includes(query) ||
+        nachname.includes(query) ||
+        discordUserId.includes(query) ||
+        discordUsername.toLowerCase().includes(query);
+
+      if (matches) {
+        results.push({
+          vorname: char.vorname || 'Unbekannt',
+          nachname: char.nachname || '',
+          discordUserId: discordUserId,
+          discordId: discordUsername,
+          warningCount: activeWarnings.length,
+          warnings: activeWarnings
+        });
+      }
+    }
+
+    // Nach Anzahl der Verwarnungen sortieren (höchste zuerst)
+    results.sort((a, b) => b.warningCount - a.warningCount);
+
+    return NextResponse.json({ 
+      success: true, 
+      results: results.slice(0, 50) // Max 50 Ergebnisse
+    });
+  } catch (error) {
+    console.error('Verwarnungen Suche error:', error);
+    return NextResponse.json({ error: 'Fehler bei der Suche' }, { status: 500 });
+  }
+}
+
 async function handleAdminCreateAccount(request) {
   const admin = getAdminContext(request);
   if (!admin || !admin.canCreateAccounts) {
@@ -2352,6 +2443,7 @@ export async function GET(request) {
     case 'admin/bewerbungen': return handleAdminGetBewerbungen(request);
     case 'admin/accounts': return handleAdminGetAccounts(request);
     case 'admin/settings': return handleAdminGetSettings(request);
+    case 'admin/verwarnungen-suche': return handleAdminVerwarnungenSuche(request);
     case 'team/members': return handleGetTeamMembers(request);
     case 'shop/items': return handleGetShopItems(request);
     case 'licenses/pending-actions': return handleGetPendingLicenseActions(request);

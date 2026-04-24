@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, FileText, UserPlus, Settings, LogOut, 
-  Menu, X, ChevronRight, Sliders, Clock, Shield
+  Menu, X, ChevronRight, Sliders, Clock, Shield, AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminAuthProvider, useAdminAuth } from '@/components/providers/AdminAuthProvider';
@@ -32,6 +32,7 @@ function AdminLayoutInner({ children }) {
     { href: '/admin', label: 'Dashboard', icon: <LayoutDashboard className="w-[18px] h-[18px]" />, show: true },
     { href: '/admin/bewerbungen', label: 'Bewerbungen', icon: <FileText className="w-[18px] h-[18px]" />, show: true },
     { href: '/admin/bewerbung-verwaltung', label: 'Bewerbungs-Verwaltung', icon: <Sliders className="w-[18px] h-[18px]" />, show: canManageBewerbungen },
+    { href: '/admin/verwarnungen', label: 'Verwarnungen', icon: <AlertTriangle className="w-[18px] h-[18px]" />, show: true },
     { href: '/admin/logs', label: 'Aktivitäts-Logs', icon: <Clock className="w-[18px] h-[18px]" />, show: true },
     { href: '/admin/accounts', label: 'Accounts', icon: <UserPlus className="w-[18px] h-[18px]" />, show: canSeeAccounts },
     { href: '/admin/system-status', label: 'System-Status', icon: <Shield className="w-[18px] h-[18px]" />, show: admin?.roleLevel >= 4 },
