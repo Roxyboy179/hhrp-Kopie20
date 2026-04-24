@@ -36,11 +36,12 @@ export function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
   const panelRef = useRef(null);
 
-  // Fetch unread count periodically
+  // Silent background fetch: vollständige Liste + unreadCount in einem Call.
+  // Läuft sofort beim Mount + alle 10s im Hintergrund, egal ob Panel offen ist.
+  // Kein Loading-State, kein Spinner - User merkt nichts davon.
   useEffect(() => {
     if (!user) {
       setUnreadCount(0);
@@ -48,27 +49,31 @@ export function NotificationBell() {
       return;
     }
 
-    const fetchCount = async () => {
+    let cancelled = false;
+
+    const fetchSilently = async () => {
       try {
-        const res = await fetch('/api/notifications/unread-count', { credentials: 'include' });
+        const res = await fetch('/api/notifications', { credentials: 'include' });
+        if (!res.ok) return;
         const data = await res.json();
+        if (cancelled) return;
+        setNotifications(data.notifications || []);
         setUnreadCount(data.unreadCount || 0);
       } catch {
-        // silent
+        // silent - kein UI-Feedback bei Fehlern
       }
     };
 
-    fetchCount();
-    const interval = setInterval(fetchCount, 10000);
-    return () => clearInterval(interval);
-  }, [user]);
+    // Sofort beim Mount laden (Hintergrund, User merkt nichts)
+    fetchSilently();
+    // Alle 10s refreshen
+    const interval = setInterval(fetchSilently, 10000);
 
-  // Fetch full notifications when panel opens
-  useEffect(() => {
-    if (open && user) {
-      fetchNotifications();
-    }
-  }, [open, user]);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [user]);
 
   // Close on outside click (desktop only) + Escape
   useEffect(() => {
@@ -108,20 +113,6 @@ export function NotificationBell() {
       }
     }
   }, [open]);
-
-  const fetchNotifications = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch('/api/notifications', { credentials: 'include' });
-      const data = await res.json();
-      setNotifications(data.notifications || []);
-      setUnreadCount(data.unreadCount || 0);
-    } catch {
-      // silent
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const markAsRead = async (id) => {
     try {
@@ -288,12 +279,7 @@ export function NotificationBell() {
 
           {/* List */}
           <div className="max-h-[420px] overflow-y-auto scrollbar-none">
-            {loading && notifications.length === 0 ? (
-              <div className="px-4 py-10 text-center">
-                <div className="w-6 h-6 border-2 border-white/10 border-t-white/40 rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-white/30 text-xs">Laden...</p>
-              </div>
-            ) : notifications.length === 0 ? (
+            {notifications.length === 0 ? (
               <div className="px-6 py-14 text-center">
                 <div
                   className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center border border-white/[0.06]"
@@ -410,12 +396,7 @@ export function NotificationBell() {
               className="flex-1 overflow-y-auto overscroll-contain"
               style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
             >
-              {loading && notifications.length === 0 ? (
-                <div className="px-4 py-16 text-center">
-                  <div className="w-8 h-8 border-2 border-white/10 border-t-white/50 rounded-full animate-spin mx-auto mb-4" />
-                  <p className="text-white/40 text-sm">Laden...</p>
-                </div>
-              ) : notifications.length === 0 ? (
+              {notifications.length === 0 ? (
                 <div className="px-6 py-20 text-center">
                   <div
                     className="w-20 h-20 mx-auto mb-5 rounded-3xl flex items-center justify-center border border-white/[0.06] relative"
