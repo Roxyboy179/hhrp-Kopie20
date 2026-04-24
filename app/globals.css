@@ -361,6 +361,23 @@ select option:hover {
   display: none;
   width: 0;
   height: 0;
+
+/* ═══════════════════════════════════════════════════════════════
+   🚧 WARTUNGS-BANNER Animations (Slide-Down + Shimmer)
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes wartung-slide-down {
+  0%   { opacity: 0; transform: translateY(-100%); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes wartung-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes wrench-spin {
+  0%, 100% { transform: rotate(-15deg); }
+  50% { transform: rotate(15deg); }
+}
+
 }
 
 
@@ -1081,4 +1098,3 @@ input, textarea, select, button, a, [role="button"] {
 .hhrp-toggle-switch.active {
   box-shadow: 0 0 12px currentColor;
 }
-
