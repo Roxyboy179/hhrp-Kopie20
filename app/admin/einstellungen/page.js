@@ -2,29 +2,55 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { GlassCard } from '@/components/shared/GlassCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { 
-  Loader2, Settings, Mail, Key, User, Shield, Eye, EyeOff,
+  Loader2, Mail, Key, User, Shield, Eye, EyeOff,
   Save, AlertTriangle, CheckCircle2
 } from 'lucide-react';
 
-const inputClass = "bg-white/[0.04] border-white/[0.08] text-white placeholder:text-white/25 focus:border-blue-500/40 focus:ring-blue-500/20 rounded-xl";
+const inputClass = "bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/25 focus:border-white/30 focus:ring-white/10 rounded-xl h-11";
 
-function getRoleBadgeColor(roleName) {
-  switch (roleName) {
-    case 'Projektinhaber': return 'bg-red-500/20 text-red-300 border-red-500/30';
-    case 'Stl. Projektinhaber': return 'bg-orange-500/20 text-orange-300 border-orange-500/30';
-    case 'Teamkoordination': return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
-    case 'Qualitätsmanagement': return 'bg-purple-500/20 text-purple-300 border-purple-500/30';
-    case 'Teamvertretung': return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-    case 'Teamleitung': return 'bg-green-500/20 text-green-300 border-green-500/30';
-    case 'Stl. Teamleitung': return 'bg-teal-500/20 text-teal-300 border-teal-500/30';
-    default: return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
-  }
+const cardStyle = {
+  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
+  border: '1px solid rgba(255, 255, 255, 0.08)',
+};
+
+const primaryButtonStyle = {
+  background: 'linear-gradient(135deg, #f5f5f5 0%, #e5e5e5 100%)',
+  boxShadow: '0 1px 0 rgba(255,255,255,0.15) inset, 0 8px 20px -6px rgba(0,0,0,0.6)',
+  color: 'black',
+};
+
+function getRoleBadgeStyle(roleName) {
+  const map = {
+    'Projektinhaber':     { color: 'rgba(252,165,165,0.95)', bg: 'rgba(239,68,68,0.10)',  border: 'rgba(239,68,68,0.22)' },
+    'Stl. Projektinhaber':{ color: 'rgba(253,186,116,0.95)', bg: 'rgba(249,115,22,0.10)', border: 'rgba(249,115,22,0.22)' },
+    'Teamkoordination':   { color: 'rgba(253,224,71,0.95)',  bg: 'rgba(234,179,8,0.10)',  border: 'rgba(234,179,8,0.22)' },
+    'Qualitätsmanagement':{ color: 'rgba(216,180,254,0.95)', bg: 'rgba(168,85,247,0.10)', border: 'rgba(168,85,247,0.22)' },
+    'Teamvertretung':     { color: 'rgba(147,197,253,0.95)', bg: 'rgba(59,130,246,0.10)', border: 'rgba(59,130,246,0.22)' },
+    'Teamleitung':        { color: 'rgba(134,239,172,0.95)', bg: 'rgba(34,197,94,0.10)',  border: 'rgba(34,197,94,0.22)' },
+    'Stl. Teamleitung':   { color: 'rgba(94,234,212,0.95)',  bg: 'rgba(20,184,166,0.10)', border: 'rgba(20,184,166,0.22)' },
+  };
+  return map[roleName] || { color: 'rgba(255,255,255,0.7)', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.12)' };
+}
+
+function Section({ icon: Icon, title, children }) {
+  return (
+    <div className="p-5 md:p-6 rounded-2xl relative overflow-hidden" style={cardStyle}>
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-px"
+        style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }}
+      />
+      <h3 className="text-[11px] font-semibold text-white/70 uppercase tracking-[0.12em] mb-5 flex items-center gap-2">
+        <Icon className="w-3.5 h-3.5 text-white/55" /> {title}
+      </h3>
+      {children}
+    </div>
+  );
 }
 
 export default function AdminEinstellungenPage() {
@@ -142,60 +168,62 @@ export default function AdminEinstellungenPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+        <Loader2 className="w-6 h-6 animate-spin text-white/50" />
       </div>
     );
   }
 
+  const roleStyle = getRoleBadgeStyle(settings?.roleName || admin?.roleName);
+
   return (
-    <div className="p-6 space-y-6 max-w-3xl mx-auto">
+    <div className="p-4 md:p-6 space-y-5 max-w-3xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold">Einstellungen</h1>
-        <p className="text-white/40 text-sm mt-1">Dein Konto verwalten</p>
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">Einstellungen</h1>
+        <p className="text-white/45 text-[13px] mt-1.5">Dein Konto verwalten</p>
       </div>
 
       {/* Profil-Info (read-only) */}
-      <GlassCard className="p-6">
-        <h3 className="text-sm font-semibold text-blue-300 uppercase tracking-wider mb-5 flex items-center gap-2">
-          <User className="w-4 h-4" /> Profil
-        </h3>
+      <Section icon={User} title="Profil">
         <div className="grid md:grid-cols-2 gap-5">
           <div>
-            <Label className="text-white/30 text-xs uppercase tracking-wider">Discord Username</Label>
-            <p className="text-white/80 mt-1 font-medium">{settings?.discordUsername || admin?.discordUsername || '-'}</p>
+            <Label className="text-white/35 text-[10.5px] uppercase tracking-wider">Discord Username</Label>
+            <p className="text-white/85 mt-1 font-medium text-[13.5px]">{settings?.discordUsername || admin?.discordUsername || '-'}</p>
           </div>
           <div>
-            <Label className="text-white/30 text-xs uppercase tracking-wider">Discord ID</Label>
-            <p className="text-white/80 mt-1 font-mono text-sm">{settings?.discordUserId || admin?.discordUserId || '-'}</p>
+            <Label className="text-white/35 text-[10.5px] uppercase tracking-wider">Discord ID</Label>
+            <p className="text-white/85 mt-1 font-mono text-[12px]">{settings?.discordUserId || admin?.discordUserId || '-'}</p>
           </div>
           <div>
-            <Label className="text-white/30 text-xs uppercase tracking-wider">Mitarbeiter-Nummer</Label>
-            <p className="text-white/80 mt-1 font-medium">{settings?.mitarbeiterNummer || admin?.mitarbeiterNummer || '-'}</p>
+            <Label className="text-white/35 text-[10.5px] uppercase tracking-wider">Mitarbeiter-Nummer</Label>
+            <p className="text-white/85 mt-1 font-medium text-[13.5px]">{settings?.mitarbeiterNummer || admin?.mitarbeiterNummer || '-'}</p>
           </div>
           <div>
-            <Label className="text-white/30 text-xs uppercase tracking-wider">Rolle</Label>
-            <div className="mt-1 flex items-center gap-2">
-              <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${getRoleBadgeColor(settings?.roleName || admin?.roleName)}`}>
+            <Label className="text-white/35 text-[10.5px] uppercase tracking-wider">Rolle</Label>
+            <div className="mt-1 flex items-center gap-2 flex-wrap">
+              <span
+                className="px-2.5 py-0.5 rounded-full text-[11px] font-medium border tracking-tight"
+                style={{ color: roleStyle.color, background: roleStyle.bg, borderColor: roleStyle.border }}
+              >
                 {settings?.roleName || admin?.roleName || '-'}
               </span>
-              <span className="text-white/30 text-xs">(Discord-Rang)</span>
+              <span className="text-white/30 text-[10.5px]">(Discord-Rang)</span>
             </div>
           </div>
         </div>
-        <div className="mt-4 p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 text-blue-300/60 text-xs flex items-center gap-2">
-          <Shield className="w-3.5 h-3.5 shrink-0" />
+        <div
+          className="mt-5 p-3 rounded-xl text-[11.5px] flex items-center gap-2"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.55)' }}
+        >
+          <Shield className="w-3.5 h-3.5 shrink-0 text-white/45" />
           Dein Username und Rang werden automatisch über Discord synchronisiert.
         </div>
-      </GlassCard>
+      </Section>
 
       {/* E-Mail ändern */}
-      <GlassCard className="p-6">
-        <h3 className="text-sm font-semibold text-blue-300 uppercase tracking-wider mb-5 flex items-center gap-2">
-          <Mail className="w-4 h-4" /> E-Mail ändern
-        </h3>
+      <Section icon={Mail} title="E-Mail ändern">
         <form onSubmit={handleEmailUpdate} className="space-y-4">
-          <div className="space-y-2">
-            <Label className="text-white/40 text-sm">Neue E-Mail-Adresse</Label>
+          <div className="space-y-1.5">
+            <Label className="text-white/60 text-[12.5px] font-medium">Neue E-Mail-Adresse</Label>
             <Input 
               type="email"
               value={newEmail}
@@ -208,22 +236,20 @@ export default function AdminEinstellungenPage() {
           <Button 
             type="submit" 
             disabled={emailSaving || newEmail === settings?.email}
-            className="bg-blue-600 hover:bg-blue-700 rounded-xl"
+            className="h-11 px-5 rounded-xl border-0 text-[12.5px] font-semibold hover:opacity-90 transition-opacity"
+            style={primaryButtonStyle}
           >
             {emailSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
             E-Mail speichern
           </Button>
         </form>
-      </GlassCard>
+      </Section>
 
       {/* Passwort ändern */}
-      <GlassCard className="p-6">
-        <h3 className="text-sm font-semibold text-blue-300 uppercase tracking-wider mb-5 flex items-center gap-2">
-          <Key className="w-4 h-4" /> Passwort ändern
-        </h3>
+      <Section icon={Key} title="Passwort ändern">
         <form onSubmit={handlePasswordUpdate} className="space-y-4">
-          <div className="space-y-2">
-            <Label className="text-white/40 text-sm">Aktuelles Passwort</Label>
+          <div className="space-y-1.5">
+            <Label className="text-white/60 text-[12.5px] font-medium">Aktuelles Passwort</Label>
             <div className="relative">
               <Input 
                 type={showCurrentPw ? 'text' : 'password'}
@@ -233,14 +259,14 @@ export default function AdminEinstellungenPage() {
                 className={`${inputClass} pr-10`}
                 required
               />
-              <button type="button" onClick={() => setShowCurrentPw(!showCurrentPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
+              <button type="button" onClick={() => setShowCurrentPw(!showCurrentPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70 transition-colors">
                 {showCurrentPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
           
-          <div className="space-y-2">
-            <Label className="text-white/40 text-sm">Neues Passwort</Label>
+          <div className="space-y-1.5">
+            <Label className="text-white/60 text-[12.5px] font-medium">Neues Passwort</Label>
             <div className="relative">
               <Input 
                 type={showNewPw ? 'text' : 'password'}
@@ -251,14 +277,14 @@ export default function AdminEinstellungenPage() {
                 required
                 minLength={6}
               />
-              <button type="button" onClick={() => setShowNewPw(!showNewPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60">
+              <button type="button" onClick={() => setShowNewPw(!showNewPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70 transition-colors">
                 {showNewPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-white/40 text-sm">Neues Passwort bestätigen</Label>
+          <div className="space-y-1.5">
+            <Label className="text-white/60 text-[12.5px] font-medium">Neues Passwort bestätigen</Label>
             <Input 
               type="password"
               value={confirmPassword}
@@ -268,12 +294,12 @@ export default function AdminEinstellungenPage() {
               required
             />
             {confirmPassword && newPassword && confirmPassword !== newPassword && (
-              <p className="text-red-400/70 text-xs flex items-center gap-1 mt-1">
+              <p className="text-red-300/80 text-[11.5px] flex items-center gap-1 mt-1">
                 <AlertTriangle className="w-3 h-3" /> Passwörter stimmen nicht überein
               </p>
             )}
             {confirmPassword && newPassword && confirmPassword === newPassword && newPassword.length >= 6 && (
-              <p className="text-green-400/70 text-xs flex items-center gap-1 mt-1">
+              <p className="text-green-300/80 text-[11.5px] flex items-center gap-1 mt-1">
                 <CheckCircle2 className="w-3 h-3" /> Passwörter stimmen überein
               </p>
             )}
@@ -282,13 +308,14 @@ export default function AdminEinstellungenPage() {
           <Button 
             type="submit" 
             disabled={passwordSaving || !currentPassword || !newPassword || newPassword !== confirmPassword || newPassword.length < 6}
-            className="bg-blue-600 hover:bg-blue-700 rounded-xl"
+            className="h-11 px-5 rounded-xl border-0 text-[12.5px] font-semibold hover:opacity-90 transition-opacity"
+            style={primaryButtonStyle}
           >
             {passwordSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Key className="w-4 h-4 mr-2" />}
             Passwort ändern
           </Button>
         </form>
-      </GlassCard>
+      </Section>
     </div>
   );
 }

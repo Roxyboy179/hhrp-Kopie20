@@ -5,6 +5,13 @@ import { Power, AlertTriangle, Clock, Save, RefreshCw, ShieldAlert, Calendar, Fl
 import { toast } from 'sonner';
 import { useAdminAuth } from '@/components/providers/AdminAuthProvider';
 
+const cardStyle = {
+  background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))',
+  border: '1px solid rgba(255,255,255,0.08)',
+};
+
+const inputStyle = 'w-full px-3.5 py-2.5 bg-white/[0.04] border border-white/[0.1] rounded-xl text-white placeholder:text-white/25 focus:outline-none focus:ring-2 focus:ring-white/10 focus:border-white/30 text-[13px]';
+
 export default function SystemStatusPage() {
   const { admin } = useAdminAuth();
   const [loading, setLoading] = useState(true);
@@ -17,11 +24,9 @@ export default function SystemStatusPage() {
     wartung_nachricht: 'Wir führen gerade Wartungsarbeiten durch.',
   });
 
-  // Nur Projektinhaber (Level 4) dürfen diese Seite nutzen
   const canManageStatus = admin?.roleLevel >= 4;
 
   useEffect(() => {
-    // WICHTIG: Cache für diese API-Route löschen beim Laden der Seite
     if ('caches' in window) {
       caches.keys().then((names) => {
         names.forEach((name) => {
@@ -31,13 +36,11 @@ export default function SystemStatusPage() {
         });
       });
     }
-    
     fetchStatus();
   }, []);
 
   const fetchStatus = async () => {
     try {
-      // Cache-Busting: Füge Timestamp hinzu um gecachte Responses zu vermeiden
       const res = await fetch('/api/admin/system-status?_=' + Date.now(), {
         cache: 'no-store',
         headers: {
@@ -64,24 +67,14 @@ export default function SystemStatusPage() {
 
     setSaving(true);
     try {
-      console.log('📤 Sending update:', status);
-      
       const res = await fetch('/api/admin/system-status', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache',
-        },
+        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
         body: JSON.stringify(status),
       });
-
       const data = await res.json();
-      console.log('📥 Response:', data);
-
       if (res.ok) {
         toast.success('Status gespeichert', { description: 'System-Status wurde aktualisiert.' });
-        
-        // Cache löschen und Daten neu laden um Persistenz zu verifizieren
         if ('caches' in window) {
           caches.keys().then((names) => {
             names.forEach((name) => {
@@ -91,16 +84,12 @@ export default function SystemStatusPage() {
             });
           });
         }
-        
-        // Warte kurz und lade dann neu um zu verifizieren
-        setTimeout(() => {
-          fetchStatus();
-        }, 500);
+        setTimeout(() => { fetchStatus(); }, 500);
       } else {
         throw new Error(data.error || 'Fehler beim Speichern');
       }
     } catch (e) {
-      console.error('❌ Save error:', e);
+      console.error('Save error:', e);
       toast.error('Fehler', { description: e.message });
     } finally {
       setSaving(false);
@@ -110,19 +99,24 @@ export default function SystemStatusPage() {
   if (loading) {
     return (
       <div className="p-8 flex items-center justify-center">
-        <RefreshCw className="w-6 h-6 animate-spin text-white/40" />
+        <RefreshCw className="w-5 h-5 animate-spin text-white/45" />
       </div>
     );
   }
 
   if (!canManageStatus) {
     return (
-      <div className="p-8 flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <ShieldAlert className="w-16 h-16 mx-auto mb-4 text-red-400" />
-          <h2 className="text-xl font-bold text-white mb-2">Keine Berechtigung</h2>
-          <p className="text-white/50">
-            Nur <strong>Projektinhaber</strong> können den System-Status verwalten.
+      <div className="p-6 md:p-8 flex items-center justify-center min-h-[60vh]">
+        <div className="text-center max-w-md p-8 rounded-2xl" style={cardStyle}>
+          <div
+            className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center border"
+            style={{ background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.2)' }}
+          >
+            <ShieldAlert className="w-6 h-6 text-red-300" />
+          </div>
+          <h2 className="text-lg font-semibold text-white tracking-tight mb-1.5">Keine Berechtigung</h2>
+          <p className="text-white/50 text-[13px]">
+            Nur <strong className="text-white/80">Projektinhaber</strong> können den System-Status verwalten.
           </p>
         </div>
       </div>
@@ -130,59 +124,71 @@ export default function SystemStatusPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
+    <div className="p-4 md:p-6 space-y-5 max-w-5xl mx-auto">
       {/* Header mit Speichern Button */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">System-Status & Wartungen</h1>
-          <p className="text-white/40 text-sm mt-1">Wartungsmodus und geplante Wartungen verwalten</p>
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">System-Status &amp; Wartungen</h1>
+          <p className="text-white/45 text-[13px] mt-1.5">Wartungsmodus und geplante Wartungen verwalten</p>
         </div>
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
+          className="flex items-center gap-2 px-5 h-11 rounded-xl font-semibold text-[12.5px] text-black border-0 transition-all disabled:opacity-50 hover:opacity-90"
+          style={{
+            background: 'linear-gradient(135deg, #f5f5f5 0%, #e5e5e5 100%)',
+            boxShadow: '0 1px 0 rgba(255,255,255,0.15) inset, 0 8px 20px -6px rgba(0,0,0,0.6)',
+          }}
         >
-          {saving ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+          {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {saving ? 'Speichern...' : 'Änderungen speichern'}
         </button>
       </div>
 
       {/* Wartungsmodus Card */}
-      <div className="glass rounded-2xl p-6 border border-white/[0.08]">
-        <div className="flex items-start gap-5">
-          <div 
-            className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
-              status.wartungsmodus 
-                ? 'bg-red-500/20 text-red-400 shadow-lg shadow-red-500/20' 
-                : 'bg-green-500/20 text-green-400 shadow-lg shadow-green-500/20'
-            }`}
+      <div className="p-5 md:p-6 rounded-2xl relative overflow-hidden" style={cardStyle}>
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-px"
+          style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }}
+        />
+        <div className="flex items-start gap-4">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center transition-all flex-shrink-0 border"
+            style={status.wartungsmodus
+              ? { background: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.25)', color: 'rgba(252,165,165,0.95)' }
+              : { background: 'rgba(34,197,94,0.12)', borderColor: 'rgba(34,197,94,0.25)', color: 'rgba(134,239,172,0.95)' }
+            }
           >
-            <Power className="w-7 h-7" />
+            <Power className="w-5 h-5" />
           </div>
-          <div className="flex-1">
-            <h2 className="text-xl font-bold text-white mb-2">Wartungsmodus</h2>
-            <p className="text-sm text-white/60 mb-5 leading-relaxed">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-[16px] font-semibold text-white tracking-tight mb-1.5">Wartungsmodus</h2>
+            <p className="text-[12.5px] text-white/50 mb-4 leading-relaxed">
               Wenn aktiviert, wird die gesamte Seite für alle Nutzer (außer Admins) gesperrt und eine Wartungsseite angezeigt.
             </p>
             
-            <label className="group flex items-center gap-3 cursor-pointer w-fit p-3 rounded-xl hover:bg-white/[0.02] transition-colors">
+            <label className="group flex items-center gap-3 cursor-pointer w-fit px-3 py-2 -mx-3 rounded-xl hover:bg-white/[0.03] transition-colors">
               <input
                 type="checkbox"
                 checked={status.wartungsmodus}
                 onChange={(e) => setStatus({ ...status, wartungsmodus: e.target.checked })}
-                className="w-6 h-6 rounded-lg border-2 border-white/20 bg-white/5 text-blue-600 focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
+                className="w-5 h-5 rounded-md border-2 border-white/20 bg-white/5 text-white focus:ring-2 focus:ring-white/20 cursor-pointer accent-white"
               />
-              <span className="text-sm font-semibold text-white">
+              <span className="text-[13px] font-medium text-white">
                 Wartungsmodus {status.wartungsmodus ? '✓ Aktiviert' : 'Deaktiviert'}
               </span>
             </label>
 
             {status.wartungsmodus && (
-              <div className="mt-5 p-4 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3 animate-in fade-in duration-300">
-                <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+              <div
+                className="mt-4 p-3.5 rounded-xl flex items-start gap-3 animate-in fade-in duration-300"
+                style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}
+              >
+                <AlertTriangle className="w-4 h-4 text-red-300 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-semibold text-red-300 mb-1">⚠️ Wartungsmodus ist aktiv!</p>
-                  <p className="text-xs text-red-300/80">
+                  <p className="text-[13px] font-semibold text-red-200 mb-0.5">⚠️ Wartungsmodus ist aktiv!</p>
+                  <p className="text-[11.5px] text-red-200/70 leading-relaxed">
                     Die Seite ist für alle normalen Benutzer nicht erreichbar. Nur Admins können zugreifen.
                   </p>
                 </div>
@@ -193,70 +199,75 @@ export default function SystemStatusPage() {
       </div>
 
       {/* Geplante Wartung Card */}
-      <div className="glass rounded-2xl p-6 border border-white/[0.08]">
-        <div className="flex items-start gap-5">
-          <div 
-            className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${
-              status.geplante_wartung 
-                ? 'bg-yellow-500/20 text-yellow-400 shadow-lg shadow-yellow-500/20' 
-                : 'bg-slate-500/20 text-slate-400'
-            }`}
+      <div className="p-5 md:p-6 rounded-2xl relative overflow-hidden" style={cardStyle}>
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-px"
+          style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }}
+        />
+        <div className="flex items-start gap-4">
+          <div
+            className="w-12 h-12 rounded-xl flex items-center justify-center transition-all flex-shrink-0 border"
+            style={status.geplante_wartung
+              ? { background: 'rgba(234,179,8,0.12)', borderColor: 'rgba(234,179,8,0.25)', color: 'rgba(253,224,71,0.95)' }
+              : { background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.55)' }
+            }
           >
-            <Clock className="w-7 h-7" />
+            <Clock className="w-5 h-5" />
           </div>
-          <div className="flex-1">
-            <h2 className="text-xl font-bold text-white mb-2">Geplante Wartung</h2>
-            <p className="text-sm text-white/60 mb-5 leading-relaxed">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-[16px] font-semibold text-white tracking-tight mb-1.5">Geplante Wartung</h2>
+            <p className="text-[12.5px] text-white/50 mb-4 leading-relaxed">
               Zeigt allen Nutzern ein auffälliges Banner unter der Navigation mit Countdown zur nächsten geplanten Wartung.
             </p>
             
-            <label className="group flex items-center gap-3 cursor-pointer w-fit p-3 rounded-xl hover:bg-white/[0.02] transition-colors mb-5">
+            <label className="group flex items-center gap-3 cursor-pointer w-fit px-3 py-2 -mx-3 rounded-xl hover:bg-white/[0.03] transition-colors mb-4">
               <input
                 type="checkbox"
                 checked={status.geplante_wartung}
                 onChange={(e) => setStatus({ ...status, geplante_wartung: e.target.checked })}
-                className="w-6 h-6 rounded-lg border-2 border-white/20 bg-white/5 text-blue-600 focus:ring-2 focus:ring-blue-500/50 cursor-pointer"
+                className="w-5 h-5 rounded-md border-2 border-white/20 bg-white/5 text-white focus:ring-2 focus:ring-white/20 cursor-pointer accent-white"
               />
-              <span className="text-sm font-semibold text-white">
+              <span className="text-[13px] font-medium text-white">
                 Wartungs-Banner {status.geplante_wartung ? '✓ Aktiviert' : 'Deaktiviert'}
               </span>
             </label>
 
             {status.geplante_wartung && (
-              <div className="space-y-5 animate-in fade-in duration-300">
+              <div className="space-y-4 animate-in fade-in duration-300">
                 {/* Zeitraum */}
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid md:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-semibold text-white/70 mb-2 flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
+                    <label className="text-[11.5px] font-medium text-white/65 mb-1.5 flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-white/45" />
                       Wartung startet am
                     </label>
                     <input
                       type="datetime-local"
                       value={status.wartung_start}
                       onChange={(e) => setStatus({ ...status, wartung_start: e.target.value })}
-                      className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
+                      className={inputStyle}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-white/70 mb-2 flex items-center gap-2">
-                      <Flag className="w-4 h-4" />
+                    <label className="text-[11.5px] font-medium text-white/65 mb-1.5 flex items-center gap-1.5">
+                      <Flag className="w-3.5 h-3.5 text-white/45" />
                       Voraussichtliches Ende
                     </label>
                     <input
                       type="datetime-local"
                       value={status.wartung_ende}
                       onChange={(e) => setStatus({ ...status, wartung_ende: e.target.value })}
-                      className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
+                      className={inputStyle}
                     />
                   </div>
                 </div>
 
                 {/* Nachricht */}
                 <div>
-                  <label className="block text-sm font-semibold text-white/70 mb-2 flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4" />
+                  <label className="text-[11.5px] font-medium text-white/65 mb-1.5 flex items-center gap-1.5">
+                    <MessageSquare className="w-3.5 h-3.5 text-white/45" />
                     Nachricht im Banner
                   </label>
                   <textarea
@@ -264,46 +275,40 @@ export default function SystemStatusPage() {
                     onChange={(e) => setStatus({ ...status, wartung_nachricht: e.target.value })}
                     rows={3}
                     placeholder="z.B. Wir führen Wartungsarbeiten durch, um die Performance zu verbessern..."
-                    className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 resize-none"
+                    className={`${inputStyle} resize-none leading-relaxed`}
                   />
                 </div>
 
                 {/* Banner Vorschau */}
                 <div>
-                  <p className="text-sm font-semibold text-white/70 mb-3 flex items-center gap-2">
-                    <Monitor className="w-4 h-4" />
+                  <p className="text-[11.5px] font-medium text-white/65 mb-2 flex items-center gap-1.5">
+                    <Monitor className="w-3.5 h-3.5 text-white/45" />
                     Live-Vorschau des Banners:
                   </p>
-                  <div className="p-5 bg-gradient-to-r from-yellow-500/20 via-orange-500/20 to-red-500/20 border-2 border-yellow-500/30 rounded-xl">
-                    <div className="flex items-center gap-3 mb-2">
-                      <AlertTriangle className="w-5 h-5 text-yellow-400" />
-                      <span className="text-base font-bold text-yellow-200">Geplante Wartungsarbeiten</span>
+                  <div
+                    className="p-4 rounded-xl"
+                    style={{
+                      background: 'linear-gradient(90deg, rgba(234,179,8,0.14), rgba(249,115,22,0.14), rgba(239,68,68,0.14))',
+                      border: '1px solid rgba(234,179,8,0.3)',
+                    }}
+                  >
+                    <div className="flex items-center gap-2.5 mb-2">
+                      <AlertTriangle className="w-4 h-4 text-yellow-300" />
+                      <span className="text-[14px] font-semibold text-yellow-100 tracking-tight">Geplante Wartungsarbeiten</span>
                     </div>
-                    <p className="text-sm text-yellow-100/90 mb-2">
+                    <p className="text-[12.5px] text-yellow-100/85 mb-2 leading-relaxed">
                       {status.wartung_nachricht || 'Wir führen gerade Wartungsarbeiten durch.'}
                     </p>
                     {status.wartung_start && (
-                      <div className="flex items-center gap-4 text-xs text-yellow-200/70">
+                      <div className="flex items-center gap-4 text-[11px] text-yellow-200/70 flex-wrap">
                         <span className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5" />
-                          Start: {new Date(status.wartung_start).toLocaleString('de-DE', { 
-                            day: '2-digit', 
-                            month: '2-digit', 
-                            year: 'numeric', 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })}
+                          <Calendar className="w-3 h-3" />
+                          Start: {new Date(status.wartung_start).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                         </span>
                         {status.wartung_ende && (
                           <span className="flex items-center gap-1.5">
-                            <Flag className="w-3.5 h-3.5" />
-                            Ende: {new Date(status.wartung_ende).toLocaleString('de-DE', { 
-                              day: '2-digit', 
-                              month: '2-digit', 
-                              year: 'numeric', 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}
+                            <Flag className="w-3 h-3" />
+                            Ende: {new Date(status.wartung_ende).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </span>
                         )}
                       </div>
@@ -317,13 +322,13 @@ export default function SystemStatusPage() {
       </div>
 
       {/* Info Box */}
-      <div className="glass rounded-xl p-5 border border-blue-500/20 bg-blue-500/5">
-        <div className="flex items-start gap-3">
-          <ShieldAlert className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
-          <div className="text-sm text-blue-300/90 leading-relaxed">
-            <strong className="text-blue-200">Admin-Hinweis:</strong> Als Admin kannst du auch während des Wartungsmodus 
-            auf die gesamte Seite zugreifen. Das Wartungs-Banner wird für Admins nicht angezeigt.
-          </div>
+      <div
+        className="p-4 rounded-xl flex items-start gap-3"
+        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+      >
+        <ShieldAlert className="w-4 h-4 text-white/55 mt-0.5 flex-shrink-0" />
+        <div className="text-[12.5px] text-white/60 leading-relaxed">
+          <strong className="text-white/80">Admin-Hinweis:</strong> Als Admin kannst du auch während des Wartungsmodus auf die gesamte Seite zugreifen. Das Wartungs-Banner wird für Admins nicht angezeigt.
         </div>
       </div>
     </div>

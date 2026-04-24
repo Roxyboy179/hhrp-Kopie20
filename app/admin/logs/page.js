@@ -5,8 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
-  FileText, User, Settings, Trash2, Clock, Filter, 
-  ChevronLeft, ChevronRight, Search, Download, RefreshCw
+  Filter, ChevronLeft, ChevronRight, Clock, RefreshCw, Loader2
 } from 'lucide-react';
 
 const ACTION_LABELS = {
@@ -26,16 +25,23 @@ const ACTION_LABELS = {
   ADMIN_LOGOUT: 'Admin Logout',
 };
 
+// Subtile Bedeutungs-Akzente (monochrom mit Tönung)
 const ACTION_COLORS = {
-  USER_LOGIN: 'text-blue-400',
-  ADMIN_LOGIN: 'text-blue-400',
-  BEWERBUNG_EINGEREICHT: 'text-green-400',
-  BEWERBUNG_STATUS_GEÄNDERT: 'text-yellow-400',
-  BEWERBUNG_GELÖSCHT: 'text-red-400',
-  ADMIN_ACCOUNT_GELÖSCHT: 'text-red-400',
-  ADMIN_ACCOUNT_DEAKTIVIERT: 'text-orange-400',
-  PASSWORT_GEÄNDERT: 'text-purple-400',
+  USER_LOGIN: 'text-blue-300/90',
+  ADMIN_LOGIN: 'text-blue-300/90',
+  BEWERBUNG_EINGEREICHT: 'text-green-300/90',
+  BEWERBUNG_STATUS_GEÄNDERT: 'text-yellow-300/90',
+  BEWERBUNG_GELÖSCHT: 'text-red-300/90',
+  ADMIN_ACCOUNT_GELÖSCHT: 'text-red-300/90',
+  ADMIN_ACCOUNT_DEAKTIVIERT: 'text-orange-300/90',
+  PASSWORT_GEÄNDERT: 'text-purple-300/90',
 };
+
+const cardStyle = {
+  background: 'linear-gradient(135deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01))',
+  border: '1px solid rgba(255,255,255,0.07)',
+};
+const inputClass = 'bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/25 focus:border-white/30 rounded-xl h-10';
 
 export default function AdminLogsPage() {
   const router = useRouter();
@@ -96,49 +102,59 @@ export default function AdminLogsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#080808] p-4 md:p-8">
+    <div className="p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <Button
-            variant="ghost"
             onClick={() => router.push('/admin')}
-            className="mb-4 text-white/60 hover:text-white"
+            className="mb-4 gap-2 h-10 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.15] text-white/75 hover:text-white text-[12.5px] font-medium"
           >
-            <ChevronLeft className="w-4 h-4 mr-2" />
+            <ChevronLeft className="w-4 h-4" />
             Zurück zum Dashboard
           </Button>
           
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-white mb-2">Aktivitäts-Logs</h1>
-              <p className="text-white/40 text-sm">Alle System-Aktivitäten • {total} Einträge gesamt</p>
+          <div className="flex items-start justify-between flex-wrap gap-3">
+            <div className="min-w-0">
+              <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">Aktivitäts-Logs</h1>
+              <p className="text-white/45 text-[13px] mt-1.5">
+                Alle System-Aktivitäten · <span className="text-white/70 tabular-nums">{total}</span> Einträge gesamt
+              </p>
             </div>
             <Button
               onClick={fetchLogs}
-              variant="outline"
-              className="rounded-xl border-white/10"
+              className="gap-2 h-10 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1] hover:border-white/[0.15] text-white/75 hover:text-white text-[12.5px] font-medium"
             >
-              <RefreshCw className="w-4 h-4 mr-2" />
+              <RefreshCw className="w-4 h-4" />
               Aktualisieren
             </Button>
           </div>
         </div>
 
         {/* Filter */}
-        <div className="mb-6 p-5 rounded-2xl bg-white/[0.02] border border-white/[0.06]">
-          <div className="flex items-center gap-3 mb-4">
-            <Filter className="w-5 h-5 text-white/40" />
-            <h3 className="text-white/80 font-semibold">Filter</h3>
+        <div className="mb-5 p-4 md:p-5 rounded-2xl relative overflow-hidden" style={cardStyle}>
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-px"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }}
+          />
+          <div className="flex items-center gap-2.5 mb-4">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center border border-white/[0.08]"
+              style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01))' }}
+            >
+              <Filter className="w-3.5 h-3.5 text-white/70" />
+            </div>
+            <h3 className="text-white/85 font-semibold text-[13.5px] tracking-tight">Filter</h3>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
-              <label className="text-white/40 text-xs mb-2 block">Aktion</label>
+              <label className="text-white/50 text-[11px] font-medium uppercase tracking-wider mb-1.5 block">Aktion</label>
               <select
                 value={filters.actionType}
                 onChange={(e) => { setFilters({ ...filters, actionType: e.target.value }); setPage(1); }}
-                className="w-full bg-white/[0.03] border border-white/[0.06] text-white rounded-xl p-2.5 text-sm focus:outline-none focus:border-blue-500/40 focus:ring-2 focus:ring-blue-500/20 [&>option]:bg-slate-900 [&>option]:text-white"
+                className="w-full bg-white/[0.04] border border-white/[0.1] text-white rounded-xl p-2.5 text-[12.5px] h-10 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/10 [&>option]:bg-slate-900 [&>option]:text-white"
               >
                 <option value="">Alle Aktionen</option>
                 {Object.keys(ACTION_LABELS).map(key => (
@@ -148,95 +164,103 @@ export default function AdminLogsPage() {
             </div>
             
             <div>
-              <label className="text-white/40 text-xs mb-2 block">User ID</label>
+              <label className="text-white/50 text-[11px] font-medium uppercase tracking-wider mb-1.5 block">User ID</label>
               <Input
                 value={filters.userId}
                 onChange={(e) => { setFilters({ ...filters, userId: e.target.value }); setPage(1); }}
                 placeholder="Discord ID suchen..."
-                className="bg-white/[0.03] border-white/[0.06] text-white rounded-xl"
+                className={inputClass}
               />
             </div>
             
             <div>
-              <label className="text-white/40 text-xs mb-2 block">Von Datum</label>
+              <label className="text-white/50 text-[11px] font-medium uppercase tracking-wider mb-1.5 block">Von Datum</label>
               <Input
                 type="date"
                 value={filters.startDate}
                 onChange={(e) => { setFilters({ ...filters, startDate: e.target.value }); setPage(1); }}
-                className="bg-white/[0.03] border-white/[0.06] text-white rounded-xl"
+                className={inputClass}
               />
             </div>
             
             <div>
-              <label className="text-white/40 text-xs mb-2 block">Bis Datum</label>
+              <label className="text-white/50 text-[11px] font-medium uppercase tracking-wider mb-1.5 block">Bis Datum</label>
               <Input
                 type="date"
                 value={filters.endDate}
                 onChange={(e) => { setFilters({ ...filters, endDate: e.target.value }); setPage(1); }}
-                className="bg-white/[0.03] border-white/[0.06] text-white rounded-xl"
+                className={inputClass}
               />
             </div>
           </div>
         </div>
 
         {/* Logs Tabelle */}
-        <div className="rounded-2xl bg-white/[0.02] border border-white/[0.06] overflow-hidden">
+        <div className="rounded-2xl overflow-hidden relative" style={cardStyle}>
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-px"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)' }}
+          />
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-white/[0.02] border-b border-white/[0.06]">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-white/60">Zeit</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-white/60">Aktion</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-white/60">User</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-white/60">Ziel</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-white/60">Details</th>
+              <thead>
+                <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                  <th className="px-4 py-3 text-left text-[10.5px] font-semibold text-white/55 uppercase tracking-wider">Zeit</th>
+                  <th className="px-4 py-3 text-left text-[10.5px] font-semibold text-white/55 uppercase tracking-wider">Aktion</th>
+                  <th className="px-4 py-3 text-left text-[10.5px] font-semibold text-white/55 uppercase tracking-wider">User</th>
+                  <th className="px-4 py-3 text-left text-[10.5px] font-semibold text-white/55 uppercase tracking-wider">Ziel</th>
+                  <th className="px-4 py-3 text-left text-[10.5px] font-semibold text-white/55 uppercase tracking-wider">Details</th>
                 </tr>
               </thead>
               <tbody>
-                {loading ? (
+                {loading && logs.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center text-white/40">
-                      Lade Logs...
+                    <td colSpan="5" className="px-4 py-12 text-center">
+                      <Loader2 className="w-5 h-5 animate-spin text-white/40 mx-auto" />
                     </td>
                   </tr>
                 ) : logs.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="px-4 py-8 text-center text-white/40">
+                    <td colSpan="5" className="px-4 py-12 text-center text-white/35 text-[13px]">
                       Keine Logs gefunden
                     </td>
                   </tr>
                 ) : (
                   logs.map((log) => (
-                    <tr key={log.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                      <td className="px-4 py-3 text-sm text-white/60 whitespace-nowrap">
+                    <tr key={log.id} className="border-b border-white/[0.04] hover:bg-white/[0.015] transition-colors">
+                      <td className="px-4 py-3 text-[11.5px] text-white/55 whitespace-nowrap font-mono">
                         {formatDate(log.created_at)}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-sm font-medium ${ACTION_COLORS[log.action_type] || 'text-white/80'}`}>
+                        <span className={`text-[12.5px] font-medium ${ACTION_COLORS[log.action_type] || 'text-white/80'}`}>
                           {ACTION_LABELS[log.action_type] || log.action_type}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-white/80">
+                      <td className="px-4 py-3 text-[12.5px] text-white/85">
                         {log.username || 'Unbekannt'}
                         <br />
-                        <span className="text-xs text-white/30">{log.user_id}</span>
+                        <span className="text-[10.5px] text-white/30 font-mono">{log.user_id}</span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-white/60">
+                      <td className="px-4 py-3 text-[12.5px] text-white/60">
                         {log.target_username ? (
                           <>
                             {log.target_username}
                             <br />
-                            <span className="text-xs text-white/30">{log.target_user_id}</span>
+                            <span className="text-[10.5px] text-white/30 font-mono">{log.target_user_id}</span>
                           </>
                         ) : (
-                          <span className="text-white/30">-</span>
+                          <span className="text-white/25">-</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-sm text-white/40">
+                      <td className="px-4 py-3 text-[12px] text-white/40">
                         {log.details && Object.keys(log.details).length > 0 ? (
                           <details className="cursor-pointer">
-                            <summary className="text-xs hover:text-white/60">Anzeigen</summary>
-                            <pre className="mt-2 text-xs bg-black/30 p-2 rounded overflow-x-auto">
+                            <summary className="text-[11.5px] hover:text-white/70 transition-colors">Anzeigen</summary>
+                            <pre
+                              className="mt-2 text-[10.5px] p-2.5 rounded-lg overflow-x-auto max-w-md"
+                              style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.7)' }}
+                            >
                               {JSON.stringify(log.details, null, 2)}
                             </pre>
                           </details>
@@ -253,26 +277,24 @@ export default function AdminLogsPage() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="px-4 py-4 border-t border-white/[0.06] flex items-center justify-between">
-              <div className="text-sm text-white/40">
-                Seite {page} von {totalPages}
+            <div className="px-4 py-3.5 flex items-center justify-between" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="text-[12px] text-white/45">
+                Seite <span className="text-white/75 tabular-nums">{page}</span> von <span className="text-white/75 tabular-nums">{totalPages}</span>
               </div>
               <div className="flex gap-2">
                 <Button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  variant="outline"
                   size="sm"
-                  className="rounded-xl border-white/10"
+                  className="h-8 w-8 p-0 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-white/70 disabled:opacity-40"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
                 <Button
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  variant="outline"
                   size="sm"
-                  className="rounded-xl border-white/10"
+                  className="h-8 w-8 p-0 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-white/70 disabled:opacity-40"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>
@@ -282,11 +304,12 @@ export default function AdminLogsPage() {
         </div>
 
         {/* Info Box */}
-        <div className="mt-6 p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
-          <p className="text-blue-300/70 text-sm">
-            <Clock className="w-4 h-4 inline mr-2" />
-            Logs werden automatisch nach 60 Tagen gelöscht.
-          </p>
+        <div
+          className="mt-5 p-3.5 rounded-xl text-[12px] flex items-center gap-2"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.55)' }}
+        >
+          <Clock className="w-3.5 h-3.5 text-white/45" />
+          Logs werden automatisch nach 60 Tagen gelöscht.
         </div>
       </div>
     </div>

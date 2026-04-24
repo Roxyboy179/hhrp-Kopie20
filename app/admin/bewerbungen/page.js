@@ -27,13 +27,14 @@ function formatDate(dateStr) {
 }
 
 function getStatusColor(status) {
+  // Monochromer Überweisungsstil mit subtilen Bedeutungs-Akzenten
   switch (status) {
-    case 'Eingereicht': return 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-    case 'In Bearbeitung': return 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30';
-    case 'Angenommen': return 'bg-green-500/20 text-green-300 border-green-500/30';
-    case 'Abgelehnt': return 'bg-red-500/20 text-red-300 border-red-500/30';
-    case 'Zurückgezogen': return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
-    default: return 'bg-gray-500/20 text-gray-300 border-gray-500/30';
+    case 'Eingereicht': return 'bg-blue-500/10 text-blue-300/90 border-blue-500/25';
+    case 'In Bearbeitung': return 'bg-yellow-500/10 text-yellow-300/90 border-yellow-500/25';
+    case 'Angenommen': return 'bg-green-500/10 text-green-300/90 border-green-500/25';
+    case 'Abgelehnt': return 'bg-red-500/10 text-red-300/90 border-red-500/25';
+    case 'Zurückgezogen': return 'bg-white/[0.04] text-white/55 border-white/[0.1]';
+    default: return 'bg-white/[0.04] text-white/55 border-white/[0.1]';
   }
 }
 
@@ -200,7 +201,7 @@ export default function AdminBewerbungenPage() {
   if (loading && !bewerbungen.length) {
     return (
       <div className="flex items-center justify-center h-full min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-400" />
+        <Loader2 className="w-6 h-6 animate-spin text-white/50" />
       </div>
     );
   }
@@ -209,78 +210,112 @@ export default function AdminBewerbungenPage() {
   const ConfirmDialog = () => {
     if (!actionConfirm) return null;
     
-    const colorMap = {
-      'Angenommen': 'bg-green-600 hover:bg-green-700',
-      'Abgelehnt': 'bg-red-600 hover:bg-red-700',
-    };
+    const acceptStyle = { background: 'linear-gradient(135deg, rgba(34,197,94,0.85), rgba(22,163,74,0.95))', color: 'white' };
+    const rejectStyle = { background: 'linear-gradient(135deg, rgba(239,68,68,0.85), rgba(220,38,38,0.95))', color: 'white' };
+    const isAccept = actionConfirm.status === 'Angenommen';
     
     return (
-      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <GlassCard className="p-6 max-w-md w-full animate-scale-in">
-          <h3 className="text-lg font-bold mb-2">{actionConfirm.title}</h3>
-          <p className="text-white/50 text-sm mb-6">{actionConfirm.description}</p>
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(16px) saturate(160%)', WebkitBackdropFilter: 'blur(16px) saturate(160%)' }}
+      >
+        <div
+          className="p-6 max-w-md w-full rounded-2xl animate-scale-in relative overflow-hidden"
+          style={{
+            background: 'linear-gradient(180deg, rgba(18,18,20,0.95) 0%, rgba(10,10,12,0.98) 100%)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 24px 60px -12px rgba(0,0,0,0.8)',
+          }}
+        >
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-px"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)' }}
+          />
+          <h3 className="text-[16px] font-semibold text-white tracking-tight mb-1.5">{actionConfirm.title}</h3>
+          <p className="text-white/50 text-[13px] mb-6 leading-relaxed">{actionConfirm.description}</p>
           <div className="flex gap-2 justify-end">
             <Button 
-              variant="outline" 
               onClick={() => setActionConfirm(null)} 
-              className="rounded-xl border-white/10"
+              className="rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1] text-white/75 hover:text-white h-10 px-4 text-[12.5px] font-medium"
             >
               Abbrechen
             </Button>
             <Button 
               onClick={() => handleAction(actionConfirm.id, actionConfirm.action, actionConfirm.status)} 
-              className={`rounded-xl ${colorMap[actionConfirm.status] || 'bg-blue-600 hover:bg-blue-700'}`}
+              className="rounded-xl h-10 px-4 text-[12.5px] font-semibold border-0"
+              style={isAccept ? acceptStyle : rejectStyle}
             >
               Bestätigen
             </Button>
           </div>
-        </GlassCard>
+        </div>
       </div>
     );
   };
 
   // Reject Modal als JSX-Variable (NICHT als Komponente, sonst Focus-Loss beim Tippen!)
   const rejectModalJsx = (showRejectModal && selected) ? (
-    <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4">
-      <div className="bg-[#0A0B0F] border border-red-500/20 rounded-2xl max-w-md w-full p-6 space-y-4">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(16px) saturate(160%)', WebkitBackdropFilter: 'blur(16px) saturate(160%)' }}
+    >
+      <div
+        className="rounded-2xl max-w-md w-full p-6 space-y-4 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(180deg, rgba(18,18,20,0.96) 0%, rgba(10,10,12,0.98) 100%)',
+          border: '1px solid rgba(239,68,68,0.22)',
+          boxShadow: '0 24px 60px -12px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.04)',
+        }}
+      >
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-px"
+          style={{ background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.35), transparent)' }}
+        />
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-red-500/10 rounded-lg">
-            <XCircle className="w-6 h-6 text-red-400" />
+          <div
+            className="w-11 h-11 rounded-xl flex items-center justify-center border flex-shrink-0"
+            style={{ background: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.2)' }}
+          >
+            <XCircle className="w-5 h-5 text-red-300" />
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-white">Bewerbung ablehnen</h3>
-            <p className="text-sm text-white/40">Von: {selected.username}</p>
+          <div className="min-w-0">
+            <h3 className="text-[15px] font-semibold text-white tracking-tight">Bewerbung ablehnen</h3>
+            <p className="text-[12px] text-white/45 truncate">Von: {selected.username}</p>
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm text-white/60">Ablehnungsgrund *</label>
+        <div className="space-y-1.5">
+          <label className="text-[12.5px] text-white/65 font-medium">Ablehnungsgrund *</label>
           <textarea
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
             placeholder="Bitte gib einen Grund für die Ablehnung an (wird dem Bewerber mitgeteilt)..."
-            className="w-full min-h-[100px] px-3 py-2 bg-white/[0.04] border border-white/[0.08] rounded-xl text-white placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-red-500/50 resize-none"
+            className="w-full min-h-[110px] px-3 py-2.5 bg-white/[0.04] border border-white/[0.1] rounded-xl text-white placeholder:text-white/25 focus:outline-none focus:border-white/30 focus:ring-2 focus:ring-white/10 resize-none text-[13px] leading-relaxed"
           />
-          <p className="text-xs text-white/30">Mindestens 10 Zeichen</p>
+          <p className="text-[11px] text-white/30">Mindestens 10 Zeichen</p>
         </div>
 
         {userWarnings && userWarnings.total >= 3 && (
-          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
-            <p className="text-xs text-red-300 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4" />
+          <div
+            className="p-3 rounded-xl flex items-center gap-2"
+            style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)' }}
+          >
+            <AlertTriangle className="w-4 h-4 text-red-300 flex-shrink-0" />
+            <p className="text-[12px] text-red-200/90">
               Bewerber hat {userWarnings.total} Verwarnungen
             </p>
           </div>
         )}
 
-        <div className="flex gap-3 pt-2">
+        <div className="flex gap-2 pt-1">
           <Button
-            variant="outline"
             onClick={() => {
               setShowRejectModal(false);
               setRejectReason('');
             }}
-            className="flex-1 rounded-xl border-white/10"
+            className="flex-1 h-10 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1] text-white/75 hover:text-white text-[12.5px] font-medium"
             disabled={actionLoading}
           >
             Abbrechen
@@ -297,11 +332,15 @@ export default function AdminBewerbungenPage() {
               handleAction(selected.id, null, 'Abgelehnt', rejectReason.trim());
               setRejectReason('');
             }}
-            className="flex-1 bg-red-600 hover:bg-red-700 rounded-xl"
+            className="flex-1 h-10 rounded-xl border-0 text-white text-[12.5px] font-semibold"
+            style={{
+              background: 'linear-gradient(135deg, rgba(239,68,68,0.85), rgba(220,38,38,0.95))',
+              boxShadow: '0 4px 14px -4px rgba(239,68,68,0.4)',
+            }}
             disabled={actionLoading || rejectReason.trim().length < 10}
           >
             {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <XCircle className="w-4 h-4 mr-2" />}
-            Bewerbung ablehnen
+            Ablehnen
           </Button>
         </div>
       </div>
@@ -319,54 +358,70 @@ export default function AdminBewerbungenPage() {
     }
 
     return (
-      <div className="p-6 space-y-6 max-w-5xl mx-auto">
+      <div className="p-4 md:p-6 space-y-5 max-w-5xl mx-auto">
         <ConfirmDialog />
         {rejectModalJsx}
         
         <Button 
-          variant="ghost" 
           onClick={() => setSelectedId(null)} 
-          className="text-white/50 hover:text-white gap-2 rounded-xl"
+          className="text-white/55 hover:text-white gap-2 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.15] h-10 px-4 text-[12.5px] font-medium"
         >
           <ArrowLeft className="w-4 h-4" /> Zurück zur Übersicht
         </Button>
 
-        <GlassCard className="p-6 md:p-8 space-y-6">
+        <div
+          className="p-6 md:p-8 space-y-6 rounded-2xl relative overflow-hidden"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))',
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-px"
+            style={{ background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)' }}
+          />
           <div className="flex items-start justify-between flex-wrap gap-4">
-            <div>
-              <h2 className="text-2xl font-bold">Bewerbung von {selected.username || 'Unbekannt'}</h2>
-              <p className="text-sm text-white/35 mt-1">
-                ID: {selected.id?.substring(0, 8)} | Eingereicht am {formatDateTime(selected.createdAt)}
+            <div className="min-w-0">
+              <h2 className="text-xl md:text-2xl font-semibold text-white tracking-tight">Bewerbung von {selected.username || 'Unbekannt'}</h2>
+              <p className="text-[12px] text-white/40 mt-1.5 font-mono">
+                ID: {selected.id?.substring(0, 8)} · Eingereicht am {formatDateTime(selected.createdAt)}
               </p>
             </div>
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${getStatusColor(selected.status)}`}>
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] font-medium border ${getStatusColor(selected.status)}`}>
               <StatusIcon status={selected.status} />
               {selected.status}
             </span>
           </div>
 
           {selected.claimedByName && (
-            <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 text-sm flex items-center gap-2">
+            <div
+              className="p-3 rounded-xl text-[12.5px] flex items-center gap-2"
+              style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.2)', color: 'rgba(253,224,71,0.9)' }}
+            >
               <User className="w-4 h-4" />
-              Wird bearbeitet von: <strong>{selected.claimedByName}</strong>
+              <span>Wird bearbeitet von: <strong className="text-yellow-200">{selected.claimedByName}</strong></span>
             </div>
           )}
 
           {/* Discord-Daten */}
-          <div className="p-4 rounded-xl bg-[#5865F2]/[0.08] border border-[#5865F2]/20">
-            <h4 className="text-xs font-semibold text-blue-300 mb-3 uppercase tracking-wider">Discord-Daten</h4>
-            <div className="grid sm:grid-cols-3 gap-3 text-sm">
+          <div
+            className="p-4 rounded-xl"
+            style={{ background: 'rgba(88,101,242,0.05)', border: '1px solid rgba(88,101,242,0.15)' }}
+          >
+            <h4 className="text-[10.5px] font-semibold text-indigo-300/90 mb-3 uppercase tracking-[0.1em]">Discord-Daten</h4>
+            <div className="grid sm:grid-cols-3 gap-4 text-[13px]">
               <div>
-                <span className="text-white/40 text-xs">Name</span>
-                <p className="text-white/90 font-medium">{selected.username || '-'}</p>
+                <span className="text-white/35 text-[10.5px] uppercase tracking-wider">Name</span>
+                <p className="text-white/90 font-medium mt-0.5">{selected.username || '-'}</p>
               </div>
               <div>
-                <span className="text-white/40 text-xs">E-Mail</span>
-                <p className="text-white/90 font-medium">{selected.email || '-'}</p>
+                <span className="text-white/35 text-[10.5px] uppercase tracking-wider">E-Mail</span>
+                <p className="text-white/90 font-medium mt-0.5 truncate">{selected.email || '-'}</p>
               </div>
               <div>
-                <span className="text-white/40 text-xs">Discord seit</span>
-                <p className="text-white/90 font-medium">{selected.discordCreatedAt ? formatDate(selected.discordCreatedAt) : '-'}</p>
+                <span className="text-white/35 text-[10.5px] uppercase tracking-wider">Discord seit</span>
+                <p className="text-white/90 font-medium mt-0.5">{selected.discordCreatedAt ? formatDate(selected.discordCreatedAt) : '-'}</p>
               </div>
             </div>
           </div>
@@ -375,25 +430,28 @@ export default function AdminBewerbungenPage() {
 
           {/* Bewerbungsdaten */}
           <div>
-            <h4 className="text-sm font-semibold text-blue-300 mb-3 flex items-center gap-2">
+            <h4 className="text-[13px] font-semibold text-white/80 mb-3 flex items-center gap-2 tracking-tight">
               Bewerbungsdaten
               {fd.bewerbungType && (
-                <span className="text-xs text-white/40 ml-2 px-2 py-1 rounded-full bg-white/[0.04] inline-flex items-center gap-1.5">
+                <span
+                  className="text-[10.5px] text-white/60 ml-1 px-2 py-0.5 rounded-full inline-flex items-center gap-1.5 border"
+                  style={{ background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.08)' }}
+                >
                   {fd.bewerbungType === 'normal' && (
                     <>
-                      <FileText className="w-3 h-3 text-blue-400" />
+                      <FileText className="w-3 h-3 text-white/60" />
                       <span>Team-Bewerbung</span>
                     </>
                   )}
                   {fd.bewerbungType === 'praktikum' && (
                     <>
-                      <Briefcase className="w-3 h-3 text-orange-400" />
+                      <Briefcase className="w-3 h-3 text-orange-300" />
                       <span>Praktikum</span>
                     </>
                   )}
                   {fd.bewerbungType === 'uprank' && (
                     <>
-                      <TrendingUp className="w-3 h-3 text-purple-400" />
+                      <TrendingUp className="w-3 h-3 text-purple-300" />
                       <span>Uprank</span>
                     </>
                   )}
@@ -480,97 +538,109 @@ export default function AdminBewerbungenPage() {
 
           {/* Verwarnungen Anzeige */}
           {loadingWarnings && (
-            <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
-              <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-yellow-400" />
-                <span className="text-sm text-yellow-300">Lade Verwarnungen...</span>
-              </div>
+            <div
+              className="p-4 rounded-xl flex items-center gap-2"
+              style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.2)' }}
+            >
+              <Loader2 className="w-4 h-4 animate-spin text-yellow-300" />
+              <span className="text-[12.5px] text-yellow-200/90">Lade Verwarnungen...</span>
             </div>
           )}
           
-          {!loadingWarnings && userWarnings && (
-            <div className={`p-4 border rounded-xl ${
-              userWarnings.total === 0 
-                ? 'bg-green-500/10 border-green-500/20' 
-                : userWarnings.total >= 3 
-                  ? 'bg-red-500/10 border-red-500/20'
-                  : 'bg-yellow-500/10 border-yellow-500/20'
-            }`}>
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className={`w-4 h-4 ${
-                  userWarnings.total === 0 
-                    ? 'text-green-400' 
-                    : userWarnings.total >= 3 
-                      ? 'text-red-400'
-                      : 'text-yellow-400'
-                }`} />
-                <h4 className="text-sm font-semibold text-white">
-                  Server Verwarnungen: {userWarnings.total}
-                </h4>
-              </div>
-              {userWarnings.total > 0 && (
-                <>
-                  {userWarnings.total >= 3 && (
-                    <p className="text-xs text-red-300 mb-2">
-                      ⚠️ ACHTUNG: {userWarnings.total} Verwarnungen! Bewerbung mit Vorsicht annehmen.
-                    </p>
-                  )}
-                  <div className="space-y-2 mt-2">
-                    {userWarnings.warnings.slice(0, 3).map((warn, idx) => (
-                      <div key={idx} className="text-xs bg-black/20 p-2 rounded">
-                        <div className="text-white/60">{new Date(warn.date).toLocaleDateString('de-DE')}</div>
-                        <div className="text-white/80">{warn.reason}</div>
-                        <div className="text-white/40">Von: {warn.admin}</div>
-                      </div>
-                    ))}
-                    {userWarnings.total > 3 && (
-                      <div className="text-xs text-white/40 text-center">
-                        + {userWarnings.total - 3} weitere Verwarnungen
-                      </div>
+          {!loadingWarnings && userWarnings && (() => {
+            const warningStyle = userWarnings.total === 0
+              ? { bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.2)', accent: 'rgba(134,239,172,0.9)' }
+              : userWarnings.total >= 3
+                ? { bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.2)', accent: 'rgba(252,165,165,0.9)' }
+                : { bg: 'rgba(234,179,8,0.08)', border: 'rgba(234,179,8,0.2)', accent: 'rgba(253,224,71,0.9)' };
+            return (
+              <div
+                className="p-4 rounded-xl"
+                style={{ background: warningStyle.bg, border: `1px solid ${warningStyle.border}` }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="w-4 h-4" style={{ color: warningStyle.accent }} />
+                  <h4 className="text-[13px] font-semibold text-white tracking-tight">
+                    Server Verwarnungen: {userWarnings.total}
+                  </h4>
+                </div>
+                {userWarnings.total > 0 && (
+                  <>
+                    {userWarnings.total >= 3 && (
+                      <p className="text-[11.5px] text-red-200/90 mb-2">
+                        ⚠️ ACHTUNG: {userWarnings.total} Verwarnungen! Bewerbung mit Vorsicht annehmen.
+                      </p>
                     )}
-                  </div>
-                </>
-              )}
-              {userWarnings.total === 0 && (
-                <p className="text-xs text-green-300">Keine Verwarnungen vorhanden ✓</p>
-              )}
-            </div>
-          )}
+                    <div className="space-y-2 mt-2">
+                      {userWarnings.warnings.slice(0, 3).map((warn, idx) => (
+                        <div key={idx} className="text-[11.5px] p-2.5 rounded-lg" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                          <div className="text-white/55 font-mono text-[10.5px]">{new Date(warn.date).toLocaleDateString('de-DE')}</div>
+                          <div className="text-white/85 mt-0.5">{warn.reason}</div>
+                          <div className="text-white/35 text-[10.5px] mt-0.5">Von: {warn.admin}</div>
+                        </div>
+                      ))}
+                      {userWarnings.total > 3 && (
+                        <div className="text-[11px] text-white/40 text-center pt-1">
+                          + {userWarnings.total - 3} weitere Verwarnungen
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+                {userWarnings.total === 0 && (
+                  <p className="text-[11.5px]" style={{ color: warningStyle.accent }}>Keine Verwarnungen vorhanden ✓</p>
+                )}
+              </div>
+            );
+          })()}
 
           <Separator className="bg-white/[0.06]" />
 
           {/* Aktionen */}
           {selected.status === 'Zurückgezogen' ? (
-            <div className="p-4 rounded-xl bg-gray-500/10 border border-gray-500/20 flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-gray-400 flex-shrink-0" />
+            <div
+              className="p-4 rounded-xl flex items-center gap-3"
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}
+            >
+              <AlertTriangle className="w-5 h-5 text-white/50 flex-shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-gray-300">Bewerbung wurde vom Bewerber zurückgezogen</p>
-                <p className="text-xs text-white/40 mt-0.5">Es sind keine weiteren Aktionen möglich.</p>
+                <p className="text-[13px] font-semibold text-white/80">Bewerbung wurde vom Bewerber zurückgezogen</p>
+                <p className="text-[11.5px] text-white/40 mt-0.5">Es sind keine weiteren Aktionen möglich.</p>
               </div>
             </div>
           ) : selected.status === 'Angenommen' ? (
-            <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
+            <div
+              className="p-4 rounded-xl flex items-center gap-3"
+              style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)' }}
+            >
+              <CheckCircle2 className="w-5 h-5 text-green-300 flex-shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-green-300">Bewerbung wurde angenommen</p>
-                <p className="text-xs text-white/40 mt-0.5">Der Vorgang ist abgeschlossen.</p>
+                <p className="text-[13px] font-semibold text-green-200">Bewerbung wurde angenommen</p>
+                <p className="text-[11.5px] text-white/45 mt-0.5">Der Vorgang ist abgeschlossen.</p>
               </div>
             </div>
           ) : selected.status === 'Abgelehnt' ? (
-            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center gap-3">
-              <XCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+            <div
+              className="p-4 rounded-xl flex items-center gap-3"
+              style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}
+            >
+              <XCircle className="w-5 h-5 text-red-300 flex-shrink-0" />
               <div>
-                <p className="text-sm font-semibold text-red-300">Bewerbung wurde abgelehnt</p>
-                <p className="text-xs text-white/40 mt-0.5">Der Vorgang ist abgeschlossen.</p>
+                <p className="text-[13px] font-semibold text-red-200">Bewerbung wurde abgelehnt</p>
+                <p className="text-[11.5px] text-white/45 mt-0.5">Der Vorgang ist abgeschlossen.</p>
               </div>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2">
               {!selected.claimedBy && selected.status === 'Eingereicht' && (
                 <Button 
                   onClick={() => handleAction(selected.id, 'claim')} 
                   disabled={actionLoading}
-                  className="bg-blue-600 hover:bg-blue-700 rounded-xl"
+                  className="h-10 rounded-xl text-[12.5px] font-semibold text-black border-0"
+                  style={{
+                    background: 'linear-gradient(135deg, #f5f5f5 0%, #e5e5e5 100%)',
+                    boxShadow: '0 4px 12px -4px rgba(0,0,0,0.5)',
+                  }}
                 >
                   {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <User className="w-4 h-4 mr-2" />}
                   Übernehmen
@@ -581,8 +651,7 @@ export default function AdminBewerbungenPage() {
                   <Button 
                     onClick={() => handleAction(selected.id, 'unclaim')} 
                     disabled={actionLoading}
-                    variant="outline" 
-                    className="rounded-xl border-white/10"
+                    className="h-10 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1] text-white/75 hover:text-white text-[12.5px] font-medium"
                   >
                     Freigeben
                   </Button>
@@ -595,7 +664,11 @@ export default function AdminBewerbungenPage() {
                       title: 'Bewerbung annehmen?',
                       description: `Möchtest du die Bewerbung von ${selected.username} wirklich annehmen? Der Bewerber wird per Discord benachrichtigt.`
                     })} 
-                    className="bg-green-600 hover:bg-green-700 rounded-xl"
+                    className="h-10 rounded-xl border-0 text-white text-[12.5px] font-semibold"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(34,197,94,0.85), rgba(22,163,74,0.95))',
+                      boxShadow: '0 4px 14px -4px rgba(34,197,94,0.35)',
+                    }}
                   >
                     <CheckCircle2 className="w-4 h-4 mr-2" /> Annehmen
                   </Button>
@@ -605,21 +678,28 @@ export default function AdminBewerbungenPage() {
                       setShowRejectModal(true);
                       setRejectReason('');
                     }} 
-                    className="bg-red-600 hover:bg-red-700 rounded-xl"
+                    className="h-10 rounded-xl border-0 text-white text-[12.5px] font-semibold"
+                    style={{
+                      background: 'linear-gradient(135deg, rgba(239,68,68,0.85), rgba(220,38,38,0.95))',
+                      boxShadow: '0 4px 14px -4px rgba(239,68,68,0.35)',
+                    }}
                   >
                     <XCircle className="w-4 h-4 mr-2" /> Ablehnen
                   </Button>
                 </>
               )}
               {selected.claimedBy && selected.claimedBy !== admin?.discordUserId && (
-                <div className="p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 text-sm flex items-center gap-2">
+                <div
+                  className="p-3 rounded-xl text-[12.5px] flex items-center gap-2"
+                  style={{ background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.2)', color: 'rgba(253,224,71,0.9)' }}
+                >
                   <User className="w-4 h-4" />
-                  Diese Bewerbung wird aktuell von <strong>{selected.claimedByName}</strong> bearbeitet.
+                  <span>Diese Bewerbung wird aktuell von <strong className="text-yellow-200">{selected.claimedByName}</strong> bearbeitet.</span>
                 </div>
               )}
             </div>
           )}
-        </GlassCard>
+        </div>
       </div>
     );
   }
@@ -635,91 +715,129 @@ export default function AdminBewerbungenPage() {
   });
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-5 max-w-[1400px] mx-auto">
       <ConfirmDialog />
       {rejectModalJsx}
       
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Bewerbungen</h1>
-          <p className="text-white/40 text-sm mt-1">
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">Bewerbungen</h1>
+          <p className="text-white/45 text-[13px] mt-1.5">
             {bewerbungen.length} insgesamt
             {admin && (
-              <span className="ml-2 text-blue-400">| {admin.roleName} (Lv.{admin.roleLevel})</span>
+              <span className="ml-2 text-white/70">· {admin.roleName} (Lv.{admin.roleLevel})</span>
             )}
           </p>
         </div>
         <Button 
-          variant="outline" 
           onClick={() => fetchBewerbungen()} 
-          className="gap-2 rounded-xl border-white/10"
+          className="gap-2 h-10 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.1] hover:border-white/[0.15] text-white/75 hover:text-white text-[12.5px] font-medium"
         >
           <RefreshCw className="w-4 h-4" /> Aktualisieren
         </Button>
       </div>
 
-      <div className="flex flex-wrap gap-4">
-        <div className="flex-1 min-w-[200px]">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-            <Input
-              placeholder="Name oder ID suchen..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 bg-white/[0.04] border-white/[0.08] rounded-xl"
-            />
-          </div>
+      {/* Search + Filter Bar */}
+      <div
+        className="p-3 md:p-4 rounded-2xl space-y-3"
+        style={{
+          background: 'linear-gradient(135deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01))',
+          border: '1px solid rgba(255,255,255,0.07)',
+        }}
+      >
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/35" />
+          <Input
+            placeholder="Name, Email oder ID suchen..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10 h-11 bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/30 focus:border-white/30 rounded-xl"
+          />
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {['all', 'Eingereicht', 'In Bearbeitung', 'Angenommen', 'Abgelehnt', 'Zurückgezogen'].map(f => (
-            <Button
-              key={f}
-              variant={filter === f ? 'default' : 'outline'}
-              onClick={() => setFilter(f)}
-              className={`rounded-xl ${filter === f ? '' : 'border-white/10'}`}
-              size="sm"
-            >
-              {f === 'all' ? `Alle (${bewerbungen.length})` : `${f} (${bewerbungen.filter(b => b.status === f).length})`}
-            </Button>
-          ))}
+        <div className="flex gap-1.5 flex-wrap">
+          {['all', 'Eingereicht', 'In Bearbeitung', 'Angenommen', 'Abgelehnt', 'Zurückgezogen'].map(f => {
+            const count = f === 'all' ? bewerbungen.length : bewerbungen.filter(b => b.status === f).length;
+            const active = filter === f;
+            return (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all border ${
+                  active
+                    ? 'text-white'
+                    : 'text-white/55 hover:text-white/85 hover:bg-white/[0.04]'
+                }`}
+                style={active ? {
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04))',
+                  borderColor: 'rgba(255,255,255,0.18)',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+                } : {
+                  background: 'transparent',
+                  borderColor: 'rgba(255,255,255,0.06)',
+                }}
+              >
+                {f === 'all' ? 'Alle' : f}
+                <span className="ml-1.5 text-[10.5px] text-white/40 font-mono">({count})</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="grid gap-3">
+      <div className="grid gap-2.5">
         {filtered.length === 0 ? (
-          <GlassCard className="p-12 text-center">
-            <Filter className="w-12 h-12 text-white/20 mx-auto mb-4" />
-            <p className="text-white/40">Keine Bewerbungen gefunden</p>
-          </GlassCard>
+          <div
+            className="p-12 text-center rounded-2xl"
+            style={{
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.005))',
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}
+          >
+            <div
+              className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center border border-white/[0.06]"
+              style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))' }}
+            >
+              <Filter className="w-6 h-6 text-white/30" />
+            </div>
+            <p className="text-white/50 text-[13.5px] font-medium">Keine Bewerbungen gefunden</p>
+            <p className="text-white/25 text-[11.5px] mt-1">Passe deinen Filter oder deine Suche an</p>
+          </div>
         ) : (
           filtered.map(b => (
-            <GlassCard 
+            <button
               key={b.id} 
-              hover 
-              className="p-5 cursor-pointer transition-all hover:border-blue-500/20" 
+              type="button"
               onClick={() => setSelectedId(b.id)}
+              className="w-full text-left p-4 md:p-5 rounded-xl cursor-pointer transition-all group hover:translate-x-0.5"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.035), rgba(255,255,255,0.01))',
+                border: '1px solid rgba(255,255,255,0.06)',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'; }}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-1.5 flex-wrap">
-                    <span className="font-semibold text-white">{b.username || 'Unbekannt'}</span>
-                    <span className="text-white/30 text-xs">#{b.id?.substring(0, 8)}</span>
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusColor(b.status)}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
+                    <span className="font-semibold text-white text-[14px] tracking-tight truncate">{b.username || 'Unbekannt'}</span>
+                    <span className="text-white/30 text-[10.5px] font-mono">#{b.id?.substring(0, 8)}</span>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium border ${getStatusColor(b.status)}`}>
                       <StatusIcon status={b.status} />
                       {b.status}
                     </span>
                   </div>
-                  <div className="flex items-center gap-4 text-xs text-white/30">
+                  <div className="flex items-center gap-3 text-[11.5px] text-white/35 flex-wrap">
                     <span>{formatDateTime(b.createdAt)}</span>
-                    {b.email && <span>{b.email}</span>}
+                    {b.email && <span className="truncate max-w-[180px]">{b.email}</span>}
                     {b.claimedByName && (
-                      <span className="text-yellow-300/70">Bearbeitet von: {b.claimedByName}</span>
+                      <span className="text-yellow-300/75">Bearbeitet von: {b.claimedByName}</span>
                     )}
                   </div>
                 </div>
-                <Eye className="w-5 h-5 text-white/20" />
+                <Eye className="w-4 h-4 text-white/25 group-hover:text-white/60 transition-colors flex-shrink-0" />
               </div>
-            </GlassCard>
+            </button>
           ))
         )}
       </div>
