@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, FileText, UserPlus, Settings, LogOut, 
-  Menu, X, Shield, ChevronRight, Sliders, Clock
+  Menu, X, ChevronRight, Sliders, Clock, Shield
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminAuthProvider, useAdminAuth } from '@/components/providers/AdminAuthProvider';
@@ -79,13 +79,13 @@ function AdminLayoutInner({ children }) {
           <div className="px-5 py-6 border-b border-white/[0.05]">
             <Link href="/" className="flex items-center gap-3 group">
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/[0.08] transition-all group-hover:scale-105"
+                className="w-10 h-10 rounded-xl flex items-center justify-center border border-white/[0.08] transition-all group-hover:scale-105 overflow-hidden"
                 style={{
                   background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))',
                   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
                 }}
               >
-                <Shield className="w-[18px] h-[18px] text-white/85" />
+                <img src="/logo.webp" alt="HHRP" className="w-full h-full object-cover" />
               </div>
               <div className="flex flex-col leading-tight">
                 <span className="font-semibold text-[15px] tracking-tight text-white/95">HHRP Admin</span>
@@ -203,10 +203,10 @@ function AdminLayoutInner({ children }) {
           </button>
           <div className="flex items-center gap-2 ml-3">
             <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center border border-white/[0.08]"
+              className="w-7 h-7 rounded-lg flex items-center justify-center border border-white/[0.08] overflow-hidden"
               style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))' }}
             >
-              <Shield className="w-3.5 h-3.5 text-white/80" />
+              <img src="/logo.webp" alt="HHRP" className="w-full h-full object-cover" />
             </div>
             <span className="font-semibold text-[14px] text-white/90 tracking-tight">HHRP Admin</span>
           </div>
