@@ -6,7 +6,7 @@ import confetti from 'canvas-confetti';
 import {
   Crown, Lock, Check, Clock, Gift, Sparkles, AlertTriangle,
   Coins, Banknote, Star, Ticket, Car, Bike, Truck, Crosshair, Shield, X, Zap, Loader2,
-  TrendingUp, Award, Gem,
+  TrendingUp, Award, Gem, Share2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -138,6 +138,15 @@ export default function BattlePassView() {
   const [purchaseAutorenew, setPurchaseAutorenew] = useState(true);
   // ✅ NEU: Toggle für Auto-Renew nach Kauf (separater Loading-State)
   const [autorenewLoading, setAutorenewLoading] = useState(false);
+  
+  // 🆕 NEU: States für neue Features
+  const [skipping, setSkipping] = useState(false);
+  const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
+  const [buyingAutoclaim, setBuyingAutoclaim] = useState(false);
+  const [autoclaimConfirmOpen, setAutoclaimConfirmOpen] = useState(false);
+  const [buyingLifetime, setBuyingLifetime] = useState(false);
+  const [lifetimeConfirmOpen, setLifetimeConfirmOpen] = useState(false);
+  
   const pollingRef = useRef(null);
   const queueCheckRef = useRef(null);
   const confettiIntervalRef = useRef(null);
@@ -438,6 +447,107 @@ export default function BattlePassView() {
     }
   };
 
+
+  // 🆕 NEU: Tier Skip Handler
+  const handleSkipTier = async () => {
+    setSkipping(true);
+    setSkipConfirmOpen(false);
+    
+    try {
+      const res = await fetch('/api/battle-pass/skip-tier', { method: 'POST' });
+      const json = await res.json();
+      
+      if (res.ok) {
+        toast.success(`✅ Tier ${json.newTier} übersprungen! (${json.creditsSpent} Credits)`);
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+        loadBattlePass();
+      } else {
+        toast.error(json.error || 'Skip fehlgeschlagen');
+      }
+    } catch (error) {
+      console.error('[BP] Skip Error:', error);
+      toast.error('Verbindungsfehler');
+    } finally {
+      setSkipping(false);
+    }
+  };
+
+  // 🆕 NEU: Auto-Claim kaufen Handler
+  const handleBuyAutoclaim = async () => {
+    setBuyingAutoclaim(true);
+    setAutoclaimConfirmOpen(false);
+    
+    try {
+      const res = await fetch('/api/battle-pass/buy-autoclaim', { method: 'POST' });
+      const json = await res.json();
+      
+      if (res.ok) {
+        toast.success('✨ Auto-Claim aktiviert! Ab jetzt wird automatisch geclaimt.');
+        confetti({
+          particleCount: 150,
+          spread: 80,
+          origin: { y: 0.5 }
+        });
+        loadBattlePass();
+      } else {
+        toast.error(json.error || 'Kauf fehlgeschlagen');
+      }
+    } catch (error) {
+      console.error('[BP] Buy Autoclaim Error:', error);
+      toast.error('Verbindungsfehler');
+    } finally {
+      setBuyingAutoclaim(false);
+    }
+  };
+
+  // 🆕 NEU: Lifetime Pass kaufen Handler
+  const handleBuyLifetime = async () => {
+    setBuyingLifetime(true);
+    setLifetimeConfirmOpen(false);
+    
+    try {
+      const res = await fetch('/api/battle-pass/buy-lifetime', { method: 'POST' });
+      const json = await res.json();
+      
+      if (res.ok) {
+        toast.success('🎉 Lifetime Pass aktiviert! Du bekommst jeden Monat automatisch den Pass!', {
+          duration: 6000
+        });
+        confetti({
+          particleCount: 200,
+          spread: 100,
+          origin: { y: 0.4 }
+        });
+        loadBattlePass();
+      } else {
+        toast.error(json.error || 'Kauf fehlgeschlagen');
+      }
+    } catch (error) {
+      console.error('[BP] Buy Lifetime Error:', error);
+      toast.error('Verbindungsfehler');
+    } finally {
+      setBuyingLifetime(false);
+    }
+  };
+
+  // 🆕 NEU: Share Progress Handler
+  const handleShareProgress = () => {
+    const { currentTier } = data.userProgress;
+    const text = `🎮 Ich bin bei Tier ${currentTier}/30 im HHRP Battle Pass! Hol dir auch einen Pass und sichere dir exklusive Rewards! 🔥`;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success('📋 In Zwischenablage kopiert!');
+    }).catch(() => {
+      toast.error('Konnte nicht kopieren');
+    });
+  };
+
+
   if (loading) {
     return (
       <div className="bg-gradient-to-br from-white/5 via-white/[0.02] to-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-10 flex items-center justify-center min-h-[300px] shadow-2xl">
@@ -456,7 +566,7 @@ export default function BattlePassView() {
   }
 
   const { userProgress, rewards, season, daysRemaining, pricing, canPurchase, minDaysToPurchase, tiers, pricingByTier } = data;
-  const { currentTier, purchased, canClaimToday, missedDays, cancelled, cancelledAt, passType, autorenew } = userProgress;
+  const { currentTier, purchased, canClaimToday, missedDays, cancelled, cancelledAt, passType, autorenew, auto_claim_enabled, lifetime_pass } = userProgress;
   const seasonName = `${season.month}/${season.year}`;
   const progress = (currentTier / 30) * 100;
   const allClaimed = currentTier >= 30;
@@ -510,9 +620,20 @@ export default function BattlePassView() {
                 <h2 className="text-2xl md:text-3xl font-black text-white">Battle Pass</h2>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-xs text-white/40 font-semibold mb-0.5">Noch</div>
-              <div className="text-2xl font-black text-white">{daysRemaining}d</div>
+            <div className="flex items-center gap-3">
+              {/* 🆕 Share Button */}
+              <button
+                onClick={handleShareProgress}
+                className="glass rounded-xl px-4 py-2 border border-white/10 hover:border-blue-400/40 transition-all hover:scale-105 flex items-center gap-2"
+                title="Progress teilen"
+              >
+                <Share2 className="w-4 h-4 text-blue-400" />
+                <span className="text-sm font-semibold text-white hidden sm:inline">Teilen</span>
+              </button>
+              <div className="text-right">
+                <div className="text-xs text-white/40 font-semibold mb-0.5">Noch</div>
+                <div className="text-2xl font-black text-white">{daysRemaining}d</div>
+              </div>
             </div>
           </div>
 
@@ -743,12 +864,31 @@ export default function BattlePassView() {
               </div>
             )}
 
+            {/* Premium User: Bereits geclaimt + Skip Button */}
             {!canClaimToday && !allClaimed && !claiming && missedDays === 0 && purchased && (
-              <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-xl md:rounded-2xl border border-white/20 bg-white/5 backdrop-blur-md shadow-lg">
-                <Clock className="w-4 h-4 text-white/50 flex-shrink-0" />
-                <span className="text-white/70 text-xs md:text-sm font-medium">
-                  Bereits geclaimt — morgen wieder
-                </span>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-xl md:rounded-2xl border border-white/20 bg-white/5 backdrop-blur-md shadow-lg flex-1">
+                  <Clock className="w-4 h-4 text-white/50 flex-shrink-0" />
+                  <span className="text-white/70 text-xs md:text-sm font-medium">
+                    Bereits geclaimt — morgen wieder
+                  </span>
+                </div>
+                {/* 🆕 Tier-Skip Button */}
+                {!skipping && (
+                  <Button
+                    onClick={() => setSkipConfirmOpen(true)}
+                    className="h-10 md:h-12 px-3 md:px-4 rounded-xl md:rounded-2xl font-bold text-xs md:text-sm text-white shadow-xl hover:shadow-2xl transition-all hover:scale-105 whitespace-nowrap"
+                    style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}
+                  >
+                    <Zap className="w-4 h-4 mr-1" />
+                    Skip (50 Credits)
+                  </Button>
+                )}
+                {skipping && (
+                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-orange-400/40 bg-orange-400/10">
+                    <Loader2 className="w-4 h-4 text-orange-400 animate-spin" />
+                  </div>
+                )}
               </div>
             )}
 
@@ -762,6 +902,113 @@ export default function BattlePassView() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* 🆕 ═══════════════════════════════════════════════════════════════
+          PREMIUM FEATURES: Auto-Claim & Lifetime Pass
+          ═══════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Auto-Claim Feature Card */}
+        {!auto_claim_enabled && passType !== 'ultra' && (
+          <div className="glass rounded-2xl p-5 border border-blue-400/20 hover:border-blue-400/40 transition-all">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-500/15 border border-blue-400/30">
+                <Zap className="w-6 h-6 text-blue-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-white text-lg">Auto-Claim</h3>
+                <p className="text-sm text-white/60 mt-1">
+                  Jeden Tag automatisch claimen — nie wieder verpassen!
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="text-2xl font-black text-white">
+                100 <span className="text-sm text-white/50">Credits</span>
+              </div>
+              <Button
+                onClick={() => setAutoclaimConfirmOpen(true)}
+                disabled={buyingAutoclaim}
+                className="rounded-xl font-bold"
+                style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}
+              >
+                {buyingAutoclaim ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Kaufen'}
+              </Button>
+            </div>
+            <div className="text-xs text-yellow-300 mt-2">
+              ⭐ Ultra+ User haben Auto-Claim kostenlos!
+            </div>
+          </div>
+        )}
+
+        {/* Auto-Claim Active Status */}
+        {(auto_claim_enabled || passType === 'ultra') && (
+          <div className="glass rounded-2xl p-5 border border-green-400/30 bg-green-500/10">
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-green-500/20 border border-green-400/40">
+                <Check className="w-6 h-6 text-green-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-white text-lg">Auto-Claim Aktiv ✨</h3>
+                <p className="text-sm text-green-300 mt-1">
+                  {passType === 'ultra' 
+                    ? 'Als Ultra+ User hast du Auto-Claim kostenlos!' 
+                    : 'Jeden Tag wird automatisch geclaimt!'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Lifetime Pass Feature Card */}
+        {!lifetime_pass && (
+          <div className="glass rounded-2xl p-5 border border-purple-400/20 hover:border-purple-400/40 transition-all">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-purple-500/15 border border-purple-400/30">
+                <Crown className="w-6 h-6 text-purple-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-white text-lg">Lifetime Pass 👑</h3>
+                <p className="text-sm text-white/60 mt-1">
+                  Einmalige Zahlung für <strong>alle zukünftigen Seasons</strong>!
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="text-2xl font-black text-white">
+                6000 <span className="text-sm text-white/50">Credits</span>
+              </div>
+              <Button
+                onClick={() => setLifetimeConfirmOpen(true)}
+                disabled={buyingLifetime}
+                className="rounded-xl font-bold"
+                style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)' }}
+              >
+                {buyingLifetime ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Kaufen'}
+              </Button>
+            </div>
+            <div className="text-xs text-emerald-300 mt-2">
+              💎 Jeden Monat automatisch Ultra+ Pass!
+            </div>
+          </div>
+        )}
+
+        {/* Lifetime Pass Active Status */}
+        {lifetime_pass && (
+          <div className="glass rounded-2xl p-5 border border-purple-400/40 bg-purple-500/10">
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-purple-500/20 border border-purple-400/50">
+                <Crown className="w-6 h-6 text-purple-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-white text-lg">Lifetime Pass Aktiv 👑</h3>
+                <p className="text-sm text-purple-300 mt-1">
+                  Du bekommst jeden Monat automatisch den Ultra+ Pass!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ==================== TIER GRID (Mobile-Friendly) ==================== */}
@@ -1098,4 +1345,170 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, purchased, canClaim }
       </div>
     </div>
   );
+
+
+      {/* 🆕 ═══════════════════════════════════════════════════════════════
+          TIER-SKIP DIALOG
+          ═══════════════════════════════════════════════════════════════ */}
+      <AlertDialog open={skipConfirmOpen} onOpenChange={setSkipConfirmOpen}>
+        <AlertDialogContent className="glass border border-white/[0.12] max-w-md mx-4">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-3 text-xl font-bold text-white">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-orange-500/15 border border-orange-400/35">
+                <Zap className="w-6 h-6 text-orange-400" />
+              </div>
+              Tier überspringen?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-3">
+                <div className="glass rounded-xl border border-white/[0.08] p-4">
+                  <p className="text-sm text-white/90">
+                    Du kannst <strong>Tier {nextTier}</strong> für <strong className="text-orange-400">50 Credits</strong> überspringen.
+                  </p>
+                  <p className="text-xs text-white/60 mt-2">
+                    ⚡ Dein Tier erhöht sich sofort, aber du erhältst <strong>keine Belohnungen</strong> für diesen Tier.
+                  </p>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-3 mt-2">
+            <AlertDialogCancel className="glass border border-white/[0.12] text-white hover:bg-white/5 font-semibold rounded-xl">
+              Abbrechen
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSkipTier}
+              className="rounded-xl font-bold border-0"
+              style={{
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                boxShadow: '0 8px 24px rgba(245, 158, 11, 0.4)'
+              }}
+            >
+              <Zap className="w-5 h-5 mr-2" />
+              Für 50 Credits überspringen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 🆕 ═══════════════════════════════════════════════════════════════
+          AUTO-CLAIM KAUFEN DIALOG
+          ═══════════════════════════════════════════════════════════════ */}
+      <AlertDialog open={autoclaimConfirmOpen} onOpenChange={setAutoclaimConfirmOpen}>
+        <AlertDialogContent className="glass border border-white/[0.12] max-w-md mx-4">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-3 text-xl font-bold text-white">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-blue-500/15 border border-blue-400/35">
+                <Zap className="w-6 h-6 text-blue-400" />
+              </div>
+              Auto-Claim aktivieren?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-3">
+                <div className="glass rounded-xl border border-white/[0.08] p-4">
+                  <p className="text-sm text-white/90 mb-3">
+                    <strong className="text-blue-400">Auto-Claim</strong> für <strong>100 Credits</strong> einmalig kaufen.
+                  </p>
+                  <ul className="space-y-2 text-xs font-medium">
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-blue-300 mt-0.5 flex-shrink-0" />
+                      <span className="text-white/80">Jeden Tag <strong>automatisch claimen</strong></span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-blue-300 mt-0.5 flex-shrink-0" />
+                      <span className="text-white/80">Nie wieder Tiers verpassen</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-blue-300 mt-0.5 flex-shrink-0" />
+                      <span className="text-white/80">Gilt für diese Season</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="text-xs text-yellow-300 bg-yellow-500/10 border border-yellow-400/30 rounded-lg p-2">
+                  ⭐ Ultra+ User haben Auto-Claim bereits kostenlos!
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-3 mt-2">
+            <AlertDialogCancel className="glass border border-white/[0.12] text-white hover:bg-white/5 font-semibold rounded-xl">
+              Abbrechen
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBuyAutoclaim}
+              className="rounded-xl font-bold border-0"
+              style={{
+                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                boxShadow: '0 8px 24px rgba(59, 130, 246, 0.4)'
+              }}
+            >
+              <Zap className="w-5 h-5 mr-2" />
+              Für 100 Credits kaufen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* 🆕 ═══════════════════════════════════════════════════════════════
+          LIFETIME PASS KAUFEN DIALOG
+          ═══════════════════════════════════════════════════════════════ */}
+      <AlertDialog open={lifetimeConfirmOpen} onOpenChange={setLifetimeConfirmOpen}>
+        <AlertDialogContent className="glass border border-white/[0.12] max-w-md mx-4">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-3 text-xl font-bold text-white">
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-purple-500/15 border border-purple-400/35">
+                <Crown className="w-6 h-6 text-purple-400" />
+              </div>
+              Lifetime Pass kaufen? 👑
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-3">
+                <div className="glass rounded-xl border border-white/[0.08] p-4">
+                  <p className="text-sm text-white/90 mb-3">
+                    <strong className="text-purple-400">Lifetime Pass</strong> für <strong>6000 Credits</strong> einmalig kaufen.
+                  </p>
+                  <ul className="space-y-2 text-xs font-medium">
+                    <li className="flex items-start gap-2">
+                      <Crown className="w-4 h-4 text-purple-300 mt-0.5 flex-shrink-0" />
+                      <span className="text-white/80"><strong>Alle zukünftigen Seasons</strong> automatisch</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Award className="w-4 h-4 text-purple-300 mt-0.5 flex-shrink-0" />
+                      <span className="text-white/80">Jeden Monat <strong>Ultra+ Pass</strong> (beste Rewards)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-purple-300 mt-0.5 flex-shrink-0" />
+                      <span className="text-white/80">Nie wieder kaufen müssen</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 text-purple-300 mt-0.5 flex-shrink-0" />
+                      <span className="text-white/80">Discord-Rolle dauerhaft</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-400/30 rounded-lg p-2">
+                  💎 Beste Investition! Spar Credits für andere Items.
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-3 mt-2">
+            <AlertDialogCancel className="glass border border-white/[0.12] text-white hover:bg-white/5 font-semibold rounded-xl">
+              Abbrechen
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleBuyLifetime}
+              className="rounded-xl font-bold border-0"
+              style={{
+                background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
+                boxShadow: '0 8px 24px rgba(168, 85, 247, 0.4)'
+              }}
+            >
+              <Crown className="w-5 h-5 mr-2" />
+              Für 6000 Credits kaufen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 }

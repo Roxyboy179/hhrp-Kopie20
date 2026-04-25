@@ -1407,6 +1407,13 @@ const BATTLE_PASS_DISCORD_ROLE_ID = '1497682871811571722';
 // Legacy-Config für Tier-Anzahl & Min-Tage
 const BATTLE_PASS_CONFIG = { TIERS_COUNT: 30, MIN_DAYS_TO_PURCHASE: 5 };
 
+// ✅ NEU: Feature-Preise
+const BATTLE_PASS_FEATURES = {
+  TIER_SKIP: 50,           // Credits pro Tier-Skip
+  AUTO_CLAIM: 100,         // Einmalige Kosten für Auto-Claim (Ultra+ kostenlos)
+  LIFETIME_PASS: 6000,     // Einmalzahlung für alle zukünftigen Seasons (kein Rabatt)
+};
+
 // ✅ Helper: Reduziert Reward-Beträge um X%
 //    - amount und alternativeCredits werden multipliziert mit (1 - reductionPercent/100)
 //    - Mindestens 1 (kein 0-Reward)
@@ -1605,6 +1612,8 @@ async function getUserBattlePassProgress(discordUserId, month, year) {
       pass_type: passType,
       role_expires_at: bpEntry.role_expires_at || null,
       autorenew: bpEntry.autorenew === true,
+      auto_claim_enabled: bpEntry.auto_claim_enabled === true,
+      lifetime_pass: parsedData?.lifetime_battle_pass === true,
     };
   } catch (e) {
     console.error('[BP-API] ❌ Fehler beim Lesen von user_data:', e.message);
@@ -2204,6 +2213,192 @@ async function handleBattlePassAutorenew(request) {
     return NextResponse.json({ error: 'Serverfehler', details: error.message }, { status: 500 });
   }
 }
+
+
+// ═══════════════════════════════════════════════════════════════
+// 🆕 NEU: TIER-SKIP (50 Credits pro Skip)
+// ═══════════════════════════════════════════════════════════════
+// POST /api/battle-pass/skip-tier
+async function handleBattlePassSkipTier(request) {
+  const user = getBpAuthContext(request);
+  if (!user) return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
+
+  try {
+    const { month, year } = getCurrentSeason();
+    const progress = await getUserBattlePassProgress(user.discordUserId, month, year);
+
+    // Kann nur skippen wenn bereits geclaimt
+    if (canClaimToday(progress.last_claim_date)) {
+      return NextResponse.json({ error: 'Bitte erst normal claimen!' }, { status: 400 });
+    }
+
+    const nextTier = (progress.current_tier || 0) + 1;
+    if (nextTier > BATTLE_PASS_CONFIG.TIERS_COUNT) {
+      return NextResponse.json({ error: 'Battle Pass komplett!' }, { status: 400 });
+    }
+
+    // Credits prüfen
+    const { data: userData } = await supabaseAdmin
+      .from('user_data')
+      .select('credits')
+      .eq('discord_user_id', user.discordUserId)
+      .single();
+
+    const currentCredits = userData?.credits || 0;
+    if (currentCredits < BATTLE_PASS_FEATURES.TIER_SKIP) {
+      return NextResponse.json({ 
+        error: `Nicht genug Credits! Du brauchst ${BATTLE_PASS_FEATURES.TIER_SKIP} Credits.` 
+      }, { status: 400 });
+    }
+
+    // Credits abziehen
+    const newCredits = currentCredits - BATTLE_PASS_FEATURES.TIER_SKIP;
+    await supabaseAdmin
+      .from('user_data')
+      .update({ credits: newCredits })
+      .eq('discord_user_id', user.discordUserId);
+
+    // Tier erhöhen (direkt in DB, kein Pending)
+    const parsedData = typeof userData.data === 'string' ? JSON.parse(userData.data) : userData.data;
+    const bpEntry = parsedData?.battle_pass || {};
+    bpEntry.current_tier = nextTier;
+    bpEntry.last_claim_date = new Date().toISOString().split('T')[0];
+
+    await supabaseAdmin
+      .from('user_data')
+      .update({ data: { ...parsedData, battle_pass: bpEntry } })
+      .eq('discord_user_id', user.discordUserId);
+
+    return NextResponse.json({
+      success: true,
+      newTier: nextTier,
+      creditsSpent: BATTLE_PASS_FEATURES.TIER_SKIP,
+      remainingCredits: newCredits,
+    });
+  } catch (error) {
+    console.error('[Battle Pass] Skip Tier Error:', error);
+    return NextResponse.json({ error: 'Serverfehler', details: error.message }, { status: 500 });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🆕 NEU: AUTO-CLAIM KAUFEN (100 Credits, Ultra+ kostenlos)
+// ═══════════════════════════════════════════════════════════════
+// POST /api/battle-pass/buy-autoclaim
+async function handleBattlePassBuyAutoclaim(request) {
+  const user = getBpAuthContext(request);
+  if (!user) return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
+
+  try {
+    const { month, year } = getCurrentSeason();
+    const progress = await getUserBattlePassProgress(user.discordUserId, month, year);
+
+    // Ultra+ bekommt Auto-Claim kostenlos
+    if (progress.pass_type === 'ultra') {
+      return NextResponse.json({ error: 'Ultra+ User haben Auto-Claim bereits kostenlos!' }, { status: 400 });
+    }
+
+    // Prüfen ob bereits gekauft
+    const { data: userData } = await supabaseAdmin
+      .from('user_data')
+      .select('data, credits')
+      .eq('discord_user_id', user.discordUserId)
+      .single();
+
+    const parsedData = typeof userData.data === 'string' ? JSON.parse(userData.data) : userData.data;
+    const bpEntry = parsedData?.battle_pass || {};
+
+    if (bpEntry.auto_claim_enabled) {
+      return NextResponse.json({ error: 'Auto-Claim ist bereits aktiviert!' }, { status: 400 });
+    }
+
+    // Credits prüfen
+    const currentCredits = userData?.credits || 0;
+    if (currentCredits < BATTLE_PASS_FEATURES.AUTO_CLAIM) {
+      return NextResponse.json({ 
+        error: `Nicht genug Credits! Du brauchst ${BATTLE_PASS_FEATURES.AUTO_CLAIM} Credits.` 
+      }, { status: 400 });
+    }
+
+    // Credits abziehen & Auto-Claim aktivieren
+    const newCredits = currentCredits - BATTLE_PASS_FEATURES.AUTO_CLAIM;
+    bpEntry.auto_claim_enabled = true;
+
+    await supabaseAdmin
+      .from('user_data')
+      .update({ 
+        credits: newCredits,
+        data: { ...parsedData, battle_pass: bpEntry }
+      })
+      .eq('discord_user_id', user.discordUserId);
+
+    return NextResponse.json({
+      success: true,
+      creditsSpent: BATTLE_PASS_FEATURES.AUTO_CLAIM,
+      remainingCredits: newCredits,
+      message: 'Auto-Claim aktiviert! Ab jetzt wird jeden Tag automatisch geclaimt.',
+    });
+  } catch (error) {
+    console.error('[Battle Pass] Buy Autoclaim Error:', error);
+    return NextResponse.json({ error: 'Serverfehler', details: error.message }, { status: 500 });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🆕 NEU: LIFETIME PASS (6000 Credits - für alle zukünftigen Seasons)
+// ═══════════════════════════════════════════════════════════════
+// POST /api/battle-pass/buy-lifetime
+async function handleBattlePassBuyLifetime(request) {
+  const user = getBpAuthContext(request);
+  if (!user) return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
+
+  try {
+    // Prüfen ob bereits gekauft
+    const { data: userData } = await supabaseAdmin
+      .from('user_data')
+      .select('data, credits')
+      .eq('discord_user_id', user.discordUserId)
+      .single();
+
+    const parsedData = typeof userData.data === 'string' ? JSON.parse(userData.data) : userData.data;
+
+    if (parsedData?.lifetime_battle_pass) {
+      return NextResponse.json({ error: 'Du hast bereits den Lifetime Pass!' }, { status: 400 });
+    }
+
+    // Credits prüfen
+    const currentCredits = userData?.credits || 0;
+    if (currentCredits < BATTLE_PASS_FEATURES.LIFETIME_PASS) {
+      return NextResponse.json({ 
+        error: `Nicht genug Credits! Du brauchst ${BATTLE_PASS_FEATURES.LIFETIME_PASS} Credits.` 
+      }, { status: 400 });
+    }
+
+    // Credits abziehen & Lifetime Pass aktivieren
+    const newCredits = currentCredits - BATTLE_PASS_FEATURES.LIFETIME_PASS;
+    parsedData.lifetime_battle_pass = true;
+    parsedData.lifetime_pass_purchased_at = new Date().toISOString();
+
+    await supabaseAdmin
+      .from('user_data')
+      .update({ 
+        credits: newCredits,
+        data: parsedData
+      })
+      .eq('discord_user_id', user.discordUserId);
+
+    return NextResponse.json({
+      success: true,
+      creditsSpent: BATTLE_PASS_FEATURES.LIFETIME_PASS,
+      remainingCredits: newCredits,
+      message: '🎉 Lifetime Pass aktiviert! Du bekommst ab jetzt jeden Monat automatisch den Battle Pass (Ultra+)!',
+    });
+  } catch (error) {
+    console.error('[Battle Pass] Buy Lifetime Error:', error);
+    return NextResponse.json({ error: 'Serverfehler', details: error.message }, { status: 500 });
+  }
+}
+
 
 async function handleAdminCreateAccount(request) {
   const admin = getAdminContext(request);
@@ -3531,6 +3726,23 @@ export async function POST(request) {
   if (p === 'battle-pass/autorenew') {
     return handleBattlePassAutorenew(request);
   }
+
+
+  // 🆕 POST /api/battle-pass/skip-tier
+  if (p === 'battle-pass/skip-tier') {
+    return handleBattlePassSkipTier(request);
+  }
+
+  // 🆕 POST /api/battle-pass/buy-autoclaim
+  if (p === 'battle-pass/buy-autoclaim') {
+    return handleBattlePassBuyAutoclaim(request);
+  }
+
+  // 🆕 POST /api/battle-pass/buy-lifetime
+  if (p === 'battle-pass/buy-lifetime') {
+    return handleBattlePassBuyLifetime(request);
+  }
+
 
   // ===== WEBSITE STATISTICS TRACKING =====
   
