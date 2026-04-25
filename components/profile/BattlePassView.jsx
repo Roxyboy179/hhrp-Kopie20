@@ -907,6 +907,18 @@ export default function BattlePassView() {
       {/* 🆕 ═══════════════════════════════════════════════════════════════
           PREMIUM FEATURES: Auto-Claim & Lifetime Pass
           ═══════════════════════════════════════════════════════════════ */}
+      {/* DEBUG TEST BUTTON */}
+      <button 
+        onClick={() => {
+          console.log('🔥 TEST BUTTON CLICKED!');
+          alert('Test Button funktioniert!');
+          setAutoclaimConfirmOpen(true);
+        }}
+        style={{ background: 'red', color: 'white', padding: '10px', borderRadius: '8px', fontWeight: 'bold' }}
+      >
+        🔥 DEBUG: Klick mich zum Testen
+      </button>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Auto-Claim Feature Card */}
         {!auto_claim_enabled && passType !== 'ultra' && (

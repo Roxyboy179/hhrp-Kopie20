@@ -1612,7 +1612,7 @@ async function getUserBattlePassProgress(discordUserId, month, year) {
       pass_type: passType,
       role_expires_at: bpEntry.role_expires_at || null,
       autorenew: bpEntry.autorenew === true,
-      auto_claim_enabled: bpEntry.auto_claim_enabled === true,
+      auto_claim_enabled: parsedData?.auto_claim_enabled === true || passType === 'ultra', // ✅ Aus ROOT oder Ultra+
       lifetime_pass: parsedData?.lifetime_battle_pass === true,
     };
   } catch (e) {
@@ -2306,9 +2306,9 @@ async function handleBattlePassBuyAutoclaim(request) {
       .single();
 
     const parsedData = typeof userData.data === 'string' ? JSON.parse(userData.data) : userData.data;
-    const bpEntry = parsedData?.battle_pass || {};
 
-    if (bpEntry.auto_claim_enabled) {
+    // ✅ WICHTIG: Auto-Claim im ROOT speichern, nicht in battle_pass!
+    if (parsedData?.auto_claim_enabled) {
       return NextResponse.json({ error: 'Auto-Claim ist bereits aktiviert!' }, { status: 400 });
     }
 
@@ -2320,15 +2320,16 @@ async function handleBattlePassBuyAutoclaim(request) {
       }, { status: 400 });
     }
 
-    // Credits abziehen & Auto-Claim aktivieren
+    // Credits abziehen & Auto-Claim aktivieren (im ROOT!)
     const newCredits = currentCredits - BATTLE_PASS_FEATURES.AUTO_CLAIM;
-    bpEntry.auto_claim_enabled = true;
+    parsedData.auto_claim_enabled = true;
+    parsedData.auto_claim_purchased_at = new Date().toISOString();
 
     await supabaseAdmin
       .from('user_data')
       .update({ 
         credits: newCredits,
-        data: { ...parsedData, battle_pass: bpEntry }
+        data: parsedData
       })
       .eq('discord_user_id', user.discordUserId);
 
@@ -7789,7 +7790,3 @@ ${ticket.closedAt ? ` • Geschlossen: ${_escapeHtml(new Date(ticket.closedAt).t
 ${msgs || '<p style="color:#71717a">Keine Nachrichten gespeichert.</p>'}
 </body></html>`;
 }
-
-
-
-
