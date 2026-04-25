@@ -1447,16 +1447,20 @@ function getReducedRewardsForTier(passType) {
 // ✅ Dynamischer Tagesrabatt (Tag 1 = 0%, Tag 31 = 30%)
 function getBattlePassDynamicPrice(passType = 'premium') {
   const tier = BATTLE_PASS_TIERS[passType] || BATTLE_PASS_TIERS.premium;
-  const now = new Date();
-  const dayOfMonth = now.getDate(); // 1..31
-  const discountPercent = Math.min(Math.max(dayOfMonth - 1, 0), 99); // 0..99
-  const discountedPrice = Math.floor(tier.cost * (1 - discountPercent / 100));
+  const daysRemaining = getDaysRemainingInMonth();
+  
+  // ✅ 50% Rabatt in den letzten 10 Tagen
+  const discountPercent = daysRemaining <= 10 ? 50 : 0;
+  const discountedPrice = discountPercent > 0 
+    ? Math.round(tier.cost * (1 - discountPercent / 100))
+    : tier.cost;
+  
   return {
     passType: tier.id,
     original: tier.cost,
     discountPercent,
     price: discountedPrice,
-    dayOfMonth,
+    daysRemaining,
   };
 }
 
