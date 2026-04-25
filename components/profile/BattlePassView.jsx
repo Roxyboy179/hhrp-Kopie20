@@ -538,47 +538,95 @@ export default function BattlePassView() {
           )}
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
+          <div className="space-y-4">
             {!purchased && !purchasing && !purchaseBlocked && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3 flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {(tiers || []).map((t) => {
                   const tierColors = {
-                    premium: { from: '#fbbf24', to: '#f59e0b', glow: 'rgba(250,204,21,0.5)', text: '#1a1a1a' },
-                    elite:   { from: '#a78bfa', to: '#7c3aed', glow: 'rgba(167,139,250,0.5)', text: '#fff' },
-                    ultra:   { from: '#fb7185', to: '#e11d48', glow: 'rgba(251,113,133,0.5)', text: '#fff' },
+                    premium: { 
+                      gradient: 'linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%)',
+                      shadow: '0 20px 60px rgba(251, 191, 36, 0.4)',
+                      text: '#1a1a1a',
+                      icon: Crown,
+                    },
+                    elite: { 
+                      gradient: 'linear-gradient(180deg, #a78bfa 0%, #7c3aed 100%)',
+                      shadow: '0 20px 60px rgba(167, 139, 250, 0.4)',
+                      text: '#fff',
+                      icon: Gem,
+                    },
+                    ultra: { 
+                      gradient: 'linear-gradient(180deg, #fb7185 0%, #e11d48 100%)',
+                      shadow: '0 20px 60px rgba(251, 113, 133, 0.4)',
+                      text: '#fff',
+                      icon: Star,
+                    },
                   };
                   const c = tierColors[t.id] || tierColors.premium;
                   const showOriginal = t.discountPercent > 0;
+                  const TierIcon = c.icon;
+                  
                   return (
-                    <Button
+                    <button
                       key={t.id}
                       onClick={() => handlePurchaseClick(t.id)}
-                      className="h-auto min-h-[60px] md:min-h-[68px] px-3 md:px-4 py-2.5 rounded-xl md:rounded-2xl font-bold text-xs md:text-sm shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] flex flex-col items-center justify-center gap-0.5 relative overflow-hidden group"
+                      className="relative rounded-3xl overflow-hidden transition-all duration-300 hover:scale-105 cursor-pointer group"
                       style={{
-                        background: `linear-gradient(135deg, ${c.from} 0%, ${c.to} 100%)`,
-                        color: c.text,
-                        boxShadow: `0 8px 24px ${c.glow}`,
+                        background: c.gradient,
+                        boxShadow: c.shadow,
+                        minHeight: '380px',
                       }}
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                      <div className="relative z-10 flex items-center gap-1.5 font-black text-sm md:text-base whitespace-nowrap">
-                        <Crown className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                        {t.name.replace(' Pass', '')}
+                      {/* Shine Effect */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                      
+                      {/* Content */}
+                      <div className="relative z-10 p-8 flex flex-col items-center justify-between h-full">
+                        {/* Icon & Title */}
+                        <div className="flex flex-col items-center gap-4">
+                          <TierIcon className="w-16 h-16" style={{ color: c.text }} />
+                          <h3 className="text-3xl font-black uppercase tracking-wider" style={{ color: c.text }}>
+                            {t.name.replace(' Pass', '')}
+                          </h3>
+                        </div>
+                        
+                        {/* Price */}
+                        <div className="flex flex-col items-center gap-2 my-6">
+                          {showOriginal && (
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl line-through opacity-60" style={{ color: c.text }}>
+                                {t.cost.toLocaleString('de-DE')}
+                              </span>
+                              <span
+                                className="text-lg font-bold px-3 py-1 rounded-full"
+                                style={{
+                                  background: 'rgba(239, 68, 68, 0.9)',
+                                  color: '#fff',
+                                }}
+                              >
+                                -{t.discountPercent}%
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-5xl font-black" style={{ color: c.text }}>
+                              {(t.currentPrice ?? t.cost).toLocaleString('de-DE')}
+                            </span>
+                            <Coins className="w-8 h-8" style={{ color: c.text }} />
+                          </div>
+                        </div>
+                        
+                        {/* Reward Reduction */}
+                        <div className="text-center">
+                          <div className="text-2xl font-black uppercase tracking-widest mb-1" style={{ color: c.text }}>
+                            -{t.reductionPercent}% REWARDS
+                          </div>
+                          <div className="text-sm opacity-80" style={{ color: c.text }}>
+                            Auf alle Belohnungen
+                          </div>
+                        </div>
                       </div>
-                      <div className="relative z-10 flex items-baseline gap-1 text-xs">
-                        {showOriginal && (
-                          <span className="line-through opacity-60 text-[10px]">{t.cost.toLocaleString('de-DE')}</span>
-                        )}
-                        <span className="font-black">{(t.currentPrice ?? t.cost).toLocaleString('de-DE')}</span>
-                        <Coins className="w-3 h-3 inline" />
-                        {showOriginal && (
-                          <span className="ml-1 text-[10px] font-bold bg-red-500/90 text-white px-1 py-0.5 rounded">-{t.discountPercent}%</span>
-                        )}
-                      </div>
-                      <div className="relative z-10 text-[9px] md:text-[10px] opacity-80 font-semibold uppercase tracking-wider">
-                        −{t.reductionPercent}% Rewards
-                      </div>
-                    </Button>
+                    </button>
                   );
                 })}
               </div>
