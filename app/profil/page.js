@@ -1932,18 +1932,19 @@ export default function ProfilPage() {
                         />
 
                         {/* GEKÜNDIGT-Badge */}
-                        <div
-                          className="absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase flex items-center gap-1 shadow-lg"
+                        <span
+                          className="absolute top-4 right-4 z-20 inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase shadow-lg whitespace-nowrap"
                           style={{
                             background:
                               'linear-gradient(135deg, #fb923c, #ef4444)',
                             color: '#fff',
                             border: '1px solid rgba(254, 215, 170, 0.6)',
+                            width: 'max-content',
                           }}
                         >
                           <XCircle className="w-3 h-3" strokeWidth={3} />
                           Gekündigt
-                        </div>
+                        </span>
 
                         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
                           <div
@@ -2039,19 +2040,20 @@ export default function ProfilPage() {
                           }}
                         />
 
-                        {/* PREMIUM-Badge */}
-                        <div
-                          className="absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase flex items-center gap-1 shadow-lg animate-pulse"
+                        {/* PREMIUM-Badge (klein, top-right) — exakt wie 7-Tage Pass GRATIS-Badge */}
+                        <span
+                          className="absolute top-4 right-4 z-20 inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase shadow-lg whitespace-nowrap"
                           style={{
                             background:
                               'linear-gradient(135deg, #fbbf24, #f59e0b)',
                             color: '#1a1a1a',
                             border: '1px solid rgba(253, 224, 71, 0.8)',
+                            width: 'max-content',
                           }}
                         >
                           <Crown className="w-3 h-3" strokeWidth={3} />
                           Premium
-                        </div>
+                        </span>
 
                         <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
                           <div
@@ -2066,7 +2068,7 @@ export default function ProfilPage() {
                             <Crown className="w-7 h-7 sm:w-8 sm:h-8 text-white drop-shadow-[0_0_4px_rgba(250,204,21,0.8)]" strokeWidth={2} />
                           </div>
 
-                          <div className="flex-1 min-w-0 pr-24 sm:pr-28">
+                          <div className="flex-1 min-w-0 pr-20 sm:pr-24">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <span className="text-[10px] font-bold uppercase tracking-widest text-yellow-300">
                                 Premium aktiv · noch {bpDaysLeft} Tage
@@ -2159,18 +2161,19 @@ export default function ProfilPage() {
                       />
 
                       {/* NEU-Badge (top-right) */}
-                      <div
-                        className="absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase flex items-center gap-1 shadow-lg"
+                      <span
+                        className="absolute top-4 right-4 z-20 inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase shadow-lg whitespace-nowrap"
                         style={{
                           background:
                             'linear-gradient(135deg, #fbbf24, #f59e0b)',
                           color: '#1a1a1a',
                           border: '1px solid rgba(253, 224, 71, 0.8)',
+                          width: 'max-content',
                         }}
                       >
                         <Sparkles className="w-3 h-3" strokeWidth={3} />
                         Neu
-                      </div>
+                      </span>
 
                       <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
                         <div

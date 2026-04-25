@@ -1943,6 +1943,7 @@ async function handleBattlePassCancel(request) {
         season_month: month,
         season_year: year,
         status: 'pending',
+        reward_data: {},
       })
       .select('id')
       .single();
