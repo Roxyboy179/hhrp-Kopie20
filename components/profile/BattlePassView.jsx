@@ -128,16 +128,20 @@ export default function BattlePassView() {
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const pollingRef = useRef(null);
   const queueCheckRef = useRef(null);
   const confettiIntervalRef = useRef(null);
   // ✅ Refs für Queue-IDs (damit Closure funktioniert)
   const purchaseQueueIdRef = useRef(null);
   const claimQueueIdsRef = useRef([]);
+  const cancelQueueIdRef = useRef(null);
   // ✅ Timestamps für Timeout (30s)
   const purchaseStartedAtRef = useRef(null);
   const claimStartedAtRef = useRef(null);
+  const cancelStartedAtRef = useRef(null);
   const POLLING_TIMEOUT_MS = 45000; // 45 Sekunden Timeout
 
   useEffect(() => {
@@ -202,9 +206,9 @@ export default function BattlePassView() {
     
     // Claims prüfen (mit Ref!)
     if (claimQueueIdsRef.current.length > 0) {
-      // Timeout-Check: Bot offline?
+      // Timeout-Check: HHRP Server offline?
       if (claimStartedAtRef.current && Date.now() - claimStartedAtRef.current > POLLING_TIMEOUT_MS) {
-        console.warn('[BP] Claim Timeout — Bot antwortet nicht');
+        console.warn('[BP] Claim Timeout — HHRP Server antwortet nicht');
         claimQueueIdsRef.current = [];
         claimStartedAtRef.current = null;
         setClaiming(false);
@@ -238,6 +242,41 @@ export default function BattlePassView() {
         console.error('[BP] Queue check error:', e);
       }
     }
+    
+    // Cancel prüfen (mit Ref!)
+    if (cancelQueueIdRef.current) {
+      // Timeout-Check: HHRP Server offline?
+      if (cancelStartedAtRef.current && Date.now() - cancelStartedAtRef.current > POLLING_TIMEOUT_MS) {
+        console.warn('[BP] Cancel Timeout — HHRP Server antwortet nicht');
+        cancelQueueIdRef.current = null;
+        cancelStartedAtRef.current = null;
+        setCancelling(false);
+        toast.dismiss('premium-cancel');
+        toast.error('⚠️ HHRP Server antwortet nicht. Bitte versuche es später erneut.', { duration: 6000 });
+        return;
+      }
+      
+      try {
+        const res = await fetch(`/api/battle-pass/queue/${cancelQueueIdRef.current}`);
+        const json = await res.json();
+        
+        if (json.processed) {
+          // ✅ Eintrag gelöscht = HHRP Server hat verarbeitet!
+          cancelQueueIdRef.current = null;
+          cancelStartedAtRef.current = null;
+          setCancelling(false);
+          toast.dismiss('premium-cancel');
+          toast.success('✅ Premium Battle Pass gekündigt', {
+            duration: 5000,
+          });
+          
+          // Lade Battle Pass neu
+          loadBattlePass();
+        }
+      } catch (e) {
+        console.error('[BP] Queue check error:', e);
+      }
+    }
   };
 
   const loadBattlePass = async () => {
@@ -262,6 +301,34 @@ export default function BattlePassView() {
   };
 
   const handlePurchaseClick = () => setConfirmOpen(true);
+  const handleCancelClick = () => setCancelConfirmOpen(true);
+
+  const handleCancel = async () => {
+    setCancelling(true);
+    setCancelConfirmOpen(false);
+    
+    try {
+      const res = await fetch('/api/battle-pass/cancel', { method: 'POST' });
+      const json = await res.json();
+      
+      if (res.ok) {
+        cancelQueueIdRef.current = json.queueId;
+        cancelStartedAtRef.current = Date.now();
+        
+        toast.loading('Warte auf HHRP Server...', {
+          duration: 60000,
+          id: 'premium-cancel',
+        });
+      } else {
+        setCancelling(false);
+        toast.error(json.error || 'Kündigung fehlgeschlagen');
+      }
+    } catch (error) {
+      console.error('[BP] Cancel Error:', error);
+      setCancelling(false);
+      toast.error('Verbindungsfehler beim Kündigen');
+    }
+  };
 
   const handlePurchase = async () => {
     setPurchasing(true);
@@ -423,10 +490,29 @@ export default function BattlePassView() {
               </div>
             )}
 
-            {purchased && !purchasing && (
-              <div className="flex items-center justify-center gap-2 px-4 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-yellow-400/40 bg-yellow-400/10 backdrop-blur-md shadow-lg flex-1 sm:flex-initial animate-pulse">
-                <Crown className="w-4 h-4 md:w-5 md:h-5 text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.8)]" />
-                <span className="text-yellow-300 font-bold text-xs md:text-sm whitespace-nowrap drop-shadow-md">Premium aktiv</span>
+            {purchased && !purchasing && !cancelling && (
+              <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-yellow-400/40 bg-yellow-400/10 backdrop-blur-md shadow-lg flex-1 animate-pulse">
+                  <Crown className="w-4 h-4 md:w-5 md:h-5 text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.8)]" />
+                  <span className="text-yellow-300 font-bold text-xs md:text-sm whitespace-nowrap drop-shadow-md">Premium aktiv</span>
+                </div>
+                <Button
+                  onClick={handleCancelClick}
+                  variant="outline"
+                  size="sm"
+                  className="h-10 md:h-12 px-3 md:px-4 rounded-xl md:rounded-2xl border border-red-400/40 bg-red-500/10 hover:bg-red-500/20 text-red-300 hover:text-red-200 backdrop-blur-md shadow-lg font-semibold text-xs md:text-sm whitespace-nowrap"
+                  title="Premium Battle Pass kündigen"
+                >
+                  <X className="w-4 h-4 md:w-4 md:h-4 mr-1" />
+                  Kündigen
+                </Button>
+              </div>
+            )}
+
+            {cancelling && (
+              <div className="flex items-center justify-center gap-2 px-4 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-red-400/40 bg-red-400/10 backdrop-blur-md shadow-lg flex-1 sm:flex-initial">
+                <Loader2 className="w-4 h-4 md:w-5 md:h-5 text-red-400 animate-spin" />
+                <span className="text-red-300 font-bold text-xs md:text-sm whitespace-nowrap">Warte auf HHRP Server...</span>
               </div>
             )}
 
@@ -552,6 +638,57 @@ export default function BattlePassView() {
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
               <Crown className="w-4 h-4 md:w-5 md:h-5 mr-1.5 md:mr-2 relative z-10" />
               <span className="relative z-10">Für 1.500 Credits kaufen</span>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ==================== CANCEL DIALOG ==================== */}
+      <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+        <AlertDialogContent className="border-white/20 bg-gradient-to-br from-red-950/90 via-black/90 to-black/90 backdrop-blur-3xl shadow-2xl max-w-md mx-4">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-red-300 text-lg md:text-xl font-bold drop-shadow-md">
+              <AlertTriangle className="w-5 h-5 md:w-6 md:h-6 drop-shadow-[0_0_6px_rgba(248,113,113,0.8)]" />
+              Premium Battle Pass kündigen?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-3">
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 backdrop-blur-md p-3 md:p-4 text-xs md:text-sm text-white/90 shadow-lg">
+                  <div className="mb-2 font-bold text-red-200 drop-shadow-md flex items-center gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                    Achtung — Konsequenzen:
+                  </div>
+                  <ul className="space-y-1.5 md:space-y-2 text-[10px] md:text-xs font-medium">
+                    <li className="flex items-start gap-1.5 md:gap-2">
+                      <X className="w-3 h-3 md:w-4 md:h-4 text-red-300 mt-0.5 flex-shrink-0" />
+                      <span>Du verlierst sofort den Premium-Zugang</span>
+                    </li>
+                    <li className="flex items-start gap-1.5 md:gap-2">
+                      <X className="w-3 h-3 md:w-4 md:h-4 text-red-300 mt-0.5 flex-shrink-0" />
+                      <span>Alle noch nicht eingelösten Premium-Belohnungen entfallen</span>
+                    </li>
+                    <li className="flex items-start gap-1.5 md:gap-2">
+                      <X className="w-3 h-3 md:w-4 md:h-4 text-red-300 mt-0.5 flex-shrink-0" />
+                      <span>Die 1.500 Credits werden <strong>nicht</strong> erstattet</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="text-[10px] md:text-xs text-white/60 italic px-1">
+                  Diese Aktion kann nicht rückgängig gemacht werden. Du kannst aber jederzeit erneut Premium kaufen.
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 md:gap-3 mt-2 flex-col sm:flex-row">
+            <AlertDialogCancel className="bg-white/10 hover:bg-white/20 border-white/20 text-white backdrop-blur-md font-semibold rounded-xl shadow-lg w-full sm:w-auto">
+              Abbrechen
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancel}
+              className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 text-white font-bold border-0 rounded-xl shadow-xl hover:shadow-2xl transition-all w-full sm:w-auto"
+            >
+              <X className="w-4 h-4 md:w-5 md:h-5 mr-1.5 md:mr-2" />
+              Ja, kündigen
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

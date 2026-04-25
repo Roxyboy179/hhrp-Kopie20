@@ -1859,7 +1859,7 @@ async function handleBattlePassCancel(request) {
     }
 
     // Pending-Eintrag anlegen → Bot übernimmt
-    const { error: insertErr } = await supabaseAdmin
+    const { data: inserted, error: insertErr } = await supabaseAdmin
       .from('pending_battle_pass_rewards')
       .insert({
         discord_user_id: user.discordUserId,
@@ -1868,7 +1868,9 @@ async function handleBattlePassCancel(request) {
         season_month: month,
         season_year: year,
         status: 'pending',
-      });
+      })
+      .select('id')
+      .single();
 
     if (insertErr) {
       console.error('[Battle Pass] Pending Cancel Insert Error:', insertErr);
@@ -1878,6 +1880,7 @@ async function handleBattlePassCancel(request) {
     return NextResponse.json({
       success: true,
       pending: true,
+      queueId: inserted.id, // ✅ Queue-ID für Polling
       message: 'Battle Pass Premium wird gekündigt… (in wenigen Sekunden aktiv)',
     });
   } catch (error) {
