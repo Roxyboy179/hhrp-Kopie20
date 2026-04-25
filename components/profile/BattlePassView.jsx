@@ -134,7 +134,7 @@ export default function BattlePassView() {
       if (queueCheckRef.current) clearInterval(queueCheckRef.current);
       if (confettiIntervalRef.current) clearInterval(confettiIntervalRef.current);
     };
-  }, [purchaseQueueId, claimQueueIds]);
+  }, []); // ✅ Nur einmal beim Mount
   
   // ✅ Prüft ob Queue-Einträge gelöscht wurden = Bot fertig
   const checkQueueStatus = async () => {
