@@ -1419,6 +1419,56 @@ function canClaimToday(lastClaimDate) {
   return last.toDateString() !== today.toDateString();
 }
 
+// Helper: Liest Battle Pass Daten aus der lokalen Bot-Datei
+function readBotBattlePassData() {
+  const fs = require('fs');
+  const path = require('path');
+  const BP_PATH = path.join(process.cwd(), 'bot-files', 'battle_pass_data.json');
+  
+  try {
+    if (fs.existsSync(BP_PATH)) {
+      const raw = fs.readFileSync(BP_PATH, 'utf8');
+      return JSON.parse(raw);
+    }
+  } catch (e) {
+    console.error('[BP-API] ❌ Fehler beim Lesen von battle_pass_data.json:', e.message);
+  }
+  return {};
+}
+
+// Helper: Holt Battle Pass Progress für einen User aus lokaler Datei
+function getUserBattlePassProgress(discordUserId, month, year) {
+  const bpData = readBotBattlePassData();
+  const userEntry = bpData[discordUserId];
+  
+  if (!userEntry) {
+    return {
+      current_tier: 0,
+      purchased: false,
+      last_claim_date: null,
+      claimed_tiers: [],
+    };
+  }
+  
+  // Season-Check
+  if (userEntry.season_month !== month || userEntry.season_year !== year) {
+    return {
+      current_tier: 0,
+      purchased: false,
+      last_claim_date: null,
+      claimed_tiers: [],
+    };
+  }
+  
+  return {
+    current_tier: userEntry.current_tier || 0,
+    purchased: userEntry.purchased || false,
+    last_claim_date: userEntry.last_claim_date || null,
+    claimed_tiers: userEntry.claimed_tiers || [],
+    purchase_date: userEntry.purchase_date || null,
+  };
+}
+
 // Helper: Auth-Context für Battle Pass (User-Token via auth_token cookie)
 function getBpAuthContext(request) {
   const decoded = getUserFromRequest(request);
@@ -1510,41 +1560,17 @@ function applyReward(parsedData, reward, username) {
 }
 
 // GET /api/battle-pass/current
+// ✅ Liest Battle Pass Daten aus lokaler Bot-Datei (battle_pass_data.json)
 async function handleBattlePassCurrent(request) {
   const user = getBpAuthContext(request);
   if (!user) return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
 
   try {
     const { month, year } = getCurrentSeason();
-
-    const { data: progress, error: progressError } = await supabaseAdmin
-      .from('user_battle_pass')
-      .select('*')
-      .eq('discord_user_id', user.discordUserId)
-      .eq('season_month', month)
-      .eq('season_year', year)
-      .maybeSingle();
-
-    let userProgress = progress;
-    if (!progress && !progressError) {
-      const { data: newProgress, error: insertErr } = await supabaseAdmin
-        .from('user_battle_pass')
-        .insert({
-          discord_user_id: user.discordUserId,
-          season_month: month,
-          season_year: year,
-          current_tier: 0,
-          purchased: false,
-          claimed_tiers: [],
-        })
-        .select()
-        .single();
-      if (insertErr) {
-        console.error('[Battle Pass] Insert Error:', insertErr);
-      }
-      userProgress = newProgress;
-    }
-
+    
+    // ✅ Lese aus lokaler Bot-Datei statt Supabase
+    const userProgress = getUserBattlePassProgress(user.discordUserId, month, year);
+    
     const seasonEndDate = new Date(year, month, 0);
 
     return NextResponse.json({
@@ -1552,11 +1578,11 @@ async function handleBattlePassCurrent(request) {
       endDate: seasonEndDate.toISOString(),
       daysRemaining: Math.max(0, Math.ceil((seasonEndDate - new Date()) / (1000 * 60 * 60 * 24))),
       userProgress: {
-        currentTier: userProgress?.current_tier || 0,
-        claimedTiers: userProgress?.claimed_tiers || [],
-        purchased: userProgress?.purchased || false,
-        canClaimToday: canClaimToday(userProgress?.last_claim_date),
-        lastClaimDate: userProgress?.last_claim_date || null,
+        currentTier: userProgress.current_tier,
+        claimedTiers: userProgress.claimed_tiers,
+        purchased: userProgress.purchased,
+        canClaimToday: canClaimToday(userProgress.last_claim_date),
+        lastClaimDate: userProgress.last_claim_date,
       },
       rewards: BATTLE_PASS_REWARDS,
       config: BATTLE_PASS_CONFIG,
@@ -1570,7 +1596,7 @@ async function handleBattlePassCurrent(request) {
 // POST /api/battle-pass/purchase
 // ⚠️ NEU: Erstellt nur noch einen pending-Eintrag in pending_battle_pass_rewards.
 // Der Discord-Bot zieht die Credits aus banks.json ab (Source of Truth) und
-// setzt purchased=true.  Verhindert Race-Conditions mit dem Bot-Sync.
+// speichert in battle_pass_data.json. Verhindert Race-Conditions mit dem Bot-Sync.
 async function handleBattlePassPurchase(request) {
   const user = getBpAuthContext(request);
   if (!user) return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
@@ -1578,33 +1604,10 @@ async function handleBattlePassPurchase(request) {
   try {
     const { month, year } = getCurrentSeason();
 
-    // Sicherstellen, dass Progress existiert
-    const { data: existingProgress } = await supabaseAdmin
-      .from('user_battle_pass')
-      .select('*')
-      .eq('discord_user_id', user.discordUserId)
-      .eq('season_month', month)
-      .eq('season_year', year)
-      .maybeSingle();
-
-    let progress = existingProgress;
-    if (!progress) {
-      const { data: newP } = await supabaseAdmin
-        .from('user_battle_pass')
-        .insert({
-          discord_user_id: user.discordUserId,
-          season_month: month,
-          season_year: year,
-          current_tier: 0,
-          purchased: false,
-          claimed_tiers: [],
-        })
-        .select()
-        .single();
-      progress = newP;
-    }
-
-    if (progress?.purchased) {
+    // ✅ Prüfe aus lokaler Datei ob bereits gekauft
+    const userProgress = getUserBattlePassProgress(user.discordUserId, month, year);
+    
+    if (userProgress.purchased) {
       return NextResponse.json({ error: 'Battle Pass bereits gekauft' }, { status: 400 });
     }
 
@@ -1675,9 +1678,9 @@ async function handleBattlePassPurchase(request) {
 }
 
 // POST /api/battle-pass/claim
-// ⚠️ NEU: Setzt nur Tier-Progress.  Belohnungen werden als pending Rows in
+// ⚠️ NEU: Belohnungen werden als pending Rows in
 // pending_battle_pass_rewards angelegt, der Bot wendet sie auf seine lokalen
-// Files an (banks/licenses/levels) – sonst überschreibt der Bot-Sync sie wieder.
+// Files an (banks/licenses/levels + battle_pass_data.json).
 async function handleBattlePassClaim(request) {
   const user = getBpAuthContext(request);
   if (!user) return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
@@ -1685,17 +1688,8 @@ async function handleBattlePassClaim(request) {
   try {
     const { month, year } = getCurrentSeason();
 
-    const { data: progress } = await supabaseAdmin
-      .from('user_battle_pass')
-      .select('*')
-      .eq('discord_user_id', user.discordUserId)
-      .eq('season_month', month)
-      .eq('season_year', year)
-      .maybeSingle();
-
-    if (!progress) {
-      return NextResponse.json({ error: 'Battle Pass nicht initialisiert. Lade die Seite neu.' }, { status: 400 });
-    }
+    // ✅ Lese aus lokaler Bot-Datei
+    const progress = getUserBattlePassProgress(user.discordUserId, month, year);
 
     if (!canClaimToday(progress.last_claim_date)) {
       return NextResponse.json({ error: 'Bereits heute geclaimt! Komm morgen wieder.' }, { status: 400 });
@@ -1752,21 +1746,6 @@ async function handleBattlePassClaim(request) {
       }
     }
 
-    // Progress sofort updaten – Bot wendet die Rewards async an
-    const claimedTiers = Array.isArray(progress.claimed_tiers) ? progress.claimed_tiers : [];
-    if (!claimedTiers.includes(nextTier)) claimedTiers.push(nextTier);
-
-    await supabaseAdmin
-      .from('user_battle_pass')
-      .update({
-        current_tier: nextTier,
-        claimed_tiers: claimedTiers,
-        last_claim_date: new Date().toISOString().split('T')[0],
-      })
-      .eq('discord_user_id', user.discordUserId)
-      .eq('season_month', month)
-      .eq('season_year', year);
-
     // Vorschau-Belohnungen (zeigen was der Bot gleich liefert) – noch ohne Duplicate-Resolution
     const grantedRewards = pendingRows.map((r) => ({ track: r.track, ...r.reward_data, pending: true }));
 
@@ -1779,6 +1758,69 @@ async function handleBattlePassClaim(request) {
     });
   } catch (error) {
     console.error('[Battle Pass] Claim Error:', error);
+    return NextResponse.json({ error: 'Serverfehler', details: error.message }, { status: 500 });
+  }
+}
+
+// POST /api/battle-pass/cancel
+// ✅ NEU: Kündigt den Premium Battle Pass (setzt purchased=false)
+async function handleBattlePassCancel(request) {
+  const user = getBpAuthContext(request);
+  if (!user) return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
+
+  try {
+    const { month, year } = getCurrentSeason();
+
+    // ✅ Prüfe ob Premium aktiv ist
+    const progress = getUserBattlePassProgress(user.discordUserId, month, year);
+    
+    if (!progress.purchased) {
+      return NextResponse.json({ error: 'Du hast keinen aktiven Premium Battle Pass' }, { status: 400 });
+    }
+
+    // Doppel-Schutz: existiert bereits ein pending cancel?
+    const { data: existingPending } = await supabaseAdmin
+      .from('pending_battle_pass_rewards')
+      .select('id')
+      .eq('discord_user_id', user.discordUserId)
+      .eq('action_type', 'cancel')
+      .eq('season_month', month)
+      .eq('season_year', year)
+      .in('status', ['pending', 'processing'])
+      .maybeSingle();
+
+    if (existingPending) {
+      return NextResponse.json({
+        success: true,
+        pending: true,
+        message: 'Kündigung wird verarbeitet…',
+      });
+    }
+
+    // Pending-Eintrag anlegen → Bot übernimmt
+    const { error: insertErr } = await supabaseAdmin
+      .from('pending_battle_pass_rewards')
+      .insert({
+        discord_user_id: user.discordUserId,
+        username: user.username,
+        action_type: 'cancel',
+        season_month: month,
+        season_year: year,
+        status: 'pending',
+      });
+
+    if (insertErr) {
+      console.error('[Battle Pass] Pending Cancel Insert Error:', insertErr);
+      return NextResponse.json({ error: 'Konnte Kündigung nicht starten', details: insertErr.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      pending: true,
+      message: 'Battle Pass Premium wird gekündigt… (in wenigen Sekunden aktiv)',
+    });
+  } catch (error) {
+    console.error('[Battle Pass] Cancel Error:', error);
     return NextResponse.json({ error: 'Serverfehler', details: error.message }, { status: 500 });
   }
 }
@@ -3094,6 +3136,9 @@ export async function POST(request) {
   }
   if (p === 'battle-pass/claim') {
     return handleBattlePassClaim(request);
+  }
+  if (p === 'battle-pass/cancel') {
+    return handleBattlePassCancel(request);
   }
 
   // ===== WEBSITE STATISTICS TRACKING =====
