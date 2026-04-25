@@ -6,6 +6,7 @@ import confetti from 'canvas-confetti';
 import {
   Crown, Lock, Check, Clock, Gift, Sparkles, AlertTriangle,
   Coins, Banknote, Star, Ticket, Car, Bike, Truck, Crosshair, Shield, X, Zap, Loader2,
+  TrendingUp, Award, Gem,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -802,46 +803,64 @@ export default function BattlePassView() {
 
       {/* ==================== PURCHASE DIALOG ==================== */}
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent className="border-white/20 bg-gradient-to-br from-yellow-950/90 via-black/90 to-black/90 backdrop-blur-3xl shadow-2xl max-w-md mx-4">
+        <AlertDialogContent className="glass border border-white/[0.12] max-w-md mx-4">
           {(() => {
             const selectedTier = (tiers || []).find((t) => t.id === selectedPassType) || (tiers || [])[0];
             if (!selectedTier) return null;
             const tierPrice = selectedTier.currentPrice ?? selectedTier.cost;
             const tierDiscount = selectedTier.discountPercent ?? 0;
             const tierOriginal = selectedTier.cost;
+            
+            // Tier-spezifische Farben
+            const tierColors = {
+              premium: { icon: Crown, color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.15)', border: 'rgba(251, 191, 36, 0.35)' },
+              elite: { icon: Gem, color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.15)', border: 'rgba(167, 139, 250, 0.35)' },
+              ultra: { icon: Star, color: '#fb7185', bg: 'rgba(251, 113, 133, 0.15)', border: 'rgba(251, 113, 133, 0.35)' },
+            };
+            const tc = tierColors[selectedTier.id] || tierColors.premium;
+            const TierIcon = tc.icon;
+            
             return (
           <>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-yellow-300 text-lg md:text-xl font-bold drop-shadow-md">
-              <Crown className="w-5 h-5 md:w-6 md:h-6 drop-shadow-[0_0_6px_rgba(250,204,21,0.8)] animate-pulse" />
+            <AlertDialogTitle className="flex items-center gap-3 text-xl font-bold text-white">
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center"
+                style={{
+                  background: tc.bg,
+                  border: `1px solid ${tc.border}`
+                }}
+              >
+                <TierIcon className="w-6 h-6" style={{ color: tc.color }} />
+              </div>
               {selectedTier.name} kaufen?
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 pt-3">
-                <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 backdrop-blur-md px-3 md:px-4 py-2.5 md:py-3 shadow-lg space-y-2">
+                <div className="glass rounded-xl border border-white/[0.08] px-4 py-3 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs md:text-sm text-white/80 font-medium">Kosten heute</span>
-                    <span className="flex items-center gap-1.5 md:gap-2 font-bold text-yellow-300 drop-shadow-md text-sm md:text-base">
-                      <Coins className="w-4 h-4 md:w-5 md:h-5" />
+                    <span className="text-sm text-white/70 font-medium">Kosten heute</span>
+                    <span className="flex items-center gap-2 font-bold text-white text-base">
+                      <Coins className="w-5 h-5" style={{ color: tc.color }} />
                       {tierPrice.toLocaleString('de-DE')} Credits
                     </span>
                   </div>
                   {tierDiscount > 0 && (
-                    <div className="flex items-center justify-between text-[10px] md:text-xs">
-                      <span className="text-white/60">Originalpreis</span>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-white/50">Originalpreis</span>
                       <span className="line-through text-white/40 font-semibold">{tierOriginal.toLocaleString('de-DE')} Credits</span>
                     </div>
                   )}
                   {tierDiscount > 0 && (
-                    <div className="flex items-center justify-between text-[10px] md:text-xs">
-                      <span className="text-emerald-300/80 font-bold">Tages-Rabatt</span>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-emerald-300 font-bold">Tages-Rabatt</span>
                       <span className="text-emerald-300 font-bold bg-emerald-500/20 px-1.5 py-0.5 rounded-md border border-emerald-500/30">
                         −{tierDiscount}% ({(tierOriginal - tierPrice).toLocaleString('de-DE')} Credits gespart)
                       </span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between text-[10px] md:text-xs pt-1 border-t border-white/10">
-                    <span className="text-white/60">Reward-Reduktion</span>
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-white/10">
+                    <span className="text-white/50">Reward-Reduktion</span>
                     <span className="text-rose-300 font-bold bg-rose-500/20 px-1.5 py-0.5 rounded-md border border-rose-500/30">
                       −{selectedTier.reductionPercent}% auf alle Beträge
                     </span>
@@ -909,50 +928,62 @@ export default function BattlePassView() {
 
       {/* ==================== CANCEL DIALOG ==================== */}
       <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
-        <AlertDialogContent className="border-white/20 bg-gradient-to-br from-orange-950/90 via-black/90 to-black/90 backdrop-blur-3xl shadow-2xl max-w-md mx-4">
+        <AlertDialogContent className="glass border border-white/[0.12] max-w-md mx-4">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-orange-300 text-lg md:text-xl font-bold drop-shadow-md">
-              <AlertTriangle className="w-5 h-5 md:w-6 md:h-6 drop-shadow-[0_0_6px_rgba(251,146,60,0.8)]" />
+            <AlertDialogTitle className="flex items-center gap-3 text-xl font-bold text-white">
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center"
+                style={{
+                  background: 'rgba(251, 146, 60, 0.15)',
+                  border: '1px solid rgba(251, 146, 60, 0.35)'
+                }}
+              >
+                <AlertTriangle className="w-6 h-6 text-orange-400" />
+              </div>
               Premium Battle Pass kündigen?
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 pt-3">
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 backdrop-blur-md p-3 md:p-4 text-xs md:text-sm text-white/90 shadow-lg">
-                  <div className="mb-2 font-bold text-emerald-200 drop-shadow-md flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <div className="glass rounded-xl border border-emerald-500/20 p-4 text-sm text-white/90">
+                  <div className="mb-2 font-bold text-emerald-300 flex items-center gap-2">
+                    <Check className="w-4 h-4" />
                     Gute Nachricht — Du verlierst nichts:
                   </div>
-                  <ul className="space-y-1.5 md:space-y-2 text-[10px] md:text-xs font-medium">
-                    <li className="flex items-start gap-1.5 md:gap-2">
-                      <Check className="w-3 h-3 md:w-4 md:h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
+                  <ul className="space-y-2 text-xs font-medium">
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
                       <span>Premium-Vorteile laufen <strong>bis Monatsende</strong> ({daysRemaining}d) weiter</span>
                     </li>
-                    <li className="flex items-start gap-1.5 md:gap-2">
-                      <Check className="w-3 h-3 md:w-4 md:h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
                       <span>Du kannst weiterhin <strong>Free + Premium</strong> Rewards claimen</span>
                     </li>
-                    <li className="flex items-start gap-1.5 md:gap-2">
-                      <Check className="w-3 h-3 md:w-4 md:h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
                       <span>Bereits eingelöste Belohnungen bleiben erhalten</span>
                     </li>
                   </ul>
                 </div>
-                <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 backdrop-blur-md p-3 text-[10px] md:text-xs text-orange-200 shadow-lg flex items-start gap-2">
-                  <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-300 mt-0.5 flex-shrink-0" />
-                  <span>Im neuen Monat startet die Saison automatisch <strong>ohne Premium</strong>. Die 1.500 Credits werden nicht erstattet.</span>
+                <div className="glass rounded-xl border border-orange-500/20 p-3 text-xs text-orange-200 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-orange-300 mt-0.5 flex-shrink-0" />
+                  <span>Im neuen Monat startet die Saison automatisch <strong>ohne Premium</strong>. Die Credits werden nicht erstattet.</span>
                 </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 md:gap-3 mt-2 flex-col sm:flex-row">
-            <AlertDialogCancel className="bg-white/10 hover:bg-white/20 border-white/20 text-white backdrop-blur-md font-semibold rounded-xl shadow-lg w-full sm:w-auto">
+          <AlertDialogFooter className="gap-3 mt-2 flex-col sm:flex-row">
+            <AlertDialogCancel className="glass border border-white/[0.12] text-white hover:bg-white/5 font-semibold rounded-xl w-full sm:w-auto">
               Doch behalten
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancel}
-              className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 text-white font-bold border-0 rounded-xl shadow-xl hover:shadow-2xl transition-all w-full sm:w-auto"
+              className="rounded-xl font-bold border-0 w-full sm:w-auto"
+              style={{
+                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                boxShadow: '0 8px 24px rgba(249, 115, 22, 0.4)'
+              }}
             >
-              <X className="w-4 h-4 md:w-5 md:h-5 mr-1.5 md:mr-2" />
+              <X className="w-5 h-5 mr-2" />
               Ja, kündigen
             </AlertDialogAction>
           </AlertDialogFooter>
