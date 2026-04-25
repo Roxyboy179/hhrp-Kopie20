@@ -1370,17 +1370,90 @@ async function handleAdminVerwarnungenSuche(request) {
 // ============================================
 
 // Importiere Battle Pass Config
-const BATTLE_PASS_CONFIG = { COST_CREDITS: 1500, TIERS_COUNT: 30, MIN_DAYS_TO_PURCHASE: 5 };
+// ✅ NEU: 3 Pass-Tiers mit unterschiedlichen Preisen und Reward-Reduktionen
+const BATTLE_PASS_TIERS = {
+  premium: {
+    id: 'premium',
+    name: 'Premium Pass',
+    cost: 500,
+    reductionPercent: 70, // -70% auf Beträge (User bekommt 30%)
+    color: 'amber',
+    icon: 'crown',
+    description: 'Einstiegs-Premium · alle Rewards mit 70% Reduktion',
+  },
+  elite: {
+    id: 'elite',
+    name: 'Elite+ Pass',
+    cost: 699,
+    reductionPercent: 50, // -50% auf Beträge (User bekommt 50%)
+    color: 'violet',
+    icon: 'gem',
+    description: 'Beliebte Wahl · alle Rewards mit 50% Reduktion',
+  },
+  ultra: {
+    id: 'ultra',
+    name: 'Ultra+ Pass',
+    cost: 899,
+    reductionPercent: 30, // -30% auf Beträge (User bekommt 70%)
+    color: 'rose',
+    icon: 'trophy',
+    description: 'Maximaler Pass · alle Rewards mit nur 30% Reduktion',
+  },
+};
 
-// ✅ Berechnet den dynamischen Battle-Pass-Preis basierend auf dem aktuellen Tag des Monats
-// Tag 1 = 0% Rabatt (1500), Tag 2 = 1% Rabatt, Tag N = (N-1)% Rabatt
-function getBattlePassDynamicPrice() {
+// ✅ Discord-Rolle die alle Pass-Käufer erhalten (1 Monat oder dauerhaft mit Auto-Renew)
+const BATTLE_PASS_DISCORD_ROLE_ID = '1497682871811571722';
+
+// Legacy-Config für Tier-Anzahl & Min-Tage
+const BATTLE_PASS_CONFIG = { TIERS_COUNT: 30, MIN_DAYS_TO_PURCHASE: 5 };
+
+// ✅ Helper: Reduziert Reward-Beträge um X%
+//    - amount und alternativeCredits werden multipliziert mit (1 - reductionPercent/100)
+//    - Mindestens 1 (kein 0-Reward)
+function applyRewardReduction(reward, reductionPercent) {
+  if (!reward || typeof reward !== 'object') return reward;
+  if (typeof reductionPercent !== 'number' || reductionPercent <= 0) return reward;
+  const factor = Math.max(0, 1 - reductionPercent / 100);
+  const reduced = { ...reward };
+  if (typeof reward.amount === 'number') {
+    const newAmt = Math.max(1, Math.floor(reward.amount * factor));
+    reduced.amount = newAmt;
+    // Label updaten (z.B. "5.000€" → "1.500€" oder "200 Credits" → "60 Credits")
+    if (typeof reward.label === 'string') {
+      const fmt = newAmt.toLocaleString('de-DE');
+      if (reward.type === 'money') reduced.label = `${fmt}€`;
+      else if (reward.type === 'credits') reduced.label = `${fmt} Credits`;
+      else if (reward.type === 'xp') reduced.label = `${fmt} XP`;
+      else reduced.label = reward.label;
+    }
+  }
+  if (typeof reward.alternativeCredits === 'number') {
+    reduced.alternativeCredits = Math.max(1, Math.floor(reward.alternativeCredits * factor));
+  }
+  return reduced;
+}
+
+// ✅ Wendet Reduktion auf alle 30 Tier-Rewards an (nur Premium-Track, Free-Track bleibt unverändert)
+function getReducedRewardsForTier(passType) {
+  const tier = BATTLE_PASS_TIERS[passType];
+  if (!tier) return BATTLE_PASS_REWARDS; // unbekannt → Original
+  return BATTLE_PASS_REWARDS.map((r) => ({
+    tier: r.tier,
+    free: r.free,
+    premium: applyRewardReduction(r.premium, tier.reductionPercent),
+  }));
+}
+
+// ✅ Dynamischer Tagesrabatt (Tag 1 = 0%, Tag 31 = 30%)
+function getBattlePassDynamicPrice(passType = 'premium') {
+  const tier = BATTLE_PASS_TIERS[passType] || BATTLE_PASS_TIERS.premium;
   const now = new Date();
   const dayOfMonth = now.getDate(); // 1..31
   const discountPercent = Math.min(Math.max(dayOfMonth - 1, 0), 99); // 0..99
-  const discountedPrice = Math.floor(BATTLE_PASS_CONFIG.COST_CREDITS * (1 - discountPercent / 100));
+  const discountedPrice = Math.floor(tier.cost * (1 - discountPercent / 100));
   return {
-    original: BATTLE_PASS_CONFIG.COST_CREDITS,
+    passType: tier.id,
+    original: tier.cost,
     discountPercent,
     price: discountedPrice,
     dayOfMonth,
@@ -1489,6 +1562,9 @@ async function getUserBattlePassProgress(discordUserId, month, year) {
         claimed_tiers: [],
         cancelled: false,
         cancelled_at: null,
+        pass_type: null,
+        role_expires_at: null,
+        autorenew: false,
       };
     }
     
@@ -1501,9 +1577,19 @@ async function getUserBattlePassProgress(discordUserId, month, year) {
         claimed_tiers: [],
         cancelled: false,
         cancelled_at: null,
+        pass_type: null,
+        role_expires_at: null,
+        autorenew: false,
       };
     }
     
+    // ✅ Legacy-Migration: User mit purchased=true aber ohne pass_type → Ultra+
+    // (Sie haben den alten 1500-Credits-Pass gekauft → bekommen die höchste neue Stufe)
+    let passType = bpEntry.pass_type || null;
+    if (bpEntry.purchased && !passType) {
+      passType = 'ultra';
+    }
+
     return {
       current_tier: bpEntry.current_tier || 0,
       purchased: bpEntry.purchased || false,
@@ -1512,6 +1598,9 @@ async function getUserBattlePassProgress(discordUserId, month, year) {
       purchase_date: bpEntry.purchase_date || null,
       cancelled: bpEntry.cancelled === true,
       cancelled_at: bpEntry.cancelled_at || null,
+      pass_type: passType,
+      role_expires_at: bpEntry.role_expires_at || null,
+      autorenew: bpEntry.autorenew === true,
     };
   } catch (e) {
     console.error('[BP-API] ❌ Fehler beim Lesen von user_data:', e.message);
@@ -1522,6 +1611,9 @@ async function getUserBattlePassProgress(discordUserId, month, year) {
       claimed_tiers: [],
       cancelled: false,
       cancelled_at: null,
+      pass_type: null,
+      role_expires_at: null,
+      autorenew: false,
     };
   }
 }
@@ -1659,32 +1751,66 @@ async function handleBattlePassCurrent(request) {
     const seasonEndDate = new Date(year, month, 0);
     const missedDays = getMissedDays(userProgress.last_claim_date, userProgress.current_tier);
     const daysRemaining = getDaysRemainingInMonth();
-    const pricing = getBattlePassDynamicPrice();
+    
+    // ✅ Pricing für alle 3 Pass-Tiers (jeder mit eigener Tagesrabatt-Berechnung)
+    const pricingByTier = {};
+    for (const tierKey of Object.keys(BATTLE_PASS_TIERS)) {
+      pricingByTier[tierKey] = getBattlePassDynamicPrice(tierKey);
+    }
+    
+    // Rückwärts-Kompatibilität: `pricing` zeigt auf Premium (günstigster)
+    const pricing = pricingByTier.premium;
     const canPurchase = !userProgress.purchased && daysRemaining >= BATTLE_PASS_CONFIG.MIN_DAYS_TO_PURCHASE;
+
+    // ✅ Rewards: Wenn User einen Pass besitzt → reduzierte Rewards anzeigen
+    //    Sonst → Original-Rewards (für Vorschau)
+    const rewardsForUser = userProgress.purchased && userProgress.pass_type
+      ? getReducedRewardsForTier(userProgress.pass_type)
+      : BATTLE_PASS_REWARDS;
+
+    // ✅ Tier-Configs für Frontend (3 Pässe + Preise + Reduktionen)
+    const tiersConfig = Object.values(BATTLE_PASS_TIERS).map((t) => ({
+      id: t.id,
+      name: t.name,
+      cost: t.cost,
+      reductionPercent: t.reductionPercent,
+      color: t.color,
+      icon: t.icon,
+      description: t.description,
+      currentPrice: pricingByTier[t.id].price,
+      discountPercent: pricingByTier[t.id].discountPercent,
+    }));
 
     return NextResponse.json({
       season: { month, year },
       endDate: seasonEndDate.toISOString(),
       daysRemaining,
       pricing: {
-        original: pricing.original,           // 1500
-        current: pricing.price,                // dynamisch (z.B. 1485)
-        discountPercent: pricing.discountPercent, // 0..99
+        original: pricing.original,           // Premium-Tier Original (500)
+        current: pricing.price,                // dynamisch
+        discountPercent: pricing.discountPercent,
         dayOfMonth: pricing.dayOfMonth,
+        priceCredits: pricing.price, // Alias für ältere Frontend-Logik
       },
+      pricingByTier,        // ✅ NEU: Preise für alle 3 Tiers
+      tiers: tiersConfig,   // ✅ NEU: 3 Pass-Tier-Configs
+      discordRoleId: BATTLE_PASS_DISCORD_ROLE_ID, // ✅ NEU: Rolle die jeder Pass-Käufer bekommt
       canPurchase, // false wenn weniger als 5 Tage übrig
       minDaysToPurchase: BATTLE_PASS_CONFIG.MIN_DAYS_TO_PURCHASE,
       userProgress: {
         currentTier: userProgress.current_tier,
         claimedTiers: userProgress.claimed_tiers,
         purchased: userProgress.purchased,
-        canClaimToday: canClaimToday(userProgress.last_claim_date) && missedDays === 0, // ✅ Nur claimen wenn kein Tag verpasst
+        canClaimToday: canClaimToday(userProgress.last_claim_date) && missedDays === 0,
         lastClaimDate: userProgress.last_claim_date,
-        missedDays: missedDays, // ✅ NEU: Anzahl verpasster Tage
-        cancelled: userProgress.cancelled === true, // ✅ NEU: ob bereits gekündigt
-        cancelledAt: userProgress.cancelled_at || null, // ✅ NEU: Zeitpunkt der Kündigung
+        missedDays: missedDays,
+        cancelled: userProgress.cancelled === true,
+        cancelledAt: userProgress.cancelled_at || null,
+        passType: userProgress.pass_type || null,        // ✅ NEU: 'premium'|'elite'|'ultra'|null
+        roleExpiresAt: userProgress.role_expires_at || null, // ✅ NEU: ISO date
+        autorenew: userProgress.autorenew === true,      // ✅ NEU: Auto-Renew Flag
       },
-      rewards: BATTLE_PASS_REWARDS,
+      rewards: rewardsForUser,
       config: BATTLE_PASS_CONFIG,
     });
   } catch (error) {
@@ -1704,6 +1830,27 @@ async function handleBattlePassPurchase(request) {
   try {
     const { month, year } = getCurrentSeason();
 
+    // ✅ NEU: passType aus Body lesen ('premium' | 'elite' | 'ultra')
+    let passType = 'premium'; // Default für Rückwärts-Kompatibilität
+    let autorenew = false;
+    try {
+      const body = await request.json();
+      if (body && typeof body.passType === 'string') {
+        passType = body.passType.toLowerCase();
+      }
+      if (body && typeof body.autorenew === 'boolean') {
+        autorenew = body.autorenew;
+      }
+    } catch (_) {
+      // Body optional → behalte Defaults
+    }
+
+    if (!BATTLE_PASS_TIERS[passType]) {
+      return NextResponse.json({
+        error: `Ungültiger Pass-Typ. Verfügbar: ${Object.keys(BATTLE_PASS_TIERS).join(', ')}`,
+      }, { status: 400 });
+    }
+
     // ✅ Prüfe aus Supabase user_data ob bereits gekauft
     const userProgress = await getUserBattlePassProgress(user.discordUserId, month, year);
     
@@ -1719,9 +1866,10 @@ async function handleBattlePassPurchase(request) {
       }, { status: 400 });
     }
 
-    // ✅ Dynamischer Preis (Tag 1 = 1500, danach pro Tag 1% Rabatt)
-    const pricing = getBattlePassDynamicPrice();
+    // ✅ NEU: Dynamischer Preis pro Pass-Typ
+    const pricing = getBattlePassDynamicPrice(passType);
     const finalCost = pricing.price;
+    const tierCfg = BATTLE_PASS_TIERS[passType];
 
     // Soft-Check: zeige dem User die voraussichtlich verfügbaren Credits.
     // Der Bot prüft beim Verarbeiten nochmal exakt gegen banks.json.
@@ -1762,7 +1910,7 @@ async function handleBattlePassPurchase(request) {
     }
 
     // Pending-Eintrag anlegen → Bot übernimmt
-    // ✅ Wir speichern den dynamischen Preis im reward_data damit der Bot ihn abzieht
+    // ✅ NEU: passType, autorenew, role_id im reward_data damit der Bot alles weiß
     const { data: inserted, error: insertErr } = await supabaseAdmin
       .from('pending_battle_pass_rewards')
       .insert({
@@ -1773,10 +1921,15 @@ async function handleBattlePassPurchase(request) {
         season_year: year,
         status: 'pending',
         reward_data: {
+          pass_type: passType,                    // 'premium' | 'elite' | 'ultra'
+          tier_name: tierCfg.name,                // z.B. "Elite+ Pass"
+          reduction_percent: tierCfg.reductionPercent, // 70 | 50 | 30
           cost_credits: finalCost,
           original_cost: pricing.original,
           discount_percent: pricing.discountPercent,
           day_of_month: pricing.dayOfMonth,
+          autorenew: autorenew,                   // ✅ NEU: User-Wunsch für Auto-Renew
+          discord_role_id: BATTLE_PASS_DISCORD_ROLE_ID, // ✅ Rolle für 1 Monat
         },
       })
       .select('id')
@@ -1852,13 +2005,26 @@ async function handleBattlePassClaim(request) {
     }
 
     if (progress.purchased && tierData.premium) {
+      // ✅ NEU: Premium-Reward basierend auf Pass-Typ reduzieren (premium=70%, elite=50%, ultra=30%)
+      const passType = progress.pass_type || 'ultra'; // Legacy-Fallback
+      const tierCfg = BATTLE_PASS_TIERS[passType];
+      const reductionPercent = tierCfg ? tierCfg.reductionPercent : 0;
+      const reducedPremium = applyRewardReduction(tierData.premium, reductionPercent);
+
       pendingRows.push({
         discord_user_id: user.discordUserId,
         username: user.username,
         action_type: 'claim_reward',
         tier: nextTier,
         track: 'premium',
-        reward_data: tierData.premium,
+        reward_data: {
+          ...reducedPremium,
+          // Audit-Felder für Bot-Logs
+          _pass_type: passType,
+          _reduction_percent: reductionPercent,
+          _original_amount: tierData.premium.amount,
+          _original_alt_credits: tierData.premium.alternativeCredits,
+        },
         season_month: month,
         season_year: year,
         status: 'pending',
@@ -1961,6 +2127,76 @@ async function handleBattlePassCancel(request) {
     });
   } catch (error) {
     console.error('[Battle Pass] Cancel Error:', error);
+    return NextResponse.json({ error: 'Serverfehler', details: error.message }, { status: 500 });
+  }
+}
+
+// POST /api/battle-pass/autorenew { enabled: boolean }
+// ✅ NEU: Aktiviert/deaktiviert Auto-Renew für den aktuellen Battle Pass
+//    Bei Auto-Renew=true bleibt die Discord-Rolle dauerhaft (nicht +1 Monat).
+//    Schreibt einen pending-Eintrag, der Bot setzt den Flag in user_data.
+async function handleBattlePassAutorenew(request) {
+  const user = getBpAuthContext(request);
+  if (!user) return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
+
+  try {
+    let enabled = true;
+    try {
+      const body = await request.json();
+      if (typeof body?.enabled === 'boolean') enabled = body.enabled;
+    } catch (_) {}
+
+    const { month, year } = getCurrentSeason();
+    const progress = await getUserBattlePassProgress(user.discordUserId, month, year);
+
+    if (!progress.purchased) {
+      return NextResponse.json({ error: 'Du hast keinen aktiven Premium Battle Pass' }, { status: 400 });
+    }
+
+    // Idempotent: schon im gewünschten Zustand?
+    if (progress.autorenew === enabled) {
+      return NextResponse.json({
+        success: true,
+        autorenew: enabled,
+        unchanged: true,
+        message: enabled
+          ? 'Auto-Verlängerung war bereits aktiviert.'
+          : 'Auto-Verlängerung war bereits deaktiviert.',
+      });
+    }
+
+    // Pending-Eintrag (action_type='enable_autorenew' | 'disable_autorenew')
+    const actionType = enabled ? 'enable_autorenew' : 'disable_autorenew';
+    const { data: inserted, error: insertErr } = await supabaseAdmin
+      .from('pending_battle_pass_rewards')
+      .insert({
+        discord_user_id: user.discordUserId,
+        username: user.username,
+        action_type: actionType,
+        season_month: month,
+        season_year: year,
+        status: 'pending',
+        reward_data: { enabled },
+      })
+      .select('id')
+      .single();
+
+    if (insertErr) {
+      console.error('[Battle Pass] Autorenew Insert Error:', insertErr);
+      return NextResponse.json({ error: 'Konnte Auto-Verlängerung nicht ändern', details: insertErr.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      pending: true,
+      queueId: inserted.id,
+      autorenew: enabled,
+      message: enabled
+        ? 'Auto-Verlängerung wird aktiviert…'
+        : 'Auto-Verlängerung wird deaktiviert…',
+    });
+  } catch (error) {
+    console.error('[Battle Pass] Autorenew Error:', error);
     return NextResponse.json({ error: 'Serverfehler', details: error.message }, { status: 500 });
   }
 }
@@ -3287,6 +3523,9 @@ export async function POST(request) {
   }
   if (p === 'battle-pass/cancel') {
     return handleBattlePassCancel(request);
+  }
+  if (p === 'battle-pass/autorenew') {
+    return handleBattlePassAutorenew(request);
   }
 
   // ===== WEBSITE STATISTICS TRACKING =====

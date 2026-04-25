@@ -131,6 +131,12 @@ export default function BattlePassView() {
   const [cancelling, setCancelling] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  // ✅ NEU: Welcher Pass wurde im Confirm-Dialog ausgewählt
+  const [selectedPassType, setSelectedPassType] = useState(null);
+  // ✅ NEU: Auto-Renew Wunsch beim Kauf (default false)
+  const [purchaseAutorenew, setPurchaseAutorenew] = useState(false);
+  // ✅ NEU: Toggle für Auto-Renew nach Kauf (separater Loading-State)
+  const [autorenewLoading, setAutorenewLoading] = useState(false);
   const pollingRef = useRef(null);
   const queueCheckRef = useRef(null);
   const confettiIntervalRef = useRef(null);
@@ -300,7 +306,11 @@ export default function BattlePassView() {
     }
   };
 
-  const handlePurchaseClick = () => setConfirmOpen(true);
+  const handlePurchaseClick = (passType = 'premium') => {
+    setSelectedPassType(passType);
+    setPurchaseAutorenew(false); // default: keine Auto-Verlängerung
+    setConfirmOpen(true);
+  };
   const handleCancelClick = () => setCancelConfirmOpen(true);
 
   const handleCancel = async () => {
@@ -333,9 +343,15 @@ export default function BattlePassView() {
   const handlePurchase = async () => {
     setPurchasing(true);
     setConfirmOpen(false);
-    
+
+    const passTypeToBuy = selectedPassType || 'premium';
+
     try {
-      const res = await fetch('/api/battle-pass/purchase', { method: 'POST' });
+      const res = await fetch('/api/battle-pass/purchase', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ passType: passTypeToBuy, autorenew: purchaseAutorenew }),
+      });
       const json = await res.json();
       
       if (res.ok) {
@@ -356,6 +372,36 @@ export default function BattlePassView() {
       console.error('[BP] Purchase Error:', error);
       setPurchasing(false);
       toast.error('Verbindungsfehler beim Kauf');
+    }
+  };
+
+  // ✅ NEU: Auto-Renew Toggle (aktivieren/deaktivieren nach dem Kauf)
+  const handleAutorenewToggle = async (enable) => {
+    setAutorenewLoading(true);
+    try {
+      const res = await fetch('/api/battle-pass/autorenew', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !!enable }),
+      });
+      const json = await res.json();
+      if (res.ok) {
+        toast.success(
+          enable
+            ? '✅ Auto-Verlängerung aktiviert — Pass läuft automatisch weiter'
+            : '✅ Auto-Verlängerung deaktiviert — endet zum Monatsende',
+          { duration: 4000 }
+        );
+        // Battle-Pass Daten neu laden (zeigt aktualisierten Zustand)
+        setTimeout(() => loadBattlePass(), 1500);
+      } else {
+        toast.error(json.error || 'Konnte Auto-Verlängerung nicht ändern');
+      }
+    } catch (error) {
+      console.error('[BP] Autorenew Error:', error);
+      toast.error('Verbindungsfehler');
+    } finally {
+      setAutorenewLoading(false);
     }
   };
 
@@ -406,8 +452,8 @@ export default function BattlePassView() {
     );
   }
 
-  const { userProgress, rewards, season, daysRemaining, pricing, canPurchase, minDaysToPurchase } = data;
-  const { currentTier, purchased, canClaimToday, missedDays, cancelled, cancelledAt } = userProgress;
+  const { userProgress, rewards, season, daysRemaining, pricing, canPurchase, minDaysToPurchase, tiers, pricingByTier } = data;
+  const { currentTier, purchased, canClaimToday, missedDays, cancelled, cancelledAt, passType, autorenew } = userProgress;
   const seasonName = `${season.month}/${season.year}`;
   const progress = (currentTier / 30) * 100;
   const allClaimed = currentTier >= 30;
@@ -475,33 +521,48 @@ export default function BattlePassView() {
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
             {!purchased && !purchasing && !purchaseBlocked && (
-              <Button
-                onClick={handlePurchaseClick}
-                className="h-11 md:h-12 px-4 md:px-6 rounded-xl md:rounded-2xl font-bold text-sm md:text-base text-black shadow-xl hover:shadow-2xl transition-all hover:scale-105 flex-1 relative overflow-hidden group"
-                style={{ background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                <span className="flex items-center gap-2 relative z-10">
-                  <Crown className="w-4 h-4 md:w-5 md:h-5" />
-                  <span className="flex items-baseline gap-1.5">
-                    <span>Premium für</span>
-                    {discountPercent > 0 ? (
-                      <>
-                        <span className="line-through text-black/50 text-xs">{originalPrice.toLocaleString('de-DE')}</span>
-                        <span className="text-black font-black">{currentPrice.toLocaleString('de-DE')}</span>
-                      </>
-                    ) : (
-                      <span className="text-black font-black">{currentPrice.toLocaleString('de-DE')}</span>
-                    )}
-                    <Coins className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                  </span>
-                  {discountPercent > 0 && (
-                    <span className="text-[10px] md:text-xs font-bold bg-red-500/90 text-white px-1.5 py-0.5 rounded-md ml-1 shadow-md">
-                      -{discountPercent}%
-                    </span>
-                  )}
-                </span>
-              </Button>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3 flex-1">
+                {(tiers || []).map((t) => {
+                  const tierColors = {
+                    premium: { from: '#fbbf24', to: '#f59e0b', glow: 'rgba(250,204,21,0.5)', text: '#1a1a1a' },
+                    elite:   { from: '#a78bfa', to: '#7c3aed', glow: 'rgba(167,139,250,0.5)', text: '#fff' },
+                    ultra:   { from: '#fb7185', to: '#e11d48', glow: 'rgba(251,113,133,0.5)', text: '#fff' },
+                  };
+                  const c = tierColors[t.id] || tierColors.premium;
+                  const showOriginal = t.discountPercent > 0;
+                  return (
+                    <Button
+                      key={t.id}
+                      onClick={() => handlePurchaseClick(t.id)}
+                      className="h-auto min-h-[60px] md:min-h-[68px] px-3 md:px-4 py-2.5 rounded-xl md:rounded-2xl font-bold text-xs md:text-sm shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] flex flex-col items-center justify-center gap-0.5 relative overflow-hidden group"
+                      style={{
+                        background: `linear-gradient(135deg, ${c.from} 0%, ${c.to} 100%)`,
+                        color: c.text,
+                        boxShadow: `0 8px 24px ${c.glow}`,
+                      }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+                      <div className="relative z-10 flex items-center gap-1.5 font-black text-sm md:text-base whitespace-nowrap">
+                        <Crown className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                        {t.name.replace(' Pass', '')}
+                      </div>
+                      <div className="relative z-10 flex items-baseline gap-1 text-xs">
+                        {showOriginal && (
+                          <span className="line-through opacity-60 text-[10px]">{t.cost.toLocaleString('de-DE')}</span>
+                        )}
+                        <span className="font-black">{(t.currentPrice ?? t.cost).toLocaleString('de-DE')}</span>
+                        <Coins className="w-3 h-3 inline" />
+                        {showOriginal && (
+                          <span className="ml-1 text-[10px] font-bold bg-red-500/90 text-white px-1 py-0.5 rounded">-{t.discountPercent}%</span>
+                        )}
+                      </div>
+                      <div className="relative z-10 text-[9px] md:text-[10px] opacity-80 font-semibold uppercase tracking-wider">
+                        −{t.reductionPercent}% Rewards
+                      </div>
+                    </Button>
+                  );
+                })}
+              </div>
             )}
 
             {!purchased && !purchasing && purchaseBlocked && (
@@ -520,24 +581,64 @@ export default function BattlePassView() {
               </div>
             )}
 
-            {purchased && !purchasing && !cancelling && !cancelled && (
-              <div className="flex items-center gap-2 flex-1 sm:flex-initial">
-                <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-yellow-400/40 bg-yellow-400/10 backdrop-blur-md shadow-lg flex-1 animate-pulse">
-                  <Crown className="w-4 h-4 md:w-5 md:h-5 text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.8)]" />
-                  <span className="text-yellow-300 font-bold text-xs md:text-sm whitespace-nowrap drop-shadow-md">Premium aktiv</span>
+            {purchased && !purchasing && !cancelling && !cancelled && (() => {
+              const tierMeta = (tiers || []).find((t) => t.id === passType) || { name: 'Premium Pass', id: 'premium' };
+              const tierColor = passType === 'elite' ? 'violet' : passType === 'ultra' ? 'rose' : 'yellow';
+              return (
+                <div className="flex items-center gap-2 flex-1 sm:flex-initial flex-wrap">
+                  <div className={`flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border backdrop-blur-md shadow-lg flex-1 ${
+                    tierColor === 'violet' ? 'border-violet-400/40 bg-violet-400/10' :
+                    tierColor === 'rose' ? 'border-rose-400/40 bg-rose-400/10' :
+                    'border-yellow-400/40 bg-yellow-400/10'
+                  }`}>
+                    <Crown className={`w-4 h-4 md:w-5 md:h-5 ${
+                      tierColor === 'violet' ? 'text-violet-300 drop-shadow-[0_0_4px_rgba(167,139,250,0.8)]' :
+                      tierColor === 'rose' ? 'text-rose-300 drop-shadow-[0_0_4px_rgba(251,113,133,0.8)]' :
+                      'text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.8)]'
+                    }`} />
+                    <span className={`font-bold text-xs md:text-sm whitespace-nowrap drop-shadow-md ${
+                      tierColor === 'violet' ? 'text-violet-200' :
+                      tierColor === 'rose' ? 'text-rose-200' :
+                      'text-yellow-300'
+                    }`}>
+                      {tierMeta.name} aktiv
+                    </span>
+                  </div>
+
+                  {/* ✅ Auto-Renew Toggle */}
+                  <button
+                    onClick={() => handleAutorenewToggle(!autorenew)}
+                    disabled={autorenewLoading}
+                    title={autorenew ? 'Auto-Verlängerung deaktivieren' : 'Auto-Verlängerung aktivieren'}
+                    className={`flex items-center gap-1.5 h-10 md:h-12 px-3 rounded-xl md:rounded-2xl border backdrop-blur-md shadow-lg font-semibold text-[10px] md:text-xs transition-all hover:scale-105 disabled:opacity-60 disabled:cursor-wait whitespace-nowrap ${
+                      autorenew
+                        ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
+                        : 'border-white/20 bg-white/5 text-white/70 hover:bg-white/10'
+                    }`}
+                  >
+                    {autorenewLoading ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <span className={`inline-flex items-center justify-center w-7 h-4 rounded-full transition-colors ${autorenew ? 'bg-emerald-500/80' : 'bg-white/20'}`}>
+                        <span className={`block w-3 h-3 rounded-full bg-white shadow transition-transform ${autorenew ? 'translate-x-1.5' : '-translate-x-1.5'}`}></span>
+                      </span>
+                    )}
+                    Auto-Renew
+                  </button>
+
+                  <Button
+                    onClick={handleCancelClick}
+                    variant="outline"
+                    size="sm"
+                    className="h-10 md:h-12 px-3 md:px-4 rounded-xl md:rounded-2xl border border-red-400/40 bg-red-500/10 hover:bg-red-500/20 text-red-300 hover:text-red-200 backdrop-blur-md shadow-lg font-semibold text-xs md:text-sm whitespace-nowrap"
+                    title="Premium Battle Pass kündigen"
+                  >
+                    <X className="w-4 h-4 md:w-4 md:h-4 mr-1" />
+                    Kündigen
+                  </Button>
                 </div>
-                <Button
-                  onClick={handleCancelClick}
-                  variant="outline"
-                  size="sm"
-                  className="h-10 md:h-12 px-3 md:px-4 rounded-xl md:rounded-2xl border border-red-400/40 bg-red-500/10 hover:bg-red-500/20 text-red-300 hover:text-red-200 backdrop-blur-md shadow-lg font-semibold text-xs md:text-sm whitespace-nowrap"
-                  title="Premium Battle Pass kündigen"
-                >
-                  <X className="w-4 h-4 md:w-4 md:h-4 mr-1" />
-                  Kündigen
-                </Button>
-              </div>
-            )}
+              );
+            })()}
 
             {/* ✅ Gekündigt-Status: Premium läuft bis Monatsende weiter */}
             {purchased && cancelled && !cancelling && (
@@ -634,10 +735,18 @@ export default function BattlePassView() {
       {/* ==================== PURCHASE DIALOG ==================== */}
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent className="border-white/20 bg-gradient-to-br from-yellow-950/90 via-black/90 to-black/90 backdrop-blur-3xl shadow-2xl max-w-md mx-4">
+          {(() => {
+            const selectedTier = (tiers || []).find((t) => t.id === selectedPassType) || (tiers || [])[0];
+            if (!selectedTier) return null;
+            const tierPrice = selectedTier.currentPrice ?? selectedTier.cost;
+            const tierDiscount = selectedTier.discountPercent ?? 0;
+            const tierOriginal = selectedTier.cost;
+            return (
+          <>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-yellow-300 text-lg md:text-xl font-bold drop-shadow-md">
               <Crown className="w-5 h-5 md:w-6 md:h-6 drop-shadow-[0_0_6px_rgba(250,204,21,0.8)] animate-pulse" />
-              Premium Battle Pass kaufen?
+              {selectedTier.name} kaufen?
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 pt-3">
@@ -646,45 +755,65 @@ export default function BattlePassView() {
                     <span className="text-xs md:text-sm text-white/80 font-medium">Kosten heute</span>
                     <span className="flex items-center gap-1.5 md:gap-2 font-bold text-yellow-300 drop-shadow-md text-sm md:text-base">
                       <Coins className="w-4 h-4 md:w-5 md:h-5" />
-                      {currentPrice.toLocaleString('de-DE')} Credits
+                      {tierPrice.toLocaleString('de-DE')} Credits
                     </span>
                   </div>
-                  {discountPercent > 0 && (
+                  {tierDiscount > 0 && (
                     <div className="flex items-center justify-between text-[10px] md:text-xs">
                       <span className="text-white/60">Originalpreis</span>
-                      <span className="line-through text-white/40 font-semibold">{originalPrice.toLocaleString('de-DE')} Credits</span>
+                      <span className="line-through text-white/40 font-semibold">{tierOriginal.toLocaleString('de-DE')} Credits</span>
                     </div>
                   )}
-                  {discountPercent > 0 && (
+                  {tierDiscount > 0 && (
                     <div className="flex items-center justify-between text-[10px] md:text-xs">
                       <span className="text-emerald-300/80 font-bold">Tages-Rabatt</span>
                       <span className="text-emerald-300 font-bold bg-emerald-500/20 px-1.5 py-0.5 rounded-md border border-emerald-500/30">
-                        −{discountPercent}% ({(originalPrice - currentPrice).toLocaleString('de-DE')} Credits gespart)
+                        −{tierDiscount}% ({(tierOriginal - tierPrice).toLocaleString('de-DE')} Credits gespart)
                       </span>
                     </div>
                   )}
-                  <div className="text-[9px] md:text-[10px] text-white/50 italic pt-1 border-t border-white/10">
-                    💡 Pro Tag im Monat reduziert sich der Preis um 1%
+                  <div className="flex items-center justify-between text-[10px] md:text-xs pt-1 border-t border-white/10">
+                    <span className="text-white/60">Reward-Reduktion</span>
+                    <span className="text-rose-300 font-bold bg-rose-500/20 px-1.5 py-0.5 rounded-md border border-rose-500/30">
+                      −{selectedTier.reductionPercent}% auf alle Beträge
+                    </span>
                   </div>
                 </div>
+
+                {/* Auto-Renew Checkbox */}
+                <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 backdrop-blur-md p-3 md:p-3.5 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={purchaseAutorenew}
+                    onChange={(e) => setPurchaseAutorenew(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 accent-emerald-500 cursor-pointer flex-shrink-0"
+                  />
+                  <div className="flex-1 text-xs md:text-sm">
+                    <div className="font-bold text-emerald-300 drop-shadow-md">Auto-Verlängerung aktivieren</div>
+                    <div className="text-[10px] md:text-xs text-white/60 mt-0.5">
+                      Pass läuft jeden Monat automatisch weiter — Discord-Rolle bleibt dauerhaft. Jederzeit kündbar.
+                    </div>
+                  </div>
+                </label>
+
                 <div className="rounded-xl border border-white/20 bg-white/5 backdrop-blur-md p-3 md:p-4 text-xs md:text-sm text-white/90 shadow-lg">
                   <div className="mb-2 font-bold text-white drop-shadow-md">Du erhältst:</div>
                   <ul className="space-y-1.5 md:space-y-2 text-[10px] md:text-xs font-medium">
                     <li className="flex items-start gap-1.5 md:gap-2">
                       <Sparkles className="w-3 h-3 md:w-4 md:h-4 text-yellow-300 mt-0.5 flex-shrink-0" />
-                      <span>Alle 30 Premium-Belohnungen</span>
+                      <span>Alle 30 Premium-Belohnungen (mit −{selectedTier.reductionPercent}% Reduktion)</span>
                     </li>
                     <li className="flex items-start gap-1.5 md:gap-2">
                       <Gift className="w-3 h-3 md:w-4 md:h-4 text-yellow-300 mt-0.5 flex-shrink-0" />
-                      <span>Doppelte Belohnungen pro Claim</span>
+                      <span>Doppelte Belohnungen pro Claim (Free + Premium)</span>
                     </li>
                     <li className="flex items-start gap-1.5 md:gap-2">
                       <Crown className="w-3 h-3 md:w-4 md:h-4 text-yellow-300 mt-0.5 flex-shrink-0" />
-                      <span>Exklusive VIP-Pässe & Items</span>
+                      <span>Exklusive Discord-Rolle für 1 Monat{purchaseAutorenew ? ' (verlängert sich automatisch)' : ''}</span>
                     </li>
                     <li className="flex items-start gap-1.5 md:gap-2">
                       <Ticket className="w-3 h-3 md:w-4 md:h-4 text-yellow-300 mt-0.5 flex-shrink-0" />
-                      <span>Bei Duplikaten → Alternative Credits!</span>
+                      <span>Bei Item-Duplikaten → Alternative Credits!</span>
                     </li>
                   </ul>
                 </div>
@@ -701,9 +830,12 @@ export default function BattlePassView() {
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
               <Crown className="w-4 h-4 md:w-5 md:h-5 mr-1.5 md:mr-2 relative z-10" />
-              <span className="relative z-10">Für {currentPrice.toLocaleString('de-DE')} Credits kaufen</span>
+              <span className="relative z-10">Für {tierPrice.toLocaleString('de-DE')} Credits kaufen</span>
             </AlertDialogAction>
           </AlertDialogFooter>
+          </>
+            );
+          })()}
         </AlertDialogContent>
       </AlertDialog>
 
