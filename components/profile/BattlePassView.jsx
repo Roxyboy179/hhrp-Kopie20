@@ -907,18 +907,6 @@ export default function BattlePassView() {
       {/* 🆕 ═══════════════════════════════════════════════════════════════
           PREMIUM FEATURES: Auto-Claim & Lifetime Pass
           ═══════════════════════════════════════════════════════════════ */}
-      {/* DEBUG TEST BUTTON */}
-      <button 
-        onClick={() => {
-          console.log('🔥 TEST BUTTON CLICKED!');
-          alert('Test Button funktioniert!');
-          setAutoclaimConfirmOpen(true);
-        }}
-        style={{ background: 'red', color: 'white', padding: '10px', borderRadius: '8px', fontWeight: 'bold' }}
-      >
-        🔥 DEBUG: Klick mich zum Testen
-      </button>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Auto-Claim Feature Card */}
         {!auto_claim_enabled && passType !== 'ultra' && (
@@ -938,14 +926,17 @@ export default function BattlePassView() {
               <div className="text-2xl font-black text-white">
                 100 <span className="text-sm text-white/50">Credits</span>
               </div>
-              <Button
-                onClick={() => setAutoclaimConfirmOpen(true)}
+              <button
+                onClick={() => {
+                  console.log('🔥 Auto-Claim Button geklickt!');
+                  setAutoclaimConfirmOpen(true);
+                }}
                 disabled={buyingAutoclaim}
-                className="rounded-xl font-bold"
+                className="px-4 py-2 rounded-xl font-bold text-white transition-all hover:scale-105 disabled:opacity-50"
                 style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}
               >
                 {buyingAutoclaim ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Kaufen'}
-              </Button>
+              </button>
             </div>
             <div className="text-xs text-yellow-300 mt-2">
               ⭐ Ultra+ User haben Auto-Claim kostenlos!
@@ -990,14 +981,17 @@ export default function BattlePassView() {
               <div className="text-2xl font-black text-white">
                 6000 <span className="text-sm text-white/50">Credits</span>
               </div>
-              <Button
-                onClick={() => setLifetimeConfirmOpen(true)}
+              <button
+                onClick={() => {
+                  console.log('🔥 Lifetime Button geklickt!');
+                  setLifetimeConfirmOpen(true);
+                }}
                 disabled={buyingLifetime}
-                className="rounded-xl font-bold"
+                className="px-4 py-2 rounded-xl font-bold text-white transition-all hover:scale-105 disabled:opacity-50"
                 style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)' }}
               >
                 {buyingLifetime ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Kaufen'}
-              </Button>
+              </button>
             </div>
             <div className="text-xs text-emerald-300 mt-2">
               💎 Jeden Monat automatisch Ultra+ Pass!
