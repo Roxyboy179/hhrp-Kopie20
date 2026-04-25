@@ -134,8 +134,8 @@ export default function BattlePassView() {
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   // ✅ NEU: Welcher Pass wurde im Confirm-Dialog ausgewählt
   const [selectedPassType, setSelectedPassType] = useState(null);
-  // ✅ NEU: Auto-Renew Wunsch beim Kauf (default false)
-  const [purchaseAutorenew, setPurchaseAutorenew] = useState(false);
+  // ✅ NEU: Auto-Renew Wunsch beim Kauf (default TRUE - standardmäßig aktiviert)
+  const [purchaseAutorenew, setPurchaseAutorenew] = useState(true);
   // ✅ NEU: Toggle für Auto-Renew nach Kauf (separater Loading-State)
   const [autorenewLoading, setAutorenewLoading] = useState(false);
   const pollingRef = useRef(null);
