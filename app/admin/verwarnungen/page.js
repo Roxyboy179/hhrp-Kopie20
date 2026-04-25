@@ -97,14 +97,15 @@ export default function VerwarnungenPage() {
   }
 
   return (
-    <div className="min-h-screen p-6 sm:p-8" style={{ background: '#0a0a0b' }}>
+    <div className="min-h-screen p-6 sm:p-8 relative" style={{ background: '#0a0a0b' }}>
       {/* Ambient background elements für Glas-Effekt */}
-      <div aria-hidden="true" className="fixed inset-0 pointer-events-none opacity-30">
-        <div className="absolute top-[20%] left-[10%] w-96 h-96 rounded-full" style={{ background: 'radial-gradient(circle, rgba(234,179,8,0.08), transparent 70%)', filter: 'blur(80px)' }} />
-        <div className="absolute bottom-[30%] right-[15%] w-80 h-80 rounded-full" style={{ background: 'radial-gradient(circle, rgba(249,115,22,0.06), transparent 70%)', filter: 'blur(80px)' }} />
+      <div aria-hidden="true" className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
+        <div className="absolute top-[15%] left-[5%] w-[500px] h-[500px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(234,179,8,0.15), transparent 60%)', filter: 'blur(100px)' }} />
+        <div className="absolute top-[40%] right-[10%] w-[450px] h-[450px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(249,115,22,0.12), transparent 60%)', filter: 'blur(100px)' }} />
+        <div className="absolute bottom-[20%] left-[40%] w-[400px] h-[400px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(234,179,8,0.1), transparent 60%)', filter: 'blur(100px)' }} />
       </div>
       
-      <div className="max-w-7xl mx-auto relative z-10">
+      <div className="max-w-7xl mx-auto relative" style={{ zIndex: 1 }}>
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 flex items-center gap-3">
