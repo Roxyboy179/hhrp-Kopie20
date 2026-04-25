@@ -542,21 +542,39 @@ export default function BattlePassView() {
 
           {/* Action Buttons */}
           <div className="space-y-4">
+            {/* Purchase + Claim Buttons für Free User */}
             {!purchased && !purchasing && !purchaseBlocked && (
-              <Button
-                onClick={() => setConfirmOpen(true)}
-                className="w-full h-14 rounded-2xl font-bold text-base text-white shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] relative overflow-hidden group"
-                style={{ 
-                  background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #fb7185 100%)',
-                  boxShadow: '0 8px 32px rgba(251, 191, 36, 0.4)'
-                }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                <span className="flex items-center gap-2 relative z-10">
-                  <Crown className="w-5 h-5" />
-                  Battle Pass kaufen
-                </span>
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Button
+                  onClick={() => setConfirmOpen(true)}
+                  className="flex-1 h-14 rounded-2xl font-bold text-base text-white shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] relative overflow-hidden group"
+                  style={{ 
+                    background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #fb7185 100%)',
+                    boxShadow: '0 8px 32px rgba(251, 191, 36, 0.4)'
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                  <span className="flex items-center gap-2 relative z-10">
+                    <Crown className="w-5 h-5" />
+                    Battle Pass kaufen
+                  </span>
+                </Button>
+
+                {/* Claim Button auch für Free User */}
+                {canClaimToday && !allClaimed && !claiming && (
+                  <Button
+                    onClick={handleClaim}
+                    className="h-14 px-6 rounded-2xl font-bold text-base text-white shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] relative overflow-hidden group whitespace-nowrap"
+                    style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                    <span className="flex items-center gap-2 relative z-10">
+                      <Zap className="w-5 h-5" />
+                      Tier {nextTier} einlösen
+                    </span>
+                  </Button>
+                )}
+              </div>
             )}
 
             {!purchased && !purchasing && purchaseBlocked && (
@@ -564,6 +582,34 @@ export default function BattlePassView() {
                 <Clock className="w-4 h-4 md:w-5 md:h-5 text-orange-400 flex-shrink-0" />
                 <span className="text-orange-300 text-xs md:text-sm font-bold text-center">
                   Nur noch {daysRemaining}d — Premium-Kauf ab &lt; {minDaysToPurchase ?? 5} Tagen gesperrt
+                </span>
+              </div>
+            )}
+
+            {/* Free User: Claiming Status */}
+            {claiming && !purchased && (
+              <div className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl md:rounded-2xl border border-green-400/40 bg-green-400/10 backdrop-blur-md shadow-lg">
+                <Loader2 className="w-5 h-5 text-green-400 animate-spin" />
+                <span className="text-green-300 font-bold text-sm">Warte auf HHRP Server...</span>
+              </div>
+            )}
+
+            {/* Free User: Bereits geclaimt */}
+            {!canClaimToday && !allClaimed && !claiming && missedDays === 0 && !purchased && (
+              <div className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl md:rounded-2xl border border-white/20 bg-white/5 backdrop-blur-md shadow-lg">
+                <Clock className="w-4 h-4 text-white/50 flex-shrink-0" />
+                <span className="text-white/70 text-sm font-medium">
+                  Bereits geclaimt — morgen wieder
+                </span>
+              </div>
+            )}
+
+            {/* Free User: Komplett */}
+            {allClaimed && !purchased && (
+              <div className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl md:rounded-2xl border border-green-400/30 bg-green-400/10 backdrop-blur-md shadow-lg">
+                <Sparkles className="w-4 h-4 text-green-400 drop-shadow-[0_0_6px_rgba(34,197,94,0.8)]" />
+                <span className="text-green-300 text-sm font-bold drop-shadow-md">
+                  Komplett! Nächste Season bald
                 </span>
               </div>
             )}
