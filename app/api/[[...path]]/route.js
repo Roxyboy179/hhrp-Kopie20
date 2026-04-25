@@ -1373,38 +1373,38 @@ async function handleAdminVerwarnungenSuche(request) {
 const BATTLE_PASS_CONFIG = { COST_CREDITS: 1500, TIERS_COUNT: 30 };
 const REWARD_TYPES = { CREDITS: 'credits', MONEY: 'money', ITEM: 'item', XP: 'xp', PASS: 'pass' };
 
-// 30 Tiers - Hardcoded Rewards (matches /lib/battle-pass-rewards.js & frontend)
+// 30 Tiers - ECHTE Items aus /lib/shop-data.js (SHOP_ITEMS)
 const BATTLE_PASS_REWARDS = [
   { tier: 1, free: { type: 'credits', amount: 50, label: '50 Credits' }, premium: { type: 'money', amount: 5000, label: '5.000€' } },
   { tier: 2, free: { type: 'xp', amount: 500, label: '500 XP' }, premium: { type: 'credits', amount: 200, label: '200 Credits' } },
-  { tier: 3, free: { type: 'credits', amount: 75, label: '75 Credits' }, premium: { type: 'item', item_id: 'führerschein_b', label: 'Führerschein B', alternativeCredits: 300 } },
+  { tier: 3, free: { type: 'credits', amount: 75, label: '75 Credits' }, premium: { type: 'item', item_id: 'führerschein_pkw', label: 'Führerschein (PKW)', alternativeCredits: 300 } },
   { tier: 4, free: { type: 'money', amount: 3000, label: '3.000€' }, premium: { type: 'credits', amount: 250, label: '250 Credits' } },
   { tier: 5, free: { type: 'xp', amount: 750, label: '750 XP' }, premium: { type: 'money', amount: 10000, label: '10.000€' } },
-  { tier: 6, free: { type: 'credits', amount: 100, label: '100 Credits' }, premium: { type: 'item', item_id: 'führerschein_a', label: 'Führerschein A', alternativeCredits: 400 } },
+  { tier: 6, free: { type: 'credits', amount: 100, label: '100 Credits' }, premium: { type: 'item', item_id: 'führerschein_motorrad', label: 'Motorradschein', alternativeCredits: 400 } },
   { tier: 7, free: { type: 'money', amount: 4000, label: '4.000€' }, premium: { type: 'credits', amount: 300, label: '300 Credits' } },
-  { tier: 8, free: { type: 'xp', amount: 1000, label: '1.000 XP' }, premium: { type: 'item', item_id: 'waffenschein_klein', label: 'Kl. Waffenschein', alternativeCredits: 350 } },
+  { tier: 8, free: { type: 'xp', amount: 1000, label: '1.000 XP' }, premium: { type: 'item', item_id: 'waffenschein', label: 'Waffenschein', alternativeCredits: 350 } },
   { tier: 9, free: { type: 'credits', amount: 125, label: '125 Credits' }, premium: { type: 'money', amount: 15000, label: '15.000€' } },
-  { tier: 10, free: { type: 'money', amount: 5000, label: '5.000€' }, premium: { type: 'pass', pass_id: 'vip_premium_7d', label: '7 Tage VIP Premium', alternativeCredits: 500, durationDays: 7 } },
+  { tier: 10, free: { type: 'money', amount: 5000, label: '5.000€' }, premium: { type: 'item', item_id: 'werkzeug_angel', label: 'Angelschein & Angel', alternativeCredits: 500 } },
   { tier: 11, free: { type: 'xp', amount: 1250, label: '1.250 XP' }, premium: { type: 'credits', amount: 350, label: '350 Credits' } },
   { tier: 12, free: { type: 'credits', amount: 150, label: '150 Credits' }, premium: { type: 'money', amount: 20000, label: '20.000€' } },
-  { tier: 13, free: { type: 'money', amount: 6000, label: '6.000€' }, premium: { type: 'item', item_id: 'führerschein_c', label: 'Führerschein C', alternativeCredits: 450 } },
+  { tier: 13, free: { type: 'money', amount: 6000, label: '6.000€' }, premium: { type: 'item', item_id: 'führerschein_lkw', label: 'LKW-Schein', alternativeCredits: 450 } },
   { tier: 14, free: { type: 'xp', amount: 1500, label: '1.500 XP' }, premium: { type: 'credits', amount: 400, label: '400 Credits' } },
-  { tier: 15, free: { type: 'credits', amount: 175, label: '175 Credits' }, premium: { type: 'item', item_id: 'waffenschein_gross', label: 'Gr. Waffenschein', alternativeCredits: 500 } },
+  { tier: 15, free: { type: 'credits', amount: 175, label: '175 Credits' }, premium: { type: 'item', item_id: 'jagdschein', label: 'Jagdschein', alternativeCredits: 500 } },
   { tier: 16, free: { type: 'money', amount: 7000, label: '7.000€' }, premium: { type: 'money', amount: 25000, label: '25.000€' } },
   { tier: 17, free: { type: 'xp', amount: 1750, label: '1.750 XP' }, premium: { type: 'credits', amount: 450, label: '450 Credits' } },
-  { tier: 18, free: { type: 'credits', amount: 200, label: '200 Credits' }, premium: { type: 'item', item_id: 'versicherung_standard', label: 'Versicherung', alternativeCredits: 400 } },
+  { tier: 18, free: { type: 'credits', amount: 200, label: '200 Credits' }, premium: { type: 'item', item_id: 'versicherung_rechtsschutz', label: 'Rechtsschutzversicherung', alternativeCredits: 400 } },
   { tier: 19, free: { type: 'money', amount: 8000, label: '8.000€' }, premium: { type: 'money', amount: 30000, label: '30.000€' } },
-  { tier: 20, free: { type: 'xp', amount: 2000, label: '2.000 XP' }, premium: { type: 'pass', pass_id: 'vip_platinum_30d', label: '30 Tage VIP Platinum', alternativeCredits: 800, durationDays: 30 } },
+  { tier: 20, free: { type: 'xp', amount: 2000, label: '2.000 XP' }, premium: { type: 'item', item_id: 'vip_premium', label: 'VIP Mitgliedschaft', alternativeCredits: 800 } },
   { tier: 21, free: { type: 'credits', amount: 225, label: '225 Credits' }, premium: { type: 'credits', amount: 500, label: '500 Credits' } },
   { tier: 22, free: { type: 'money', amount: 9000, label: '9.000€' }, premium: { type: 'money', amount: 35000, label: '35.000€' } },
-  { tier: 23, free: { type: 'xp', amount: 2250, label: '2.250 XP' }, premium: { type: 'item', item_id: 'führerschein_ce', label: 'Führerschein CE', alternativeCredits: 550 } },
+  { tier: 23, free: { type: 'xp', amount: 2250, label: '2.250 XP' }, premium: { type: 'item', item_id: 'führerschein_bus', label: 'Bus Führerschein', alternativeCredits: 550 } },
   { tier: 24, free: { type: 'credits', amount: 250, label: '250 Credits' }, premium: { type: 'money', amount: 40000, label: '40.000€' } },
   { tier: 25, free: { type: 'money', amount: 10000, label: '10.000€' }, premium: { type: 'credits', amount: 600, label: '600 Credits' } },
-  { tier: 26, free: { type: 'xp', amount: 2500, label: '2.500 XP' }, premium: { type: 'item', item_id: 'flugschein', label: 'Flugschein', alternativeCredits: 700 } },
+  { tier: 26, free: { type: 'xp', amount: 2500, label: '2.500 XP' }, premium: { type: 'item', item_id: 'versicherung_kranken', label: 'Krankenversicherung', alternativeCredits: 700 } },
   { tier: 27, free: { type: 'credits', amount: 275, label: '275 Credits' }, premium: { type: 'money', amount: 45000, label: '45.000€' } },
   { tier: 28, free: { type: 'money', amount: 12000, label: '12.000€' }, premium: { type: 'credits', amount: 700, label: '700 Credits' } },
   { tier: 29, free: { type: 'xp', amount: 3000, label: '3.000 XP' }, premium: { type: 'money', amount: 50000, label: '50.000€' } },
-  { tier: 30, free: { type: 'credits', amount: 300, label: '300 Credits' }, premium: { type: 'pass', pass_id: 'vip_elite_plus_30d', label: '30 Tage VIP Elite+', alternativeCredits: 1000, durationDays: 30 } },
+  { tier: 30, free: { type: 'credits', amount: 300, label: '300 Credits' }, premium: { type: 'item', item_id: 'credits_basic_pass', label: 'Credits Basic Pass', alternativeCredits: 1000 } },
 ];
 
 function getCurrentSeason() {
