@@ -311,7 +311,7 @@ export default function BattlePassView() {
     // Setze ersten Tier als default wenn kein passType übergeben wird
     const firstTier = (tiers || [])[0]?.id || 'premium';
     setSelectedPassType(passType || firstTier);
-    setPurchaseAutorenew(false); // default: keine Auto-Verlängerung
+    setPurchaseAutorenew(true); // ✅ default: Auto-Verlängerung aktiviert
     setConfirmOpen(true);
   };
   const handleCancelClick = () => setCancelConfirmOpen(true);
@@ -465,6 +465,22 @@ export default function BattlePassView() {
   const currentPrice = pricing?.current ?? 1500;
   const originalPrice = pricing?.original ?? 1500;
   const discountPercent = pricing?.discountPercent ?? 0;
+
+  // ✅ 50% Rabatt in den letzten 10 Tagen
+  const lastDaysDiscount = daysRemaining <= 10 ? 50 : 0;
+  const tiersWithDiscount = (tiers || []).map(tier => {
+    const basePrice = tier.cost;
+    const discountedPrice = lastDaysDiscount > 0 
+      ? Math.round(basePrice * (1 - lastDaysDiscount / 100))
+      : basePrice;
+    
+    return {
+      ...tier,
+      originalCost: basePrice,
+      currentPrice: discountedPrice,
+      discountPercent: lastDaysDiscount,
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -622,7 +638,7 @@ export default function BattlePassView() {
             )}
 
             {purchased && !purchasing && !cancelling && !cancelled && (() => {
-              const tierMeta = (tiers || []).find((t) => t.id === passType) || { name: 'Premium Pass', id: 'premium' };
+              const tierMeta = (tiersWithDiscount || []).find((t) => t.id === passType) || { name: 'Premium Pass', id: 'premium' };
               const tierColor = passType === 'elite' ? 'violet' : passType === 'ultra' ? 'rose' : 'yellow';
               return (
                 <div className="flex items-center gap-2 flex-1 flex-wrap">
@@ -678,7 +694,7 @@ export default function BattlePassView() {
 
             {/* ✅ Gekündigt-Status: Premium läuft bis Monatsende weiter */}
             {purchased && cancelled && !cancelling && (() => {
-              const tierMeta = (tiers || []).find((t) => t.id === passType) || { name: 'Premium Pass', id: 'premium' };
+              const tierMeta = (tiersWithDiscount || []).find((t) => t.id === passType) || { name: 'Premium Pass', id: 'premium' };
               const tierColor = passType === 'elite' ? 'violet' : passType === 'ultra' ? 'rose' : 'yellow';
               return (
                 <div className="flex items-center gap-2 flex-1 flex-wrap">
@@ -781,11 +797,11 @@ export default function BattlePassView() {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent className="glass border border-white/[0.12] max-w-lg mx-4">
           {(() => {
-            const selectedTier = (tiers || []).find((t) => t.id === selectedPassType) || (tiers || [])[0];
+            const selectedTier = (tiersWithDiscount || []).find((t) => t.id === selectedPassType) || (tiersWithDiscount || [])[0];
             if (!selectedTier) return null;
             const tierPrice = selectedTier.currentPrice ?? selectedTier.cost;
             const tierDiscount = selectedTier.discountPercent ?? 0;
-            const tierOriginal = selectedTier.cost;
+            const tierOriginal = selectedTier.originalCost || selectedTier.cost;
             
             // Tier-spezifische Farben
             const tierColors = {
@@ -805,7 +821,7 @@ export default function BattlePassView() {
             
             {/* Tier-Auswahl Buttons */}
             <div className="grid grid-cols-3 gap-2 mb-4">
-              {(tiers || []).map((t) => {
+              {(tiersWithDiscount || []).map((t) => {
                 const isSelected = selectedPassType === t.id;
                 const tColor = tierColors[t.id] || tierColors.premium;
                 const TIcon = tColor.icon;
