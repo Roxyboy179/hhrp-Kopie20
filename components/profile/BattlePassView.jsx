@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
+import confetti from 'canvas-confetti';
 import {
   Crown, Lock, Check, Clock, Gift, Sparkles, AlertTriangle,
-  Coins, Banknote, Star, Ticket, Car, Bike, Truck, Crosshair, Shield, X,
+  Coins, Banknote, Star, Ticket, Car, Bike, Truck, Crosshair, Shield, X, Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -64,15 +65,78 @@ function getRewardColor(reward) {
   return REWARD_COLOR[reward.type] || 'text-white/70';
 }
 
+// ✨ Confetti Animationen
+function fireConfetti() {
+  const count = 200;
+  const defaults = { origin: { y: 0.7 } };
+
+  function fire(particleRatio, opts) {
+    confetti({
+      ...defaults,
+      ...opts,
+      particleCount: Math.floor(count * particleRatio),
+    });
+  }
+
+  fire(0.25, { spread: 26, startVelocity: 55 });
+  fire(0.2, { spread: 60 });
+  fire(0.35, { spread: 100, decay: 0.91, scalar: 0.8 });
+  fire(0.1, { spread: 120, startVelocity: 25, decay: 0.92, scalar: 1.2 });
+  fire(0.1, { spread: 120, startVelocity: 45 });
+}
+
+// 🎉 Premium Kauf Animation (goldener Regen)
+function firePremiumConfetti() {
+  const duration = 3000;
+  const animationEnd = Date.now() + duration;
+  const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+  function randomInRange(min, max) {
+    return Math.random() * (max - min) + min;
+  }
+
+  const interval = setInterval(() => {
+    const timeLeft = animationEnd - Date.now();
+
+    if (timeLeft <= 0) {
+      return clearInterval(interval);
+    }
+
+    const particleCount = 50 * (timeLeft / duration);
+
+    confetti({
+      ...defaults,
+      particleCount,
+      origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+      colors: ['#FFD700', '#FFA500', '#FFFF00', '#FFE4B5'],
+    });
+    confetti({
+      ...defaults,
+      particleCount,
+      origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+      colors: ['#FFD700', '#FFA500', '#FFFF00', '#FFE4B5'],
+    });
+  }, 250);
+}
+
 export default function BattlePassView() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [showClaimAnim, setShowClaimAnim] = useState(false);
+  const pollingRef = useRef(null);
 
   useEffect(() => {
     loadBattlePass();
+    
+    // ✅ Auto-Refresh alle 5 Sekunden (für Echtzeit-Updates)
+    pollingRef.current = setInterval(loadBattlePass, 5000);
+    
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
   }, []);
 
   const loadBattlePass = async () => {
@@ -82,11 +146,15 @@ export default function BattlePassView() {
       if (res.ok) {
         setData(json);
       } else {
-        toast.error(json.error || 'Fehler beim Laden des Battle Pass');
+        if (!data) {
+          toast.error(json.error || 'Fehler beim Laden des Battle Pass');
+        }
       }
     } catch (error) {
       console.error('[BP] Load Error:', error);
-      toast.error('Verbindungsfehler beim Laden');
+      if (!data) {
+        toast.error('Verbindungsfehler beim Laden');
+      }
     } finally {
       setLoading(false);
     }
@@ -97,12 +165,30 @@ export default function BattlePassView() {
   const handlePurchase = async () => {
     setPurchasing(true);
     setConfirmOpen(false);
+    
     try {
       const res = await fetch('/api/battle-pass/purchase', { method: 'POST' });
       const json = await res.json();
+      
       if (res.ok) {
-        toast.success('✨ Premium Battle Pass gekauft! Aktivierung läuft...');
-        setTimeout(loadBattlePass, 3000);
+        // 🎉 Premium Kauf Animation
+        firePremiumConfetti();
+        
+        // Optimistic Update
+        if (data) {
+          setData({
+            ...data,
+            userProgress: { ...data.userProgress, purchased: true }
+          });
+        }
+        
+        toast.success('✨ Premium Battle Pass aktiviert!', {
+          icon: '👑',
+          duration: 5000,
+        });
+        
+        // Lade nach 2s neu für finale Daten
+        setTimeout(loadBattlePass, 2000);
       } else {
         toast.error(json.error || 'Kauf fehlgeschlagen');
       }
@@ -116,18 +202,52 @@ export default function BattlePassView() {
 
   const handleClaim = async () => {
     setClaiming(true);
+    setShowClaimAnim(true);
+    
     try {
       const res = await fetch('/api/battle-pass/claim', { method: 'POST' });
       const json = await res.json();
+      
       if (res.ok) {
-        toast.success(`🎁 Tier ${json.newTier} geclaimt!`);
-        setTimeout(loadBattlePass, 2000);
+        // 🎊 Claim Animation
+        fireConfetti();
+        
+        // Optimistic Update
+        if (data) {
+          setData({
+            ...data,
+            userProgress: {
+              ...data.userProgress,
+              currentTier: json.newTier,
+              canClaimToday: false,
+              claimedTiers: [...(data.userProgress.claimedTiers || []), json.newTier],
+            }
+          });
+        }
+        
+        // Zeige geclaimte Rewards
+        if (json.grantedRewards && json.grantedRewards.length > 0) {
+          const rewardText = json.grantedRewards.map(r => r.label).join(', ');
+          toast.success(`🎁 Tier ${json.newTier} geclaimt!\n${rewardText}`, {
+            duration: 5000,
+          });
+        } else {
+          toast.success(`🎁 Tier ${json.newTier} geclaimt!`);
+        }
+        
+        // Lade nach 1s neu für finale Daten
+        setTimeout(() => {
+          loadBattlePass();
+          setShowClaimAnim(false);
+        }, 1000);
       } else {
         toast.error(json.error || 'Claim fehlgeschlagen');
+        setShowClaimAnim(false);
       }
     } catch (error) {
       console.error('[BP] Claim Error:', error);
       toast.error('Verbindungsfehler beim Claimen');
+      setShowClaimAnim(false);
     } finally {
       setClaiming(false);
     }
@@ -158,7 +278,18 @@ export default function BattlePassView() {
   const nextTier = currentTier + 1;
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-4 md:space-y-6 relative">
+      {/* ✨ Claim Animation Overlay */}
+      {showClaimAnim && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
+          <div className="animate-bounce">
+            <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full p-6 md:p-8 shadow-2xl">
+              <Gift className="w-16 h-16 md:w-20 md:h-20 text-white animate-pulse" />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ==================== HEADER  ==================== */}
       <div className="relative bg-gradient-to-br from-yellow-500/20 via-purple-500/10 to-blue-500/10 backdrop-blur-2xl border border-white/20 rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-2xl overflow-hidden">
         {/* Animated Background */}
@@ -204,7 +335,7 @@ export default function BattlePassView() {
 
           {/* Missed Days Warning */}
           {missedDays > 0 && (
-            <div className="mb-3 md:mb-4 flex items-center gap-2 px-3 md:px-4 py-2 md:py-3 rounded-xl border border-red-500/30 bg-red-500/10 backdrop-blur-md shadow-lg">
+            <div className="mb-3 md:mb-4 flex items-center gap-2 px-3 md:px-4 py-2 md:py-3 rounded-xl border border-red-500/30 bg-red-500/10 backdrop-blur-md shadow-lg animate-pulse">
               <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-red-400 flex-shrink-0" />
               <span className="text-red-300 text-xs md:text-sm font-bold">
                 ⚠️ {missedDays} Tag{missedDays > 1 ? 'e' : ''} verpasst! Diese Tiers sind verloren.
@@ -218,11 +349,12 @@ export default function BattlePassView() {
               <Button
                 onClick={handlePurchaseClick}
                 disabled={purchasing}
-                className="h-11 md:h-12 px-4 md:px-6 rounded-xl md:rounded-2xl font-bold text-sm md:text-base text-black shadow-xl hover:shadow-2xl transition-all hover:scale-105 flex-1"
+                className="h-11 md:h-12 px-4 md:px-6 rounded-xl md:rounded-2xl font-bold text-sm md:text-base text-black shadow-xl hover:shadow-2xl transition-all hover:scale-105 flex-1 relative overflow-hidden group"
                 style={{ background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' }}
               >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                 {purchasing ? 'Kaufe...' : (
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 relative z-10">
                     <Crown className="w-4 h-4 md:w-5 md:h-5" /> Premium kaufen
                   </span>
                 )}
@@ -230,7 +362,7 @@ export default function BattlePassView() {
             )}
 
             {purchased && (
-              <div className="flex items-center justify-center gap-2 px-4 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-yellow-400/40 bg-yellow-400/10 backdrop-blur-md shadow-lg flex-1 sm:flex-initial">
+              <div className="flex items-center justify-center gap-2 px-4 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-yellow-400/40 bg-yellow-400/10 backdrop-blur-md shadow-lg flex-1 sm:flex-initial animate-pulse">
                 <Crown className="w-4 h-4 md:w-5 md:h-5 text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.8)]" />
                 <span className="text-yellow-300 font-bold text-xs md:text-sm whitespace-nowrap drop-shadow-md">Premium aktiv</span>
               </div>
@@ -240,12 +372,18 @@ export default function BattlePassView() {
               <Button
                 onClick={handleClaim}
                 disabled={claiming}
-                className="h-11 md:h-12 rounded-xl md:rounded-2xl font-bold text-sm md:text-base text-white shadow-xl hover:shadow-2xl transition-all hover:scale-105 flex-1"
+                className="h-11 md:h-12 rounded-xl md:rounded-2xl font-bold text-sm md:text-base text-white shadow-xl hover:shadow-2xl transition-all hover:scale-105 flex-1 relative overflow-hidden group"
                 style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
               >
-                {claiming ? 'Wird geclaimt...' : (
-                  <span className="flex items-center gap-2">
-                    <Gift className="w-4 h-4 md:w-5 md:h-5" />
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                {claiming ? (
+                  <span className="flex items-center gap-2 relative z-10">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/40 border-t-white"></div>
+                    Wird geclaimt...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2 relative z-10">
+                    <Zap className="w-4 h-4 md:w-5 md:h-5 animate-pulse" />
                     Tier {nextTier} einlösen
                   </span>
                 )}
@@ -305,7 +443,7 @@ export default function BattlePassView() {
         <AlertDialogContent className="border-white/20 bg-gradient-to-br from-yellow-950/90 via-black/90 to-black/90 backdrop-blur-3xl shadow-2xl max-w-md mx-4">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-yellow-300 text-lg md:text-xl font-bold drop-shadow-md">
-              <Crown className="w-5 h-5 md:w-6 md:h-6 drop-shadow-[0_0_6px_rgba(250,204,21,0.8)]" />
+              <Crown className="w-5 h-5 md:w-6 md:h-6 drop-shadow-[0_0_6px_rgba(250,204,21,0.8)] animate-pulse" />
               Premium Battle Pass kaufen?
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -332,6 +470,10 @@ export default function BattlePassView() {
                       <Crown className="w-3 h-3 md:w-4 md:h-4 text-yellow-300 mt-0.5 flex-shrink-0" />
                       <span>Exklusive VIP-Pässe & Items</span>
                     </li>
+                    <li className="flex items-start gap-1.5 md:gap-2">
+                      <Ticket className="w-3 h-3 md:w-4 md:h-4 text-yellow-300 mt-0.5 flex-shrink-0" />
+                      <span>Bei Duplikaten → Alternative Credits!</span>
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -343,10 +485,11 @@ export default function BattlePassView() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handlePurchase}
-              className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-black font-bold border-0 rounded-xl shadow-xl hover:shadow-2xl transition-all hover:scale-105 w-full sm:w-auto"
+              className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-black font-bold border-0 rounded-xl shadow-xl hover:shadow-2xl transition-all hover:scale-105 w-full sm:w-auto relative overflow-hidden group"
             >
-              <Crown className="w-4 h-4 md:w-5 md:h-5 mr-1.5 md:mr-2" />
-              Für 1.500 Credits kaufen
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+              <Crown className="w-4 h-4 md:w-5 md:h-5 mr-1.5 md:mr-2 relative z-10" />
+              <span className="relative z-10">Für 1.500 Credits kaufen</span>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -367,7 +510,7 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, purchased }) {
     <div
       className={`
         relative rounded-xl md:rounded-2xl overflow-hidden border-2 transition-all duration-300
-        ${isCurrent ? 'border-yellow-400 ring-2 ring-yellow-400/50 ring-offset-2 ring-offset-black scale-105' : ''}
+        ${isCurrent ? 'border-yellow-400 ring-2 ring-yellow-400/50 ring-offset-2 ring-offset-black scale-105 animate-pulse' : ''}
         ${isUnlocked && !isCurrent ? 'border-green-400/40' : ''}
         ${isLocked ? 'border-white/10' : ''}
       `}
@@ -386,8 +529,8 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, purchased }) {
 
       {/* Unlocked Badge */}
       {isUnlocked && (
-        <div className="absolute top-1 right-1 md:top-1.5 md:right-1.5 z-10">
-          <Check className="w-4 h-4 md:w-5 md:h-5 p-0.5 md:p-1 rounded-full bg-green-500 text-white shadow-lg" />
+        <div className="absolute top-1 right-1 md:top-1.5 md:right-1.5 z-10 animate-bounce">
+          <Check className="w-4 h-4 md:w-5 md:h-5 p-0.5 md:p-1 rounded-full bg-green-500 text-white shadow-lg shadow-green-500/50" />
         </div>
       )}
 
@@ -405,7 +548,7 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, purchased }) {
         </div>
 
         {/* Premium Reward */}
-        <div className={`relative rounded-lg p-1.5 md:p-2 border ${purchased ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-black/20 border-white/10'}`}>
+        <div className={`relative rounded-lg p-1.5 md:p-2 border transition-all ${purchased ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-black/20 border-white/10'}`}>
           <div className="flex items-center gap-1 mb-1">
             <Crown className="w-2.5 h-2.5 md:w-3 md:h-3 text-yellow-400" />
             <div className="text-[8px] md:text-[9px] uppercase tracking-wider text-yellow-300/70 font-bold">Premium</div>
