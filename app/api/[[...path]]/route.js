@@ -1526,6 +1526,13 @@ function canClaimToday(lastClaimDate) {
   return last.toDateString() !== today.toDateString();
 }
 
+// 🆕 NEU: Berechnet welcher Tier basierend auf dem aktuellen Tag verfügbar sein sollte
+function getExpectedTierBasedOnDay() {
+  const now = new Date();
+  const dayOfMonth = now.getDate(); // 1-31
+  return Math.min(dayOfMonth, BATTLE_PASS_CONFIG.TIERS_COUNT);
+}
+
 // ✅ NEU: Prüft ob User gestern geclaimt hat (für "verpasster Tag = verlorener Tier" Regel)
 function getMissedDays(lastClaimDate, currentTier) {
   if (!lastClaimDate || currentTier === 0) return 0;
@@ -1768,6 +1775,15 @@ async function handleBattlePassCurrent(request) {
     const missedDays = getMissedDays(userProgress.last_claim_date, userProgress.current_tier);
     const daysRemaining = getDaysRemainingInMonth();
     
+    // 🆕 NEU: Berechne "expected tier" basierend auf dem Tag im Monat
+    const expectedTier = getExpectedTierBasedOnDay();
+    const nextClaimableTier = Math.max(userProgress.current_tier + 1, expectedTier);
+    // Array der verpassten Tiers (zwischen currentTier und expectedTier)
+    const missedTiers = [];
+    for (let t = userProgress.current_tier + 1; t < expectedTier; t++) {
+      missedTiers.push(t);
+    }
+    
     // ✅ Pricing für alle 3 Pass-Tiers (jeder mit eigener Tagesrabatt-Berechnung)
     const pricingByTier = {};
     for (const tierKey of Object.keys(BATTLE_PASS_TIERS)) {
@@ -1820,6 +1836,8 @@ async function handleBattlePassCurrent(request) {
         canClaimToday: canClaimToday(userProgress.last_claim_date) && missedDays === 0,
         lastClaimDate: userProgress.last_claim_date,
         missedDays: missedDays,
+        missedTiers: missedTiers, // 🆕 Array der verpassten Tier-Nummern
+        nextTier: nextClaimableTier, // 🆕 Basierend auf Tag im Monat
         cancelled: userProgress.cancelled === true,
         cancelledAt: userProgress.cancelled_at || null,
         passType: userProgress.pass_type || null,        // ✅ NEU: 'premium'|'elite'|'ultra'|null
@@ -1995,7 +2013,10 @@ async function handleBattlePassClaim(request) {
       return NextResponse.json({ error: 'Bereits heute geclaimt! Komm morgen wieder.' }, { status: 400 });
     }
 
-    const nextTier = (progress.current_tier || 0) + 1;
+    // 🆕 NEU: nextTier basierend auf Tag im Monat (nicht currentTier + 1)
+    const expectedTier = getExpectedTierBasedOnDay();
+    const nextTier = Math.max(progress.current_tier + 1, expectedTier);
+    
     if (nextTier > BATTLE_PASS_CONFIG.TIERS_COUNT) {
       return NextResponse.json({ error: 'Battle Pass komplett!' }, { status: 400 });
     }
@@ -2259,7 +2280,10 @@ async function handleBattlePassSkipTier(request) {
       return NextResponse.json({ error: 'Bitte erst normal claimen!' }, { status: 400 });
     }
 
-    const nextTier = (progress.current_tier || 0) + 1;
+    // 🆕 NEU: nextTier basierend auf Tag im Monat
+    const expectedTier = getExpectedTierBasedOnDay();
+    const nextTier = Math.max(progress.current_tier + 1, expectedTier);
+    
     if (nextTier > BATTLE_PASS_CONFIG.TIERS_COUNT) {
       return NextResponse.json({ error: 'Battle Pass komplett!' }, { status: 400 });
     }

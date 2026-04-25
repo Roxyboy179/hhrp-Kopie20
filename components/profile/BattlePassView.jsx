@@ -210,8 +210,9 @@ export default function BattlePassView() {
           
           setPurchasing(false);
           toast.dismiss('premium-purchase');
-          toast.success('✨ Premium Battle Pass aktiviert!', {
-            icon: '👑',
+          toast.success('Premium Battle Pass aktiviert!', {
+            id: 'premium-purchase-success',
+            icon: <Crown className="w-5 h-5 text-yellow-400" />,
             duration: 5000,
           });
           
@@ -250,8 +251,12 @@ export default function BattlePassView() {
           claimStartedAtRef.current = null;
           setClaiming(false);
           toast.dismiss('tier-claim');
-          toast.success('🎁 Tier geclaimt!', {
+          
+          // ✅ Eindeutiger Success-Toast mit ID um Duplikate zu vermeiden
+          toast.success('Tier geclaimt!', {
+            id: 'tier-claim-success',
             duration: 4000,
+            icon: <Gift className="w-5 h-5 text-purple-400" />,
           });
           
           // 🎊 Confetti ERST nach erfolgreichem Abschluss
@@ -288,7 +293,9 @@ export default function BattlePassView() {
           cancelStartedAtRef.current = null;
           setCancelling(false);
           toast.dismiss('premium-cancel');
-          toast.success('✅ Premium Battle Pass gekündigt', {
+          toast.success('Premium Battle Pass gekündigt', {
+            id: 'premium-cancel-success',
+            icon: <X className="w-5 h-5 text-red-400" />,
             duration: 5000,
           });
           
@@ -321,7 +328,11 @@ export default function BattlePassView() {
           skipStartedAtRef.current = null;
           setSkipping(false);
           toast.dismiss('tier-skip');
-          toast.success('⚡ Tier übersprungen!', { duration: 4000 });
+          toast.success('Tier übersprungen!', { 
+            id: 'tier-skip-success', 
+            icon: <Zap className="w-5 h-5 text-orange-400" />,
+            duration: 4000 
+          });
           confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
           loadBattlePass();
         }
@@ -351,7 +362,11 @@ export default function BattlePassView() {
           autoclaimStartedAtRef.current = null;
           setBuyingAutoclaim(false);
           toast.dismiss('autoclaim-buy');
-          toast.success('✨ Auto-Claim aktiviert! Ab jetzt wird automatisch geclaimt.', { duration: 5000 });
+          toast.success('Auto-Claim aktiviert! Ab jetzt wird automatisch geclaimt.', { 
+            id: 'autoclaim-buy-success',
+            icon: <Zap className="w-5 h-5 text-blue-400" />,
+            duration: 5000 
+          });
           confetti({ particleCount: 150, spread: 80, origin: { y: 0.5 } });
           loadBattlePass();
         }
@@ -381,7 +396,11 @@ export default function BattlePassView() {
           lifetimeStartedAtRef.current = null;
           setBuyingLifetime(false);
           toast.dismiss('lifetime-buy');
-          toast.success('🎉 Lifetime Pass aktiviert! Du bekommst jeden Monat automatisch den Pass!', { duration: 6000 });
+          toast.success('Lifetime Pass aktiviert! Du bekommst jeden Monat automatisch den Ultra+ Pass!', { 
+            id: 'lifetime-buy-success',
+            icon: <Crown className="w-5 h-5 text-purple-400" />,
+            duration: 6000 
+          });
           confetti({ particleCount: 200, spread: 100, origin: { y: 0.4 } });
           loadBattlePass();
         }
@@ -433,9 +452,11 @@ export default function BattlePassView() {
         cancelQueueIdRef.current = json.queueId;
         cancelStartedAtRef.current = Date.now();
         
+        toast.dismiss('premium-cancel');
         toast.loading('Warte auf HHRP Server...', {
           duration: 60000,
           id: 'premium-cancel',
+          icon: <Loader2 className="w-4 h-4 animate-spin" />,
         });
       } else {
         setCancelling(false);
@@ -468,9 +489,11 @@ export default function BattlePassView() {
         purchaseStartedAtRef.current = Date.now();
         
         // ⏳ Kein Confetti hier — erst nach erfolgreicher Bestätigung in checkQueueStatus
+        toast.dismiss('premium-purchase');
         toast.loading('Warte auf HHRP Server...', {
           duration: 60000,
           id: 'premium-purchase',
+          icon: <Loader2 className="w-4 h-4 animate-spin" />,
         });
       } else {
         setPurchasing(false);
@@ -526,9 +549,11 @@ export default function BattlePassView() {
         claimStartedAtRef.current = Date.now();
         
         // ⏳ Kein Confetti hier — erst nach erfolgreicher Bestätigung in checkQueueStatus
+        toast.dismiss('tier-claim'); // ✅ Dismiss any existing toast first
         toast.loading('Warte auf HHRP Server...', {
           duration: 60000,
           id: 'tier-claim',
+          icon: <Loader2 className="w-4 h-4 animate-spin" />,
         });
         
         // Queue-Check läuft automatisch
@@ -558,9 +583,11 @@ export default function BattlePassView() {
         if (json.queueId) {
           skipQueueIdRef.current = json.queueId;
           skipStartedAtRef.current = Date.now();
+          toast.dismiss('tier-skip');
           toast.loading('Warte auf HHRP Server...', {
             duration: 60000,
             id: 'tier-skip',
+            icon: <Loader2 className="w-4 h-4 animate-spin" />,
           });
         } else {
           // Fallback (sollte mit neuer API nicht mehr passieren)
@@ -593,9 +620,11 @@ export default function BattlePassView() {
         if (json.queueId) {
           autoclaimQueueIdRef.current = json.queueId;
           autoclaimStartedAtRef.current = Date.now();
+          toast.dismiss('autoclaim-buy');
           toast.loading('Warte auf HHRP Server...', {
             duration: 60000,
             id: 'autoclaim-buy',
+            icon: <Loader2 className="w-4 h-4 animate-spin" />,
           });
         } else {
           toast.success('✨ Auto-Claim aktiviert! Ab jetzt wird automatisch geclaimt.');
@@ -627,9 +656,11 @@ export default function BattlePassView() {
         if (json.queueId) {
           lifetimeQueueIdRef.current = json.queueId;
           lifetimeStartedAtRef.current = Date.now();
+          toast.dismiss('lifetime-buy');
           toast.loading('Warte auf HHRP Server...', {
             duration: 60000,
             id: 'lifetime-buy',
+            icon: <Loader2 className="w-4 h-4 animate-spin" />,
           });
         } else {
           toast.success('🎉 Lifetime Pass aktiviert! Du bekommst jeden Monat automatisch den Pass!', {
@@ -657,7 +688,9 @@ export default function BattlePassView() {
     
     // Copy to clipboard
     navigator.clipboard.writeText(text).then(() => {
-      toast.success('📋 In Zwischenablage kopiert!');
+      toast.success('In Zwischenablage kopiert!', {
+        icon: <Share2 className="w-5 h-5 text-blue-400" />,
+      });
     }).catch(() => {
       toast.error('Konnte nicht kopieren');
     });
@@ -682,11 +715,11 @@ export default function BattlePassView() {
   }
 
   const { userProgress, rewards, season, daysRemaining, pricing, canPurchase, minDaysToPurchase, tiers, pricingByTier } = data;
-  const { currentTier, purchased, canClaimToday, missedDays, cancelled, cancelledAt, passType, autorenew, auto_claim_enabled, lifetime_pass } = userProgress;
+  const { currentTier, purchased, canClaimToday, missedDays, missedTiers, nextTier: nextTierFromBackend, cancelled, cancelledAt, passType, autorenew, auto_claim_enabled, lifetime_pass } = userProgress;
   const seasonName = `${season.month}/${season.year}`;
   const progress = (currentTier / 30) * 100;
   const allClaimed = currentTier >= 30;
-  const nextTier = currentTier + 1;
+  const nextTier = nextTierFromBackend || (currentTier + 1); // Fallback für alte API
   const purchaseBlocked = canPurchase === false; // weniger als 5 Tage übrig
   const currentPrice = pricing?.current ?? 1500;
   const originalPrice = pricing?.original ?? 1500;
@@ -981,15 +1014,15 @@ export default function BattlePassView() {
             )}
 
             {/* Premium User: Bereits geclaimt + Skip Button */}
-            {!canClaimToday && !allClaimed && !claiming && missedDays === 0 && purchased && (
+            {!canClaimToday && !allClaimed && !claiming && purchased && (
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-xl md:rounded-2xl border border-white/20 bg-white/5 backdrop-blur-md shadow-lg flex-1">
                   <Clock className="w-4 h-4 text-white/50 flex-shrink-0" />
                   <span className="text-white/70 text-xs md:text-sm font-medium">
-                    Bereits geclaimt — morgen wieder
+                    {missedDays > 0 ? `${missedDays} Tag${missedDays > 1 ? 'e' : ''} verpasst` : 'Bereits geclaimt — morgen wieder'}
                   </span>
                 </div>
-                {/* 🆕 Tier-Skip Button */}
+                {/* 🆕 Tier-Skip Button - Auch für verpasste Tage! */}
                 {!skipping && (
                   <Button
                     onClick={() => setSkipConfirmOpen(true)}
@@ -1145,7 +1178,8 @@ export default function BattlePassView() {
           {rewards.map((tier) => {
             const isUnlocked = tier.tier <= currentTier;
             const isCurrent = tier.tier === nextTier;
-            const isLocked = tier.tier > currentTier;
+            const isMissed = (missedTiers || []).includes(tier.tier); // 🆕 Verpasste Tiers
+            const isLocked = tier.tier > nextTier && !isMissed;
 
             return (
               <TierCard
@@ -1154,6 +1188,7 @@ export default function BattlePassView() {
                 isUnlocked={isUnlocked}
                 isCurrent={isCurrent}
                 isLocked={isLocked}
+                isMissed={isMissed}
                 purchased={purchased}
                 canClaim={canClaimToday && isCurrent}
               />
@@ -1550,7 +1585,7 @@ export default function BattlePassView() {
 }
 
 // ==================== TIER CARD COMPONENT ==================== 
-function TierCard({ tier, isUnlocked, isCurrent, isLocked, purchased, canClaim }) {
+function TierCard({ tier, isUnlocked, isCurrent, isLocked, isMissed, purchased, canClaim }) {
   const freeReward = tier.free;
   const premiumReward = tier.premium;
   
@@ -1563,13 +1598,16 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, purchased, canClaim }
         relative rounded-xl md:rounded-2xl overflow-hidden border-2 transition-all duration-300
         ${isCurrent ? 'border-yellow-400 ring-2 ring-yellow-400/50 ring-offset-2 ring-offset-black scale-105' : ''}
         ${isUnlocked && !isCurrent ? 'border-green-400/40' : ''}
-        ${isLocked ? 'border-white/10' : ''}
+        ${isMissed ? 'border-red-500/40 opacity-60' : ''}
+        ${isLocked && !isMissed ? 'border-white/10' : ''}
       `}
       style={{
         background: isUnlocked 
           ? 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.1))' 
           : isCurrent 
           ? 'linear-gradient(135deg, rgba(251,191,36,0.2), rgba(245,158,11,0.15))'
+          : isMissed
+          ? 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(220,38,38,0.1))'
           : 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))',
       }}
     >
@@ -1582,6 +1620,22 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, purchased, canClaim }
       {isUnlocked && (
         <div className="absolute top-1 right-1 md:top-1.5 md:right-1.5 z-10 animate-bounce">
           <Check className="w-4 h-4 md:w-5 md:h-5 p-0.5 md:p-1 rounded-full bg-green-500 text-white shadow-lg shadow-green-500/50" />
+        </div>
+      )}
+
+      {/* 🆕 Missed Badge */}
+      {isMissed && (
+        <div className="absolute top-1 right-1 md:top-1.5 md:right-1.5 z-10">
+          <X className="w-4 h-4 md:w-5 md:h-5 p-0.5 md:p-1 rounded-full bg-red-500 text-white shadow-lg shadow-red-500/50" />
+        </div>
+      )}
+
+      {/* Missed Overlay */}
+      {isMissed && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-[2px] z-10">
+          <X className="w-6 h-6 md:w-8 md:h-8 text-red-400 mb-1" />
+          <span className="text-[10px] md:text-xs font-bold text-red-300">Verpasst</span>
+          <span className="text-[8px] md:text-[9px] text-red-200/80 mt-0.5">Skip möglich</span>
         </div>
       )}
 
