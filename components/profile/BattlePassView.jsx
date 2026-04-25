@@ -484,7 +484,6 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, purchased, canClaim }
         ${isCurrent ? 'border-yellow-400 ring-2 ring-yellow-400/50 ring-offset-2 ring-offset-black scale-105' : ''}
         ${isUnlocked && !isCurrent ? 'border-green-400/40' : ''}
         ${isLocked ? 'border-white/10' : ''}
-        ${canClaim ? 'animate-card-flip' : ''}
       `}
       style={{
         background: isUnlocked 
