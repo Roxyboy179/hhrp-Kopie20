@@ -8,6 +8,16 @@ import {
   Shield, Plane,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 // Icon-Mapper für Reward-Typen (Lucide Icons)
 const REWARD_ICON = {
@@ -63,6 +73,7 @@ export default function BattlePassView() {
   const [purchasing, setPurchasing] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [data, setData] = useState(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -99,9 +110,13 @@ export default function BattlePassView() {
     }
   };
 
-  const handlePurchase = async () => {
-    if (!confirm('Battle Pass für 1.500 Credits kaufen?\n\nDu erhältst Zugriff auf den Premium-Track mit doppelten Belohnungen!')) return;
+  // Öffnet das Confirm-Modal (kein Browser-confirm mehr)
+  const handlePurchaseClick = () => {
+    setConfirmOpen(true);
+  };
 
+  const handlePurchase = async () => {
+    setConfirmOpen(false);
     setPurchasing(true);
     try {
       const res = await fetch('/api/battle-pass/purchase', { method: 'POST' });
@@ -200,7 +215,7 @@ export default function BattlePassView() {
               </div>
             ) : (
               <Button
-                onClick={handlePurchase}
+                onClick={handlePurchaseClick}
                 disabled={purchasing}
                 className="h-11 px-5 rounded-xl font-semibold text-black"
                 style={{ background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' }}
@@ -407,6 +422,61 @@ export default function BattlePassView() {
           </ul>
         </div>
       </div>
+
+      {/* ───────── Battle Pass Kauf Bestätigungs-Dialog ───────── */}
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent className="border-white/10 bg-gradient-to-br from-yellow-950/95 via-black/95 to-black/95 backdrop-blur-xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-yellow-300">
+              <Crown className="w-5 h-5" />
+              Premium Battle Pass kaufen?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between rounded-lg border border-yellow-500/20 bg-yellow-500/5 px-3 py-2">
+                  <span className="text-sm text-white/70">Kosten</span>
+                  <span className="flex items-center gap-1.5 font-semibold text-yellow-300">
+                    <Coins className="w-4 h-4" />
+                    1.500 Credits
+                  </span>
+                </div>
+                <div className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white/80">
+                  <div className="mb-1.5 font-medium text-white">Du erhältst:</div>
+                  <ul className="space-y-1 text-xs">
+                    <li className="flex items-start gap-2">
+                      <Sparkles className="w-3.5 h-3.5 text-yellow-300 mt-0.5 flex-shrink-0" />
+                      <span>Zugriff auf alle <span className="text-yellow-200">30 Premium-Tier-Belohnungen</span></span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Gift className="w-3.5 h-3.5 text-yellow-300 mt-0.5 flex-shrink-0" />
+                      <span>Doppelte Belohnungen pro Daily Claim (Free + Premium)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Crown className="w-3.5 h-3.5 text-yellow-300 mt-0.5 flex-shrink-0" />
+                      <span>Exklusive Items, VIP-Pässe & große Geld-Boni</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 px-3 py-2 text-xs text-orange-200/80">
+                  ⚠️ Der Bot prüft dein Guthaben und zieht die Credits dann automatisch ab. Aktivierung in wenigen Sekunden.
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="bg-white/5 hover:bg-white/10 border-white/10 text-white">
+              Abbrechen
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handlePurchase}
+              className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-400 hover:to-amber-400 text-black font-semibold border-0"
+            >
+              <Crown className="w-4 h-4 mr-1.5" />
+              Jetzt für 1.500 Credits kaufen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -2899,10 +2899,8 @@ export async function GET(request) {
     case 'admin/settings': return handleAdminGetSettings(request);
     case 'admin/verwarnungen-suche': return handleAdminVerwarnungenSuche(request);
     
-    // Battle Pass Endpoints
+    // Battle Pass Endpoints (nur GET hier; POST + claim/purchase sind im POST-Handler)
     case 'battle-pass/current': return handleBattlePassCurrent(request);
-    case 'battle-pass/purchase': return handleBattlePassPurchase(request);
-    case 'battle-pass/claim': return handleBattlePassClaim(request);
     case 'team/members': return handleGetTeamMembers(request);
     case 'shop/items': return handleGetShopItems(request);
     case 'licenses/pending-actions': return handleGetPendingLicenseActions(request);
@@ -3089,6 +3087,14 @@ export async function POST(request) {
   
   console.log('[POST] Path:', p);
   console.log('[POST] Full URL:', url.pathname);
+
+  // ===== BATTLE PASS POST ENDPOINTS =====
+  if (p === 'battle-pass/purchase') {
+    return handleBattlePassPurchase(request);
+  }
+  if (p === 'battle-pass/claim') {
+    return handleBattlePassClaim(request);
+  }
 
   // ===== WEBSITE STATISTICS TRACKING =====
   
