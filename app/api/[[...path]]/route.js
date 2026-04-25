@@ -1495,6 +1495,34 @@ async function getUserBattlePassProgress(discordUserId, month, year) {
   }
 }
 
+// GET /api/battle-pass/queue-status/:id
+// Prüft ob Queue-Eintrag noch existiert (gelöscht = verarbeitet)
+async function handleBattlePassQueueStatus(request, queueId) {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('pending_battle_pass_rewards')
+      .select('id, status')
+      .eq('id', queueId)
+      .maybeSingle();
+    
+    if (error) {
+      console.error('[Battle Pass] Queue Status Error:', error);
+      return NextResponse.json({ exists: false, processed: true });
+    }
+    
+    // Wenn data null = gelöscht = verarbeitet
+    if (!data) {
+      return NextResponse.json({ exists: false, processed: true });
+    }
+    
+    // Wenn noch da = noch nicht verarbeitet
+    return NextResponse.json({ exists: true, processed: false, status: data.status });
+  } catch (error) {
+    console.error('[Battle Pass] Queue Status Exception:', error);
+    return NextResponse.json({ exists: false, processed: true });
+  }
+}
+
 // Helper: Auth-Context für Battle Pass (User-Token via auth_token cookie)
 function getBpAuthContext(request) {
   const decoded = getUserFromRequest(request);
@@ -1678,7 +1706,7 @@ async function handleBattlePassPurchase(request) {
     }
 
     // Pending-Eintrag anlegen → Bot übernimmt
-    const { error: insertErr } = await supabaseAdmin
+    const { data: inserted, error: insertErr } = await supabaseAdmin
       .from('pending_battle_pass_rewards')
       .insert({
         discord_user_id: user.discordUserId,
@@ -1687,7 +1715,9 @@ async function handleBattlePassPurchase(request) {
         season_month: month,
         season_year: year,
         status: 'pending',
-      });
+      })
+      .select('id')
+      .single();
 
     if (insertErr) {
       console.error('[Battle Pass] Pending Purchase Insert Error:', insertErr);
@@ -1697,6 +1727,7 @@ async function handleBattlePassPurchase(request) {
     return NextResponse.json({
       success: true,
       pending: true,
+      queueId: inserted.id, // ✅ Queue-ID für Polling
       message: 'Battle Pass Kauf wird verarbeitet… (Credits werden vom Bot abgezogen, in wenigen Sekunden aktiv)',
     });
   } catch (error) {
@@ -1765,25 +1796,27 @@ async function handleBattlePassClaim(request) {
     }
 
     if (pendingRows.length > 0) {
-      const { error: insertErr } = await supabaseAdmin
+      const { data: inserted, error: insertErr } = await supabaseAdmin
         .from('pending_battle_pass_rewards')
-        .insert(pendingRows);
+        .insert(pendingRows)
+        .select('id');
       if (insertErr) {
         console.error('[Battle Pass] Pending Claim Insert Error:', insertErr);
         return NextResponse.json({ error: 'Konnte Belohnung nicht in Queue stellen', details: insertErr.message }, { status: 500 });
       }
+      
+      // Vorschau-Belohnungen (zeigen was der Bot gleich liefert) – noch ohne Duplicate-Resolution
+      const grantedRewards = pendingRows.map((r) => ({ track: r.track, ...r.reward_data, pending: true }));
+
+      return NextResponse.json({
+        success: true,
+        newTier: nextTier,
+        grantedRewards,
+        pending: true,
+        queueIds: inserted.map(i => i.id), // ✅ Queue-IDs für Polling
+        message: 'Belohnungen werden vom Bot zugewiesen (in wenigen Sekunden sichtbar)',
+      });
     }
-
-    // Vorschau-Belohnungen (zeigen was der Bot gleich liefert) – noch ohne Duplicate-Resolution
-    const grantedRewards = pendingRows.map((r) => ({ track: r.track, ...r.reward_data, pending: true }));
-
-    return NextResponse.json({
-      success: true,
-      newTier: nextTier,
-      grantedRewards,
-      pending: true,
-      message: 'Belohnungen werden vom Bot zugewiesen (in wenigen Sekunden sichtbar)',
-    });
   } catch (error) {
     console.error('[Battle Pass] Claim Error:', error);
     return NextResponse.json({ error: 'Serverfehler', details: error.message }, { status: 500 });
@@ -2971,6 +3004,13 @@ export async function GET(request) {
     
     // Battle Pass Endpoints (nur GET hier; POST + claim/purchase sind im POST-Handler)
     case 'battle-pass/current': return handleBattlePassCurrent(request);
+    
+    // ✅ Queue Status Check (für Eintrag-gelöscht-Polling)
+    if (p.startsWith('battle-pass/queue/')) {
+      const queueId = p.split('/')[2];
+      return handleBattlePassQueueStatus(request, queueId);
+    }
+    
     case 'team/members': return handleGetTeamMembers(request);
     case 'shop/items': return handleGetShopItems(request);
     case 'licenses/pending-actions': return handleGetPendingLicenseActions(request);

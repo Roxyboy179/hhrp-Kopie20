@@ -117,56 +117,87 @@ export default function BattlePassView() {
   const [claiming, setClaiming] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [purchaseQueueId, setPurchaseQueueId] = useState(null); // ✅ Queue-ID für Purchase
+  const [claimQueueIds, setClaimQueueIds] = useState([]); // ✅ Queue-IDs für Claims
   const pollingRef = useRef(null);
+  const queueCheckRef = useRef(null); // ✅ Interval für Queue-Check
   const confettiIntervalRef = useRef(null);
 
   useEffect(() => {
     loadBattlePass();
     
-    // ✅ Auto-Refresh alle 3 Sekunden (für schnellere Bot-Updates)
-    pollingRef.current = setInterval(loadBattlePass, 3000);
+    // ✅ Check Queue Status alle 2 Sekunden (schneller als Battle Pass reload)
+    queueCheckRef.current = setInterval(checkQueueStatus, 2000);
     
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
+      if (queueCheckRef.current) clearInterval(queueCheckRef.current);
       if (confettiIntervalRef.current) clearInterval(confettiIntervalRef.current);
     };
-  }, []);
+  }, [purchaseQueueId, claimQueueIds]);
+  
+  // ✅ Prüft ob Queue-Einträge gelöscht wurden = Bot fertig
+  const checkQueueStatus = async () => {
+    // Purchase prüfen
+    if (purchaseQueueId) {
+      try {
+        const res = await fetch(`/api/battle-pass/queue/${purchaseQueueId}`);
+        const json = await res.json();
+        
+        if (json.processed) {
+          // ✅ Eintrag gelöscht = Bot hat verarbeitet!
+          setPurchaseQueueId(null);
+          
+          if (confettiIntervalRef.current) {
+            clearInterval(confettiIntervalRef.current);
+            confettiIntervalRef.current = null;
+          }
+          
+          setPurchasing(false);
+          toast.dismiss('premium-purchase');
+          toast.success('✨ Premium Battle Pass aktiviert!', {
+            icon: '👑',
+            duration: 5000,
+          });
+          
+          // Lade Battle Pass neu
+          loadBattlePass();
+        }
+      } catch (e) {
+        console.error('[BP] Queue check error:', e);
+      }
+    }
+    
+    // Claims prüfen
+    if (claimQueueIds.length > 0) {
+      try {
+        const checks = await Promise.all(
+          claimQueueIds.map(id => fetch(`/api/battle-pass/queue/${id}`).then(r => r.json()))
+        );
+        
+        // Wenn alle gelöscht = Bot fertig
+        if (checks.every(c => c.processed)) {
+          setClaimQueueIds([]);
+          setClaiming(false);
+          toast.dismiss('tier-claim');
+          toast.success('🎁 Tier geclaimt!', {
+            duration: 4000,
+          });
+          
+          // Lade Battle Pass neu
+          loadBattlePass();
+        }
+      } catch (e) {
+        console.error('[BP] Queue check error:', e);
+      }
+    }
+  };
 
   const loadBattlePass = async () => {
     try {
       const res = await fetch('/api/battle-pass/current');
       const json = await res.json();
       if (res.ok) {
-        const oldPurchased = data?.userProgress?.purchased;
-        const newPurchased = json.userProgress.purchased;
-        
-        // ✅ Wenn Premium gerade aktiviert wurde, stoppe Gold-Regen
-        if (!oldPurchased && newPurchased && confettiIntervalRef.current) {
-          clearInterval(confettiIntervalRef.current);
-          confettiIntervalRef.current = null;
-          setPurchasing(false);
-          
-          // ✅ Schließe Loading-Toast
-          toast.dismiss('premium-purchase');
-          toast.success('✨ Premium Battle Pass aktiviert!', {
-            icon: '👑',
-            duration: 5000,
-          });
-        }
-        
-        // ✅ Wenn Tier geclaimt wurde, stoppe Claim-Animation
-        const oldTier = data?.userProgress?.currentTier || 0;
-        const newTier = json.userProgress.currentTier;
-        if (claiming && newTier > oldTier) {
-          setClaiming(false);
-          
-          // ✅ Schließe Loading-Toast
-          toast.dismiss('tier-claim');
-          toast.success(`🎁 Tier ${newTier} geclaimt!`, {
-            duration: 4000,
-          });
-        }
-        
         setData(json);
       } else {
         if (!data) {
@@ -194,7 +225,10 @@ export default function BattlePassView() {
       const json = await res.json();
       
       if (res.ok) {
-        // 🎉 Starte Premium-Kauf Animation (läuft bis Bot bestätigt)
+        // ✅ Speichere Queue-ID für Status-Prüfung
+        setPurchaseQueueId(json.queueId);
+        
+        // 🎉 Starte Premium-Kauf Animation (läuft bis Queue-Eintrag gelöscht)
         confettiIntervalRef.current = startPremiumConfetti();
         
         toast.loading('Warte auf Bot-Bestätigung...', {
@@ -220,6 +254,9 @@ export default function BattlePassView() {
       const json = await res.json();
       
       if (res.ok) {
+        // ✅ Speichere Queue-IDs für Status-Prüfung
+        setClaimQueueIds(json.queueIds || []);
+        
         // 🎊 Nur Confetti, kein Overlay
         fireConfetti();
         
@@ -228,7 +265,7 @@ export default function BattlePassView() {
           id: 'tier-claim',
         });
         
-        // Warte auf Bot-Bestätigung (Polling läuft weiter)
+        // Queue-Check läuft automatisch
       } else {
         setClaiming(false);
         toast.error(json.error || 'Claim fehlgeschlagen');
