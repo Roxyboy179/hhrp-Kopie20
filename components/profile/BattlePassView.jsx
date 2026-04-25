@@ -145,6 +145,9 @@ export default function BattlePassView() {
           clearInterval(confettiIntervalRef.current);
           confettiIntervalRef.current = null;
           setPurchasing(false);
+          
+          // ✅ Schließe Loading-Toast
+          toast.dismiss('premium-purchase');
           toast.success('✨ Premium Battle Pass aktiviert!', {
             icon: '👑',
             duration: 5000,
@@ -156,6 +159,12 @@ export default function BattlePassView() {
         const newTier = json.userProgress.currentTier;
         if (claiming && newTier > oldTier) {
           setClaiming(false);
+          
+          // ✅ Schließe Loading-Toast
+          toast.dismiss('tier-claim');
+          toast.success(`🎁 Tier ${newTier} geclaimt!`, {
+            duration: 4000,
+          });
         }
         
         setData(json);
