@@ -90,19 +90,50 @@ export default function VerwarnungenPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0a0b' }}>
+      <div 
+        className="min-h-screen flex items-center justify-center" 
+        style={{ 
+          background: 'linear-gradient(135deg, #0f0f10 0%, #1a1a1d 50%, #0f0f10 100%)'
+        }}
+      >
         <Loader2 className="w-8 h-8 animate-spin text-white/50" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-6 sm:p-8 relative" style={{ background: '#0a0a0b' }}>
-      {/* Ambient background elements für Glas-Effekt */}
-      <div aria-hidden="true" className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
-        <div className="absolute top-[15%] left-[5%] w-[500px] h-[500px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(234,179,8,0.15), transparent 60%)', filter: 'blur(100px)' }} />
-        <div className="absolute top-[40%] right-[10%] w-[450px] h-[450px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(249,115,22,0.12), transparent 60%)', filter: 'blur(100px)' }} />
-        <div className="absolute bottom-[20%] left-[40%] w-[400px] h-[400px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(234,179,8,0.1), transparent 60%)', filter: 'blur(100px)' }} />
+    <div 
+      className="min-h-screen p-6 sm:p-8 relative overflow-hidden" 
+      style={{ 
+        background: 'linear-gradient(135deg, #0f0f10 0%, #1a1a1d 50%, #0f0f10 100%)'
+      }}
+    >
+      {/* Animated Ambient Glows */}
+      <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 0 }}>
+        <div 
+          className="absolute top-[10%] left-[5%] w-[600px] h-[600px] rounded-full opacity-40"
+          style={{ 
+            background: 'radial-gradient(circle, rgba(234,179,8,0.25), rgba(249,115,22,0.15), transparent 70%)',
+            filter: 'blur(120px)',
+            animation: 'pulse 8s ease-in-out infinite'
+          }} 
+        />
+        <div 
+          className="absolute top-[50%] right-[5%] w-[500px] h-[500px] rounded-full opacity-30"
+          style={{ 
+            background: 'radial-gradient(circle, rgba(249,115,22,0.2), rgba(234,179,8,0.1), transparent 70%)',
+            filter: 'blur(120px)',
+            animation: 'pulse 10s ease-in-out infinite 2s'
+          }} 
+        />
+        <div 
+          className="absolute bottom-[10%] left-[30%] w-[450px] h-[450px] rounded-full opacity-35"
+          style={{ 
+            background: 'radial-gradient(circle, rgba(234,179,8,0.18), transparent 70%)',
+            filter: 'blur(100px)',
+            animation: 'pulse 12s ease-in-out infinite 4s'
+          }} 
+        />
       </div>
       
       <div className="max-w-7xl mx-auto relative" style={{ zIndex: 1 }}>
@@ -119,10 +150,13 @@ export default function VerwarnungenPage() {
 
         {/* Suchformular */}
         <div 
-          className="glass rounded-2xl p-5 sm:p-6 mb-6"
+          className="rounded-2xl p-5 sm:p-6 mb-6 relative overflow-hidden"
           style={{
-            backdropFilter: 'blur(20px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            background: 'rgba(255, 255, 255, 0.03)',
+            backdropFilter: 'blur(40px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
           }}
         >
           <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
@@ -166,10 +200,13 @@ export default function VerwarnungenPage() {
           <div className="space-y-4">
             {searchResults.length === 0 ? (
               <div 
-                className="glass rounded-2xl p-12 text-center"
+                className="rounded-2xl p-12 text-center relative overflow-hidden"
                 style={{
-                  backdropFilter: 'blur(20px) saturate(180%)',
-                  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  backdropFilter: 'blur(40px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
                 }}
               >
                 <Search className="w-16 h-16 text-white/15 mx-auto mb-4" />
@@ -180,10 +217,13 @@ export default function VerwarnungenPage() {
               searchResults.map((user, index) => (
                 <div 
                   key={index} 
-                  className="glass rounded-2xl p-5 sm:p-6"
+                  className="rounded-2xl p-5 sm:p-6 relative overflow-hidden"
                   style={{
-                    backdropFilter: 'blur(20px) saturate(180%)',
-                    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    backdropFilter: 'blur(40px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
                   }}
                 >
                   {/* User Header */}
@@ -278,10 +318,13 @@ export default function VerwarnungenPage() {
 
         {!hasSearched && (
           <div 
-            className="glass rounded-2xl p-12 text-center"
+            className="rounded-2xl p-12 text-center relative overflow-hidden"
             style={{
-              backdropFilter: 'blur(20px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+              background: 'rgba(255, 255, 255, 0.03)',
+              backdropFilter: 'blur(40px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
             }}
           >
             <AlertTriangle className="w-16 h-16 text-yellow-400/20 mx-auto mb-4" />
