@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 import {
   Crown, Lock, Check, Clock, Gift, Sparkles, AlertTriangle,
-  Coins, Banknote, Star, Ticket, Car, Bike, Truck, Crosshair, Shield, X, Zap,
+  Coins, Banknote, Star, Ticket, Car, Bike, Truck, Crosshair, Shield, X, Zap, Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -65,7 +65,7 @@ function getRewardColor(reward) {
   return REWARD_COLOR[reward.type] || 'text-white/70';
 }
 
-// ✨ Confetti Animationen
+// ✨ Confetti Animation (nur Confetti, kein Overlay)
 function fireConfetti() {
   const count = 200;
   const defaults = { origin: { y: 0.7 } };
@@ -85,10 +85,8 @@ function fireConfetti() {
   fire(0.1, { spread: 120, startVelocity: 45 });
 }
 
-// 🎉 Premium Kauf Animation (goldener Regen)
-function firePremiumConfetti() {
-  const duration = 3000;
-  const animationEnd = Date.now() + duration;
+// 🎉 Premium Kauf Animation (goldener Regen) - läuft bis Bot bestätigt
+function startPremiumConfetti() {
   const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
 
   function randomInRange(min, max) {
@@ -96,27 +94,21 @@ function firePremiumConfetti() {
   }
 
   const interval = setInterval(() => {
-    const timeLeft = animationEnd - Date.now();
-
-    if (timeLeft <= 0) {
-      return clearInterval(interval);
-    }
-
-    const particleCount = 50 * (timeLeft / duration);
-
     confetti({
       ...defaults,
-      particleCount,
+      particleCount: 25,
       origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
       colors: ['#FFD700', '#FFA500', '#FFFF00', '#FFE4B5'],
     });
     confetti({
       ...defaults,
-      particleCount,
+      particleCount: 25,
       origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
       colors: ['#FFD700', '#FFA500', '#FFFF00', '#FFE4B5'],
     });
   }, 250);
+
+  return interval; // Return interval so we can clear it
 }
 
 export default function BattlePassView() {
@@ -125,17 +117,18 @@ export default function BattlePassView() {
   const [claiming, setClaiming] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [showClaimAnim, setShowClaimAnim] = useState(false);
   const pollingRef = useRef(null);
+  const confettiIntervalRef = useRef(null);
 
   useEffect(() => {
     loadBattlePass();
     
-    // ✅ Auto-Refresh alle 5 Sekunden (für Echtzeit-Updates)
-    pollingRef.current = setInterval(loadBattlePass, 5000);
+    // ✅ Auto-Refresh alle 3 Sekunden (für schnellere Bot-Updates)
+    pollingRef.current = setInterval(loadBattlePass, 3000);
     
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
+      if (confettiIntervalRef.current) clearInterval(confettiIntervalRef.current);
     };
   }, []);
 
@@ -144,6 +137,27 @@ export default function BattlePassView() {
       const res = await fetch('/api/battle-pass/current');
       const json = await res.json();
       if (res.ok) {
+        const oldPurchased = data?.userProgress?.purchased;
+        const newPurchased = json.userProgress.purchased;
+        
+        // ✅ Wenn Premium gerade aktiviert wurde, stoppe Gold-Regen
+        if (!oldPurchased && newPurchased && confettiIntervalRef.current) {
+          clearInterval(confettiIntervalRef.current);
+          confettiIntervalRef.current = null;
+          setPurchasing(false);
+          toast.success('✨ Premium Battle Pass aktiviert!', {
+            icon: '👑',
+            duration: 5000,
+          });
+        }
+        
+        // ✅ Wenn Tier geclaimt wurde, stoppe Claim-Animation
+        const oldTier = data?.userProgress?.currentTier || 0;
+        const newTier = json.userProgress.currentTier;
+        if (claiming && newTier > oldTier) {
+          setClaiming(false);
+        }
+        
         setData(json);
       } else {
         if (!data) {
@@ -171,85 +185,49 @@ export default function BattlePassView() {
       const json = await res.json();
       
       if (res.ok) {
-        // 🎉 Premium Kauf Animation
-        firePremiumConfetti();
+        // 🎉 Starte Premium-Kauf Animation (läuft bis Bot bestätigt)
+        confettiIntervalRef.current = startPremiumConfetti();
         
-        // Optimistic Update
-        if (data) {
-          setData({
-            ...data,
-            userProgress: { ...data.userProgress, purchased: true }
-          });
-        }
-        
-        toast.success('✨ Premium Battle Pass aktiviert!', {
-          icon: '👑',
-          duration: 5000,
+        toast.loading('Warte auf Bot-Bestätigung...', {
+          duration: 30000,
+          id: 'premium-purchase',
         });
-        
-        // Lade nach 2s neu für finale Daten
-        setTimeout(loadBattlePass, 2000);
       } else {
+        setPurchasing(false);
         toast.error(json.error || 'Kauf fehlgeschlagen');
       }
     } catch (error) {
       console.error('[BP] Purchase Error:', error);
-      toast.error('Verbindungsfehler beim Kauf');
-    } finally {
       setPurchasing(false);
+      toast.error('Verbindungsfehler beim Kauf');
     }
   };
 
   const handleClaim = async () => {
     setClaiming(true);
-    setShowClaimAnim(true);
     
     try {
       const res = await fetch('/api/battle-pass/claim', { method: 'POST' });
       const json = await res.json();
       
       if (res.ok) {
-        // 🎊 Claim Animation
+        // 🎊 Nur Confetti, kein Overlay
         fireConfetti();
         
-        // Optimistic Update
-        if (data) {
-          setData({
-            ...data,
-            userProgress: {
-              ...data.userProgress,
-              currentTier: json.newTier,
-              canClaimToday: false,
-              claimedTiers: [...(data.userProgress.claimedTiers || []), json.newTier],
-            }
-          });
-        }
+        toast.loading('Warte auf Bot-Bestätigung...', {
+          duration: 30000,
+          id: 'tier-claim',
+        });
         
-        // Zeige geclaimte Rewards
-        if (json.grantedRewards && json.grantedRewards.length > 0) {
-          const rewardText = json.grantedRewards.map(r => r.label).join(', ');
-          toast.success(`🎁 Tier ${json.newTier} geclaimt!\n${rewardText}`, {
-            duration: 5000,
-          });
-        } else {
-          toast.success(`🎁 Tier ${json.newTier} geclaimt!`);
-        }
-        
-        // Lade nach 1s neu für finale Daten
-        setTimeout(() => {
-          loadBattlePass();
-          setShowClaimAnim(false);
-        }, 1000);
+        // Warte auf Bot-Bestätigung (Polling läuft weiter)
       } else {
+        setClaiming(false);
         toast.error(json.error || 'Claim fehlgeschlagen');
-        setShowClaimAnim(false);
       }
     } catch (error) {
       console.error('[BP] Claim Error:', error);
-      toast.error('Verbindungsfehler beim Claimen');
-      setShowClaimAnim(false);
-    } finally {
       setClaiming(false);
+      toast.error('Verbindungsfehler beim Claimen');
     }
   };
 
@@ -279,17 +257,6 @@ export default function BattlePassView() {
 
   return (
     <div className="space-y-4 md:space-y-6 relative">
-      {/* ✨ Claim Animation Overlay */}
-      {showClaimAnim && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
-          <div className="animate-bounce">
-            <div className="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full p-6 md:p-8 shadow-2xl">
-              <Gift className="w-16 h-16 md:w-20 md:h-20 text-white animate-pulse" />
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ==================== HEADER  ==================== */}
       <div className="relative bg-gradient-to-br from-yellow-500/20 via-purple-500/10 to-blue-500/10 backdrop-blur-2xl border border-white/20 rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-2xl overflow-hidden">
         {/* Animated Background */}
@@ -345,52 +312,55 @@ export default function BattlePassView() {
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
-            {!purchased && (
+            {!purchased && !purchasing && (
               <Button
                 onClick={handlePurchaseClick}
-                disabled={purchasing}
                 className="h-11 md:h-12 px-4 md:px-6 rounded-xl md:rounded-2xl font-bold text-sm md:text-base text-black shadow-xl hover:shadow-2xl transition-all hover:scale-105 flex-1 relative overflow-hidden group"
                 style={{ background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' }}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-                {purchasing ? 'Kaufe...' : (
-                  <span className="flex items-center gap-2 relative z-10">
-                    <Crown className="w-4 h-4 md:w-5 md:h-5" /> Premium kaufen
-                  </span>
-                )}
+                <span className="flex items-center gap-2 relative z-10">
+                  <Crown className="w-4 h-4 md:w-5 md:h-5" /> Premium kaufen
+                </span>
               </Button>
             )}
 
-            {purchased && (
+            {purchasing && (
+              <div className="flex items-center justify-center gap-2 px-4 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-yellow-400/40 bg-yellow-400/10 backdrop-blur-md shadow-lg flex-1 sm:flex-initial">
+                <Loader2 className="w-4 h-4 md:w-5 md:h-5 text-yellow-400 animate-spin" />
+                <span className="text-yellow-300 font-bold text-xs md:text-sm whitespace-nowrap">Warte auf Bot...</span>
+              </div>
+            )}
+
+            {purchased && !purchasing && (
               <div className="flex items-center justify-center gap-2 px-4 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-yellow-400/40 bg-yellow-400/10 backdrop-blur-md shadow-lg flex-1 sm:flex-initial animate-pulse">
                 <Crown className="w-4 h-4 md:w-5 md:h-5 text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.8)]" />
                 <span className="text-yellow-300 font-bold text-xs md:text-sm whitespace-nowrap drop-shadow-md">Premium aktiv</span>
               </div>
             )}
 
-            {canClaimToday && !allClaimed && (
+            {canClaimToday && !allClaimed && !claiming && (
               <Button
                 onClick={handleClaim}
-                disabled={claiming}
                 className="h-11 md:h-12 rounded-xl md:rounded-2xl font-bold text-sm md:text-base text-white shadow-xl hover:shadow-2xl transition-all hover:scale-105 flex-1 relative overflow-hidden group"
                 style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                {claiming ? (
-                  <span className="flex items-center gap-2 relative z-10">
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/40 border-t-white"></div>
-                    Wird geclaimt...
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2 relative z-10">
-                    <Zap className="w-4 h-4 md:w-5 md:h-5 animate-pulse" />
-                    Tier {nextTier} einlösen
-                  </span>
-                )}
+                <span className="flex items-center gap-2 relative z-10">
+                  <Zap className="w-4 h-4 md:w-5 md:h-5" />
+                  Tier {nextTier} einlösen
+                </span>
               </Button>
             )}
 
-            {!canClaimToday && !allClaimed && missedDays === 0 && (
+            {claiming && (
+              <div className="flex items-center justify-center gap-2 px-4 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-green-400/40 bg-green-400/10 backdrop-blur-md shadow-lg flex-1">
+                <Loader2 className="w-4 h-4 md:w-5 md:h-5 text-green-400 animate-spin" />
+                <span className="text-green-300 font-bold text-xs md:text-sm whitespace-nowrap">Warte auf Bot...</span>
+              </div>
+            )}
+
+            {!canClaimToday && !allClaimed && !claiming && missedDays === 0 && (
               <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-white/20 bg-white/5 backdrop-blur-md shadow-lg flex-1">
                 <Clock className="w-4 h-4 md:w-5 md:h-5 text-white/50 flex-shrink-0" />
                 <span className="text-white/70 text-xs md:text-sm font-medium text-center">
@@ -432,6 +402,7 @@ export default function BattlePassView() {
                 isCurrent={isCurrent}
                 isLocked={isLocked}
                 purchased={purchased}
+                canClaim={canClaimToday && isCurrent}
               />
             );
           })}
@@ -499,7 +470,7 @@ export default function BattlePassView() {
 }
 
 // ==================== TIER CARD COMPONENT ==================== 
-function TierCard({ tier, isUnlocked, isCurrent, isLocked, purchased }) {
+function TierCard({ tier, isUnlocked, isCurrent, isLocked, purchased, canClaim }) {
   const freeReward = tier.free;
   const premiumReward = tier.premium;
   
@@ -510,9 +481,10 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, purchased }) {
     <div
       className={`
         relative rounded-xl md:rounded-2xl overflow-hidden border-2 transition-all duration-300
-        ${isCurrent ? 'border-yellow-400 ring-2 ring-yellow-400/50 ring-offset-2 ring-offset-black scale-105 animate-pulse' : ''}
+        ${isCurrent ? 'border-yellow-400 ring-2 ring-yellow-400/50 ring-offset-2 ring-offset-black scale-105' : ''}
         ${isUnlocked && !isCurrent ? 'border-green-400/40' : ''}
         ${isLocked ? 'border-white/10' : ''}
+        ${canClaim ? 'animate-card-flip' : ''}
       `}
       style={{
         background: isUnlocked 
@@ -545,6 +517,12 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, purchased }) {
             <FreeIcon className={`w-4 h-4 md:w-5 md:h-5 ${getRewardColor(freeReward)} flex-shrink-0`} />
             <span className="text-[10px] md:text-xs text-white/80 font-semibold line-clamp-2">{freeReward.label}</span>
           </div>
+          {/* Alternative Credits Hinweis */}
+          {freeReward.alternativeCredits && (
+            <div className="text-[8px] md:text-[9px] text-yellow-300/70 mt-1 font-medium">
+              Alt: {freeReward.alternativeCredits} Credits
+            </div>
+          )}
         </div>
 
         {/* Premium Reward */}
@@ -564,6 +542,12 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, purchased }) {
               {premiumReward.label}
             </span>
           </div>
+          {/* Alternative Credits Hinweis */}
+          {purchased && premiumReward.alternativeCredits && (
+            <div className="text-[8px] md:text-[9px] text-yellow-300/70 mt-1 font-medium">
+              Alt: {premiumReward.alternativeCredits} Credits
+            </div>
+          )}
         </div>
       </div>
     </div>
