@@ -2218,7 +2218,29 @@ async function handleBattlePassAutorenew(request) {
 // ═══════════════════════════════════════════════════════════════
 // 🆕 NEU: TIER-SKIP (50 Credits pro Skip)
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// Helper: Liest Credits korrekt aus user_data.data.credits (JSON)
+// ═══════════════════════════════════════════════════════════════
+async function readUserCredits(discordUserId) {
+  const { data: userData, error } = await supabaseAdmin
+    .from('user_data')
+    .select('data')
+    .eq('discord_user_id', discordUserId)
+    .single();
+
+  if (error || !userData) {
+    return { parsedData: {}, credits: 0 };
+  }
+
+  const parsedData = userData?.data
+    ? (typeof userData.data === 'string' ? JSON.parse(userData.data) : userData.data)
+    : {};
+
+  return { parsedData: parsedData || {}, credits: parsedData?.credits || 0 };
+}
+
 // POST /api/battle-pass/skip-tier
+// ⚠️ Nutzt Bot-Queue Pattern: API erstellt Pending-Eintrag, Bot zieht Credits aus banks.json
 async function handleBattlePassSkipTier(request) {
   const user = getBpAuthContext(request);
   if (!user) return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
@@ -2237,43 +2259,64 @@ async function handleBattlePassSkipTier(request) {
       return NextResponse.json({ error: 'Battle Pass komplett!' }, { status: 400 });
     }
 
-    // Credits prüfen
-    const { data: userData } = await supabaseAdmin
-      .from('user_data')
-      .select('credits')
-      .eq('discord_user_id', user.discordUserId)
-      .single();
-
-    const currentCredits = userData?.credits || 0;
+    // ✅ Credits korrekt aus parsedData.credits lesen (Soft-Check)
+    const { credits: currentCredits } = await readUserCredits(user.discordUserId);
     if (currentCredits < BATTLE_PASS_FEATURES.TIER_SKIP) {
       return NextResponse.json({ 
-        error: `Nicht genug Credits! Du brauchst ${BATTLE_PASS_FEATURES.TIER_SKIP} Credits.` 
+        error: `Nicht genug Credits! Du brauchst ${BATTLE_PASS_FEATURES.TIER_SKIP} Credits (du hast ${currentCredits}).` 
       }, { status: 400 });
     }
 
-    // Credits abziehen
-    const newCredits = currentCredits - BATTLE_PASS_FEATURES.TIER_SKIP;
-    await supabaseAdmin
-      .from('user_data')
-      .update({ credits: newCredits })
-      .eq('discord_user_id', user.discordUserId);
+    // Doppel-Schutz: existiert bereits ein pending skip für diese Season?
+    const { data: existingPending } = await supabaseAdmin
+      .from('pending_battle_pass_rewards')
+      .select('id')
+      .eq('discord_user_id', user.discordUserId)
+      .eq('action_type', 'skip_tier')
+      .eq('season_month', month)
+      .eq('season_year', year)
+      .in('status', ['pending', 'processing'])
+      .maybeSingle();
 
-    // Tier erhöhen (direkt in DB, kein Pending)
-    const parsedData = typeof userData.data === 'string' ? JSON.parse(userData.data) : userData.data;
-    const bpEntry = parsedData?.battle_pass || {};
-    bpEntry.current_tier = nextTier;
-    bpEntry.last_claim_date = new Date().toISOString().split('T')[0];
+    if (existingPending) {
+      return NextResponse.json({
+        success: true,
+        pending: true,
+        queueId: existingPending.id,
+        message: 'Skip wird bereits verarbeitet…',
+      });
+    }
 
-    await supabaseAdmin
-      .from('user_data')
-      .update({ data: { ...parsedData, battle_pass: bpEntry } })
-      .eq('discord_user_id', user.discordUserId);
+    // Pending-Eintrag anlegen → Bot übernimmt
+    const { data: inserted, error: insertErr } = await supabaseAdmin
+      .from('pending_battle_pass_rewards')
+      .insert({
+        discord_user_id: user.discordUserId,
+        username: user.username,
+        action_type: 'skip_tier',
+        season_month: month,
+        season_year: year,
+        status: 'pending',
+        reward_data: {
+          credits_cost: BATTLE_PASS_FEATURES.TIER_SKIP,
+          target_tier: nextTier,
+        },
+      })
+      .select('id')
+      .single();
+
+    if (insertErr) {
+      console.error('[Battle Pass] Pending Skip Insert Error:', insertErr);
+      return NextResponse.json({ error: 'Konnte Skip nicht starten', details: insertErr.message }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
+      pending: true,
+      queueId: inserted.id,
       newTier: nextTier,
       creditsSpent: BATTLE_PASS_FEATURES.TIER_SKIP,
-      remainingCredits: newCredits,
+      message: `Skip wird verarbeitet… (${BATTLE_PASS_FEATURES.TIER_SKIP} Credits werden vom HHRP Server abgezogen)`,
     });
   } catch (error) {
     console.error('[Battle Pass] Skip Tier Error:', error);
@@ -2298,46 +2341,65 @@ async function handleBattlePassBuyAutoclaim(request) {
       return NextResponse.json({ error: 'Ultra+ User haben Auto-Claim bereits kostenlos!' }, { status: 400 });
     }
 
-    // Prüfen ob bereits gekauft
-    const { data: userData } = await supabaseAdmin
-      .from('user_data')
-      .select('data, credits')
-      .eq('discord_user_id', user.discordUserId)
-      .single();
+    // ✅ Credits + parsedData korrekt lesen
+    const { parsedData, credits: currentCredits } = await readUserCredits(user.discordUserId);
 
-    const parsedData = typeof userData.data === 'string' ? JSON.parse(userData.data) : userData.data;
-
-    // ✅ WICHTIG: Auto-Claim im ROOT speichern, nicht in battle_pass!
     if (parsedData?.auto_claim_enabled) {
       return NextResponse.json({ error: 'Auto-Claim ist bereits aktiviert!' }, { status: 400 });
     }
 
-    // Credits prüfen
-    const currentCredits = userData?.credits || 0;
     if (currentCredits < BATTLE_PASS_FEATURES.AUTO_CLAIM) {
       return NextResponse.json({ 
-        error: `Nicht genug Credits! Du brauchst ${BATTLE_PASS_FEATURES.AUTO_CLAIM} Credits.` 
+        error: `Nicht genug Credits! Du brauchst ${BATTLE_PASS_FEATURES.AUTO_CLAIM} Credits (du hast ${currentCredits}).` 
       }, { status: 400 });
     }
 
-    // Credits abziehen & Auto-Claim aktivieren (im ROOT!)
-    const newCredits = currentCredits - BATTLE_PASS_FEATURES.AUTO_CLAIM;
-    parsedData.auto_claim_enabled = true;
-    parsedData.auto_claim_purchased_at = new Date().toISOString();
+    // Doppel-Schutz: existiert bereits ein pending buy_autoclaim?
+    const { data: existingPending } = await supabaseAdmin
+      .from('pending_battle_pass_rewards')
+      .select('id')
+      .eq('discord_user_id', user.discordUserId)
+      .eq('action_type', 'buy_autoclaim')
+      .in('status', ['pending', 'processing'])
+      .maybeSingle();
 
-    await supabaseAdmin
-      .from('user_data')
-      .update({ 
-        credits: newCredits,
-        data: parsedData
+    if (existingPending) {
+      return NextResponse.json({
+        success: true,
+        pending: true,
+        queueId: existingPending.id,
+        message: 'Auto-Claim wird bereits verarbeitet…',
+      });
+    }
+
+    // Pending-Eintrag anlegen → Bot übernimmt
+    const { data: inserted, error: insertErr } = await supabaseAdmin
+      .from('pending_battle_pass_rewards')
+      .insert({
+        discord_user_id: user.discordUserId,
+        username: user.username,
+        action_type: 'buy_autoclaim',
+        season_month: month,
+        season_year: year,
+        status: 'pending',
+        reward_data: {
+          credits_cost: BATTLE_PASS_FEATURES.AUTO_CLAIM,
+        },
       })
-      .eq('discord_user_id', user.discordUserId);
+      .select('id')
+      .single();
+
+    if (insertErr) {
+      console.error('[Battle Pass] Pending Autoclaim Insert Error:', insertErr);
+      return NextResponse.json({ error: 'Konnte Kauf nicht starten', details: insertErr.message }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
+      pending: true,
+      queueId: inserted.id,
       creditsSpent: BATTLE_PASS_FEATURES.AUTO_CLAIM,
-      remainingCredits: newCredits,
-      message: 'Auto-Claim aktiviert! Ab jetzt wird jeden Tag automatisch geclaimt.',
+      message: `Auto-Claim wird verarbeitet… (${BATTLE_PASS_FEATURES.AUTO_CLAIM} Credits werden vom HHRP Server abgezogen)`,
     });
   } catch (error) {
     console.error('[Battle Pass] Buy Autoclaim Error:', error);
@@ -2354,45 +2416,67 @@ async function handleBattlePassBuyLifetime(request) {
   if (!user) return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
 
   try {
-    // Prüfen ob bereits gekauft
-    const { data: userData } = await supabaseAdmin
-      .from('user_data')
-      .select('data, credits')
-      .eq('discord_user_id', user.discordUserId)
-      .single();
+    const { month, year } = getCurrentSeason();
 
-    const parsedData = typeof userData.data === 'string' ? JSON.parse(userData.data) : userData.data;
+    // ✅ Credits + parsedData korrekt lesen
+    const { parsedData, credits: currentCredits } = await readUserCredits(user.discordUserId);
 
     if (parsedData?.lifetime_battle_pass) {
       return NextResponse.json({ error: 'Du hast bereits den Lifetime Pass!' }, { status: 400 });
     }
 
-    // Credits prüfen
-    const currentCredits = userData?.credits || 0;
     if (currentCredits < BATTLE_PASS_FEATURES.LIFETIME_PASS) {
       return NextResponse.json({ 
-        error: `Nicht genug Credits! Du brauchst ${BATTLE_PASS_FEATURES.LIFETIME_PASS} Credits.` 
+        error: `Nicht genug Credits! Du brauchst ${BATTLE_PASS_FEATURES.LIFETIME_PASS} Credits (du hast ${currentCredits}).` 
       }, { status: 400 });
     }
 
-    // Credits abziehen & Lifetime Pass aktivieren
-    const newCredits = currentCredits - BATTLE_PASS_FEATURES.LIFETIME_PASS;
-    parsedData.lifetime_battle_pass = true;
-    parsedData.lifetime_pass_purchased_at = new Date().toISOString();
+    // Doppel-Schutz: existiert bereits ein pending buy_lifetime?
+    const { data: existingPending } = await supabaseAdmin
+      .from('pending_battle_pass_rewards')
+      .select('id')
+      .eq('discord_user_id', user.discordUserId)
+      .eq('action_type', 'buy_lifetime')
+      .in('status', ['pending', 'processing'])
+      .maybeSingle();
 
-    await supabaseAdmin
-      .from('user_data')
-      .update({ 
-        credits: newCredits,
-        data: parsedData
+    if (existingPending) {
+      return NextResponse.json({
+        success: true,
+        pending: true,
+        queueId: existingPending.id,
+        message: 'Lifetime Pass wird bereits verarbeitet…',
+      });
+    }
+
+    // Pending-Eintrag anlegen → Bot übernimmt
+    const { data: inserted, error: insertErr } = await supabaseAdmin
+      .from('pending_battle_pass_rewards')
+      .insert({
+        discord_user_id: user.discordUserId,
+        username: user.username,
+        action_type: 'buy_lifetime',
+        season_month: month,
+        season_year: year,
+        status: 'pending',
+        reward_data: {
+          credits_cost: BATTLE_PASS_FEATURES.LIFETIME_PASS,
+        },
       })
-      .eq('discord_user_id', user.discordUserId);
+      .select('id')
+      .single();
+
+    if (insertErr) {
+      console.error('[Battle Pass] Pending Lifetime Insert Error:', insertErr);
+      return NextResponse.json({ error: 'Konnte Kauf nicht starten', details: insertErr.message }, { status: 500 });
+    }
 
     return NextResponse.json({
       success: true,
+      pending: true,
+      queueId: inserted.id,
       creditsSpent: BATTLE_PASS_FEATURES.LIFETIME_PASS,
-      remainingCredits: newCredits,
-      message: '🎉 Lifetime Pass aktiviert! Du bekommst ab jetzt jeden Monat automatisch den Battle Pass (Ultra+)!',
+      message: `Lifetime Pass wird verarbeitet… (${BATTLE_PASS_FEATURES.LIFETIME_PASS} Credits werden vom HHRP Server abgezogen)`,
     });
   } catch (error) {
     console.error('[Battle Pass] Buy Lifetime Error:', error);

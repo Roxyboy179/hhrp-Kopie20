@@ -154,10 +154,16 @@ export default function BattlePassView() {
   const purchaseQueueIdRef = useRef(null);
   const claimQueueIdsRef = useRef([]);
   const cancelQueueIdRef = useRef(null);
+  const skipQueueIdRef = useRef(null);
+  const autoclaimQueueIdRef = useRef(null);
+  const lifetimeQueueIdRef = useRef(null);
   // ✅ Timestamps für Timeout (30s)
   const purchaseStartedAtRef = useRef(null);
   const claimStartedAtRef = useRef(null);
   const cancelStartedAtRef = useRef(null);
+  const skipStartedAtRef = useRef(null);
+  const autoclaimStartedAtRef = useRef(null);
+  const lifetimeStartedAtRef = useRef(null);
   const POLLING_TIMEOUT_MS = 45000; // 45 Sekunden Timeout
 
   useEffect(() => {
@@ -291,6 +297,96 @@ export default function BattlePassView() {
         }
       } catch (e) {
         console.error('[BP] Queue check error:', e);
+      }
+    }
+
+    // 🆕 Skip-Tier prüfen
+    if (skipQueueIdRef.current) {
+      if (skipStartedAtRef.current && Date.now() - skipStartedAtRef.current > POLLING_TIMEOUT_MS) {
+        console.warn('[BP] Skip Timeout — HHRP Server antwortet nicht');
+        skipQueueIdRef.current = null;
+        skipStartedAtRef.current = null;
+        setSkipping(false);
+        toast.dismiss('tier-skip');
+        toast.error('⚠️ HHRP Server antwortet nicht. Bitte versuche es später erneut.', { duration: 6000 });
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/battle-pass/queue/${skipQueueIdRef.current}`);
+        const json = await res.json();
+
+        if (json.processed) {
+          skipQueueIdRef.current = null;
+          skipStartedAtRef.current = null;
+          setSkipping(false);
+          toast.dismiss('tier-skip');
+          toast.success('⚡ Tier übersprungen!', { duration: 4000 });
+          confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+          loadBattlePass();
+        }
+      } catch (e) {
+        console.error('[BP] Skip queue check error:', e);
+      }
+    }
+
+    // 🆕 Auto-Claim Kauf prüfen
+    if (autoclaimQueueIdRef.current) {
+      if (autoclaimStartedAtRef.current && Date.now() - autoclaimStartedAtRef.current > POLLING_TIMEOUT_MS) {
+        console.warn('[BP] Autoclaim Timeout — HHRP Server antwortet nicht');
+        autoclaimQueueIdRef.current = null;
+        autoclaimStartedAtRef.current = null;
+        setBuyingAutoclaim(false);
+        toast.dismiss('autoclaim-buy');
+        toast.error('⚠️ HHRP Server antwortet nicht. Bitte versuche es später erneut.', { duration: 6000 });
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/battle-pass/queue/${autoclaimQueueIdRef.current}`);
+        const json = await res.json();
+
+        if (json.processed) {
+          autoclaimQueueIdRef.current = null;
+          autoclaimStartedAtRef.current = null;
+          setBuyingAutoclaim(false);
+          toast.dismiss('autoclaim-buy');
+          toast.success('✨ Auto-Claim aktiviert! Ab jetzt wird automatisch geclaimt.', { duration: 5000 });
+          confetti({ particleCount: 150, spread: 80, origin: { y: 0.5 } });
+          loadBattlePass();
+        }
+      } catch (e) {
+        console.error('[BP] Autoclaim queue check error:', e);
+      }
+    }
+
+    // 🆕 Lifetime Pass Kauf prüfen
+    if (lifetimeQueueIdRef.current) {
+      if (lifetimeStartedAtRef.current && Date.now() - lifetimeStartedAtRef.current > POLLING_TIMEOUT_MS) {
+        console.warn('[BP] Lifetime Timeout — HHRP Server antwortet nicht');
+        lifetimeQueueIdRef.current = null;
+        lifetimeStartedAtRef.current = null;
+        setBuyingLifetime(false);
+        toast.dismiss('lifetime-buy');
+        toast.error('⚠️ HHRP Server antwortet nicht. Bitte versuche es später erneut.', { duration: 6000 });
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/battle-pass/queue/${lifetimeQueueIdRef.current}`);
+        const json = await res.json();
+
+        if (json.processed) {
+          lifetimeQueueIdRef.current = null;
+          lifetimeStartedAtRef.current = null;
+          setBuyingLifetime(false);
+          toast.dismiss('lifetime-buy');
+          toast.success('🎉 Lifetime Pass aktiviert! Du bekommst jeden Monat automatisch den Pass!', { duration: 6000 });
+          confetti({ particleCount: 200, spread: 100, origin: { y: 0.4 } });
+          loadBattlePass();
+        }
+      } catch (e) {
+        console.error('[BP] Lifetime queue check error:', e);
       }
     }
   };
@@ -458,21 +554,29 @@ export default function BattlePassView() {
       const json = await res.json();
       
       if (res.ok) {
-        toast.success(`✅ Tier ${json.newTier} übersprungen! (${json.creditsSpent} Credits)`);
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 }
-        });
-        loadBattlePass();
+        // ✅ Queue-Pattern: Bot verarbeitet asynchron
+        if (json.queueId) {
+          skipQueueIdRef.current = json.queueId;
+          skipStartedAtRef.current = Date.now();
+          toast.loading('Warte auf HHRP Server...', {
+            duration: 60000,
+            id: 'tier-skip',
+          });
+        } else {
+          // Fallback (sollte mit neuer API nicht mehr passieren)
+          toast.success(`✅ Tier übersprungen! (${json.creditsSpent} Credits)`);
+          confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+          setSkipping(false);
+          loadBattlePass();
+        }
       } else {
+        setSkipping(false);
         toast.error(json.error || 'Skip fehlgeschlagen');
       }
     } catch (error) {
       console.error('[BP] Skip Error:', error);
-      toast.error('Verbindungsfehler');
-    } finally {
       setSkipping(false);
+      toast.error('Verbindungsfehler');
     }
   };
 
@@ -486,21 +590,27 @@ export default function BattlePassView() {
       const json = await res.json();
       
       if (res.ok) {
-        toast.success('✨ Auto-Claim aktiviert! Ab jetzt wird automatisch geclaimt.');
-        confetti({
-          particleCount: 150,
-          spread: 80,
-          origin: { y: 0.5 }
-        });
-        loadBattlePass();
+        if (json.queueId) {
+          autoclaimQueueIdRef.current = json.queueId;
+          autoclaimStartedAtRef.current = Date.now();
+          toast.loading('Warte auf HHRP Server...', {
+            duration: 60000,
+            id: 'autoclaim-buy',
+          });
+        } else {
+          toast.success('✨ Auto-Claim aktiviert! Ab jetzt wird automatisch geclaimt.');
+          confetti({ particleCount: 150, spread: 80, origin: { y: 0.5 } });
+          setBuyingAutoclaim(false);
+          loadBattlePass();
+        }
       } else {
+        setBuyingAutoclaim(false);
         toast.error(json.error || 'Kauf fehlgeschlagen');
       }
     } catch (error) {
       console.error('[BP] Buy Autoclaim Error:', error);
-      toast.error('Verbindungsfehler');
-    } finally {
       setBuyingAutoclaim(false);
+      toast.error('Verbindungsfehler');
     }
   };
 
@@ -514,23 +624,29 @@ export default function BattlePassView() {
       const json = await res.json();
       
       if (res.ok) {
-        toast.success('🎉 Lifetime Pass aktiviert! Du bekommst jeden Monat automatisch den Pass!', {
-          duration: 6000
-        });
-        confetti({
-          particleCount: 200,
-          spread: 100,
-          origin: { y: 0.4 }
-        });
-        loadBattlePass();
+        if (json.queueId) {
+          lifetimeQueueIdRef.current = json.queueId;
+          lifetimeStartedAtRef.current = Date.now();
+          toast.loading('Warte auf HHRP Server...', {
+            duration: 60000,
+            id: 'lifetime-buy',
+          });
+        } else {
+          toast.success('🎉 Lifetime Pass aktiviert! Du bekommst jeden Monat automatisch den Pass!', {
+            duration: 6000
+          });
+          confetti({ particleCount: 200, spread: 100, origin: { y: 0.4 } });
+          setBuyingLifetime(false);
+          loadBattlePass();
+        }
       } else {
+        setBuyingLifetime(false);
         toast.error(json.error || 'Kauf fehlgeschlagen');
       }
     } catch (error) {
       console.error('[BP] Buy Lifetime Error:', error);
-      toast.error('Verbindungsfehler');
-    } finally {
       setBuyingLifetime(false);
+      toast.error('Verbindungsfehler');
     }
   };
 
