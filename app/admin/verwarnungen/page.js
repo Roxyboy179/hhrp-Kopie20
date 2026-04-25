@@ -98,7 +98,13 @@ export default function VerwarnungenPage() {
 
   return (
     <div className="min-h-screen p-6 sm:p-8" style={{ background: '#0a0a0b' }}>
-      <div className="max-w-7xl mx-auto">
+      {/* Ambient background elements für Glas-Effekt */}
+      <div aria-hidden="true" className="fixed inset-0 pointer-events-none opacity-30">
+        <div className="absolute top-[20%] left-[10%] w-96 h-96 rounded-full" style={{ background: 'radial-gradient(circle, rgba(234,179,8,0.08), transparent 70%)', filter: 'blur(80px)' }} />
+        <div className="absolute bottom-[30%] right-[15%] w-80 h-80 rounded-full" style={{ background: 'radial-gradient(circle, rgba(249,115,22,0.06), transparent 70%)', filter: 'blur(80px)' }} />
+      </div>
+      
+      <div className="max-w-7xl mx-auto relative z-10">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3 flex items-center gap-3">
@@ -114,8 +120,8 @@ export default function VerwarnungenPage() {
         <div 
           className="glass rounded-2xl p-5 sm:p-6 mb-6"
           style={{
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
+            backdropFilter: 'blur(20px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
           }}
         >
           <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3">
@@ -161,8 +167,8 @@ export default function VerwarnungenPage() {
               <div 
                 className="glass rounded-2xl p-12 text-center"
                 style={{
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
+                  backdropFilter: 'blur(20px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
                 }}
               >
                 <Search className="w-16 h-16 text-white/15 mx-auto mb-4" />
@@ -175,8 +181,8 @@ export default function VerwarnungenPage() {
                   key={index} 
                   className="glass rounded-2xl p-5 sm:p-6"
                   style={{
-                    backdropFilter: 'blur(20px)',
-                    WebkitBackdropFilter: 'blur(20px)',
+                    backdropFilter: 'blur(20px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
                   }}
                 >
                   {/* User Header */}
@@ -273,8 +279,8 @@ export default function VerwarnungenPage() {
           <div 
             className="glass rounded-2xl p-12 text-center"
             style={{
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
             }}
           >
             <AlertTriangle className="w-16 h-16 text-yellow-400/20 mx-auto mb-4" />
