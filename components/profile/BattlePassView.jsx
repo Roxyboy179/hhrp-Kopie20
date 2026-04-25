@@ -579,7 +579,8 @@ export default function BattlePassView() {
               const tierMeta = (tiers || []).find((t) => t.id === passType) || { name: 'Premium Pass', id: 'premium' };
               const tierColor = passType === 'elite' ? 'violet' : passType === 'ultra' ? 'rose' : 'yellow';
               return (
-                <div className="flex items-center gap-2 flex-1 sm:flex-initial flex-wrap">
+                <div className="flex items-center gap-2 flex-1 flex-wrap">
+                  {/* Status Card */}
                   <div className={`flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border backdrop-blur-md shadow-lg flex-1 ${
                     tierColor === 'violet' ? 'border-violet-400/40 bg-violet-400/10' :
                     tierColor === 'rose' ? 'border-rose-400/40 bg-rose-400/10' :
@@ -599,27 +600,22 @@ export default function BattlePassView() {
                     </span>
                   </div>
 
-                  {/* ✅ Auto-Renew Toggle */}
-                  <button
-                    onClick={() => handleAutorenewToggle(!autorenew)}
-                    disabled={autorenewLoading}
-                    title={autorenew ? 'Auto-Verlängerung deaktivieren' : 'Auto-Verlängerung aktivieren'}
-                    className={`flex items-center gap-1.5 h-10 md:h-12 px-3 rounded-xl md:rounded-2xl border backdrop-blur-md shadow-lg font-semibold text-[10px] md:text-xs transition-all hover:scale-105 disabled:opacity-60 disabled:cursor-wait whitespace-nowrap ${
-                      autorenew
-                        ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
-                        : 'border-white/20 bg-white/5 text-white/70 hover:bg-white/10'
-                    }`}
-                  >
-                    {autorenewLoading ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <span className={`inline-flex items-center justify-center w-7 h-4 rounded-full transition-colors ${autorenew ? 'bg-emerald-500/80' : 'bg-white/20'}`}>
-                        <span className={`block w-3 h-3 rounded-full bg-white shadow transition-transform ${autorenew ? 'translate-x-1.5' : '-translate-x-1.5'}`}></span>
+                  {/* Claim Button direkt daneben */}
+                  {canClaimToday && !allClaimed && !claiming && (
+                    <Button
+                      onClick={handleClaim}
+                      className="h-10 md:h-12 px-3 md:px-4 rounded-xl md:rounded-2xl font-bold text-xs md:text-sm text-white shadow-xl hover:shadow-2xl transition-all hover:scale-105 relative overflow-hidden group whitespace-nowrap"
+                      style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                      <span className="flex items-center gap-1.5 relative z-10">
+                        <Zap className="w-4 h-4" />
+                        Tier {nextTier} einlösen
                       </span>
-                    )}
-                    Auto-Renew
-                  </button>
+                    </Button>
+                  )}
 
+                  {/* Cancel Button */}
                   <Button
                     onClick={handleCancelClick}
                     variant="outline"
@@ -635,39 +631,47 @@ export default function BattlePassView() {
             })()}
 
             {/* ✅ Gekündigt-Status: Premium läuft bis Monatsende weiter */}
-            {purchased && cancelled && !cancelling && (
-              <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-orange-400/40 bg-gradient-to-r from-orange-500/10 to-amber-500/10 backdrop-blur-md shadow-lg flex-1">
-                <X className="w-4 h-4 md:w-5 md:h-5 text-orange-400 flex-shrink-0" />
-                <div className="flex flex-col min-w-0">
-                  <span className="text-orange-200 font-bold text-xs md:text-sm whitespace-nowrap drop-shadow-md leading-tight">
-                    Gekündigt
-                  </span>
-                  <span className="text-orange-300/80 text-[10px] md:text-xs leading-tight">
-                    Premium läuft noch {daysRemaining}d (bis Monatsende)
-                  </span>
+            {purchased && cancelled && !cancelling && (() => {
+              const tierMeta = (tiers || []).find((t) => t.id === passType) || { name: 'Premium Pass', id: 'premium' };
+              const tierColor = passType === 'elite' ? 'violet' : passType === 'ultra' ? 'rose' : 'yellow';
+              return (
+                <div className="flex items-center gap-2 flex-1 flex-wrap">
+                  {/* Gekündigt Status Card */}
+                  <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-orange-400/40 bg-gradient-to-r from-orange-500/10 to-amber-500/10 backdrop-blur-md shadow-lg flex-1">
+                    <X className="w-4 h-4 md:w-5 md:h-5 text-orange-400 flex-shrink-0" />
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-orange-200 font-bold text-xs md:text-sm whitespace-nowrap drop-shadow-md leading-tight">
+                        Gekündigt
+                      </span>
+                      <span className="text-orange-300/80 text-[10px] md:text-xs leading-tight">
+                        Premium läuft noch {daysRemaining}d
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Claim Button direkt daneben */}
+                  {canClaimToday && !allClaimed && !claiming && (
+                    <Button
+                      onClick={handleClaim}
+                      className="h-10 md:h-12 px-3 md:px-4 rounded-xl md:rounded-2xl font-bold text-xs md:text-sm text-white shadow-xl hover:shadow-2xl transition-all hover:scale-105 relative overflow-hidden group whitespace-nowrap"
+                      style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                      <span className="flex items-center gap-1.5 relative z-10">
+                        <Zap className="w-4 h-4" />
+                        Tier {nextTier} einlösen
+                      </span>
+                    </Button>
+                  )}
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {cancelling && (
               <div className="flex items-center justify-center gap-2 px-4 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-red-400/40 bg-red-400/10 backdrop-blur-md shadow-lg flex-1 sm:flex-initial">
                 <Loader2 className="w-4 h-4 md:w-5 md:h-5 text-red-400 animate-spin" />
                 <span className="text-red-300 font-bold text-xs md:text-sm whitespace-nowrap">Warte auf HHRP Server...</span>
               </div>
-            )}
-
-            {canClaimToday && !allClaimed && !claiming && (
-              <Button
-                onClick={handleClaim}
-                className="h-11 md:h-12 rounded-xl md:rounded-2xl font-bold text-sm md:text-base text-white shadow-xl hover:shadow-2xl transition-all hover:scale-105 flex-1 relative overflow-hidden group"
-                style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                <span className="flex items-center gap-2 relative z-10">
-                  <Zap className="w-4 h-4 md:w-5 md:h-5" />
-                  Tier {nextTier} einlösen
-                </span>
-              </Button>
             )}
 
             {claiming && (
@@ -677,19 +681,19 @@ export default function BattlePassView() {
               </div>
             )}
 
-            {!canClaimToday && !allClaimed && !claiming && missedDays === 0 && (
-              <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-white/20 bg-white/5 backdrop-blur-md shadow-lg flex-1">
-                <Clock className="w-4 h-4 md:w-5 md:h-5 text-white/50 flex-shrink-0" />
-                <span className="text-white/70 text-xs md:text-sm font-medium text-center">
+            {!canClaimToday && !allClaimed && !claiming && missedDays === 0 && purchased && (
+              <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-xl md:rounded-2xl border border-white/20 bg-white/5 backdrop-blur-md shadow-lg">
+                <Clock className="w-4 h-4 text-white/50 flex-shrink-0" />
+                <span className="text-white/70 text-xs md:text-sm font-medium">
                   Bereits geclaimt — morgen wieder
                 </span>
               </div>
             )}
 
-            {allClaimed && (
-              <div className="flex items-center justify-center gap-2 px-4 md:px-5 py-3 md:py-4 rounded-xl md:rounded-2xl border border-green-400/30 bg-green-400/10 backdrop-blur-md shadow-lg flex-1">
-                <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-green-400 drop-shadow-[0_0_6px_rgba(34,197,94,0.8)]" />
-                <span className="text-green-300 text-xs md:text-sm font-bold drop-shadow-md text-center">
+            {allClaimed && purchased && (
+              <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-xl md:rounded-2xl border border-green-400/30 bg-green-400/10 backdrop-blur-md shadow-lg">
+                <Sparkles className="w-4 h-4 text-green-400 drop-shadow-[0_0_6px_rgba(34,197,94,0.8)]" />
+                <span className="text-green-300 text-xs md:text-sm font-bold drop-shadow-md">
                   Komplett! Nächste Season bald
                 </span>
               </div>
