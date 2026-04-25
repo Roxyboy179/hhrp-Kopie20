@@ -962,6 +962,7 @@ export default function ProfilPage() {
   const [settingsSection, setSettingsSection] = useState('appearance');
   const [settingsSearch, setSettingsSearch]   = useState('');
   const [bewerbungen, setBewerbungen] = useState([]);
+  const [battlePassData, setBattlePassData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
@@ -1206,10 +1207,11 @@ export default function ProfilPage() {
       }
       
       // 2. Bot ist online, lade die Daten
-      const [userRes, rewardsRes, bewerbungenRes] = await Promise.all([
+      const [userRes, rewardsRes, bewerbungenRes, battlePassRes] = await Promise.all([
         fetch('/api/user/data', { cache: 'no-store' }),
         fetch('/api/user/rewards', { cache: 'no-store' }),
-        fetch('/api/bewerbungen/me', { cache: 'no-store' })
+        fetch('/api/bewerbungen/me', { cache: 'no-store' }),
+        fetch('/api/battle-pass/current', { cache: 'no-store' }).catch(() => null)
       ]);
 
       if (userRes.ok) {
@@ -1240,6 +1242,16 @@ export default function ProfilPage() {
       if (bewerbungenRes.ok) {
         const json = await bewerbungenRes.json();
         setBewerbungen(json.bewerbungen || []);
+      }
+
+      // ✅ Battle Pass laden (für Übersicht-Karte)
+      if (battlePassRes && battlePassRes.ok) {
+        try {
+          const bpJson = await battlePassRes.json();
+          setBattlePassData(bpJson);
+        } catch (e) {
+          console.warn('[BP] Konnte Battle Pass Daten nicht parsen:', e?.message);
+        }
       }
     } catch (error) {
       console.error('Load data error:', error);
@@ -1866,6 +1878,373 @@ export default function ProfilPage() {
                         }}
                       >
                         Jetzt gratis holen
+                        <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+                      </Button>
+                    </div>
+                  );
+                })()}
+
+                {/* ═══════════════════════════════════════════════════════════ */}
+                {/* Battle Pass Karte (direkt unter dem 7-Tage Pass)              */}
+                {/* Adaptiv: Promo / Premium aktiv / Gekündigt                    */}
+                {/* ═══════════════════════════════════════════════════════════ */}
+                {(() => {
+                  const bp = battlePassData;
+                  if (!bp || !bp.userProgress) return null;
+
+                  const bpUp = bp.userProgress || {};
+                  const bpRewardsArr = Array.isArray(bp.rewards) ? bp.rewards : [];
+                  const bpDaysLeft = typeof bp.daysRemaining === 'number' ? bp.daysRemaining : 0;
+                  const bpPriceCredits = bp.pricing?.priceCredits ?? 1500;
+                  const bpCanPurchase = bp.canPurchase !== false;
+                  const bpMaxTier = bpRewardsArr.length || 30;
+                  const bpCurrentTier = bpUp.currentTier || 0;
+                  const bpProgressPct = Math.max(0, Math.min(100, Math.round((bpCurrentTier / bpMaxTier) * 100)));
+                  const isPurchased = bpUp.purchased === true;
+                  const isCancelled = bpUp.cancelled === true;
+
+                  const goToBattlePass = (e) => {
+                    if (e) e.stopPropagation();
+                    setActiveTab('battle-pass');
+                  };
+
+                  // ───── Variante: Premium aktiv und gekündigt → Hinweis-Karte (Orange) ─────
+                  if (isPurchased && isCancelled) {
+                    return (
+                      <div
+                        data-tour-card="Battle Pass · Gekündigt|Dein Premium Battle Pass wurde gekündigt, läuft aber noch bis zum Monatsende. Beanspruche deine restlichen Belohnungen rechtzeitig."
+                        className="relative overflow-hidden rounded-2xl p-5 sm:p-6 border group cursor-pointer transition-all hover:scale-[1.01]"
+                        style={{
+                          background:
+                            'linear-gradient(135deg, rgba(249, 115, 22, 0.18), rgba(244, 63, 94, 0.10), rgba(234, 88, 12, 0.08))',
+                          borderColor: 'rgba(249, 115, 22, 0.45)',
+                          boxShadow:
+                            '0 0 40px rgba(249, 115, 22, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+                        }}
+                        onClick={goToBattlePass}
+                      >
+                        <div
+                          className="absolute inset-0 pointer-events-none opacity-50"
+                          style={{
+                            background:
+                              'radial-gradient(ellipse at top right, rgba(251, 191, 36, 0.14), transparent 60%), radial-gradient(ellipse at bottom left, rgba(244, 63, 94, 0.18), transparent 60%)',
+                          }}
+                        />
+
+                        {/* GEKÜNDIGT-Badge */}
+                        <div
+                          className="absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase flex items-center gap-1 shadow-lg"
+                          style={{
+                            background:
+                              'linear-gradient(135deg, #fb923c, #ef4444)',
+                            color: '#fff',
+                            border: '1px solid rgba(254, 215, 170, 0.6)',
+                          }}
+                        >
+                          <XCircle className="w-3 h-3" strokeWidth={3} />
+                          Gekündigt
+                        </div>
+
+                        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
+                          <div
+                            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 group-hover:rotate-6"
+                            style={{
+                              background:
+                                'linear-gradient(135deg, rgba(249, 115, 22, 0.5), rgba(244, 63, 94, 0.4))',
+                              border: '1px solid rgba(254, 215, 170, 0.5)',
+                              boxShadow: '0 0 24px rgba(249, 115, 22, 0.5)',
+                            }}
+                          >
+                            <Crown className="w-7 h-7 sm:w-8 sm:h-8 text-white" strokeWidth={2} />
+                          </div>
+
+                          <div className="flex-1 min-w-0 pr-24 sm:pr-28">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-orange-300">
+                                Premium läuft aus · noch {bpDaysLeft} Tage
+                              </span>
+                            </div>
+                            <h3 className="text-lg sm:text-xl font-black text-white leading-tight mb-1.5">
+                              Battle Pass{' '}
+                              <span className="text-orange-300">gekündigt</span>
+                            </h3>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-white/80">
+                              <span className="flex items-center gap-1.5">
+                                <Trophy className="w-3.5 h-3.5 text-yellow-400" />
+                                <span>
+                                  Aktuelles Tier <b className="text-white">{bpCurrentTier}</b>/{bpMaxTier}
+                                </span>
+                              </span>
+                              <span className="flex items-center gap-1.5">
+                                <Clock className="w-3.5 h-3.5 text-orange-400" />
+                                <span>
+                                  Endet am <b className="text-white">Monatsende</b>
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+
+                          <Button
+                            onClick={goToBattlePass}
+                            className="hidden sm:flex rounded-xl h-11 px-5 font-bold items-center gap-2 shadow-lg transition-all hover:shadow-xl flex-shrink-0"
+                            style={{
+                              background:
+                                'linear-gradient(135deg, #fb923c, #f97316)',
+                              color: '#1a1a1a',
+                              border: '1px solid rgba(254, 215, 170, 0.8)',
+                            }}
+                          >
+                            Belohnungen sichern
+                            <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+                          </Button>
+                        </div>
+
+                        <Button
+                          onClick={goToBattlePass}
+                          className="sm:hidden w-full mt-4 rounded-xl h-11 font-bold flex items-center justify-center gap-2 shadow-lg"
+                          style={{
+                            background:
+                              'linear-gradient(135deg, #fb923c, #f97316)',
+                            color: '#1a1a1a',
+                            border: '1px solid rgba(254, 215, 170, 0.8)',
+                          }}
+                        >
+                          Belohnungen sichern
+                          <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+                        </Button>
+                      </div>
+                    );
+                  }
+
+                  // ───── Variante: Premium aktiv → Status-Karte (Gold) ─────
+                  if (isPurchased) {
+                    return (
+                      <div
+                        data-tour-card="Premium Battle Pass aktiv|Dein Premium Battle Pass ist aktiv. Sammle XP, schalte Tiers frei und beanspruche exklusive Belohnungen."
+                        className="relative overflow-hidden rounded-2xl p-5 sm:p-6 border group cursor-pointer transition-all hover:scale-[1.01]"
+                        style={{
+                          background:
+                            'linear-gradient(135deg, rgba(250, 204, 21, 0.18), rgba(245, 158, 11, 0.12), rgba(168, 85, 247, 0.10))',
+                          borderColor: 'rgba(253, 224, 71, 0.55)',
+                          boxShadow:
+                            '0 0 40px rgba(250, 204, 21, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.10)',
+                        }}
+                        onClick={goToBattlePass}
+                      >
+                        <div
+                          className="absolute inset-0 pointer-events-none opacity-50"
+                          style={{
+                            background:
+                              'radial-gradient(ellipse at top right, rgba(251, 191, 36, 0.22), transparent 60%), radial-gradient(ellipse at bottom left, rgba(168, 85, 247, 0.20), transparent 60%)',
+                          }}
+                        />
+
+                        {/* PREMIUM-Badge */}
+                        <div
+                          className="absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase flex items-center gap-1 shadow-lg animate-pulse"
+                          style={{
+                            background:
+                              'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                            color: '#1a1a1a',
+                            border: '1px solid rgba(253, 224, 71, 0.8)',
+                          }}
+                        >
+                          <Crown className="w-3 h-3" strokeWidth={3} />
+                          Premium
+                        </div>
+
+                        <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
+                          <div
+                            className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 group-hover:rotate-6"
+                            style={{
+                              background:
+                                'linear-gradient(135deg, rgba(250, 204, 21, 0.5), rgba(245, 158, 11, 0.45))',
+                              border: '1px solid rgba(253, 224, 71, 0.6)',
+                              boxShadow: '0 0 24px rgba(250, 204, 21, 0.6)',
+                            }}
+                          >
+                            <Crown className="w-7 h-7 sm:w-8 sm:h-8 text-white drop-shadow-[0_0_4px_rgba(250,204,21,0.8)]" strokeWidth={2} />
+                          </div>
+
+                          <div className="flex-1 min-w-0 pr-24 sm:pr-28">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-yellow-300">
+                                Premium aktiv · noch {bpDaysLeft} Tage
+                              </span>
+                            </div>
+                            <h3 className="text-lg sm:text-xl font-black text-white leading-tight mb-2">
+                              Battle Pass{' '}
+                              <span className="text-yellow-300">Tier {bpCurrentTier}</span>
+                              <span className="text-white/50 font-bold">/{bpMaxTier}</span>
+                            </h3>
+                            {/* Mini-Progress-Bar */}
+                            <div className="w-full h-2 rounded-full overflow-hidden mb-2" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                              <div
+                                className="h-full transition-all"
+                                style={{
+                                  width: `${bpProgressPct}%`,
+                                  background: 'linear-gradient(90deg, #fbbf24, #f59e0b, #ec4899)',
+                                  boxShadow: '0 0 12px rgba(250, 204, 21, 0.5)',
+                                }}
+                              />
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-white/80">
+                              <span className="flex items-center gap-1.5">
+                                <Trophy className="w-3.5 h-3.5 text-yellow-400" />
+                                <span>
+                                  <b className="text-white">{bpProgressPct}%</b> Fortschritt
+                                </span>
+                              </span>
+                              <span className="flex items-center gap-1.5">
+                                <Gift className="w-3.5 h-3.5 text-pink-400" />
+                                <span>
+                                  <b className="text-white">{bpRewardsArr.length}</b> Tiers gesamt
+                                </span>
+                              </span>
+                            </div>
+                          </div>
+
+                          <Button
+                            onClick={goToBattlePass}
+                            className="hidden sm:flex rounded-xl h-11 px-5 font-bold items-center gap-2 shadow-lg transition-all hover:shadow-xl flex-shrink-0"
+                            style={{
+                              background:
+                                'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                              color: '#1a1a1a',
+                              border: '1px solid rgba(253, 224, 71, 0.8)',
+                            }}
+                          >
+                            Pass öffnen
+                            <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+                          </Button>
+                        </div>
+
+                        <Button
+                          onClick={goToBattlePass}
+                          className="sm:hidden w-full mt-4 rounded-xl h-11 font-bold flex items-center justify-center gap-2 shadow-lg"
+                          style={{
+                            background:
+                              'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                            color: '#1a1a1a',
+                            border: '1px solid rgba(253, 224, 71, 0.8)',
+                          }}
+                        >
+                          Pass öffnen
+                          <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+                        </Button>
+                      </div>
+                    );
+                  }
+
+                  // ───── Variante: Nicht gekauft → Promo-Karte (Gold) ─────
+                  return (
+                    <div
+                      data-tour-card="Battle Pass · Premium|Schalte den Premium Battle Pass frei und sichere dir 30 Tiers exklusiver Belohnungen — Credits, VIP-Zeiten, Custom-Rollen und mehr."
+                      className="relative overflow-hidden rounded-2xl p-5 sm:p-6 border group cursor-pointer transition-all hover:scale-[1.01]"
+                      style={{
+                        background:
+                          'linear-gradient(135deg, rgba(250, 204, 21, 0.16), rgba(245, 158, 11, 0.10), rgba(168, 85, 247, 0.10))',
+                        borderColor: 'rgba(253, 224, 71, 0.45)',
+                        boxShadow:
+                          '0 0 40px rgba(250, 204, 21, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+                      }}
+                      onClick={goToBattlePass}
+                    >
+                      <div
+                        className="absolute inset-0 pointer-events-none opacity-50"
+                        style={{
+                          background:
+                            'radial-gradient(ellipse at top right, rgba(251, 191, 36, 0.20), transparent 60%), radial-gradient(ellipse at bottom left, rgba(168, 85, 247, 0.18), transparent 60%)',
+                        }}
+                      />
+
+                      {/* NEU-Badge (top-right) */}
+                      <div
+                        className="absolute top-4 right-4 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase flex items-center gap-1 shadow-lg"
+                        style={{
+                          background:
+                            'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                          color: '#1a1a1a',
+                          border: '1px solid rgba(253, 224, 71, 0.8)',
+                        }}
+                      >
+                        <Sparkles className="w-3 h-3" strokeWidth={3} />
+                        Neu
+                      </div>
+
+                      <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-5">
+                        <div
+                          className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 group-hover:rotate-6"
+                          style={{
+                            background:
+                              'linear-gradient(135deg, rgba(250, 204, 21, 0.5), rgba(168, 85, 247, 0.4))',
+                            border: '1px solid rgba(253, 224, 71, 0.5)',
+                            boxShadow: '0 0 24px rgba(250, 204, 21, 0.5)',
+                          }}
+                        >
+                          <Crown className="w-7 h-7 sm:w-8 sm:h-8 text-white" strokeWidth={2} />
+                        </div>
+
+                        <div className="flex-1 min-w-0 pr-20 sm:pr-24">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-yellow-300">
+                              Saison aktiv · {bpDaysLeft} Tage übrig
+                            </span>
+                          </div>
+                          <h3 className="text-lg sm:text-xl font-black text-white leading-tight mb-1.5">
+                            Premium Battle Pass{' '}
+                            <span className="text-yellow-300">freischalten</span>
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-white/80">
+                            <span className="flex items-center gap-1.5">
+                              <Trophy className="w-3.5 h-3.5 text-yellow-400" />
+                              <span>
+                                <b className="text-white">{bpMaxTier} Tiers</b> exklusive Rewards
+                              </span>
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <Coins className="w-3.5 h-3.5 text-amber-400" />
+                              <span>
+                                Nur <b className="text-white">{bpPriceCredits.toLocaleString('de-DE')}</b> Credits
+                              </span>
+                            </span>
+                            <span className="flex items-center gap-1.5">
+                              <Gift className="w-3.5 h-3.5 text-pink-400" />
+                              <span>
+                                <b className="text-white">VIP</b> + Custom-Rollen
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+
+                        <Button
+                          onClick={goToBattlePass}
+                          disabled={!bpCanPurchase}
+                          className="hidden sm:flex rounded-xl h-11 px-5 font-bold items-center gap-2 shadow-lg transition-all hover:shadow-xl flex-shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                          style={{
+                            background:
+                              'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                            color: '#1a1a1a',
+                            border: '1px solid rgba(253, 224, 71, 0.8)',
+                          }}
+                        >
+                          {bpCanPurchase ? 'Battle Pass entdecken' : 'Saison endet bald'}
+                          <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
+                        </Button>
+                      </div>
+
+                      <Button
+                        onClick={goToBattlePass}
+                        disabled={!bpCanPurchase}
+                        className="sm:hidden w-full mt-4 rounded-xl h-11 font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                        style={{
+                          background:
+                            'linear-gradient(135deg, #fbbf24, #f59e0b)',
+                          color: '#1a1a1a',
+                          border: '1px solid rgba(253, 224, 71, 0.8)',
+                        }}
+                      >
+                        {bpCanPurchase ? 'Battle Pass entdecken' : 'Saison endet bald'}
                         <ArrowRight className="w-4 h-4" strokeWidth={2.5} />
                       </Button>
                     </div>

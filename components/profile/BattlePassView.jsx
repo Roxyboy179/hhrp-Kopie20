@@ -407,7 +407,7 @@ export default function BattlePassView() {
   }
 
   const { userProgress, rewards, season, daysRemaining, pricing, canPurchase, minDaysToPurchase } = data;
-  const { currentTier, purchased, canClaimToday, missedDays } = userProgress;
+  const { currentTier, purchased, canClaimToday, missedDays, cancelled, cancelledAt } = userProgress;
   const seasonName = `${season.month}/${season.year}`;
   const progress = (currentTier / 30) * 100;
   const allClaimed = currentTier >= 30;
@@ -520,7 +520,7 @@ export default function BattlePassView() {
               </div>
             )}
 
-            {purchased && !purchasing && !cancelling && (
+            {purchased && !purchasing && !cancelling && !cancelled && (
               <div className="flex items-center gap-2 flex-1 sm:flex-initial">
                 <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-yellow-400/40 bg-yellow-400/10 backdrop-blur-md shadow-lg flex-1 animate-pulse">
                   <Crown className="w-4 h-4 md:w-5 md:h-5 text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.8)]" />
@@ -536,6 +536,21 @@ export default function BattlePassView() {
                   <X className="w-4 h-4 md:w-4 md:h-4 mr-1" />
                   Kündigen
                 </Button>
+              </div>
+            )}
+
+            {/* ✅ Gekündigt-Status: Premium läuft bis Monatsende weiter */}
+            {purchased && cancelled && !cancelling && (
+              <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-orange-400/40 bg-gradient-to-r from-orange-500/10 to-amber-500/10 backdrop-blur-md shadow-lg flex-1">
+                <X className="w-4 h-4 md:w-5 md:h-5 text-orange-400 flex-shrink-0" />
+                <div className="flex flex-col min-w-0">
+                  <span className="text-orange-200 font-bold text-xs md:text-sm whitespace-nowrap drop-shadow-md leading-tight">
+                    Gekündigt
+                  </span>
+                  <span className="text-orange-300/80 text-[10px] md:text-xs leading-tight">
+                    Premium läuft noch {daysRemaining}d (bis Monatsende)
+                  </span>
+                </div>
               </div>
             )}
 

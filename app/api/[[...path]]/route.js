@@ -1487,6 +1487,8 @@ async function getUserBattlePassProgress(discordUserId, month, year) {
         purchased: false,
         last_claim_date: null,
         claimed_tiers: [],
+        cancelled: false,
+        cancelled_at: null,
       };
     }
     
@@ -1497,6 +1499,8 @@ async function getUserBattlePassProgress(discordUserId, month, year) {
         purchased: false,
         last_claim_date: null,
         claimed_tiers: [],
+        cancelled: false,
+        cancelled_at: null,
       };
     }
     
@@ -1506,6 +1510,8 @@ async function getUserBattlePassProgress(discordUserId, month, year) {
       last_claim_date: bpEntry.last_claim_date || null,
       claimed_tiers: bpEntry.claimed_tiers || [],
       purchase_date: bpEntry.purchase_date || null,
+      cancelled: bpEntry.cancelled === true,
+      cancelled_at: bpEntry.cancelled_at || null,
     };
   } catch (e) {
     console.error('[BP-API] ❌ Fehler beim Lesen von user_data:', e.message);
@@ -1514,6 +1520,8 @@ async function getUserBattlePassProgress(discordUserId, month, year) {
       purchased: false,
       last_claim_date: null,
       claimed_tiers: [],
+      cancelled: false,
+      cancelled_at: null,
     };
   }
 }
@@ -1673,6 +1681,8 @@ async function handleBattlePassCurrent(request) {
         canClaimToday: canClaimToday(userProgress.last_claim_date) && missedDays === 0, // ✅ Nur claimen wenn kein Tag verpasst
         lastClaimDate: userProgress.last_claim_date,
         missedDays: missedDays, // ✅ NEU: Anzahl verpasster Tage
+        cancelled: userProgress.cancelled === true, // ✅ NEU: ob bereits gekündigt
+        cancelledAt: userProgress.cancelled_at || null, // ✅ NEU: Zeitpunkt der Kündigung
       },
       rewards: BATTLE_PASS_REWARDS,
       config: BATTLE_PASS_CONFIG,
@@ -1897,6 +1907,11 @@ async function handleBattlePassCancel(request) {
     
     if (!progress.purchased) {
       return NextResponse.json({ error: 'Du hast keinen aktiven Premium Battle Pass' }, { status: 400 });
+    }
+
+    // ✅ Bereits gekündigt? Dann nicht erneut kündigen
+    if (progress.cancelled) {
+      return NextResponse.json({ error: 'Premium Battle Pass wurde bereits gekündigt' }, { status: 400 });
     }
 
     // Doppel-Schutz: existiert bereits ein pending cancel?
