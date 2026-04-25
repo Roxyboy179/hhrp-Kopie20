@@ -85,15 +85,29 @@ function fireConfetti() {
   fire(0.1, { spread: 120, startVelocity: 45 });
 }
 
-// 🎉 Premium Kauf Animation (goldener Regen) - läuft bis Bot bestätigt
-function startPremiumConfetti() {
-  const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+// 🎉 Premium Kauf Animation (goldener Regen) - 3 Sekunden Burst nach Erfolg
+function firePremiumConfetti() {
+  const defaults = { startVelocity: 35, spread: 360, ticks: 80, zIndex: 9999 };
 
   function randomInRange(min, max) {
     return Math.random() * (max - min) + min;
   }
 
+  // Initial großer Burst
+  confetti({
+    particleCount: 150,
+    spread: 90,
+    origin: { y: 0.6 },
+    colors: ['#FFD700', '#FFA500', '#FFFF00', '#FFE4B5', '#FFC107'],
+  });
+
+  // Goldener Regen über 3 Sekunden
+  const end = Date.now() + 3000;
   const interval = setInterval(() => {
+    if (Date.now() > end) {
+      clearInterval(interval);
+      return;
+    }
     confetti({
       ...defaults,
       particleCount: 25,
@@ -106,9 +120,7 @@ function startPremiumConfetti() {
       origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
       colors: ['#FFD700', '#FFA500', '#FFFF00', '#FFE4B5'],
     });
-  }, 250);
-
-  return interval; // Return interval so we can clear it
+  }, 200);
 }
 
 export default function BattlePassView() {
@@ -157,7 +169,7 @@ export default function BattlePassView() {
         }
         setPurchasing(false);
         toast.dismiss('premium-purchase');
-        toast.error('⚠️ Bot antwortet nicht. Bitte versuche es später erneut.', { duration: 6000 });
+        toast.error('⚠️ HHRP Server antwortet nicht. Bitte versuche es später erneut.', { duration: 6000 });
         return;
       }
       
@@ -166,14 +178,9 @@ export default function BattlePassView() {
         const json = await res.json();
         
         if (json.processed) {
-          // ✅ Eintrag gelöscht = Bot hat verarbeitet!
+          // ✅ Eintrag gelöscht = HHRP Server hat verarbeitet!
           purchaseQueueIdRef.current = null;
           purchaseStartedAtRef.current = null;
-          
-          if (confettiIntervalRef.current) {
-            clearInterval(confettiIntervalRef.current);
-            confettiIntervalRef.current = null;
-          }
           
           setPurchasing(false);
           toast.dismiss('premium-purchase');
@@ -181,6 +188,9 @@ export default function BattlePassView() {
             icon: '👑',
             duration: 5000,
           });
+          
+          // 🎉 Confetti ERST nach erfolgreichem Abschluss (goldener Regen)
+          firePremiumConfetti();
           
           // Lade Battle Pass neu
           loadBattlePass();
@@ -199,7 +209,7 @@ export default function BattlePassView() {
         claimStartedAtRef.current = null;
         setClaiming(false);
         toast.dismiss('tier-claim');
-        toast.error('⚠️ Bot antwortet nicht. Bitte versuche es später erneut.', { duration: 6000 });
+        toast.error('⚠️ HHRP Server antwortet nicht. Bitte versuche es später erneut.', { duration: 6000 });
         return;
       }
       
@@ -208,7 +218,7 @@ export default function BattlePassView() {
           claimQueueIdsRef.current.map(id => fetch(`/api/battle-pass/queue/${id}`).then(r => r.json()))
         );
         
-        // Wenn alle gelöscht = Bot fertig
+        // Wenn alle gelöscht = HHRP Server fertig
         if (checks.every(c => c.processed)) {
           claimQueueIdsRef.current = [];
           claimStartedAtRef.current = null;
@@ -217,6 +227,9 @@ export default function BattlePassView() {
           toast.success('🎁 Tier geclaimt!', {
             duration: 4000,
           });
+          
+          // 🎊 Confetti ERST nach erfolgreichem Abschluss
+          fireConfetti();
           
           // Lade Battle Pass neu
           loadBattlePass();
@@ -263,10 +276,8 @@ export default function BattlePassView() {
         purchaseQueueIdRef.current = json.queueId;
         purchaseStartedAtRef.current = Date.now();
         
-        // 🎉 Starte Premium-Kauf Animation (läuft bis Queue-Eintrag gelöscht)
-        confettiIntervalRef.current = startPremiumConfetti();
-        
-        toast.loading('Warte auf Bot-Bestätigung...', {
+        // ⏳ Kein Confetti hier — erst nach erfolgreicher Bestätigung in checkQueueStatus
+        toast.loading('Warte auf HHRP Server...', {
           duration: 60000,
           id: 'premium-purchase',
         });
@@ -293,10 +304,8 @@ export default function BattlePassView() {
         claimQueueIdsRef.current = json.queueIds || [];
         claimStartedAtRef.current = Date.now();
         
-        // 🎊 Nur Confetti, kein Overlay
-        fireConfetti();
-        
-        toast.loading('Warte auf Bot-Bestätigung...', {
+        // ⏳ Kein Confetti hier — erst nach erfolgreicher Bestätigung in checkQueueStatus
+        toast.loading('Warte auf HHRP Server...', {
           duration: 60000,
           id: 'tier-claim',
         });
@@ -410,7 +419,7 @@ export default function BattlePassView() {
             {purchasing && (
               <div className="flex items-center justify-center gap-2 px-4 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-yellow-400/40 bg-yellow-400/10 backdrop-blur-md shadow-lg flex-1 sm:flex-initial">
                 <Loader2 className="w-4 h-4 md:w-5 md:h-5 text-yellow-400 animate-spin" />
-                <span className="text-yellow-300 font-bold text-xs md:text-sm whitespace-nowrap">Warte auf Bot...</span>
+                <span className="text-yellow-300 font-bold text-xs md:text-sm whitespace-nowrap">Warte auf HHRP Server...</span>
               </div>
             )}
 
@@ -438,7 +447,7 @@ export default function BattlePassView() {
             {claiming && (
               <div className="flex items-center justify-center gap-2 px-4 md:px-5 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-green-400/40 bg-green-400/10 backdrop-blur-md shadow-lg flex-1">
                 <Loader2 className="w-4 h-4 md:w-5 md:h-5 text-green-400 animate-spin" />
-                <span className="text-green-300 font-bold text-xs md:text-sm whitespace-nowrap">Warte auf Bot...</span>
+                <span className="text-green-300 font-bold text-xs md:text-sm whitespace-nowrap">Warte auf HHRP Server...</span>
               </div>
             )}
 
