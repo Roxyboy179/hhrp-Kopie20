@@ -727,141 +727,159 @@ export default function BattlePassView() {
         </div>
       </div>
 
-      {/* ==================== PURCHASE DIALOG - Tier Selection ==================== */}
+      {/* ==================== PURCHASE DIALOG - Mit Tier-Auswahl ==================== */}
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent className="glass border border-white/[0.12] max-w-4xl mx-4">
+        <AlertDialogContent className="glass border border-white/[0.12] max-w-lg mx-4">
+          {(() => {
+            const selectedTier = (tiers || []).find((t) => t.id === selectedPassType) || (tiers || [])[0];
+            if (!selectedTier) return null;
+            const tierPrice = selectedTier.currentPrice ?? selectedTier.cost;
+            const tierDiscount = selectedTier.discountPercent ?? 0;
+            const tierOriginal = selectedTier.cost;
+            
+            // Tier-spezifische Farben
+            const tierColors = {
+              premium: { icon: Crown, color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.15)', border: 'rgba(251, 191, 36, 0.35)' },
+              elite: { icon: Gem, color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.15)', border: 'rgba(167, 139, 250, 0.35)' },
+              ultra: { icon: Star, color: '#fb7185', bg: 'rgba(251, 113, 133, 0.15)', border: 'rgba(251, 113, 133, 0.35)' },
+            };
+            const tc = tierColors[selectedTier.id] || tierColors.premium;
+            const TierIcon = tc.icon;
+            
+            return (
+          <>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl font-bold text-white text-center mb-4">
-              Wähle deinen Battle Pass
+            <AlertDialogTitle className="text-xl font-bold text-white text-center mb-3">
+              Battle Pass kaufen
             </AlertDialogTitle>
-          </AlertDialogHeader>
-          
-          {/* 3 Tier Cards zur Auswahl */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 py-4">
-            {(tiers || []).map((t) => {
-              const tierColors = {
-                premium: { 
-                  gradient: 'linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%)',
-                  shadow: '0 10px 30px rgba(251, 191, 36, 0.3)',
-                  text: '#1a1a1a',
-                  icon: Crown,
-                },
-                elite: { 
-                  gradient: 'linear-gradient(180deg, #a78bfa 0%, #7c3aed 100%)',
-                  shadow: '0 10px 30px rgba(167, 139, 250, 0.3)',
-                  text: '#fff',
-                  icon: Gem,
-                },
-                ultra: { 
-                  gradient: 'linear-gradient(180deg, #fb7185 0%, #e11d48 100%)',
-                  shadow: '0 10px 30px rgba(251, 113, 133, 0.3)',
-                  text: '#fff',
-                  icon: Star,
-                },
-              };
-              const c = tierColors[t.id] || tierColors.premium;
-              const showOriginal = t.discountPercent > 0;
-              const TierIcon = c.icon;
-              const isSelected = selectedPassType === t.id;
-              
-              return (
-                <button
-                  key={t.id}
-                  onClick={() => setSelectedPassType(t.id)}
-                  className={`relative rounded-3xl overflow-hidden transition-all duration-300 hover:scale-105 cursor-pointer group ${isSelected ? 'ring-4 ring-white/50' : ''}`}
-                  style={{
-                    background: c.gradient,
-                    boxShadow: c.shadow,
-                    minHeight: '420px',
-                  }}
-                >
-                  {/* Shine Effect */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                  
-                  {/* Content */}
-                  <div className="relative z-10 p-6 flex flex-col items-center justify-between h-full">
-                    {/* Icon & Title */}
-                    <div className="flex flex-col items-center gap-3">
-                      <TierIcon className="w-12 h-12" style={{ color: c.text }} />
-                      <h3 className="text-2xl font-black uppercase tracking-wider" style={{ color: c.text }}>
-                        {t.name.replace(' Pass', '')}
-                      </h3>
+            
+            {/* Tier-Auswahl Buttons */}
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {(tiers || []).map((t) => {
+                const isSelected = selectedPassType === t.id;
+                const tColor = tierColors[t.id] || tierColors.premium;
+                const TIcon = tColor.icon;
+                
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedPassType(t.id)}
+                    className={`relative rounded-xl p-3 transition-all duration-300 hover:scale-105 ${
+                      isSelected ? 'ring-2' : ''
+                    }`}
+                    style={{
+                      background: tColor.bg,
+                      border: `2px solid ${isSelected ? tColor.color : tColor.border}`,
+                      boxShadow: isSelected ? `0 4px 16px ${tColor.color}40` : 'none'
+                    }}
+                  >
+                    <TIcon className="w-6 h-6 mx-auto mb-1" style={{ color: tColor.color }} />
+                    <div className="text-xs font-bold" style={{ color: tColor.color }}>
+                      {t.name.replace(' Pass', '')}
                     </div>
-                    
-                    {/* Price */}
-                    <div className="flex flex-col items-center gap-2 my-4">
-                      {showOriginal && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xl line-through opacity-60" style={{ color: c.text }}>
-                            {t.cost.toLocaleString('de-DE')}
-                          </span>
-                          <span
-                            className="text-sm font-bold px-2 py-1 rounded-full"
-                            style={{
-                              background: 'rgba(239, 68, 68, 0.9)',
-                              color: '#fff',
-                            }}
-                          >
-                            -{t.discountPercent}%
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-4xl font-black" style={{ color: c.text }}>
-                          {(t.currentPrice ?? t.cost).toLocaleString('de-DE')}
-                        </span>
-                        <Coins className="w-6 h-6" style={{ color: c.text }} />
-                      </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                {/* Preis-Info */}
+                <div className="glass rounded-xl border border-white/[0.08] px-4 py-3 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-white/70 font-medium">Kosten heute</span>
+                    <span className="flex items-center gap-2 font-bold text-white text-base">
+                      <Coins className="w-5 h-5" style={{ color: tc.color }} />
+                      {tierPrice.toLocaleString('de-DE')} Credits
+                    </span>
+                  </div>
+                  {tierDiscount > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-white/50">Originalpreis</span>
+                      <span className="line-through text-white/40 font-semibold">{tierOriginal.toLocaleString('de-DE')} Credits</span>
                     </div>
-                    
-                    {/* Reward Reduction */}
-                    <div className="text-center">
-                      <div className="text-xl font-black uppercase tracking-widest mb-1" style={{ color: c.text }}>
-                        -{t.reductionPercent}% REWARDS
-                      </div>
-                      <div className="text-xs opacity-80" style={{ color: c.text }}>
-                        Auf alle Belohnungen
-                      </div>
+                  )}
+                  {tierDiscount > 0 && (
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-emerald-300 font-bold">Tages-Rabatt</span>
+                      <span className="text-emerald-300 font-bold bg-emerald-500/20 px-1.5 py-0.5 rounded-md border border-emerald-500/30">
+                        −{tierDiscount}% ({(tierOriginal - tierPrice).toLocaleString('de-DE')} Credits gespart)
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-white/10">
+                    <span className="text-white/50">Reward-Reduktion</span>
+                    <span className="text-rose-300 font-bold bg-rose-500/20 px-1.5 py-0.5 rounded-md border border-rose-500/30">
+                      −{selectedTier.reductionPercent}% auf alle Beträge
+                    </span>
+                  </div>
+                </div>
+
+                {/* Auto-Renew Checkbox */}
+                <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 backdrop-blur-md p-3 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={purchaseAutorenew}
+                    onChange={(e) => setPurchaseAutorenew(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 accent-emerald-500 cursor-pointer flex-shrink-0"
+                  />
+                  <div className="flex-1 text-sm">
+                    <div className="font-bold text-emerald-300">Auto-Verlängerung aktivieren</div>
+                    <div className="text-xs text-white/60 mt-0.5">
+                      Pass läuft jeden Monat automatisch weiter — Discord-Rolle bleibt dauerhaft. Jederzeit kündbar.
                     </div>
                   </div>
-                </button>
-              );
-            })}
-          </div>
+                </label>
 
-          {/* Auto-Renew Checkbox */}
-          <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 backdrop-blur-md p-3 transition-colors">
-            <input
-              type="checkbox"
-              checked={purchaseAutorenew}
-              onChange={(e) => setPurchaseAutorenew(e.target.checked)}
-              className="mt-0.5 w-4 h-4 accent-emerald-500 cursor-pointer flex-shrink-0"
-            />
-            <div className="flex-1 text-sm">
-              <div className="font-bold text-emerald-300">Auto-Verlängerung aktivieren</div>
-              <div className="text-xs text-white/60 mt-0.5">
-                Pass läuft jeden Monat automatisch weiter — Discord-Rolle bleibt dauerhaft. Jederzeit kündbar.
+                {/* Vorteile */}
+                <div className="rounded-xl border border-white/20 bg-white/5 backdrop-blur-md p-4 text-sm text-white/90">
+                  <div className="mb-2 font-bold text-white">Du erhältst:</div>
+                  <ul className="space-y-2 text-xs font-medium">
+                    <li className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: tc.color }} />
+                      <span>Alle 30 Premium-Belohnungen (mit −{selectedTier.reductionPercent}% Reduktion)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Gift className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: tc.color }} />
+                      <span>Doppelte Belohnungen pro Claim (Free + Premium)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <TierIcon className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: tc.color }} />
+                      <span>Exklusive Discord-Rolle für 1 Monat{purchaseAutorenew ? ' (verlängert sich automatisch)' : ''}</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Ticket className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: tc.color }} />
+                      <span>Bei Item-Duplikaten → Alternative Credits!</span>
+                    </li>
+                  </ul>
+                </div>
               </div>
-            </div>
-          </label>
-
-          <AlertDialogFooter className="gap-3 mt-4">
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-3 mt-2">
             <AlertDialogCancel className="glass border border-white/[0.12] text-white hover:bg-white/5 font-semibold rounded-xl">
               Abbrechen
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handlePurchase}
-              disabled={!selectedPassType}
               className="rounded-xl font-bold border-0"
               style={{
-                background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-                boxShadow: '0 8px 24px rgba(251, 191, 36, 0.4)'
+                background: tc.color.includes('#fbbf24') 
+                  ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' 
+                  : tc.color.includes('#a78bfa')
+                  ? 'linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%)'
+                  : 'linear-gradient(135deg, #fb7185 0%, #e11d48 100%)',
+                color: tc.color.includes('#fbbf24') ? '#1a1a1a' : '#fff',
+                boxShadow: `0 8px 24px ${tc.color}60`
               }}
             >
-              <Crown className="w-5 h-5 mr-2" />
-              Jetzt kaufen
+              <TierIcon className="w-5 h-5 mr-2" />
+              Für {tierPrice.toLocaleString('de-DE')} Credits kaufen
             </AlertDialogAction>
           </AlertDialogFooter>
+          </>
+            );
+          })()}
         </AlertDialogContent>
       </AlertDialog>
 
