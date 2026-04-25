@@ -117,11 +117,12 @@ export default function BattlePassView() {
   const [claiming, setClaiming] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [purchaseQueueId, setPurchaseQueueId] = useState(null); // ✅ Queue-ID für Purchase
-  const [claimQueueIds, setClaimQueueIds] = useState([]); // ✅ Queue-IDs für Claims
   const pollingRef = useRef(null);
-  const queueCheckRef = useRef(null); // ✅ Interval für Queue-Check
+  const queueCheckRef = useRef(null);
   const confettiIntervalRef = useRef(null);
+  // ✅ Refs für Queue-IDs (damit Closure funktioniert)
+  const purchaseQueueIdRef = useRef(null);
+  const claimQueueIdsRef = useRef([]);
 
   useEffect(() => {
     loadBattlePass();
@@ -138,15 +139,15 @@ export default function BattlePassView() {
   
   // ✅ Prüft ob Queue-Einträge gelöscht wurden = Bot fertig
   const checkQueueStatus = async () => {
-    // Purchase prüfen
-    if (purchaseQueueId) {
+    // Purchase prüfen (mit Ref!)
+    if (purchaseQueueIdRef.current) {
       try {
-        const res = await fetch(`/api/battle-pass/queue/${purchaseQueueId}`);
+        const res = await fetch(`/api/battle-pass/queue/${purchaseQueueIdRef.current}`);
         const json = await res.json();
         
         if (json.processed) {
           // ✅ Eintrag gelöscht = Bot hat verarbeitet!
-          setPurchaseQueueId(null);
+          purchaseQueueIdRef.current = null;
           
           if (confettiIntervalRef.current) {
             clearInterval(confettiIntervalRef.current);
@@ -168,16 +169,16 @@ export default function BattlePassView() {
       }
     }
     
-    // Claims prüfen
-    if (claimQueueIds.length > 0) {
+    // Claims prüfen (mit Ref!)
+    if (claimQueueIdsRef.current.length > 0) {
       try {
         const checks = await Promise.all(
-          claimQueueIds.map(id => fetch(`/api/battle-pass/queue/${id}`).then(r => r.json()))
+          claimQueueIdsRef.current.map(id => fetch(`/api/battle-pass/queue/${id}`).then(r => r.json()))
         );
         
         // Wenn alle gelöscht = Bot fertig
         if (checks.every(c => c.processed)) {
-          setClaimQueueIds([]);
+          claimQueueIdsRef.current = [];
           setClaiming(false);
           toast.dismiss('tier-claim');
           toast.success('🎁 Tier geclaimt!', {
@@ -225,8 +226,8 @@ export default function BattlePassView() {
       const json = await res.json();
       
       if (res.ok) {
-        // ✅ Speichere Queue-ID für Status-Prüfung
-        setPurchaseQueueId(json.queueId);
+        // ✅ Speichere Queue-ID in Ref (nicht State!)
+        purchaseQueueIdRef.current = json.queueId;
         
         // 🎉 Starte Premium-Kauf Animation (läuft bis Queue-Eintrag gelöscht)
         confettiIntervalRef.current = startPremiumConfetti();
@@ -254,8 +255,8 @@ export default function BattlePassView() {
       const json = await res.json();
       
       if (res.ok) {
-        // ✅ Speichere Queue-IDs für Status-Prüfung
-        setClaimQueueIds(json.queueIds || []);
+        // ✅ Speichere Queue-IDs in Ref (nicht State!)
+        claimQueueIdsRef.current = json.queueIds || [];
         
         // 🎊 Nur Confetti, kein Overlay
         fireConfetti();
