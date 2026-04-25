@@ -123,6 +123,10 @@ export default function BattlePassView() {
   // ✅ Refs für Queue-IDs (damit Closure funktioniert)
   const purchaseQueueIdRef = useRef(null);
   const claimQueueIdsRef = useRef([]);
+  // ✅ Timestamps für Timeout (30s)
+  const purchaseStartedAtRef = useRef(null);
+  const claimStartedAtRef = useRef(null);
+  const POLLING_TIMEOUT_MS = 45000; // 45 Sekunden Timeout
 
   useEffect(() => {
     loadBattlePass();
@@ -135,12 +139,28 @@ export default function BattlePassView() {
       if (queueCheckRef.current) clearInterval(queueCheckRef.current);
       if (confettiIntervalRef.current) clearInterval(confettiIntervalRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // ✅ Nur einmal beim Mount
   
   // ✅ Prüft ob Queue-Einträge gelöscht wurden = Bot fertig
   const checkQueueStatus = async () => {
     // Purchase prüfen (mit Ref!)
     if (purchaseQueueIdRef.current) {
+      // Timeout-Check: Bot offline?
+      if (purchaseStartedAtRef.current && Date.now() - purchaseStartedAtRef.current > POLLING_TIMEOUT_MS) {
+        console.warn('[BP] Purchase Timeout — Bot antwortet nicht');
+        purchaseQueueIdRef.current = null;
+        purchaseStartedAtRef.current = null;
+        if (confettiIntervalRef.current) {
+          clearInterval(confettiIntervalRef.current);
+          confettiIntervalRef.current = null;
+        }
+        setPurchasing(false);
+        toast.dismiss('premium-purchase');
+        toast.error('⚠️ Bot antwortet nicht. Bitte versuche es später erneut.', { duration: 6000 });
+        return;
+      }
+      
       try {
         const res = await fetch(`/api/battle-pass/queue/${purchaseQueueIdRef.current}`);
         const json = await res.json();
@@ -148,6 +168,7 @@ export default function BattlePassView() {
         if (json.processed) {
           // ✅ Eintrag gelöscht = Bot hat verarbeitet!
           purchaseQueueIdRef.current = null;
+          purchaseStartedAtRef.current = null;
           
           if (confettiIntervalRef.current) {
             clearInterval(confettiIntervalRef.current);
@@ -171,6 +192,17 @@ export default function BattlePassView() {
     
     // Claims prüfen (mit Ref!)
     if (claimQueueIdsRef.current.length > 0) {
+      // Timeout-Check: Bot offline?
+      if (claimStartedAtRef.current && Date.now() - claimStartedAtRef.current > POLLING_TIMEOUT_MS) {
+        console.warn('[BP] Claim Timeout — Bot antwortet nicht');
+        claimQueueIdsRef.current = [];
+        claimStartedAtRef.current = null;
+        setClaiming(false);
+        toast.dismiss('tier-claim');
+        toast.error('⚠️ Bot antwortet nicht. Bitte versuche es später erneut.', { duration: 6000 });
+        return;
+      }
+      
       try {
         const checks = await Promise.all(
           claimQueueIdsRef.current.map(id => fetch(`/api/battle-pass/queue/${id}`).then(r => r.json()))
@@ -179,6 +211,7 @@ export default function BattlePassView() {
         // Wenn alle gelöscht = Bot fertig
         if (checks.every(c => c.processed)) {
           claimQueueIdsRef.current = [];
+          claimStartedAtRef.current = null;
           setClaiming(false);
           toast.dismiss('tier-claim');
           toast.success('🎁 Tier geclaimt!', {
@@ -228,12 +261,13 @@ export default function BattlePassView() {
       if (res.ok) {
         // ✅ Speichere Queue-ID in Ref (nicht State!)
         purchaseQueueIdRef.current = json.queueId;
+        purchaseStartedAtRef.current = Date.now();
         
         // 🎉 Starte Premium-Kauf Animation (läuft bis Queue-Eintrag gelöscht)
         confettiIntervalRef.current = startPremiumConfetti();
         
         toast.loading('Warte auf Bot-Bestätigung...', {
-          duration: 30000,
+          duration: 60000,
           id: 'premium-purchase',
         });
       } else {
@@ -257,12 +291,13 @@ export default function BattlePassView() {
       if (res.ok) {
         // ✅ Speichere Queue-IDs in Ref (nicht State!)
         claimQueueIdsRef.current = json.queueIds || [];
+        claimStartedAtRef.current = Date.now();
         
         // 🎊 Nur Confetti, kein Overlay
         fireConfetti();
         
         toast.loading('Warte auf Bot-Bestätigung...', {
-          duration: 30000,
+          duration: 60000,
           id: 'tier-claim',
         });
         

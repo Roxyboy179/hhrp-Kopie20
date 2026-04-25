@@ -2987,6 +2987,13 @@ export async function GET(request) {
     }
   }
 
+  // ✅ Queue Status Check (für Eintrag-gelöscht-Polling)
+  // ⚠️ MUSS VOR dem switch stehen, da dynamische Pfade nicht in switch passen!
+  if (p.startsWith('battle-pass/queue/')) {
+    const queueId = p.split('/')[2];
+    return handleBattlePassQueueStatus(request, queueId);
+  }
+
   switch (p) {
     case 'auth/discord': return handleDiscordAuth();
     case 'auth/callback': return handleDiscordCallback(request);
@@ -3004,12 +3011,6 @@ export async function GET(request) {
     
     // Battle Pass Endpoints (nur GET hier; POST + claim/purchase sind im POST-Handler)
     case 'battle-pass/current': return handleBattlePassCurrent(request);
-    
-    // ✅ Queue Status Check (für Eintrag-gelöscht-Polling)
-    if (p.startsWith('battle-pass/queue/')) {
-      const queueId = p.split('/')[2];
-      return handleBattlePassQueueStatus(request, queueId);
-    }
     
     case 'team/members': return handleGetTeamMembers(request);
     case 'shop/items': return handleGetShopItems(request);
