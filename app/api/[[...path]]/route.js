@@ -1612,8 +1612,11 @@ async function getUserBattlePassProgress(discordUserId, month, year) {
       pass_type: passType,
       role_expires_at: bpEntry.role_expires_at || null,
       autorenew: bpEntry.autorenew === true,
-      auto_claim_enabled: parsedData?.auto_claim_enabled === true || passType === 'ultra', // ✅ Aus ROOT oder Ultra+
-      lifetime_pass: parsedData?.lifetime_battle_pass === true,
+      auto_claim_enabled: bpEntry.auto_claim_enabled === true
+                          || parsedData?.auto_claim_enabled === true
+                          || passType === 'ultra', // ✅ Aus battle_pass-Sub, Root (Legacy) oder Ultra+
+      lifetime_pass: bpEntry.lifetime_battle_pass === true
+                     || parsedData?.lifetime_battle_pass === true, // ✅ Aus battle_pass-Sub oder Root (Legacy)
     };
   } catch (e) {
     console.error('[BP-API] ❌ Fehler beim Lesen von user_data:', e.message);
@@ -2344,7 +2347,10 @@ async function handleBattlePassBuyAutoclaim(request) {
     // ✅ Credits + parsedData korrekt lesen
     const { parsedData, credits: currentCredits } = await readUserCredits(user.discordUserId);
 
-    if (parsedData?.auto_claim_enabled) {
+    // Prüfe sowohl battle_pass-Sub als auch Root (Legacy)
+    const alreadyEnabled = parsedData?.battle_pass?.auto_claim_enabled === true
+                           || parsedData?.auto_claim_enabled === true;
+    if (alreadyEnabled) {
       return NextResponse.json({ error: 'Auto-Claim ist bereits aktiviert!' }, { status: 400 });
     }
 
@@ -2421,7 +2427,10 @@ async function handleBattlePassBuyLifetime(request) {
     // ✅ Credits + parsedData korrekt lesen
     const { parsedData, credits: currentCredits } = await readUserCredits(user.discordUserId);
 
-    if (parsedData?.lifetime_battle_pass) {
+    // Prüfe sowohl battle_pass-Sub als auch Root (Legacy)
+    const alreadyOwned = parsedData?.battle_pass?.lifetime_battle_pass === true
+                         || parsedData?.lifetime_battle_pass === true;
+    if (alreadyOwned) {
       return NextResponse.json({ error: 'Du hast bereits den Lifetime Pass!' }, { status: 400 });
     }
 
