@@ -42,6 +42,7 @@ import { ErweiterteTransaktionenView, SparkontoManagementView } from '@/componen
 import { TransferMoneyView } from '@/components/profile/TransferMoneyView';
 import { ShopView } from '@/components/profile/ShopView';
 import { CharacterManagementView } from '@/components/profile/CharacterManagementView';
+import BattlePassView from '@/components/profile/BattlePassView';
 import HamburgHorizonTab from '@/components/profile/HamburgHorizonTab';
 import LicensesView from '@/components/profile/LicensesView';
 import ProfileTour, { TourStartButton, hasCompletedProfileTour } from '@/components/profile/ProfileTour';
@@ -1033,6 +1034,7 @@ export default function ProfilPage() {
     { id: 'finance', label: 'Finanzen', icon: Wallet, hasSubTabs: true },
     { id: 'documents', label: 'Dokumente', icon: IdCard, hasSubTabs: true },
     { id: 'shop', label: 'Shop', icon: ShoppingCart },
+    { id: 'battle-pass', label: 'Battle Pass', icon: Crown },
     { id: 'character', label: 'Charakter-Verwaltung', icon: User },
     { id: 'hamburg-horizon', label: 'Mein Profil', icon: Sparkles, hasSubTabs: true },
     { id: 'applications', label: 'Bewerbungen', icon: ClipboardList },
@@ -3820,6 +3822,13 @@ export default function ProfilPage() {
               jumpToCategory={shopJumpToCategory}
               onJumpHandled={() => setShopJumpToCategory(null)}
             />
+          </div>
+        )}
+
+        {/* Battle Pass Tab */}
+        {activeTab === 'battle-pass' && (
+          <div data-tour-card="HHRP Battle Pass|Schalte täglich neue Belohnungen frei! Premium für doppelte Rewards. Credits, Geld, Items und mehr warten auf dich.">
+            <BattlePassView />
           </div>
         )}
 

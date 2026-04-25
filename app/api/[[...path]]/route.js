@@ -1365,6 +1365,362 @@ async function handleAdminVerwarnungenSuche(request) {
   }
 }
 
+// ============================================
+// Battle Pass Handlers
+// ============================================
+
+// Importiere Battle Pass Config
+const BATTLE_PASS_CONFIG = { COST_CREDITS: 1500, TIERS_COUNT: 30 };
+const REWARD_TYPES = { CREDITS: 'credits', MONEY: 'money', ITEM: 'item', XP: 'xp', PASS: 'pass' };
+
+// 30 Tiers - Hardcoded Rewards (matches /lib/battle-pass-rewards.js & frontend)
+const BATTLE_PASS_REWARDS = [
+  { tier: 1, free: { type: 'credits', amount: 50, label: '50 Credits' }, premium: { type: 'money', amount: 5000, label: '5.000€' } },
+  { tier: 2, free: { type: 'xp', amount: 500, label: '500 XP' }, premium: { type: 'credits', amount: 200, label: '200 Credits' } },
+  { tier: 3, free: { type: 'credits', amount: 75, label: '75 Credits' }, premium: { type: 'item', item_id: 'führerschein_b', label: 'Führerschein B', alternativeCredits: 300 } },
+  { tier: 4, free: { type: 'money', amount: 3000, label: '3.000€' }, premium: { type: 'credits', amount: 250, label: '250 Credits' } },
+  { tier: 5, free: { type: 'xp', amount: 750, label: '750 XP' }, premium: { type: 'money', amount: 10000, label: '10.000€' } },
+  { tier: 6, free: { type: 'credits', amount: 100, label: '100 Credits' }, premium: { type: 'item', item_id: 'führerschein_a', label: 'Führerschein A', alternativeCredits: 400 } },
+  { tier: 7, free: { type: 'money', amount: 4000, label: '4.000€' }, premium: { type: 'credits', amount: 300, label: '300 Credits' } },
+  { tier: 8, free: { type: 'xp', amount: 1000, label: '1.000 XP' }, premium: { type: 'item', item_id: 'waffenschein_klein', label: 'Kl. Waffenschein', alternativeCredits: 350 } },
+  { tier: 9, free: { type: 'credits', amount: 125, label: '125 Credits' }, premium: { type: 'money', amount: 15000, label: '15.000€' } },
+  { tier: 10, free: { type: 'money', amount: 5000, label: '5.000€' }, premium: { type: 'pass', pass_id: 'vip_premium_7d', label: '7 Tage VIP Premium', alternativeCredits: 500, durationDays: 7 } },
+  { tier: 11, free: { type: 'xp', amount: 1250, label: '1.250 XP' }, premium: { type: 'credits', amount: 350, label: '350 Credits' } },
+  { tier: 12, free: { type: 'credits', amount: 150, label: '150 Credits' }, premium: { type: 'money', amount: 20000, label: '20.000€' } },
+  { tier: 13, free: { type: 'money', amount: 6000, label: '6.000€' }, premium: { type: 'item', item_id: 'führerschein_c', label: 'Führerschein C', alternativeCredits: 450 } },
+  { tier: 14, free: { type: 'xp', amount: 1500, label: '1.500 XP' }, premium: { type: 'credits', amount: 400, label: '400 Credits' } },
+  { tier: 15, free: { type: 'credits', amount: 175, label: '175 Credits' }, premium: { type: 'item', item_id: 'waffenschein_gross', label: 'Gr. Waffenschein', alternativeCredits: 500 } },
+  { tier: 16, free: { type: 'money', amount: 7000, label: '7.000€' }, premium: { type: 'money', amount: 25000, label: '25.000€' } },
+  { tier: 17, free: { type: 'xp', amount: 1750, label: '1.750 XP' }, premium: { type: 'credits', amount: 450, label: '450 Credits' } },
+  { tier: 18, free: { type: 'credits', amount: 200, label: '200 Credits' }, premium: { type: 'item', item_id: 'versicherung_standard', label: 'Versicherung', alternativeCredits: 400 } },
+  { tier: 19, free: { type: 'money', amount: 8000, label: '8.000€' }, premium: { type: 'money', amount: 30000, label: '30.000€' } },
+  { tier: 20, free: { type: 'xp', amount: 2000, label: '2.000 XP' }, premium: { type: 'pass', pass_id: 'vip_platinum_30d', label: '30 Tage VIP Platinum', alternativeCredits: 800, durationDays: 30 } },
+  { tier: 21, free: { type: 'credits', amount: 225, label: '225 Credits' }, premium: { type: 'credits', amount: 500, label: '500 Credits' } },
+  { tier: 22, free: { type: 'money', amount: 9000, label: '9.000€' }, premium: { type: 'money', amount: 35000, label: '35.000€' } },
+  { tier: 23, free: { type: 'xp', amount: 2250, label: '2.250 XP' }, premium: { type: 'item', item_id: 'führerschein_ce', label: 'Führerschein CE', alternativeCredits: 550 } },
+  { tier: 24, free: { type: 'credits', amount: 250, label: '250 Credits' }, premium: { type: 'money', amount: 40000, label: '40.000€' } },
+  { tier: 25, free: { type: 'money', amount: 10000, label: '10.000€' }, premium: { type: 'credits', amount: 600, label: '600 Credits' } },
+  { tier: 26, free: { type: 'xp', amount: 2500, label: '2.500 XP' }, premium: { type: 'item', item_id: 'flugschein', label: 'Flugschein', alternativeCredits: 700 } },
+  { tier: 27, free: { type: 'credits', amount: 275, label: '275 Credits' }, premium: { type: 'money', amount: 45000, label: '45.000€' } },
+  { tier: 28, free: { type: 'money', amount: 12000, label: '12.000€' }, premium: { type: 'credits', amount: 700, label: '700 Credits' } },
+  { tier: 29, free: { type: 'xp', amount: 3000, label: '3.000 XP' }, premium: { type: 'money', amount: 50000, label: '50.000€' } },
+  { tier: 30, free: { type: 'credits', amount: 300, label: '300 Credits' }, premium: { type: 'pass', pass_id: 'vip_elite_plus_30d', label: '30 Tage VIP Elite+', alternativeCredits: 1000, durationDays: 30 } },
+];
+
+function getCurrentSeason() {
+  const now = new Date();
+  return { month: now.getMonth() + 1, year: now.getFullYear() };
+}
+
+function canClaimToday(lastClaimDate) {
+  if (!lastClaimDate) return true;
+  const last = new Date(lastClaimDate);
+  const today = new Date();
+  return last.toDateString() !== today.toDateString();
+}
+
+// Helper: Auth-Context für Battle Pass (User-Token via auth_token cookie)
+function getBpAuthContext(request) {
+  const decoded = getUserFromRequest(request);
+  if (!decoded) return null;
+  return {
+    discordUserId: decoded.id || decoded.userId || decoded.discordUserId,
+    username: decoded.username || decoded.globalName,
+  };
+}
+
+// Helper: Prüft, ob ein User bereits einen Item-License hat (String oder Object Format)
+function userHasLicense(licenses, itemId) {
+  if (!Array.isArray(licenses)) return false;
+  return licenses.some(l => {
+    if (!l) return false;
+    if (typeof l === 'string') return l === itemId;
+    if (typeof l === 'object') return l.id === itemId || l.name === itemId;
+    return false;
+  });
+}
+
+// Helper: Wendet eine Belohnung auf parsedData an. Gibt {applied, granted} zurück.
+function applyReward(parsedData, reward, username) {
+  if (!reward) return { applied: false, granted: null };
+  const granted = { ...reward };
+
+  if (reward.type === 'credits') {
+    parsedData.credits = (parsedData.credits || 0) + reward.amount;
+    granted.label = `+${reward.amount} Credits`;
+  } else if (reward.type === 'money') {
+    if (!parsedData.money || typeof parsedData.money !== 'object') parsedData.money = {};
+    parsedData.money.bank = (parsedData.money.bank || 0) + reward.amount;
+    granted.label = `+${reward.amount.toLocaleString('de-DE')}€ aufs Bankkonto`;
+  } else if (reward.type === 'xp') {
+    if (!parsedData.stats || typeof parsedData.stats !== 'object') parsedData.stats = { level: 1, xp: 0 };
+    parsedData.stats.xp = (parsedData.stats.xp || 0) + reward.amount;
+    granted.label = `+${reward.amount} XP`;
+  } else if (reward.type === 'item') {
+    if (!Array.isArray(parsedData.licenses)) parsedData.licenses = [];
+    // Duplicate-Check: Hat der User dieses Item bereits?
+    if (userHasLicense(parsedData.licenses, reward.item_id)) {
+      // Fallback: Alternative Credits
+      const altCredits = reward.alternativeCredits || 100;
+      parsedData.credits = (parsedData.credits || 0) + altCredits;
+      granted.type = 'credits';
+      granted.amount = altCredits;
+      granted.label = `Bereits vorhanden → +${altCredits} Credits`;
+      granted.duplicate = true;
+    } else {
+      parsedData.licenses.push({
+        id: reward.item_id,
+        name: reward.item_id,
+        purchasedAt: new Date().toISOString(),
+        expiresAt: 0,
+        autoRenew: false,
+        owner: username || 'Battle Pass',
+        source: 'battle_pass',
+      });
+      granted.label = `${reward.label} freigeschaltet`;
+    }
+  } else if (reward.type === 'pass') {
+    if (!Array.isArray(parsedData.licenses)) parsedData.licenses = [];
+    // Pässe: Duplicate-Check via pass_id  → bei aktivem Pass Alternative Credits
+    if (userHasLicense(parsedData.licenses, reward.pass_id)) {
+      const altCredits = reward.alternativeCredits || 200;
+      parsedData.credits = (parsedData.credits || 0) + altCredits;
+      granted.type = 'credits';
+      granted.amount = altCredits;
+      granted.label = `Bereits vorhanden → +${altCredits} Credits`;
+      granted.duplicate = true;
+    } else {
+      const expiresAt = reward.durationDays
+        ? new Date(Date.now() + reward.durationDays * 24 * 60 * 60 * 1000).toISOString()
+        : 0;
+      parsedData.licenses.push({
+        id: reward.pass_id,
+        name: reward.pass_id,
+        purchasedAt: new Date().toISOString(),
+        expiresAt,
+        autoRenew: false,
+        owner: username || 'Battle Pass',
+        source: 'battle_pass',
+      });
+      granted.label = `${reward.label} aktiviert`;
+    }
+  }
+
+  return { applied: true, granted };
+}
+
+// GET /api/battle-pass/current
+async function handleBattlePassCurrent(request) {
+  const user = getBpAuthContext(request);
+  if (!user) return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
+
+  try {
+    const { month, year } = getCurrentSeason();
+
+    const { data: progress, error: progressError } = await supabaseAdmin
+      .from('user_battle_pass')
+      .select('*')
+      .eq('discord_user_id', user.discordUserId)
+      .eq('season_month', month)
+      .eq('season_year', year)
+      .maybeSingle();
+
+    let userProgress = progress;
+    if (!progress && !progressError) {
+      const { data: newProgress, error: insertErr } = await supabaseAdmin
+        .from('user_battle_pass')
+        .insert({
+          discord_user_id: user.discordUserId,
+          season_month: month,
+          season_year: year,
+          current_tier: 0,
+          purchased: false,
+          claimed_tiers: [],
+        })
+        .select()
+        .single();
+      if (insertErr) {
+        console.error('[Battle Pass] Insert Error:', insertErr);
+      }
+      userProgress = newProgress;
+    }
+
+    const seasonEndDate = new Date(year, month, 0);
+
+    return NextResponse.json({
+      season: { month, year },
+      endDate: seasonEndDate.toISOString(),
+      daysRemaining: Math.max(0, Math.ceil((seasonEndDate - new Date()) / (1000 * 60 * 60 * 24))),
+      userProgress: {
+        currentTier: userProgress?.current_tier || 0,
+        claimedTiers: userProgress?.claimed_tiers || [],
+        purchased: userProgress?.purchased || false,
+        canClaimToday: canClaimToday(userProgress?.last_claim_date),
+        lastClaimDate: userProgress?.last_claim_date || null,
+      },
+      rewards: BATTLE_PASS_REWARDS,
+      config: BATTLE_PASS_CONFIG,
+    });
+  } catch (error) {
+    console.error('[Battle Pass] Current Error:', error);
+    return NextResponse.json({ error: 'Serverfehler', details: error.message }, { status: 500 });
+  }
+}
+
+// POST /api/battle-pass/purchase
+async function handleBattlePassPurchase(request) {
+  const user = getBpAuthContext(request);
+  if (!user) return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
+
+  try {
+    const { month, year } = getCurrentSeason();
+
+    // Sicherstellen, dass Progress existiert
+    const { data: existingProgress } = await supabaseAdmin
+      .from('user_battle_pass')
+      .select('*')
+      .eq('discord_user_id', user.discordUserId)
+      .eq('season_month', month)
+      .eq('season_year', year)
+      .maybeSingle();
+
+    let progress = existingProgress;
+    if (!progress) {
+      const { data: newP } = await supabaseAdmin
+        .from('user_battle_pass')
+        .insert({
+          discord_user_id: user.discordUserId,
+          season_month: month,
+          season_year: year,
+          current_tier: 0,
+          purchased: false,
+          claimed_tiers: [],
+        })
+        .select()
+        .single();
+      progress = newP;
+    }
+
+    if (progress?.purchased) {
+      return NextResponse.json({ error: 'Battle Pass bereits gekauft' }, { status: 400 });
+    }
+
+    const { data: userData, error: userErr } = await supabaseAdmin
+      .from('user_data')
+      .select('data')
+      .eq('discord_user_id', user.discordUserId)
+      .single();
+
+    if (userErr || !userData) {
+      return NextResponse.json({ error: 'User-Daten nicht gefunden' }, { status: 404 });
+    }
+
+    const parsedData = typeof userData.data === 'string' ? JSON.parse(userData.data) : (userData.data || {});
+    const userCredits = parsedData.credits || 0;
+
+    if (userCredits < BATTLE_PASS_CONFIG.COST_CREDITS) {
+      return NextResponse.json({ error: `Nicht genug Credits. Benötigt: ${BATTLE_PASS_CONFIG.COST_CREDITS}, vorhanden: ${userCredits}` }, { status: 400 });
+    }
+
+    parsedData.credits = userCredits - BATTLE_PASS_CONFIG.COST_CREDITS;
+
+    await supabaseAdmin.from('user_data').update({ data: parsedData }).eq('discord_user_id', user.discordUserId);
+    await supabaseAdmin
+      .from('user_battle_pass')
+      .update({ purchased: true, purchase_date: new Date().toISOString() })
+      .eq('discord_user_id', user.discordUserId)
+      .eq('season_month', month)
+      .eq('season_year', year);
+
+    return NextResponse.json({ success: true, newCredits: parsedData.credits });
+  } catch (error) {
+    console.error('[Battle Pass] Purchase Error:', error);
+    return NextResponse.json({ error: 'Serverfehler', details: error.message }, { status: 500 });
+  }
+}
+
+// POST /api/battle-pass/claim
+async function handleBattlePassClaim(request) {
+  const user = getBpAuthContext(request);
+  if (!user) return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
+
+  try {
+    const { month, year } = getCurrentSeason();
+
+    const { data: progress } = await supabaseAdmin
+      .from('user_battle_pass')
+      .select('*')
+      .eq('discord_user_id', user.discordUserId)
+      .eq('season_month', month)
+      .eq('season_year', year)
+      .maybeSingle();
+
+    if (!progress) {
+      return NextResponse.json({ error: 'Battle Pass nicht initialisiert. Lade die Seite neu.' }, { status: 400 });
+    }
+
+    if (!canClaimToday(progress.last_claim_date)) {
+      return NextResponse.json({ error: 'Bereits heute geclaimt! Komm morgen wieder.' }, { status: 400 });
+    }
+
+    const nextTier = (progress.current_tier || 0) + 1;
+    if (nextTier > BATTLE_PASS_CONFIG.TIERS_COUNT) {
+      return NextResponse.json({ error: 'Battle Pass komplett!' }, { status: 400 });
+    }
+
+    const tierData = BATTLE_PASS_REWARDS.find(t => t.tier === nextTier);
+    if (!tierData) {
+      return NextResponse.json({ error: 'Tier-Daten nicht gefunden' }, { status: 500 });
+    }
+
+    // User-Daten laden
+    const { data: userData, error: userErr } = await supabaseAdmin
+      .from('user_data')
+      .select('data')
+      .eq('discord_user_id', user.discordUserId)
+      .single();
+
+    if (userErr || !userData) {
+      return NextResponse.json({ error: 'User-Daten nicht gefunden' }, { status: 404 });
+    }
+
+    const parsedData = typeof userData.data === 'string' ? JSON.parse(userData.data) : (userData.data || {});
+
+    // Free-Track Belohnung
+    const freeResult = applyReward(parsedData, tierData.free, user.username);
+    const grantedRewards = [{ track: 'free', ...freeResult.granted }];
+
+    // Premium-Track Belohnung (nur wenn purchased)
+    if (progress.purchased && tierData.premium) {
+      const premiumResult = applyReward(parsedData, tierData.premium, user.username);
+      grantedRewards.push({ track: 'premium', ...premiumResult.granted });
+    }
+
+    // User-Daten speichern
+    await supabaseAdmin.from('user_data').update({ data: parsedData }).eq('discord_user_id', user.discordUserId);
+
+    // Progress updaten
+    const claimedTiers = Array.isArray(progress.claimed_tiers) ? progress.claimed_tiers : [];
+    if (!claimedTiers.includes(nextTier)) claimedTiers.push(nextTier);
+
+    await supabaseAdmin
+      .from('user_battle_pass')
+      .update({
+        current_tier: nextTier,
+        claimed_tiers: claimedTiers,
+        last_claim_date: new Date().toISOString().split('T')[0],
+      })
+      .eq('discord_user_id', user.discordUserId)
+      .eq('season_month', month)
+      .eq('season_year', year);
+
+    return NextResponse.json({ success: true, newTier: nextTier, grantedRewards });
+  } catch (error) {
+    console.error('[Battle Pass] Claim Error:', error);
+    return NextResponse.json({ error: 'Serverfehler', details: error.message }, { status: 500 });
+  }
+}
+
 async function handleAdminCreateAccount(request) {
   const admin = getAdminContext(request);
   if (!admin || !admin.canCreateAccounts) {
@@ -2480,6 +2836,11 @@ export async function GET(request) {
     case 'admin/accounts': return handleAdminGetAccounts(request);
     case 'admin/settings': return handleAdminGetSettings(request);
     case 'admin/verwarnungen-suche': return handleAdminVerwarnungenSuche(request);
+    
+    // Battle Pass Endpoints
+    case 'battle-pass/current': return handleBattlePassCurrent(request);
+    case 'battle-pass/purchase': return handleBattlePassPurchase(request);
+    case 'battle-pass/claim': return handleBattlePassClaim(request);
     case 'team/members': return handleGetTeamMembers(request);
     case 'shop/items': return handleGetShopItems(request);
     case 'licenses/pending-actions': return handleGetPendingLicenseActions(request);
