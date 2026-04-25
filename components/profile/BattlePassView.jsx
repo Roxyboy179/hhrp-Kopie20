@@ -107,8 +107,18 @@ export default function BattlePassView() {
       const res = await fetch('/api/battle-pass/purchase', { method: 'POST' });
       const json = await res.json();
       if (res.ok) {
-        toast.success('Battle Pass erfolgreich gekauft! Premium-Track aktiv.');
-        await loadBattlePass();
+        if (json.pending) {
+          toast.success('Battle Pass Kauf gestartet!', {
+            description: 'Der Bot zieht gleich die Credits ab und aktiviert den Premium-Track. Bitte einen Moment Geduld…',
+          });
+          // Automatisch nach 5s, 10s und 20s neu laden, bis der Bot fertig ist
+          setTimeout(() => loadBattlePass(), 5000);
+          setTimeout(() => loadBattlePass(), 10000);
+          setTimeout(() => loadBattlePass(), 20000);
+        } else {
+          toast.success('Battle Pass erfolgreich gekauft! Premium-Track aktiv.');
+          await loadBattlePass();
+        }
       } else {
         toast.error(json.error || 'Fehler beim Kauf');
       }

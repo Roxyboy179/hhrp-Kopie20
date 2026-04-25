@@ -1568,6 +1568,9 @@ async function handleBattlePassCurrent(request) {
 }
 
 // POST /api/battle-pass/purchase
+// ⚠️ NEU: Erstellt nur noch einen pending-Eintrag in pending_battle_pass_rewards.
+// Der Discord-Bot zieht die Credits aus banks.json ab (Source of Truth) und
+// setzt purchased=true.  Verhindert Race-Conditions mit dem Bot-Sync.
 async function handleBattlePassPurchase(request) {
   const user = getBpAuthContext(request);
   if (!user) return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
@@ -1605,34 +1608,66 @@ async function handleBattlePassPurchase(request) {
       return NextResponse.json({ error: 'Battle Pass bereits gekauft' }, { status: 400 });
     }
 
-    const { data: userData, error: userErr } = await supabaseAdmin
+    // Soft-Check: zeige dem User die voraussichtlich verfügbaren Credits.
+    // Der Bot prüft beim Verarbeiten nochmal exakt gegen banks.json.
+    const { data: userData } = await supabaseAdmin
       .from('user_data')
       .select('data')
       .eq('discord_user_id', user.discordUserId)
       .single();
 
-    if (userErr || !userData) {
-      return NextResponse.json({ error: 'User-Daten nicht gefunden' }, { status: 404 });
-    }
-
-    const parsedData = typeof userData.data === 'string' ? JSON.parse(userData.data) : (userData.data || {});
+    const parsedData = userData?.data
+      ? (typeof userData.data === 'string' ? JSON.parse(userData.data) : userData.data)
+      : {};
     const userCredits = parsedData.credits || 0;
 
     if (userCredits < BATTLE_PASS_CONFIG.COST_CREDITS) {
-      return NextResponse.json({ error: `Nicht genug Credits. Benötigt: ${BATTLE_PASS_CONFIG.COST_CREDITS}, vorhanden: ${userCredits}` }, { status: 400 });
+      return NextResponse.json({
+        error: `Nicht genug Credits. Benötigt: ${BATTLE_PASS_CONFIG.COST_CREDITS}, vorhanden: ${userCredits}`,
+      }, { status: 400 });
     }
 
-    parsedData.credits = userCredits - BATTLE_PASS_CONFIG.COST_CREDITS;
-
-    await supabaseAdmin.from('user_data').update({ data: parsedData }).eq('discord_user_id', user.discordUserId);
-    await supabaseAdmin
-      .from('user_battle_pass')
-      .update({ purchased: true, purchase_date: new Date().toISOString() })
+    // Doppel-Schutz: existiert bereits ein pending purchase für diese Season?
+    const { data: existingPending } = await supabaseAdmin
+      .from('pending_battle_pass_rewards')
+      .select('id')
       .eq('discord_user_id', user.discordUserId)
+      .eq('action_type', 'purchase')
       .eq('season_month', month)
-      .eq('season_year', year);
+      .eq('season_year', year)
+      .in('status', ['pending', 'processing'])
+      .maybeSingle();
 
-    return NextResponse.json({ success: true, newCredits: parsedData.credits });
+    if (existingPending) {
+      return NextResponse.json({
+        success: true,
+        pending: true,
+        message: 'Kauf wird verarbeitet (Bot ist gleich da)…',
+      });
+    }
+
+    // Pending-Eintrag anlegen → Bot übernimmt
+    const { error: insertErr } = await supabaseAdmin
+      .from('pending_battle_pass_rewards')
+      .insert({
+        discord_user_id: user.discordUserId,
+        username: user.username,
+        action_type: 'purchase',
+        season_month: month,
+        season_year: year,
+        status: 'pending',
+      });
+
+    if (insertErr) {
+      console.error('[Battle Pass] Pending Purchase Insert Error:', insertErr);
+      return NextResponse.json({ error: 'Konnte Kauf nicht starten', details: insertErr.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      pending: true,
+      message: 'Battle Pass Kauf wird verarbeitet… (Credits werden vom Bot abgezogen, in wenigen Sekunden aktiv)',
+    });
   } catch (error) {
     console.error('[Battle Pass] Purchase Error:', error);
     return NextResponse.json({ error: 'Serverfehler', details: error.message }, { status: 500 });
@@ -1640,6 +1675,9 @@ async function handleBattlePassPurchase(request) {
 }
 
 // POST /api/battle-pass/claim
+// ⚠️ NEU: Setzt nur Tier-Progress.  Belohnungen werden als pending Rows in
+// pending_battle_pass_rewards angelegt, der Bot wendet sie auf seine lokalen
+// Files an (banks/licenses/levels) – sonst überschreibt der Bot-Sync sie wieder.
 async function handleBattlePassClaim(request) {
   const user = getBpAuthContext(request);
   if (!user) return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
@@ -1673,33 +1711,48 @@ async function handleBattlePassClaim(request) {
       return NextResponse.json({ error: 'Tier-Daten nicht gefunden' }, { status: 500 });
     }
 
-    // User-Daten laden
-    const { data: userData, error: userErr } = await supabaseAdmin
-      .from('user_data')
-      .select('data')
-      .eq('discord_user_id', user.discordUserId)
-      .single();
+    // ── Pending-Reward-Einträge anlegen (Bot wendet sie an) ──
+    const pendingRows = [];
 
-    if (userErr || !userData) {
-      return NextResponse.json({ error: 'User-Daten nicht gefunden' }, { status: 404 });
+    if (tierData.free) {
+      pendingRows.push({
+        discord_user_id: user.discordUserId,
+        username: user.username,
+        action_type: 'claim_reward',
+        tier: nextTier,
+        track: 'free',
+        reward_data: tierData.free,
+        season_month: month,
+        season_year: year,
+        status: 'pending',
+      });
     }
 
-    const parsedData = typeof userData.data === 'string' ? JSON.parse(userData.data) : (userData.data || {});
-
-    // Free-Track Belohnung
-    const freeResult = applyReward(parsedData, tierData.free, user.username);
-    const grantedRewards = [{ track: 'free', ...freeResult.granted }];
-
-    // Premium-Track Belohnung (nur wenn purchased)
     if (progress.purchased && tierData.premium) {
-      const premiumResult = applyReward(parsedData, tierData.premium, user.username);
-      grantedRewards.push({ track: 'premium', ...premiumResult.granted });
+      pendingRows.push({
+        discord_user_id: user.discordUserId,
+        username: user.username,
+        action_type: 'claim_reward',
+        tier: nextTier,
+        track: 'premium',
+        reward_data: tierData.premium,
+        season_month: month,
+        season_year: year,
+        status: 'pending',
+      });
     }
 
-    // User-Daten speichern
-    await supabaseAdmin.from('user_data').update({ data: parsedData }).eq('discord_user_id', user.discordUserId);
+    if (pendingRows.length > 0) {
+      const { error: insertErr } = await supabaseAdmin
+        .from('pending_battle_pass_rewards')
+        .insert(pendingRows);
+      if (insertErr) {
+        console.error('[Battle Pass] Pending Claim Insert Error:', insertErr);
+        return NextResponse.json({ error: 'Konnte Belohnung nicht in Queue stellen', details: insertErr.message }, { status: 500 });
+      }
+    }
 
-    // Progress updaten
+    // Progress sofort updaten – Bot wendet die Rewards async an
     const claimedTiers = Array.isArray(progress.claimed_tiers) ? progress.claimed_tiers : [];
     if (!claimedTiers.includes(nextTier)) claimedTiers.push(nextTier);
 
@@ -1714,7 +1767,16 @@ async function handleBattlePassClaim(request) {
       .eq('season_month', month)
       .eq('season_year', year);
 
-    return NextResponse.json({ success: true, newTier: nextTier, grantedRewards });
+    // Vorschau-Belohnungen (zeigen was der Bot gleich liefert) – noch ohne Duplicate-Resolution
+    const grantedRewards = pendingRows.map((r) => ({ track: r.track, ...r.reward_data, pending: true }));
+
+    return NextResponse.json({
+      success: true,
+      newTier: nextTier,
+      grantedRewards,
+      pending: true,
+      message: 'Belohnungen werden vom Bot zugewiesen (in wenigen Sekunden sichtbar)',
+    });
   } catch (error) {
     console.error('[Battle Pass] Claim Error:', error);
     return NextResponse.json({ error: 'Serverfehler', details: error.message }, { status: 500 });
