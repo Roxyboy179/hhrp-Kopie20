@@ -1419,6 +1419,21 @@ function canClaimToday(lastClaimDate) {
   return last.toDateString() !== today.toDateString();
 }
 
+// ✅ NEU: Prüft ob User gestern geclaimt hat (für "verpasster Tag = verlorener Tier" Regel)
+function getMissedDays(lastClaimDate, currentTier) {
+  if (!lastClaimDate || currentTier === 0) return 0;
+  
+  const last = new Date(lastClaimDate);
+  const today = new Date();
+  
+  // Berechne Differenz in Tagen
+  const diffTime = today - last;
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  // Wenn mehr als 1 Tag vergangen ist, wurden Tage verpasst
+  return Math.max(0, diffDays - 1);
+}
+
 // Helper: Liest Battle Pass Daten aus Supabase user_data
 async function getUserBattlePassProgress(discordUserId, month, year) {
   try {
@@ -1583,6 +1598,7 @@ async function handleBattlePassCurrent(request) {
     const userProgress = await getUserBattlePassProgress(user.discordUserId, month, year);
     
     const seasonEndDate = new Date(year, month, 0);
+    const missedDays = getMissedDays(userProgress.last_claim_date, userProgress.current_tier);
 
     return NextResponse.json({
       season: { month, year },
@@ -1592,8 +1608,9 @@ async function handleBattlePassCurrent(request) {
         currentTier: userProgress.current_tier,
         claimedTiers: userProgress.claimed_tiers,
         purchased: userProgress.purchased,
-        canClaimToday: canClaimToday(userProgress.last_claim_date),
+        canClaimToday: canClaimToday(userProgress.last_claim_date) && missedDays === 0, // ✅ Nur claimen wenn kein Tag verpasst
         lastClaimDate: userProgress.last_claim_date,
+        missedDays: missedDays, // ✅ NEU: Anzahl verpasster Tage
       },
       rewards: BATTLE_PASS_REWARDS,
       config: BATTLE_PASS_CONFIG,
