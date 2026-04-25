@@ -1825,6 +1825,8 @@ async function handleBattlePassCurrent(request) {
         passType: userProgress.pass_type || null,        // ✅ NEU: 'premium'|'elite'|'ultra'|null
         roleExpiresAt: userProgress.role_expires_at || null, // ✅ NEU: ISO date
         autorenew: userProgress.autorenew === true,      // ✅ NEU: Auto-Renew Flag
+        auto_claim_enabled: userProgress.auto_claim_enabled === true, // 🆕 Auto-Claim aktiv
+        lifetime_pass: userProgress.lifetime_pass === true,           // 🆕 Lifetime Pass aktiv
       },
       rewards: rewardsForUser,
       config: BATTLE_PASS_CONFIG,
