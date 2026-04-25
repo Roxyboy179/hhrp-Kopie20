@@ -1202,157 +1202,6 @@ export default function BattlePassView() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* ==================== CANCEL DIALOG ==================== */}
-      <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
-        <AlertDialogContent className="glass border border-white/[0.12] max-w-md mx-4">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-3 text-xl font-bold text-white">
-              <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center"
-                style={{
-                  background: 'rgba(251, 146, 60, 0.15)',
-                  border: '1px solid rgba(251, 146, 60, 0.35)'
-                }}
-              >
-                <AlertTriangle className="w-6 h-6 text-orange-400" />
-              </div>
-              Premium Battle Pass kündigen?
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-3 pt-3">
-                <div className="glass rounded-xl border border-emerald-500/20 p-4 text-sm text-white/90">
-                  <div className="mb-2 font-bold text-emerald-300 flex items-center gap-2">
-                    <Check className="w-4 h-4" />
-                    Gute Nachricht — Du verlierst nichts:
-                  </div>
-                  <ul className="space-y-2 text-xs font-medium">
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
-                      <span>Premium-Vorteile laufen <strong>bis Monatsende</strong> ({daysRemaining}d) weiter</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
-                      <span>Du kannst weiterhin <strong>Free + Premium</strong> Rewards claimen</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
-                      <span>Bereits eingelöste Belohnungen bleiben erhalten</span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="glass rounded-xl border border-orange-500/20 p-3 text-xs text-orange-200 flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-orange-300 mt-0.5 flex-shrink-0" />
-                  <span>Im neuen Monat startet die Saison automatisch <strong>ohne Premium</strong>. Die Credits werden nicht erstattet.</span>
-                </div>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-3 mt-2 flex-col sm:flex-row">
-            <AlertDialogCancel className="glass border border-white/[0.12] text-white hover:bg-white/5 font-semibold rounded-xl w-full sm:w-auto">
-              Doch behalten
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancel}
-              className="rounded-xl font-bold border-0 w-full sm:w-auto"
-              style={{
-                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
-                boxShadow: '0 8px 24px rgba(249, 115, 22, 0.4)'
-              }}
-            >
-              <X className="w-5 h-5 mr-2" />
-              Ja, kündigen
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
-  );
-}
-
-// ==================== TIER CARD COMPONENT ==================== 
-function TierCard({ tier, isUnlocked, isCurrent, isLocked, purchased, canClaim }) {
-  const freeReward = tier.free;
-  const premiumReward = tier.premium;
-  
-  const FreeIcon = getRewardIcon(freeReward);
-  const PremiumIcon = getRewardIcon(premiumReward);
-  
-  return (
-    <div
-      className={`
-        relative rounded-xl md:rounded-2xl overflow-hidden border-2 transition-all duration-300
-        ${isCurrent ? 'border-yellow-400 ring-2 ring-yellow-400/50 ring-offset-2 ring-offset-black scale-105' : ''}
-        ${isUnlocked && !isCurrent ? 'border-green-400/40' : ''}
-        ${isLocked ? 'border-white/10' : ''}
-      `}
-      style={{
-        background: isUnlocked 
-          ? 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.1))' 
-          : isCurrent 
-          ? 'linear-gradient(135deg, rgba(251,191,36,0.2), rgba(245,158,11,0.15))'
-          : 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))',
-      }}
-    >
-      {/* Tier Number */}
-      <div className="absolute top-1 left-1 md:top-1.5 md:left-1.5 bg-black/60 backdrop-blur-sm rounded-lg px-1.5 py-0.5 md:px-2 md:py-1 border border-white/20 z-10">
-        <span className="text-[10px] md:text-xs font-black text-white drop-shadow-md">T{tier.tier}</span>
-      </div>
-
-      {/* Unlocked Badge */}
-      {isUnlocked && (
-        <div className="absolute top-1 right-1 md:top-1.5 md:right-1.5 z-10 animate-bounce">
-          <Check className="w-4 h-4 md:w-5 md:h-5 p-0.5 md:p-1 rounded-full bg-green-500 text-white shadow-lg shadow-green-500/50" />
-        </div>
-      )}
-
-      {/* Content */}
-      <div className="p-2 md:p-3 space-y-1.5 md:space-y-2">
-        {/* Free Reward */}
-        <div className="bg-black/40 backdrop-blur-sm rounded-lg p-1.5 md:p-2 border border-white/10">
-          <div className="flex items-center gap-1 mb-1">
-            <div className="text-[8px] md:text-[9px] uppercase tracking-wider text-white/50 font-bold">Free</div>
-          </div>
-          <div className="flex items-center gap-1.5 md:gap-2">
-            <FreeIcon className={`w-4 h-4 md:w-5 md:h-5 ${getRewardColor(freeReward)} flex-shrink-0`} />
-            <span className="text-[10px] md:text-xs text-white/80 font-semibold line-clamp-2">{freeReward.label}</span>
-          </div>
-          {/* Alternative Credits Hinweis */}
-          {freeReward.alternativeCredits && (
-            <div className="text-[8px] md:text-[9px] text-yellow-300/70 mt-1 font-medium">
-              Alt: {freeReward.alternativeCredits} Credits
-            </div>
-          )}
-        </div>
-
-        {/* Premium Reward */}
-        <div className={`relative rounded-lg p-1.5 md:p-2 border transition-all ${purchased ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-black/20 border-white/10'}`}>
-          <div className="flex items-center gap-1 mb-1">
-            <Crown className="w-2.5 h-2.5 md:w-3 md:h-3 text-yellow-400" />
-            <div className="text-[8px] md:text-[9px] uppercase tracking-wider text-yellow-300/70 font-bold">Premium</div>
-          </div>
-          {!purchased && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[2px] rounded-lg">
-              <Lock className="w-4 h-4 md:w-5 md:h-5 text-white/40" />
-            </div>
-          )}
-          <div className="flex items-center gap-1.5 md:gap-2">
-            <PremiumIcon className={`w-4 h-4 md:w-5 md:h-5 ${purchased ? getRewardColor(premiumReward) : 'text-white/30'} flex-shrink-0`} />
-            <span className={`text-[10px] md:text-xs font-semibold line-clamp-2 ${purchased ? 'text-yellow-200' : 'text-white/30'}`}>
-              {premiumReward.label}
-            </span>
-          </div>
-          {/* Alternative Credits Hinweis */}
-          {purchased && premiumReward.alternativeCredits && (
-            <div className="text-[8px] md:text-[9px] text-yellow-300/70 mt-1 font-medium">
-              Alt: {premiumReward.alternativeCredits} Credits
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-
       {/* 🆕 ═══════════════════════════════════════════════════════════════
           TIER-SKIP DIALOG
           ═══════════════════════════════════════════════════════════════ */}
@@ -1517,4 +1366,153 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, purchased, canClaim }
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* ==================== CANCEL DIALOG ==================== */}
+      <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+        <AlertDialogContent className="glass border border-white/[0.12] max-w-md mx-4">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-3 text-xl font-bold text-white">
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center"
+                style={{
+                  background: 'rgba(251, 146, 60, 0.15)',
+                  border: '1px solid rgba(251, 146, 60, 0.35)'
+                }}
+              >
+                <AlertTriangle className="w-6 h-6 text-orange-400" />
+              </div>
+              Premium Battle Pass kündigen?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 pt-3">
+                <div className="glass rounded-xl border border-emerald-500/20 p-4 text-sm text-white/90">
+                  <div className="mb-2 font-bold text-emerald-300 flex items-center gap-2">
+                    <Check className="w-4 h-4" />
+                    Gute Nachricht — Du verlierst nichts:
+                  </div>
+                  <ul className="space-y-2 text-xs font-medium">
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
+                      <span>Premium-Vorteile laufen <strong>bis Monatsende</strong> ({daysRemaining}d) weiter</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
+                      <span>Du kannst weiterhin <strong>Free + Premium</strong> Rewards claimen</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="w-4 h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
+                      <span>Bereits eingelöste Belohnungen bleiben erhalten</span>
+                    </li>
+                  </ul>
+                </div>
+                <div className="glass rounded-xl border border-orange-500/20 p-3 text-xs text-orange-200 flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-orange-300 mt-0.5 flex-shrink-0" />
+                  <span>Im neuen Monat startet die Saison automatisch <strong>ohne Premium</strong>. Die Credits werden nicht erstattet.</span>
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-3 mt-2 flex-col sm:flex-row">
+            <AlertDialogCancel className="glass border border-white/[0.12] text-white hover:bg-white/5 font-semibold rounded-xl w-full sm:w-auto">
+              Doch behalten
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancel}
+              className="rounded-xl font-bold border-0 w-full sm:w-auto"
+              style={{
+                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                boxShadow: '0 8px 24px rgba(249, 115, 22, 0.4)'
+              }}
+            >
+              <X className="w-5 h-5 mr-2" />
+              Ja, kündigen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+// ==================== TIER CARD COMPONENT ==================== 
+function TierCard({ tier, isUnlocked, isCurrent, isLocked, purchased, canClaim }) {
+  const freeReward = tier.free;
+  const premiumReward = tier.premium;
+  
+  const FreeIcon = getRewardIcon(freeReward);
+  const PremiumIcon = getRewardIcon(premiumReward);
+  
+  return (
+    <div
+      className={`
+        relative rounded-xl md:rounded-2xl overflow-hidden border-2 transition-all duration-300
+        ${isCurrent ? 'border-yellow-400 ring-2 ring-yellow-400/50 ring-offset-2 ring-offset-black scale-105' : ''}
+        ${isUnlocked && !isCurrent ? 'border-green-400/40' : ''}
+        ${isLocked ? 'border-white/10' : ''}
+      `}
+      style={{
+        background: isUnlocked 
+          ? 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.1))' 
+          : isCurrent 
+          ? 'linear-gradient(135deg, rgba(251,191,36,0.2), rgba(245,158,11,0.15))'
+          : 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))',
+      }}
+    >
+      {/* Tier Number */}
+      <div className="absolute top-1 left-1 md:top-1.5 md:left-1.5 bg-black/60 backdrop-blur-sm rounded-lg px-1.5 py-0.5 md:px-2 md:py-1 border border-white/20 z-10">
+        <span className="text-[10px] md:text-xs font-black text-white drop-shadow-md">T{tier.tier}</span>
+      </div>
+
+      {/* Unlocked Badge */}
+      {isUnlocked && (
+        <div className="absolute top-1 right-1 md:top-1.5 md:right-1.5 z-10 animate-bounce">
+          <Check className="w-4 h-4 md:w-5 md:h-5 p-0.5 md:p-1 rounded-full bg-green-500 text-white shadow-lg shadow-green-500/50" />
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="p-2 md:p-3 space-y-1.5 md:space-y-2">
+        {/* Free Reward */}
+        <div className="bg-black/40 backdrop-blur-sm rounded-lg p-1.5 md:p-2 border border-white/10">
+          <div className="flex items-center gap-1 mb-1">
+            <div className="text-[8px] md:text-[9px] uppercase tracking-wider text-white/50 font-bold">Free</div>
+          </div>
+          <div className="flex items-center gap-1.5 md:gap-2">
+            <FreeIcon className={`w-4 h-4 md:w-5 md:h-5 ${getRewardColor(freeReward)} flex-shrink-0`} />
+            <span className="text-[10px] md:text-xs text-white/80 font-semibold line-clamp-2">{freeReward.label}</span>
+          </div>
+          {/* Alternative Credits Hinweis */}
+          {freeReward.alternativeCredits && (
+            <div className="text-[8px] md:text-[9px] text-yellow-300/70 mt-1 font-medium">
+              Alt: {freeReward.alternativeCredits} Credits
+            </div>
+          )}
+        </div>
+
+        {/* Premium Reward */}
+        <div className={`relative rounded-lg p-1.5 md:p-2 border transition-all ${purchased ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-black/20 border-white/10'}`}>
+          <div className="flex items-center gap-1 mb-1">
+            <Crown className="w-2.5 h-2.5 md:w-3 md:h-3 text-yellow-400" />
+            <div className="text-[8px] md:text-[9px] uppercase tracking-wider text-yellow-300/70 font-bold">Premium</div>
+          </div>
+          {!purchased && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[2px] rounded-lg">
+              <Lock className="w-4 h-4 md:w-5 md:h-5 text-white/40" />
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 md:gap-2">
+            <PremiumIcon className={`w-4 h-4 md:w-5 md:h-5 ${purchased ? getRewardColor(premiumReward) : 'text-white/30'} flex-shrink-0`} />
+            <span className={`text-[10px] md:text-xs font-semibold line-clamp-2 ${purchased ? 'text-yellow-200' : 'text-white/30'}`}>
+              {premiumReward.label}
+            </span>
+          </div>
+          {/* Alternative Credits Hinweis */}
+          {purchased && premiumReward.alternativeCredits && (
+            <div className="text-[8px] md:text-[9px] text-yellow-300/70 mt-1 font-medium">
+              Alt: {premiumReward.alternativeCredits} Credits
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
