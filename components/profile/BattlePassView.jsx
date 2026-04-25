@@ -470,6 +470,7 @@ export default function BattlePassView() {
   };
 
   const handlePurchase = async () => {
+    if (purchasing) return; // ✅ Guard
     setPurchasing(true);
     setConfirmOpen(false);
 
@@ -537,6 +538,7 @@ export default function BattlePassView() {
   };
 
   const handleClaim = async () => {
+    if (claiming) return; // ✅ Guard: Verhindert doppelte Aufrufe
     setClaiming(true);
     
     try {
@@ -1013,8 +1015,8 @@ export default function BattlePassView() {
               </div>
             )}
 
-            {/* Premium User: Bereits geclaimt + Skip Button */}
-            {!canClaimToday && !allClaimed && !claiming && purchased && (
+            {/* Bereits geclaimt heute + Skip Button (für ALLE User) */}
+            {!canClaimToday && !allClaimed && !claiming && (
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-xl md:rounded-2xl border border-white/20 bg-white/5 backdrop-blur-md shadow-lg flex-1">
                   <Clock className="w-4 h-4 text-white/50 flex-shrink-0" />
@@ -1022,7 +1024,7 @@ export default function BattlePassView() {
                     {missedDays > 0 ? `${missedDays} Tag${missedDays > 1 ? 'e' : ''} verpasst` : 'Bereits geclaimt — morgen wieder'}
                   </span>
                 </div>
-                {/* 🆕 Tier-Skip Button - Auch für verpasste Tage! */}
+                {/* 🆕 Skip Button - Für ALLE User verfügbar (50 Credits) */}
                 {!skipping && (
                   <Button
                     onClick={() => setSkipConfirmOpen(true)}
@@ -1059,21 +1061,22 @@ export default function BattlePassView() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Auto-Claim Feature Card */}
         {!auto_claim_enabled && passType !== 'ultra' && (
-          <div className="glass rounded-2xl p-5 border border-blue-400/20 hover:border-blue-400/40 transition-all">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-blue-500/15 border border-blue-400/30">
-                <Zap className="w-6 h-6 text-blue-400" />
+          <div className="glass rounded-2xl p-6 border border-blue-400/20 hover:border-blue-400/50 transition-all hover:shadow-xl hover:shadow-blue-500/20">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-400/40 shadow-lg">
+                <Zap className="w-7 h-7 text-blue-400" />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-white text-lg">Auto-Claim</h3>
-                <p className="text-sm text-white/60 mt-1">
+                <h3 className="font-bold text-white text-xl mb-1.5">Auto-Claim</h3>
+                <p className="text-sm text-white/70 leading-relaxed">
                   Jeden Tag automatisch claimen — nie wieder verpassen!
                 </p>
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="text-2xl font-black text-white">
-                100 <span className="text-sm text-white/50">Credits</span>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-white">100</span>
+                <span className="text-sm text-white/50 font-medium">Credits</span>
               </div>
               <button
                 onClick={() => {
@@ -1081,14 +1084,15 @@ export default function BattlePassView() {
                   setAutoclaimConfirmOpen(true);
                 }}
                 disabled={buyingAutoclaim}
-                className="px-4 py-2 rounded-xl font-bold text-white transition-all hover:scale-105 disabled:opacity-50"
+                className="px-5 py-2.5 rounded-xl font-bold text-white transition-all hover:scale-105 disabled:opacity-50 shadow-lg hover:shadow-blue-500/50"
                 style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}
               >
                 {buyingAutoclaim ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Kaufen'}
               </button>
             </div>
-            <div className="text-xs text-yellow-300 mt-2">
-              ⭐ Ultra+ User haben Auto-Claim kostenlos!
+            <div className="flex items-center gap-2 text-xs text-yellow-300 bg-yellow-400/10 border border-yellow-400/20 rounded-lg px-3 py-2">
+              <Star className="w-4 h-4 flex-shrink-0" />
+              <span>Ultra+ User haben Auto-Claim kostenlos!</span>
             </div>
           </div>
         )}
@@ -1101,7 +1105,10 @@ export default function BattlePassView() {
                 <Check className="w-6 h-6 text-green-400" />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-white text-lg">Auto-Claim Aktiv ✨</h3>
+                <h3 className="font-bold text-white text-lg flex items-center gap-2">
+                  Auto-Claim Aktiv
+                  <Sparkles className="w-4 h-4 text-green-400" />
+                </h3>
                 <p className="text-sm text-green-300 mt-1">
                   {passType === 'ultra' 
                     ? 'Als Ultra+ User hast du Auto-Claim kostenlos!' 
@@ -1114,21 +1121,25 @@ export default function BattlePassView() {
 
         {/* Lifetime Pass Feature Card */}
         {!lifetime_pass && (
-          <div className="glass rounded-2xl p-5 border border-purple-400/20 hover:border-purple-400/40 transition-all">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-purple-500/15 border border-purple-400/30">
-                <Crown className="w-6 h-6 text-purple-400" />
+          <div className="glass rounded-2xl p-6 border border-purple-400/20 hover:border-purple-400/50 transition-all hover:shadow-xl hover:shadow-purple-500/20">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-400/40 shadow-lg">
+                <Crown className="w-7 h-7 text-purple-400" />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-white text-lg">Lifetime Pass 👑</h3>
-                <p className="text-sm text-white/60 mt-1">
-                  Einmalige Zahlung für <strong>alle zukünftigen Seasons</strong>!
+                <h3 className="font-bold text-white text-xl mb-1.5 flex items-center gap-2">
+                  Lifetime Pass
+                  <Crown className="w-5 h-5 text-purple-400" />
+                </h3>
+                <p className="text-sm text-white/70 leading-relaxed">
+                  Einmalige Zahlung für <strong className="text-purple-300">alle zukünftigen Seasons</strong>!
                 </p>
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <div className="text-2xl font-black text-white">
-                6000 <span className="text-sm text-white/50">Credits</span>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-white">6000</span>
+                <span className="text-sm text-white/50 font-medium">Credits</span>
               </div>
               <button
                 onClick={() => {
@@ -1136,14 +1147,15 @@ export default function BattlePassView() {
                   setLifetimeConfirmOpen(true);
                 }}
                 disabled={buyingLifetime}
-                className="px-4 py-2 rounded-xl font-bold text-white transition-all hover:scale-105 disabled:opacity-50"
+                className="px-5 py-2.5 rounded-xl font-bold text-white transition-all hover:scale-105 disabled:opacity-50 shadow-lg hover:shadow-purple-500/50"
                 style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)' }}
               >
                 {buyingLifetime ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Kaufen'}
               </button>
             </div>
-            <div className="text-xs text-emerald-300 mt-2">
-              💎 Jeden Monat automatisch Ultra+ Pass!
+            <div className="flex items-center gap-2 text-xs text-emerald-300 bg-emerald-400/10 border border-emerald-400/20 rounded-lg px-3 py-2">
+              <Gem className="w-4 h-4 flex-shrink-0" />
+              <span>Jeden Monat automatisch Ultra+ Pass!</span>
             </div>
           </div>
         )}
@@ -1156,7 +1168,10 @@ export default function BattlePassView() {
                 <Crown className="w-6 h-6 text-purple-400" />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-white text-lg">Lifetime Pass Aktiv 👑</h3>
+                <h3 className="font-bold text-white text-lg flex items-center gap-2">
+                  Lifetime Pass Aktiv
+                  <Crown className="w-4 h-4 text-purple-400" />
+                </h3>
                 <p className="text-sm text-purple-300 mt-1">
                   Du bekommst jeden Monat automatisch den Ultra+ Pass!
                 </p>
@@ -1176,9 +1191,9 @@ export default function BattlePassView() {
         {/* Grid Layout - Responsive */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {rewards.map((tier) => {
-            const isUnlocked = tier.tier <= currentTier;
-            const isCurrent = tier.tier === nextTier;
             const isMissed = (missedTiers || []).includes(tier.tier); // 🆕 Verpasste Tiers
+            const isUnlocked = tier.tier <= currentTier && !isMissed; // ✅ Nur wirklich geclaimte Tiers
+            const isCurrent = tier.tier === nextTier;
             const isLocked = tier.tier > nextTier && !isMissed;
 
             return (
