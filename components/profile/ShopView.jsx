@@ -303,12 +303,15 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
   const [checkingRecipient, setCheckingRecipient] = useState(false);
 
   // ═══════════════════════════════════════════════════════════════
-  // PENDING PURCHASES — Karten sperren bis Bot verarbeitet hat
+  // PENDING PURCHASES — Karten sperren bis HHRP Server verarbeitet hat
   // pendingPurchases = { [itemId]: { queuedId, queuedAt, category, isGift } }
   // ═══════════════════════════════════════════════════════════════
   const [pendingPurchases, setPendingPurchases] = useState({});
   const pollTimeoutRef = useRef(null);
   const previousPendingKeys = useRef(new Set());
+
+  // ✅ GLOBAL LOCK: Wenn ein Kauf läuft, alle Buttons sperren (bis HHRP Server bestätigt)
+  const hasAnyPending = Object.keys(pendingPurchases).length > 0;
 
   const fetchPendingPurchases = useCallback(async () => {
     try {
@@ -360,14 +363,14 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
       const removed = [...oldKeys].filter(k => !newKeys.has(k));
 
       if (removed.length > 0) {
-        // Bot hat verarbeitet → Daten neu laden
+        // HHRP Server hat verarbeitet → Daten neu laden
         if (typeof onRefresh === 'function') {
           await onRefresh();
         }
         removed.forEach(itemId => {
           const item = shopItems[itemId];
           toast.success('Kauf abgeschlossen', {
-            description: `${item?.name || itemId} – der Bot hat die Lieferung abgeschlossen.`
+            description: `${item?.name || itemId} – der HHRP Server hat die Lieferung abgeschlossen.`
           });
         });
       }
@@ -528,7 +531,7 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
         toast.error(data.error || 'Kauf fehlgeschlagen');
       } else {
         toast.info(`${item.label} wird aktiviert …`);
-        // Karte bis Bot-Verarbeitung sperren
+        // Karte bis HHRP Server-Verarbeitung sperren
         markItemsPending([item.id], {
           variant: 'credit_spend',
           category: 'credit_spend'
@@ -561,7 +564,7 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
         toast.error(data.error || 'Box konnte nicht geöffnet werden');
       } else {
         toast.info(`${crate.name} wird geöffnet …`);
-        // Karte bis Bot-Verarbeitung sperren
+        // Karte bis HHRP Server-Verarbeitung sperren
         markItemsPending([`crate_${crate.id}`], {
           variant: 'mystery_box',
           category: 'mystery_box'
@@ -690,7 +693,7 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
         if (successfulItemIds.length > 0) {
           // Sofort als pending markieren → Karten werden gesperrt
           markItemsPending(successfulItemIds, { isGift: false });
-          toast.info(`${successfulItemIds.length} Item(s) gekauft — Bot liefert gleich aus.`);
+          toast.info(`${successfulItemIds.length} Item(s) gekauft — HHRP Server liefert gleich aus.`);
         }
         clearCart();
         setShowCart(false);
@@ -846,7 +849,7 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
       const data = await res.json();
       
       if (res.ok) {
-        toast.info(`${item.name} an ${giftRecipient.displayName} gesendet — Bot liefert gleich aus.`);
+        toast.info(`${item.name} an ${giftRecipient.displayName} gesendet — HHRP Server liefert gleich aus.`);
         // Sofort als pending markieren → Karte wird gesperrt
         markItemsPending([giftItemId], { isGift: true });
         setGiftItemId(null);
@@ -1058,6 +1061,19 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
     <div className="space-y-6">
       {/* 🎉 Aktions-Banner (Slider bei mehreren aktiven Aktionen) */}
       <PromoBanner promos={activeBannerPromos} variant="shop" />
+
+      {/* ⏳ Globaler Hinweis: Kauf wird gerade verarbeitet — alle Buttons gesperrt */}
+      {hasAnyPending && (
+        <div className="rounded-2xl border border-amber-400/40 bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-amber-500/10 backdrop-blur-xl px-4 py-3 flex items-center gap-3 shadow-lg animate-pulse">
+          <Loader2 className="w-5 h-5 text-amber-400 animate-spin flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-amber-200">Kauf wird verarbeitet…</p>
+            <p className="text-xs text-amber-100/70">
+              Alle Kauf-Buttons sind gesperrt, bis der HHRP Server die Lieferung abgeschlossen hat.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ═══════════════════════════════════════════════════════════════
           HERO HEADER: Guthaben + Credits + VIP-Status (Glass-Stil)
@@ -1417,7 +1433,7 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
                 <span className="text-white/60 text-sm">{option.cost.toLocaleString('de-DE')}€</span>
                 <Button
                   onClick={() => openPinModal({ type: 'credits', optionIndex: index })}
-                  disabled={purchasing || userBalance < option.cost || isBotLocked}
+                  disabled={purchasing || userBalance < option.cost || isBotLocked || hasAnyPending}
                   size="sm"
                   className="rounded-lg"
                   style={{
@@ -1521,7 +1537,7 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
                 </div>
                 <Button
                   onClick={() => openPinModal({ type: 'bank_limit', upgradeIndex: index })}
-                  disabled={purchasing || userCredits < finalCost || isBotLocked}
+                  disabled={purchasing || userCredits < finalCost || isBotLocked || hasAnyPending}
                   size="sm"
                   className="rounded-lg"
                   style={{
@@ -1599,7 +1615,7 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
             const discountAmount = discount > 0 ? Math.floor(dynamicPrice * discount) : 0;
             const finalPrice = dynamicPrice - discountAmount;
 
-            const blocked = isActive || cooldownLeft > 0 || pending || isBotLocked;
+            const blocked = isActive || cooldownLeft > 0 || pending || isBotLocked || hasAnyPending;
             const canAfford = userCredits >= dynamicPrice;
             const canBuy = !blocked && canAfford;
 
@@ -1856,7 +1872,7 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
                   )}
                   <Button
                     onClick={() => handleOpenCrate(crate)}
-                    disabled={purchasing || !canAfford || isBotLocked}
+                    disabled={purchasing || !canAfford || isBotLocked || hasAnyPending}
                     size="sm"
                     className="rounded-lg"
                     style={{
@@ -2313,7 +2329,7 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
                         ) : (
                           <Button
                             onClick={() => giftItem(id)}
-                            disabled={isDisabledInGiftMode || isLowerVIP || isBotLocked}
+                            disabled={isDisabledInGiftMode || isLowerVIP || isBotLocked || hasAnyPending}
                             size="sm"
                             className="rounded-lg"
                             style={{
@@ -2333,7 +2349,7 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
                     ) : (
                       <Button
                         onClick={() => addToCart(id)}
-                        disabled={hasItem || isLowerVIP || isBotLocked || alreadyHadFreePass || hasActiveCreditsPass}
+                        disabled={hasItem || isLowerVIP || isBotLocked || alreadyHadFreePass || hasActiveCreditsPass || hasAnyPending}
                         size="sm"
                         className="rounded-lg"
                         style={{
@@ -2521,7 +2537,7 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
                     setShowCart(false);
                     openPinModal({ type: 'cart' });
                   }}
-                  disabled={purchasing || cart.length === 0 || userBalance < cartTotal}
+                  disabled={purchasing || cart.length === 0 || userBalance < cartTotal || hasAnyPending}
                   className="w-full h-12 text-base font-semibold rounded-xl"
                   style={{
                     background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.3))',
@@ -2893,7 +2909,7 @@ export function ShopView({ user, userData, onRefresh, jumpToCategory = null, onJ
               </Button>
               <Button
                 onClick={() => handleSpendCredit(spendModal.item, spendModal.value)}
-                disabled={purchasing || !spendModal.value || 
+                disabled={purchasing || hasAnyPending || !spendModal.value || 
                   (spendModal.item.id === 'custom_kontonummer' && spendModal.value.length !== 9) || 
                   (spendModal.item.id === 'bank_pin_change' && spendModal.value.length !== 3) ||
                   (spendModal.item.id === 'exklusiver_titel' && spendModal.value.length < 2)}
