@@ -464,40 +464,48 @@ export default function BattlePassView() {
   const discountPercent = pricing?.discountPercent ?? 0;
 
   return (
-    <div className="space-y-4 md:space-y-6 relative">
+    <div className="space-y-6">
       {/* ==================== HEADER  ==================== */}
-      <div className="relative bg-gradient-to-br from-yellow-500/20 via-purple-500/10 to-blue-500/10 backdrop-blur-2xl border border-white/20 rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-2xl overflow-hidden">
+      <div className="glass rounded-2xl p-6 border border-white/[0.08]">
         {/* Animated Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 via-transparent to-purple-500/5 animate-pulse pointer-events-none"></div>
         
         <div className="relative z-10">
           {/* Title */}
-          <div className="flex items-center justify-between mb-3 md:mb-4">
-            <div>
-              <div className="flex items-center gap-2 text-white/50 text-[10px] md:text-xs uppercase tracking-widest mb-1 font-bold">
-                <Sparkles className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                Season {seasonName}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center"
+                style={{
+                  background: 'rgba(251, 191, 36, 0.15)',
+                  border: '1px solid rgba(251, 191, 36, 0.35)'
+                }}
+              >
+                <Crown className="w-6 h-6 text-yellow-400" />
               </div>
-              <h2 className="text-xl md:text-3xl font-black text-white flex items-center gap-2 md:gap-3 drop-shadow-lg">
-                <Crown className="w-6 h-6 md:w-8 md:h-8 text-yellow-400 flex-shrink-0 drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" />
-                <span>Battle Pass</span>
-              </h2>
+              <div>
+                <div className="flex items-center gap-2 text-white/40 text-xs uppercase tracking-widest mb-1 font-bold">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Season {seasonName}
+                </div>
+                <h2 className="text-2xl md:text-3xl font-black text-white">Battle Pass</h2>
+              </div>
             </div>
             <div className="text-right">
-              <div className="text-[10px] md:text-xs text-white/50 font-semibold mb-0.5">Noch</div>
-              <div className="text-lg md:text-2xl font-black text-white drop-shadow-md">{daysRemaining}d</div>
+              <div className="text-xs text-white/40 font-semibold mb-0.5">Noch</div>
+              <div className="text-2xl font-black text-white">{daysRemaining}d</div>
             </div>
           </div>
 
           {/* Progress Bar */}
-          <div className="mb-3 md:mb-4">
-            <div className="flex items-center justify-between mb-2 text-xs md:text-sm">
+          <div className="mb-4">
+            <div className="flex items-center justify-between mb-2 text-sm">
               <span className="text-white/60 font-semibold">Tier {currentTier} / 30</span>
-              <span className="text-white font-bold tabular-nums drop-shadow-md">{Math.round(progress)}%</span>
+              <span className="text-white font-bold tabular-nums">{Math.round(progress)}%</span>
             </div>
-            <div className="h-3 md:h-4 rounded-full overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 shadow-inner">
+            <div className="h-4 rounded-full overflow-hidden bg-white/10 border border-white/20">
               <div
-                className="h-full rounded-full transition-all duration-700 ease-out relative overflow-hidden"
+                className="h-full rounded-full transition-all duration-700 relative overflow-hidden"
                 style={{
                   width: `${progress}%`,
                   background: 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 50%, #ef4444 100%)',
@@ -510,11 +518,22 @@ export default function BattlePassView() {
 
           {/* Missed Days Warning */}
           {missedDays > 0 && (
-            <div className="mb-3 md:mb-4 flex items-center gap-2 px-3 md:px-4 py-2 md:py-3 rounded-xl border border-red-500/30 bg-red-500/10 backdrop-blur-md shadow-lg animate-pulse">
-              <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-red-400 flex-shrink-0" />
-              <span className="text-red-300 text-xs md:text-sm font-bold">
-                ⚠️ {missedDays} Tag{missedDays > 1 ? 'e' : ''} verpasst! Diese Tiers sind verloren.
-              </span>
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl border border-red-500/30 bg-red-500/10 backdrop-blur-md animate-pulse">
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.35)'
+                }}
+              >
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-bold text-red-300">
+                  {missedDays} Tag{missedDays > 1 ? 'e' : ''} verpasst!
+                </p>
+                <p className="text-xs text-red-200/80">Diese Tiers sind verloren</p>
+              </div>
             </div>
           )}
 
@@ -705,13 +724,14 @@ export default function BattlePassView() {
       </div>
 
       {/* ==================== TIER GRID (Mobile-Friendly) ==================== */}
-      <div className="relative bg-gradient-to-br from-white/10 via-white/5 to-white/5 backdrop-blur-2xl border border-white/20 rounded-2xl md:rounded-3xl p-3 md:p-6 shadow-2xl overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-pink-500/5 pointer-events-none"></div>
-        
-        <h3 className="relative z-10 text-base md:text-xl font-bold text-white mb-3 md:mb-4 drop-shadow-md px-1 md:px-0">Alle Belohnungen</h3>
+      <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+        <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+          <Gift className="w-5 h-5 text-purple-400" />
+          Alle Belohnungen
+        </h3>
 
         {/* Grid Layout - Responsive */}
-        <div className="relative z-10 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {rewards.map((tier) => {
             const isUnlocked = tier.tier <= currentTier;
             const isCurrent = tier.tier === nextTier;
