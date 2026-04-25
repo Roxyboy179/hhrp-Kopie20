@@ -406,12 +406,16 @@ export default function BattlePassView() {
     );
   }
 
-  const { userProgress, rewards, season, daysRemaining } = data;
+  const { userProgress, rewards, season, daysRemaining, pricing, canPurchase, minDaysToPurchase } = data;
   const { currentTier, purchased, canClaimToday, missedDays } = userProgress;
   const seasonName = `${season.month}/${season.year}`;
   const progress = (currentTier / 30) * 100;
   const allClaimed = currentTier >= 30;
   const nextTier = currentTier + 1;
+  const purchaseBlocked = canPurchase === false; // weniger als 5 Tage übrig
+  const currentPrice = pricing?.current ?? 1500;
+  const originalPrice = pricing?.original ?? 1500;
+  const discountPercent = pricing?.discountPercent ?? 0;
 
   return (
     <div className="space-y-4 md:space-y-6 relative">
@@ -470,7 +474,7 @@ export default function BattlePassView() {
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-2 md:gap-3">
-            {!purchased && !purchasing && (
+            {!purchased && !purchasing && !purchaseBlocked && (
               <Button
                 onClick={handlePurchaseClick}
                 className="h-11 md:h-12 px-4 md:px-6 rounded-xl md:rounded-2xl font-bold text-sm md:text-base text-black shadow-xl hover:shadow-2xl transition-all hover:scale-105 flex-1 relative overflow-hidden group"
@@ -478,9 +482,35 @@ export default function BattlePassView() {
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
                 <span className="flex items-center gap-2 relative z-10">
-                  <Crown className="w-4 h-4 md:w-5 md:h-5" /> Premium kaufen
+                  <Crown className="w-4 h-4 md:w-5 md:h-5" />
+                  <span className="flex items-baseline gap-1.5">
+                    <span>Premium für</span>
+                    {discountPercent > 0 ? (
+                      <>
+                        <span className="line-through text-black/50 text-xs">{originalPrice.toLocaleString('de-DE')}</span>
+                        <span className="text-black font-black">{currentPrice.toLocaleString('de-DE')}</span>
+                      </>
+                    ) : (
+                      <span className="text-black font-black">{currentPrice.toLocaleString('de-DE')}</span>
+                    )}
+                    <Coins className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                  </span>
+                  {discountPercent > 0 && (
+                    <span className="text-[10px] md:text-xs font-bold bg-red-500/90 text-white px-1.5 py-0.5 rounded-md ml-1 shadow-md">
+                      -{discountPercent}%
+                    </span>
+                  )}
                 </span>
               </Button>
+            )}
+
+            {!purchased && !purchasing && purchaseBlocked && (
+              <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-orange-500/30 bg-orange-500/10 backdrop-blur-md shadow-lg flex-1">
+                <Clock className="w-4 h-4 md:w-5 md:h-5 text-orange-400 flex-shrink-0" />
+                <span className="text-orange-300 text-xs md:text-sm font-bold text-center">
+                  Nur noch {daysRemaining}d — Premium-Kauf ab &lt; {minDaysToPurchase ?? 5} Tagen gesperrt
+                </span>
+              </div>
             )}
 
             {purchasing && (
@@ -596,12 +626,31 @@ export default function BattlePassView() {
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 pt-3">
-                <div className="flex items-center justify-between rounded-xl border border-yellow-500/30 bg-yellow-500/10 backdrop-blur-md px-3 md:px-4 py-2 md:py-3 shadow-lg">
-                  <span className="text-xs md:text-sm text-white/80 font-medium">Kosten</span>
-                  <span className="flex items-center gap-1.5 md:gap-2 font-bold text-yellow-300 drop-shadow-md text-sm md:text-base">
-                    <Coins className="w-4 h-4 md:w-5 md:h-5" />
-                    1.500 Credits
-                  </span>
+                <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 backdrop-blur-md px-3 md:px-4 py-2.5 md:py-3 shadow-lg space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs md:text-sm text-white/80 font-medium">Kosten heute</span>
+                    <span className="flex items-center gap-1.5 md:gap-2 font-bold text-yellow-300 drop-shadow-md text-sm md:text-base">
+                      <Coins className="w-4 h-4 md:w-5 md:h-5" />
+                      {currentPrice.toLocaleString('de-DE')} Credits
+                    </span>
+                  </div>
+                  {discountPercent > 0 && (
+                    <div className="flex items-center justify-between text-[10px] md:text-xs">
+                      <span className="text-white/60">Originalpreis</span>
+                      <span className="line-through text-white/40 font-semibold">{originalPrice.toLocaleString('de-DE')} Credits</span>
+                    </div>
+                  )}
+                  {discountPercent > 0 && (
+                    <div className="flex items-center justify-between text-[10px] md:text-xs">
+                      <span className="text-emerald-300/80 font-bold">Tages-Rabatt</span>
+                      <span className="text-emerald-300 font-bold bg-emerald-500/20 px-1.5 py-0.5 rounded-md border border-emerald-500/30">
+                        −{discountPercent}% ({(originalPrice - currentPrice).toLocaleString('de-DE')} Credits gespart)
+                      </span>
+                    </div>
+                  )}
+                  <div className="text-[9px] md:text-[10px] text-white/50 italic pt-1 border-t border-white/10">
+                    💡 Pro Tag im Monat reduziert sich der Preis um 1%
+                  </div>
                 </div>
                 <div className="rounded-xl border border-white/20 bg-white/5 backdrop-blur-md p-3 md:p-4 text-xs md:text-sm text-white/90 shadow-lg">
                   <div className="mb-2 font-bold text-white drop-shadow-md">Du erhältst:</div>
@@ -637,7 +686,7 @@ export default function BattlePassView() {
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
               <Crown className="w-4 h-4 md:w-5 md:h-5 mr-1.5 md:mr-2 relative z-10" />
-              <span className="relative z-10">Für 1.500 Credits kaufen</span>
+              <span className="relative z-10">Für {currentPrice.toLocaleString('de-DE')} Credits kaufen</span>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -645,47 +694,48 @@ export default function BattlePassView() {
 
       {/* ==================== CANCEL DIALOG ==================== */}
       <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
-        <AlertDialogContent className="border-white/20 bg-gradient-to-br from-red-950/90 via-black/90 to-black/90 backdrop-blur-3xl shadow-2xl max-w-md mx-4">
+        <AlertDialogContent className="border-white/20 bg-gradient-to-br from-orange-950/90 via-black/90 to-black/90 backdrop-blur-3xl shadow-2xl max-w-md mx-4">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-red-300 text-lg md:text-xl font-bold drop-shadow-md">
-              <AlertTriangle className="w-5 h-5 md:w-6 md:h-6 drop-shadow-[0_0_6px_rgba(248,113,113,0.8)]" />
+            <AlertDialogTitle className="flex items-center gap-2 text-orange-300 text-lg md:text-xl font-bold drop-shadow-md">
+              <AlertTriangle className="w-5 h-5 md:w-6 md:h-6 drop-shadow-[0_0_6px_rgba(251,146,60,0.8)]" />
               Premium Battle Pass kündigen?
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 pt-3">
-                <div className="rounded-xl border border-red-500/30 bg-red-500/10 backdrop-blur-md p-3 md:p-4 text-xs md:text-sm text-white/90 shadow-lg">
-                  <div className="mb-2 font-bold text-red-200 drop-shadow-md flex items-center gap-2">
-                    <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                    Achtung — Konsequenzen:
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 backdrop-blur-md p-3 md:p-4 text-xs md:text-sm text-white/90 shadow-lg">
+                  <div className="mb-2 font-bold text-emerald-200 drop-shadow-md flex items-center gap-2">
+                    <Check className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                    Gute Nachricht — Du verlierst nichts:
                   </div>
                   <ul className="space-y-1.5 md:space-y-2 text-[10px] md:text-xs font-medium">
                     <li className="flex items-start gap-1.5 md:gap-2">
-                      <X className="w-3 h-3 md:w-4 md:h-4 text-red-300 mt-0.5 flex-shrink-0" />
-                      <span>Du verlierst sofort den Premium-Zugang</span>
+                      <Check className="w-3 h-3 md:w-4 md:h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
+                      <span>Premium-Vorteile laufen <strong>bis Monatsende</strong> ({daysRemaining}d) weiter</span>
                     </li>
                     <li className="flex items-start gap-1.5 md:gap-2">
-                      <X className="w-3 h-3 md:w-4 md:h-4 text-red-300 mt-0.5 flex-shrink-0" />
-                      <span>Alle noch nicht eingelösten Premium-Belohnungen entfallen</span>
+                      <Check className="w-3 h-3 md:w-4 md:h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
+                      <span>Du kannst weiterhin <strong>Free + Premium</strong> Rewards claimen</span>
                     </li>
                     <li className="flex items-start gap-1.5 md:gap-2">
-                      <X className="w-3 h-3 md:w-4 md:h-4 text-red-300 mt-0.5 flex-shrink-0" />
-                      <span>Die 1.500 Credits werden <strong>nicht</strong> erstattet</span>
+                      <Check className="w-3 h-3 md:w-4 md:h-4 text-emerald-300 mt-0.5 flex-shrink-0" />
+                      <span>Bereits eingelöste Belohnungen bleiben erhalten</span>
                     </li>
                   </ul>
                 </div>
-                <div className="text-[10px] md:text-xs text-white/60 italic px-1">
-                  Diese Aktion kann nicht rückgängig gemacht werden. Du kannst aber jederzeit erneut Premium kaufen.
+                <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 backdrop-blur-md p-3 text-[10px] md:text-xs text-orange-200 shadow-lg flex items-start gap-2">
+                  <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4 text-orange-300 mt-0.5 flex-shrink-0" />
+                  <span>Im neuen Monat startet die Saison automatisch <strong>ohne Premium</strong>. Die 1.500 Credits werden nicht erstattet.</span>
                 </div>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 md:gap-3 mt-2 flex-col sm:flex-row">
             <AlertDialogCancel className="bg-white/10 hover:bg-white/20 border-white/20 text-white backdrop-blur-md font-semibold rounded-xl shadow-lg w-full sm:w-auto">
-              Abbrechen
+              Doch behalten
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancel}
-              className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 text-white font-bold border-0 rounded-xl shadow-xl hover:shadow-2xl transition-all w-full sm:w-auto"
+              className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-400 hover:to-amber-500 text-white font-bold border-0 rounded-xl shadow-xl hover:shadow-2xl transition-all w-full sm:w-auto"
             >
               <X className="w-4 h-4 md:w-5 md:h-5 mr-1.5 md:mr-2" />
               Ja, kündigen
