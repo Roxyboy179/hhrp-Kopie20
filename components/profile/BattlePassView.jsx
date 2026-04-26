@@ -1303,18 +1303,18 @@ export default function BattlePassView() {
             <Gift className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
             Alle Belohnungen
           </h3>
-          <div className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs text-white/50 font-medium">
-            <span className="hidden sm:inline">←</span>
-            <span>Wische horizontal</span>
-            <span>→</span>
+          <div className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs text-white/40 font-medium">
+            <span className="hidden sm:inline">Mausrad oder Touch</span>
+            <span className="sm:hidden">Wische</span>
+            <span>↔</span>
           </div>
         </div>
 
         {/* Horizontal Scrollable Track */}
         <div
           ref={rewardsTrackRef}
-          className="overflow-x-auto overflow-y-visible -mx-4 md:-mx-6 px-4 md:px-6 pb-3 scroll-smooth snap-x snap-mandatory"
-          style={{ scrollbarWidth: 'thin' }}
+          className="overflow-x-auto overflow-y-visible -mx-4 md:-mx-6 px-4 md:px-6 pb-3 scroll-smooth snap-x snap-mandatory cursor-default"
+          style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.2) transparent' }}
         >
           <div className="flex gap-2 md:gap-3 w-max">
             {rewards.map((tier) => {
@@ -1327,7 +1327,7 @@ export default function BattlePassView() {
                 <div
                   key={tier.tier}
                   data-tier={tier.tier}
-                  className="flex-shrink-0 w-[140px] sm:w-[150px] md:w-[170px] snap-center"
+                  className="flex-shrink-0 w-[125px] sm:w-[140px] md:w-[155px] snap-center"
                 >
                   <TierCard
                     tier={tier}
@@ -1351,7 +1351,7 @@ export default function BattlePassView() {
             <span>Aktuell</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded border-2 border-green-400 bg-green-500/20"></div>
+            <div className="w-3 h-3 rounded border-2 border-emerald-400/40 bg-emerald-500/20"></div>
             <span>Erhalten</span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -1783,7 +1783,7 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, isMissed, purchased, 
   return (
     <div
       className={`
-        relative rounded-xl md:rounded-2xl overflow-hidden border-2 transition-all duration-300
+        relative rounded-xl md:rounded-2xl overflow-hidden border-2 transition-all duration-300 h-full flex flex-col
         ${isCurrent ? 'border-yellow-400 shadow-[0_0_24px_rgba(251,191,36,0.4)] z-10' : ''}
         ${isUnlocked && !isCurrent ? 'border-emerald-400/40' : ''}
         ${isMissed ? 'border-red-500/40 opacity-70' : ''}
@@ -1844,26 +1844,25 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, isMissed, purchased, 
       )}
 
       {/* === Content === */}
-      <div className="p-1.5 md:p-2 space-y-1.5 md:space-y-2">
+      <div className="p-1.5 md:p-2 space-y-1.5 md:space-y-2 flex-1 flex flex-col">
         {/* Free Reward */}
-        <div className="rounded-lg p-1.5 md:p-2 border border-white/8" style={{ background: 'rgba(0,0,0,0.25)' }}>
+        <div className="rounded-lg p-1.5 md:p-2 border border-white/8 flex-1 flex flex-col" style={{ background: 'rgba(0,0,0,0.25)' }}>
           <div className="text-[8px] md:text-[9px] uppercase tracking-wider text-white/40 font-bold mb-1">
             Free
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-1">
             <FreeIcon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${getRewardColor(freeReward)} flex-shrink-0`} />
             <span className="text-[10px] md:text-[11px] text-white/85 font-semibold line-clamp-2 leading-tight">{freeReward.label}</span>
           </div>
-          {freeReward.alternativeCredits && (
-            <div className="text-[8px] md:text-[9px] text-white/40 mt-1 font-medium">
-              Alt: {freeReward.alternativeCredits}c
-            </div>
-          )}
+          {/* Alt-Credits Zeile - immer reserviert für gleiche Card-Höhe */}
+          <div className="text-[8px] md:text-[9px] text-white/40 mt-1 font-medium min-h-[10px] md:min-h-[11px]">
+            {freeReward.alternativeCredits ? `Alt: ${freeReward.alternativeCredits}c` : '\u00A0'}
+          </div>
         </div>
 
         {/* Premium Reward */}
         <div 
-          className={`relative rounded-lg p-1.5 md:p-2 border transition-all ${
+          className={`relative rounded-lg p-1.5 md:p-2 border transition-all flex-1 flex flex-col ${
             purchased 
               ? 'border-yellow-400/25' 
               : 'border-white/8'
@@ -1885,17 +1884,16 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, isMissed, purchased, 
               <Lock className="w-3.5 h-3.5 md:w-4 md:h-4 text-white/40" />
             </div>
           )}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-1">
             <PremiumIcon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${purchased ? getRewardColor(premiumReward) : 'text-white/30'} flex-shrink-0`} />
             <span className={`text-[10px] md:text-[11px] font-semibold line-clamp-2 leading-tight ${purchased ? 'text-white/90' : 'text-white/30'}`}>
               {premiumReward.label}
             </span>
           </div>
-          {purchased && premiumReward.alternativeCredits && (
-            <div className="text-[8px] md:text-[9px] text-yellow-300/60 mt-1 font-medium">
-              Alt: {premiumReward.alternativeCredits}c
-            </div>
-          )}
+          {/* Alt-Credits Zeile - immer reserviert für gleiche Card-Höhe */}
+          <div className="text-[8px] md:text-[9px] text-yellow-300/60 mt-1 font-medium min-h-[10px] md:min-h-[11px]">
+            {purchased && premiumReward.alternativeCredits ? `Alt: ${premiumReward.alternativeCredits}c` : '\u00A0'}
+          </div>
         </div>
       </div>
     </div>
