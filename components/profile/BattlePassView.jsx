@@ -700,6 +700,20 @@ export default function BattlePassView() {
     });
   };
 
+  // 🆕 Auto-scroll to current tier in horizontal track
+  // ⚠️ Hooks MÜSSEN vor Early Returns kommen (rules of hooks)
+  const _currentTierForScroll = data?.userProgress?.currentTier;
+  useEffect(() => {
+    if (!rewardsTrackRef.current || !_currentTierForScroll) return;
+    const el = rewardsTrackRef.current.querySelector(`[data-tier="${_currentTierForScroll}"]`);
+    if (el) {
+      const containerWidth = rewardsTrackRef.current.clientWidth;
+      const cardLeft = el.offsetLeft;
+      const cardWidth = el.clientWidth;
+      const scrollTo = cardLeft - (containerWidth / 2) + (cardWidth / 2);
+      rewardsTrackRef.current.scrollTo({ left: Math.max(0, scrollTo), behavior: 'smooth' });
+    }
+  }, [_currentTierForScroll]);
 
   if (loading) {
     return (
@@ -744,20 +758,6 @@ export default function BattlePassView() {
       discountPercent: lastDaysDiscount,
     };
   });
-
-  // 🆕 Auto-scroll to current tier in horizontal track
-  useEffect(() => {
-    if (!rewardsTrackRef.current || !currentTier) return;
-    const el = rewardsTrackRef.current.querySelector(`[data-tier="${currentTier}"]`);
-    if (el) {
-      // Center the current tier card in the viewport of the track
-      const containerWidth = rewardsTrackRef.current.clientWidth;
-      const cardLeft = el.offsetLeft;
-      const cardWidth = el.clientWidth;
-      const scrollTo = cardLeft - (containerWidth / 2) + (cardWidth / 2);
-      rewardsTrackRef.current.scrollTo({ left: Math.max(0, scrollTo), behavior: 'smooth' });
-    }
-  }, [currentTier]);
 
   return (
     <div className="space-y-4 md:space-y-6">
