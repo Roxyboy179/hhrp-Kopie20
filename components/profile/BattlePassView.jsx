@@ -2059,6 +2059,133 @@ function BenefitsTab({ purchased, passType, lifetime_pass, auto_claim_enabled, t
         )}
       </div>
       
+      {/* 🆕 NEU: Warum Battle Pass kaufen? */}
+      <div className="glass rounded-xl md:rounded-2xl p-4 md:p-8 border border-white/10 bg-gradient-to-br from-blue-500/10 to-purple-600/10 border-blue-400/20 shadow-2xl">
+        <h3 className="text-lg md:text-2xl font-black text-white mb-2 md:mb-3 flex items-center gap-2 md:gap-3">
+          <Sparkles className="w-5 h-5 md:w-7 md:h-7 text-blue-300" />
+          <span>Warum einen Battle Pass kaufen?</span>
+        </h3>
+        <p className="text-white/60 text-xs md:text-sm mb-4 md:mb-6">
+          Maximiere deine Belohnungen und spare langfristig Geld!
+        </p>
+        
+        <div className="grid md:grid-cols-2 gap-3 md:gap-4">
+          {/* Grund 1 */}
+          <div className="p-3 md:p-4 rounded-xl bg-gradient-to-br from-yellow-500/15 to-yellow-600/5 border border-yellow-400/20 hover:border-yellow-400/40 transition-all">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-lg bg-yellow-500/20 flex items-center justify-center border border-yellow-400/30">
+                <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-yellow-300" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-white font-bold text-sm md:text-base mb-1">Doppelte Belohnungen</h4>
+                <p className="text-white/70 text-xs md:text-sm leading-relaxed">
+                  Erhalte Free- UND Premium-Track Rewards gleichzeitig. Maximiere deine Credits, XP und Items!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Grund 2 */}
+          <div className="p-3 md:p-4 rounded-xl bg-gradient-to-br from-green-500/15 to-green-600/5 border border-green-400/20 hover:border-green-400/40 transition-all">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-lg bg-green-500/20 flex items-center justify-center border border-green-400/30">
+                <Coins className="w-5 h-5 md:w-6 md:h-6 text-green-300" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-white font-bold text-sm md:text-base mb-1">Langfristig günstiger</h4>
+                <p className="text-white/70 text-xs md:text-sm leading-relaxed">
+                  Ein Battle Pass zahlt sich bereits nach wenigen Claims aus. Spare Geld im Vergleich zu Einzelkäufen!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Grund 3 */}
+          <div className="p-3 md:p-4 rounded-xl bg-gradient-to-br from-purple-500/15 to-purple-600/5 border border-purple-400/20 hover:border-purple-400/40 transition-all">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-lg bg-purple-500/20 flex items-center justify-center border border-purple-400/30">
+                <Crown className="w-5 h-5 md:w-6 md:h-6 text-purple-300" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-white font-bold text-sm md:text-base mb-1">Exklusive Rewards</h4>
+                <p className="text-white/70 text-xs md:text-sm leading-relaxed">
+                  Nur Battle Pass Besitzer erhalten Zugang zu seltenen Items, Lizenzen und exklusiven Belohnungen!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Grund 4 */}
+          <div className="p-3 md:p-4 rounded-xl bg-gradient-to-br from-rose-500/15 to-rose-600/5 border border-rose-400/20 hover:border-rose-400/40 transition-all">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-lg bg-rose-500/20 flex items-center justify-center border border-rose-400/30">
+                <Zap className="w-5 h-5 md:w-6 md:h-6 text-rose-300" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-white font-bold text-sm md:text-base mb-1">Auto-Claim verfügbar</h4>
+                <p className="text-white/70 text-xs md:text-sm leading-relaxed">
+                  Mit Ultra+ Pass: Belohnungen werden automatisch geclaimed. Nie wieder etwas verpassen!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Grund 5 */}
+          <div className="p-3 md:p-4 rounded-xl bg-gradient-to-br from-cyan-500/15 to-cyan-600/5 border border-cyan-400/20 hover:border-cyan-400/40 transition-all">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-lg bg-cyan-500/20 flex items-center justify-center border border-cyan-400/30">
+                <Gift className="w-5 h-5 md:w-6 md:h-6 text-cyan-300" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-white font-bold text-sm md:text-base mb-1">Flexible Optionen</h4>
+                <p className="text-white/70 text-xs md:text-sm leading-relaxed">
+                  Wähle zwischen Premium (70%), Elite+ (50%) oder Ultra+ (30% + Lizenzen) je nach deinem Budget!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Grund 6 */}
+          <div className="p-3 md:p-4 rounded-xl bg-gradient-to-br from-orange-500/15 to-orange-600/5 border border-orange-400/20 hover:border-orange-400/40 transition-all">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-lg bg-orange-500/20 flex items-center justify-center border border-orange-400/30">
+                <Shield className="w-5 h-5 md:w-6 md:h-6 text-orange-300" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-white font-bold text-sm md:text-base mb-1">Lifetime Option</h4>
+                <p className="text-white/70 text-xs md:text-sm leading-relaxed">
+                  Einmal zahlen, für immer Ultra+ Pass! Beste Langzeit-Investition für aktive Spieler.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Call-to-Action */}
+        <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-white/10">
+          <div className="text-center">
+            <p className="text-white/80 text-sm md:text-base mb-3 md:mb-4 font-medium flex items-center justify-center gap-2">
+              <Gem className="w-4 h-4 md:w-5 md:h-5 text-blue-300 flex-shrink-0" />
+              <span>Investiere smart und hole das Maximum aus deiner Spielzeit!</span>
+            </p>
+            <div className="flex flex-wrap gap-2 md:gap-3 justify-center text-xs md:text-sm">
+              <div className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg bg-white/5 border border-white/20 text-white/70 flex items-center gap-1.5">
+                <Check className="w-3 h-3 md:w-4 md:h-4 text-green-400 flex-shrink-0" />
+                <span>Sofortiger Zugriff</span>
+              </div>
+              <div className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg bg-white/5 border border-white/20 text-white/70 flex items-center gap-1.5">
+                <Check className="w-3 h-3 md:w-4 md:h-4 text-green-400 flex-shrink-0" />
+                <span>Keine versteckten Kosten</span>
+              </div>
+              <div className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg bg-white/5 border border-white/20 text-white/70 flex items-center gap-1.5">
+                <Check className="w-3 h-3 md:w-4 md:h-4 text-green-400 flex-shrink-0" />
+                <span>Jederzeit upgraden</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       {/* Vergleichstabelle - KOMPLETT VERBESSERT */}
       <div className="glass rounded-xl md:rounded-2xl p-4 md:p-8 border border-white/10 shadow-2xl">
         <h3 className="text-lg md:text-2xl font-black text-white mb-3 md:mb-6 flex items-center gap-2 md:gap-3">
