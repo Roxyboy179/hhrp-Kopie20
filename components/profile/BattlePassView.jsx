@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import confetti from 'canvas-confetti';
 import {
@@ -9,6 +9,7 @@ import {
   TrendingUp, Award, Gem, Share2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -744,9 +745,52 @@ export default function BattlePassView() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* ==================== HEADER  ==================== */}
-      <div className="glass rounded-2xl p-6 border border-white/[0.08]">
+      <div className="glass rounded-xl md:rounded-2xl p-4 md:p-6 border border-white/[0.08]">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black text-white drop-shadow-md">Battle Pass</h1>
+            <p className="text-white/60 text-sm md:text-base mt-1">Season {seasonName}</p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+            <div className="text-left sm:text-right w-full sm:w-auto">
+              <div className="text-xs md:text-sm text-white/50">Noch</div>
+              <div className="text-lg md:text-xl font-bold text-white">{daysRemaining} Tage</div>
+            </div>
+            <Button
+              onClick={handleShareProgress}
+              variant="outline"
+              size="sm"
+              className="w-full sm:w-auto border-white/20 hover:bg-white/10 text-white text-xs md:text-sm px-3 py-2"
+            >
+              <Share2 className="w-3 h-3 md:w-4 md:h-4 mr-2" />
+              Teilen
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* ==================== TABS ==================== */}
+      <Tabs defaultValue="battlepass" className="w-full">
+        <TabsList className="w-full grid grid-cols-2 bg-white/5 border border-white/10 p-1 rounded-xl md:rounded-2xl h-auto">
+          <TabsTrigger 
+            value="battlepass" 
+            className="rounded-lg md:rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500/20 data-[state=active]:to-orange-500/20 data-[state=active]:text-white text-white/60 font-bold py-2 md:py-3 text-sm md:text-base transition-all"
+          >
+            🎮 Battle Pass
+          </TabsTrigger>
+          <TabsTrigger 
+            value="benefits" 
+            className="rounded-lg md:rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/20 data-[state=active]:to-pink-500/20 data-[state=active]:text-white text-white/60 font-bold py-2 md:py-3 text-sm md:text-base transition-all"
+          >
+            ⭐ Vorteile
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ==================== TAB 1: BATTLE PASS ==================== */}
+        <TabsContent value="battlepass" className="mt-4 md:mt-6 space-y-4 md:space-y-6">
+        
         {/* Animated Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 via-transparent to-purple-500/5 animate-pulse pointer-events-none"></div>
         
@@ -936,17 +980,29 @@ export default function BattlePassView() {
                     </Button>
                   )}
 
-                  {/* Cancel Button */}
-                  <Button
-                    onClick={handleCancelClick}
-                    variant="outline"
-                    size="sm"
-                    className="h-10 md:h-12 px-3 md:px-4 rounded-xl md:rounded-2xl border border-red-400/40 bg-red-500/10 hover:bg-red-500/20 text-red-300 hover:text-red-200 backdrop-blur-md shadow-lg font-semibold text-xs md:text-sm whitespace-nowrap"
-                    title="Premium Battle Pass kündigen"
-                  >
-                    <X className="w-4 h-4 md:w-4 md:h-4 mr-1" />
-                    Kündigen
-                  </Button>
+                  {/* Cancel Button - NICHT für Lifetime Pass! */}
+                  {!lifetime_pass && (
+                    <Button
+                      onClick={handleCancelClick}
+                      variant="outline"
+                      size="sm"
+                      className="h-10 md:h-12 px-3 md:px-4 rounded-xl md:rounded-2xl border border-red-400/40 bg-red-500/10 hover:bg-red-500/20 text-red-300 hover:text-red-200 backdrop-blur-md shadow-lg font-semibold text-xs md:text-sm whitespace-nowrap"
+                      title="Premium Battle Pass kündigen"
+                    >
+                      <X className="w-4 h-4 md:w-4 md:h-4 mr-1" />
+                      Kündigen
+                    </Button>
+                  )}
+                  
+                  {/* Lifetime Info - Kann nicht gekündigt werden */}
+                  {lifetime_pass && (
+                    <div className="px-3 md:px-4 py-2 md:py-2.5 rounded-xl border border-purple-400/30 bg-purple-500/10 backdrop-blur-md">
+                      <span className="text-purple-300 text-xs md:text-sm font-semibold flex items-center gap-2">
+                        <Shield className="w-4 h-4" />
+                        Lifetime aktiv
+                      </span>
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -1201,7 +1257,7 @@ export default function BattlePassView() {
 
       {/* ==================== PURCHASE DIALOG - Mit Tier-Auswahl ==================== */}
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent className="glass border border-white/[0.12] max-w-lg mx-4">
+        <AlertDialogContent className="glass border border-white/[0.12] max-w-[95vw] md:max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
           {(() => {
             const selectedTier = (tiersWithDiscount || []).find((t) => t.id === selectedPassType) || (tiersWithDiscount || [])[0];
             if (!selectedTier) return null;
@@ -1359,7 +1415,7 @@ export default function BattlePassView() {
           TIER-SKIP DIALOG
           ═══════════════════════════════════════════════════════════════ */}
       <AlertDialog open={skipConfirmOpen} onOpenChange={setSkipConfirmOpen}>
-        <AlertDialogContent className="glass border border-white/[0.12] max-w-md mx-4">
+        <AlertDialogContent className="glass border border-white/[0.12] max-w-[95vw] md:max-w-md mx-4 max-h-[90vh] overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-3 text-xl font-bold text-white">
               <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-orange-500/15 border border-orange-400/35">
@@ -1403,7 +1459,7 @@ export default function BattlePassView() {
           AUTO-CLAIM KAUFEN DIALOG
           ═══════════════════════════════════════════════════════════════ */}
       <AlertDialog open={autoclaimConfirmOpen} onOpenChange={setAutoclaimConfirmOpen}>
-        <AlertDialogContent className="glass border border-white/[0.12] max-w-md mx-4">
+        <AlertDialogContent className="glass border border-white/[0.12] max-w-[95vw] md:max-w-md mx-4 max-h-[90vh] overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-3 text-xl font-bold text-white">
               <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-blue-500/15 border border-blue-400/35">
@@ -1461,7 +1517,7 @@ export default function BattlePassView() {
           LIFETIME PASS KAUFEN DIALOG
           ═══════════════════════════════════════════════════════════════ */}
       <AlertDialog open={lifetimeConfirmOpen} onOpenChange={setLifetimeConfirmOpen}>
-        <AlertDialogContent className="glass border border-white/[0.12] max-w-md mx-4">
+        <AlertDialogContent className="glass border border-white/[0.12] max-w-[95vw] md:max-w-md mx-4 max-h-[90vh] overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-3 text-xl font-bold text-white">
               <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-purple-500/15 border border-purple-400/35">
@@ -1521,7 +1577,7 @@ export default function BattlePassView() {
 
       {/* ==================== CANCEL DIALOG ==================== */}
       <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
-        <AlertDialogContent className="glass border border-white/[0.12] max-w-md mx-4">
+        <AlertDialogContent className="glass border border-white/[0.12] max-w-[95vw] md:max-w-md mx-4 max-h-[90vh] overflow-y-auto">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-3 text-xl font-bold text-white">
               <div
@@ -1582,6 +1638,20 @@ export default function BattlePassView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+        </TabsContent> {/* Ende Battle Pass Tab */}
+        
+        {/* ==================== TAB 2: VORTEILE ==================== */}
+        <TabsContent value="benefits" className="mt-4 md:mt-6">
+          <BenefitsTab
+            purchased={purchased}
+            passType={passType}
+            lifetime_pass={lifetime_pass}
+            auto_claim_enabled={auto_claim_enabled}
+          />
+        </TabsContent>
+        
+      </Tabs> {/* Ende Tabs */}
     </div>
   );
 }
@@ -1683,6 +1753,191 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, isMissed, purchased, 
               Alt: {premiumReward.alternativeCredits} Credits
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 🆕 NEU: Vorteile Tab Content - Zeigt Benefits je nach Pass-Typ
+function BenefitsTab({ purchased, passType, lifetime_pass, auto_claim_enabled }) {
+  const getBenefits = () => {
+    if (lifetime_pass) {
+      return {
+        title: '♾️ Lifetime Pass',
+        color: 'purple',
+        benefits: [
+          { icon: <Crown />, title: 'Jeden Monat Ultra+ Pass', desc: 'Automatisch bei jedem Season-Reset' },
+          { icon: <Zap />, title: 'Auto-Claim kostenlos', desc: 'Nie wieder manuell claimen' },
+          { icon: <Gem />, title: 'Beste Langzeit-Investition', desc: 'Einmal zahlen, für immer profitieren' },
+          { icon: <TrendingUp />, title: '30% Rewards + Extra Lizenzen', desc: 'Optimiert für Langzeit-Spieler' },
+          { icon: <Shield />, title: 'Kann nicht gekündigt werden', desc: 'Lifetime bleibt für immer aktiv' },
+        ],
+      };
+    }
+    
+    if (!purchased) {
+      return {
+        title: '🆓 Free Track',
+        color: 'gray',
+        benefits: [
+          { icon: <Gift />, title: 'Tägliche kostenlose Rewards', desc: 'XP, Credits, Geld und Items' },
+          { icon: <Clock />, title: 'Einmal pro Tag claimen', desc: '24h Cooldown zwischen Claims' },
+          { icon: <Lock />, title: 'Premium Rewards gesperrt', desc: 'Kaufe einen Pass für doppelte Belohnungen!' },
+        ],
+        upgrade: true,
+      };
+    }
+    
+    switch (passType) {
+      case 'ultra':
+        return {
+          title: '💎 Ultra+ Pass',
+          color: 'rose',
+          benefits: [
+            { icon: <Crown />, title: 'Ultra+ Tier', desc: 'Bester Premium Pass verfügbar' },
+            { icon: <TrendingUp />, title: '30% Rewards + Extra Lizenzen', desc: 'Weniger Geld/XP aber mehr wertvolle Lizenzen' },
+            { icon: <Zap />, title: 'Auto-Claim kostenlos', desc: 'Nie wieder manuell claimen müssen' },
+            { icon: <Gem />, title: 'Beste Preise', desc: 'Niedrigste Kosten pro Season' },
+            { icon: <Award />, title: 'Exklusive Ultra+ Items', desc: 'Einzigartige Belohnungen nur für Ultra+' },
+          ],
+        };
+      
+      case 'elite':
+        return {
+          title: '⭐ Elite Pass',
+          color: 'violet',
+          benefits: [
+            { icon: <Crown />, title: 'Elite Tier', desc: 'Mittlerer Premium Pass' },
+            { icon: <TrendingUp />, title: '50% Rewards', desc: 'Halbe Rewards für reduzierten Preis' },
+            { icon: <Coins />, title: 'Reduzierte Preise', desc: 'Günstiger als Premium Pass' },
+            { icon: <Gift />, title: 'Free + Premium Rewards', desc: 'Beide Tracks gleichzeitig' },
+            { icon: <Sparkles />, title: 'Elite Items', desc: 'Spezielle Belohnungen für Elite' },
+          ],
+        };
+      
+      default: // premium
+        return {
+          title: '👑 Premium Pass',
+          color: 'yellow',
+          benefits: [
+            { icon: <Crown />, title: 'Premium Tier', desc: 'Basis Premium Pass' },
+            { icon: <TrendingUp />, title: '70% Rewards', desc: 'Meiste Rewards für fairen Preis' },
+            { icon: <Gift />, title: 'Free + Premium Rewards', desc: 'Beide Tracks gleichzeitig claimen' },
+            { icon: <Coins />, title: 'Gutes Preis-Leistungs-Verhältnis', desc: 'Beste Balance zwischen Kosten und Rewards' },
+            { icon: <Award />, title: 'Premium Items', desc: 'Exklusive Premium Belohnungen' },
+          ],
+        };
+    }
+  };
+  
+  const { title, color, benefits, upgrade } = getBenefits();
+  
+  const colorClasses = {
+    purple: 'from-purple-500/20 to-purple-600/10 border-purple-400/30',
+    rose: 'from-rose-500/20 to-rose-600/10 border-rose-400/30',
+    violet: 'from-violet-500/20 to-violet-600/10 border-violet-400/30',
+    yellow: 'from-yellow-500/20 to-yellow-600/10 border-yellow-400/30',
+    gray: 'from-gray-500/20 to-gray-600/10 border-gray-400/30',
+  };
+  
+  return (
+    <div className="space-y-4 md:space-y-6">
+      <div className={`glass rounded-xl md:rounded-2xl p-6 md:p-8 border bg-gradient-to-br ${colorClasses[color]}`}>
+        <h2 className="text-2xl md:text-3xl font-black text-white mb-2">{title}</h2>
+        <p className="text-white/60 text-sm md:text-base mb-6">
+          {upgrade ? 'Upgrade jetzt für exklusive Vorteile!' : 'Deine aktuellen Vorteile'}
+        </p>
+        
+        <div className="grid gap-4 md:gap-5">
+          {benefits.map((benefit, idx) => (
+            <div 
+              key={idx}
+              className="flex items-start gap-4 p-4 md:p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+            >
+              <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center border border-white/20">
+                {React.cloneElement(benefit.icon, { className: 'w-5 h-5 md:w-6 md:h-6 text-white' })}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-white font-bold text-base md:text-lg mb-1">{benefit.title}</h3>
+                <p className="text-white/60 text-sm md:text-base">{benefit.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        {upgrade && (
+          <div className="mt-6 pt-6 border-t border-white/10">
+            <p className="text-white/70 text-center text-sm md:text-base mb-4">
+              🎁 Upgrade jetzt und erhalte sofort Zugriff auf Premium Rewards!
+            </p>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <span className="px-4 py-2 rounded-lg bg-yellow-500/20 border border-yellow-400/30 text-yellow-300 font-bold text-sm">
+                Premium: ab 1.500c
+              </span>
+              <span className="px-4 py-2 rounded-lg bg-violet-500/20 border border-violet-400/30 text-violet-300 font-bold text-sm">
+                Elite: ab 2.500c
+              </span>
+              <span className="px-4 py-2 rounded-lg bg-rose-500/20 border border-rose-400/30 text-rose-300 font-bold text-sm">
+                Ultra+: ab 3.500c
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Vergleichstabelle */}
+      <div className="glass rounded-xl md:rounded-2xl p-6 md:p-8 border border-white/10 overflow-x-auto">
+        <h3 className="text-xl md:text-2xl font-black text-white mb-6">📊 Pass-Vergleich</h3>
+        <div className="min-w-[600px]">
+          <table className="w-full text-sm md:text-base">
+            <thead>
+              <tr className="border-b border-white/10">
+                <th className="text-left text-white/60 font-bold pb-4 pr-4">Feature</th>
+                <th className="text-center text-white/60 font-bold pb-4 px-2">Free</th>
+                <th className="text-center text-yellow-300 font-bold pb-4 px-2">Premium</th>
+                <th className="text-center text-violet-300 font-bold pb-4 px-2">Elite</th>
+                <th className="text-center text-rose-300 font-bold pb-4 px-2">Ultra+</th>
+              </tr>
+            </thead>
+            <tbody className="text-white">
+              <tr className="border-b border-white/5">
+                <td className="py-4 pr-4">Free Track Rewards</td>
+                <td className="text-center py-4 px-2"><Check className="w-5 h-5 text-green-400 mx-auto" /></td>
+                <td className="text-center py-4 px-2"><Check className="w-5 h-5 text-green-400 mx-auto" /></td>
+                <td className="text-center py-4 px-2"><Check className="w-5 h-5 text-green-400 mx-auto" /></td>
+                <td className="text-center py-4 px-2"><Check className="w-5 h-5 text-green-400 mx-auto" /></td>
+              </tr>
+              <tr className="border-b border-white/5">
+                <td className="py-4 pr-4">Premium Track Rewards</td>
+                <td className="text-center py-4 px-2"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
+                <td className="text-center py-4 px-2">70%</td>
+                <td className="text-center py-4 px-2">50%</td>
+                <td className="text-center py-4 px-2">30% + Lizenzen</td>
+              </tr>
+              <tr className="border-b border-white/5">
+                <td className="py-4 pr-4">Auto-Claim</td>
+                <td className="text-center py-4 px-2">100c</td>
+                <td className="text-center py-4 px-2">100c</td>
+                <td className="text-center py-4 px-2">100c</td>
+                <td className="text-center py-4 px-2"><Check className="w-5 h-5 text-green-400 mx-auto" /></td>
+              </tr>
+              <tr className="border-b border-white/5">
+                <td className="py-4 pr-4">Skip Feature</td>
+                <td className="text-center py-4 px-2">50c/Tier</td>
+                <td className="text-center py-4 px-2">50c/Tier</td>
+                <td className="text-center py-4 px-2">50c/Tier</td>
+                <td className="text-center py-4 px-2">50c/Tier</td>
+              </tr>
+              <tr>
+                <td className="py-4 pr-4 font-bold">Preis (Tag 1)</td>
+                <td className="text-center py-4 px-2 font-bold text-green-400">Kostenlos</td>
+                <td className="text-center py-4 px-2 font-bold">1.500c</td>
+                <td className="text-center py-4 px-2 font-bold">2.500c</td>
+                <td className="text-center py-4 px-2 font-bold">3.500c</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
