@@ -1778,10 +1778,25 @@ async function handleBattlePassCurrent(request) {
     // 🆕 NEU: Berechne "expected tier" basierend auf dem Tag im Monat
     const expectedTier = getExpectedTierBasedOnDay();
     const nextClaimableTier = Math.max(userProgress.current_tier + 1, expectedTier);
-    // Array der verpassten Tiers (zwischen currentTier und expectedTier)
+    
+    // 🆕 NEU: Berechne verpasste Tiers korrekt
+    // Alle Tiers zwischen 1 und expectedTier die NICHT geclaimt wurden (currentTier < Tier < expectedTier)
+    const claimedTiers = userProgress.claimed_tiers || [];
     const missedTiers = [];
-    for (let t = userProgress.current_tier + 1; t < expectedTier; t++) {
-      missedTiers.push(t);
+    
+    // Wenn currentTier < expectedTier, dann wurden Tiers übersprungen
+    if (userProgress.current_tier < expectedTier) {
+      // Alle Tiers zwischen currentTier+1 und expectedTier sind verpasst
+      for (let t = userProgress.current_tier + 1; t < expectedTier; t++) {
+        missedTiers.push(t);
+      }
+    } else {
+      // Wenn currentTier >= expectedTier, schaue nach "Lücken" in den geclaimten Tiers
+      for (let t = 1; t <= userProgress.current_tier; t++) {
+        if (!claimedTiers.includes(t)) {
+          missedTiers.push(t);
+        }
+      }
     }
     
     // ✅ Pricing für alle 3 Pass-Tiers (jeder mit eigener Tagesrabatt-Berechnung)
