@@ -1638,9 +1638,6 @@ export default function BattlePassView() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
-            </div> {/* Ende relative z-10 */}
-          </div> {/* Ende relative wrapper */}
         </TabsContent> {/* Ende Battle Pass Tab */}
         
         {/* ==================== TAB 2: VORTEILE ==================== */}
@@ -1650,6 +1647,7 @@ export default function BattlePassView() {
             passType={passType}
             lifetime_pass={lifetime_pass}
             auto_claim_enabled={auto_claim_enabled}
+            tiers={tiersWithDiscount}
           />
         </TabsContent>
         
@@ -1762,7 +1760,21 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, isMissed, purchased, 
 }
 
 // 🆕 NEU: Vorteile Tab Content - Zeigt Benefits je nach Pass-Typ
-function BenefitsTab({ purchased, passType, lifetime_pass, auto_claim_enabled }) {
+function BenefitsTab({ purchased, passType, lifetime_pass, auto_claim_enabled, tiers }) {
+  // ✅ Dynamische Preise aus Backend (statt hardcoded)
+  const tierMap = {};
+  (tiers || []).forEach((t) => {
+    tierMap[t.id] = {
+      original: t.originalCost ?? t.cost,
+      current: t.currentPrice ?? t.cost,
+      discount: t.discountPercent ?? 0,
+    };
+  });
+  const fmt = (n) => (n != null ? n.toLocaleString('de-DE') : '—');
+  const premiumPrice = tierMap.premium?.original;
+  const elitePrice = tierMap.elite?.original;
+  const ultraPrice = tierMap.ultra?.original;
+
   const getBenefits = () => {
     if (lifetime_pass) {
       return {
@@ -1875,13 +1887,13 @@ function BenefitsTab({ purchased, passType, lifetime_pass, auto_claim_enabled })
             </p>
             <div className="flex flex-wrap gap-3 justify-center">
               <span className="px-4 py-2 rounded-lg bg-yellow-500/20 border border-yellow-400/30 text-yellow-300 font-bold text-sm">
-                Premium: ab 1.500c
+                Premium: ab {fmt(premiumPrice)}c
               </span>
               <span className="px-4 py-2 rounded-lg bg-violet-500/20 border border-violet-400/30 text-violet-300 font-bold text-sm">
-                Elite: ab 2.500c
+                Elite+: ab {fmt(elitePrice)}c
               </span>
               <span className="px-4 py-2 rounded-lg bg-rose-500/20 border border-rose-400/30 text-rose-300 font-bold text-sm">
-                Ultra+: ab 3.500c
+                Ultra+: ab {fmt(ultraPrice)}c
               </span>
             </div>
           </div>
@@ -1898,7 +1910,7 @@ function BenefitsTab({ purchased, passType, lifetime_pass, auto_claim_enabled })
                 <th className="text-left text-white/60 font-bold pb-4 pr-4">Feature</th>
                 <th className="text-center text-white/60 font-bold pb-4 px-2">Free</th>
                 <th className="text-center text-yellow-300 font-bold pb-4 px-2">Premium</th>
-                <th className="text-center text-violet-300 font-bold pb-4 px-2">Elite</th>
+                <th className="text-center text-violet-300 font-bold pb-4 px-2">Elite+</th>
                 <th className="text-center text-rose-300 font-bold pb-4 px-2">Ultra+</th>
               </tr>
             </thead>
@@ -1934,9 +1946,9 @@ function BenefitsTab({ purchased, passType, lifetime_pass, auto_claim_enabled })
               <tr>
                 <td className="py-4 pr-4 font-bold">Preis (Tag 1)</td>
                 <td className="text-center py-4 px-2 font-bold text-green-400">Kostenlos</td>
-                <td className="text-center py-4 px-2 font-bold">1.500c</td>
-                <td className="text-center py-4 px-2 font-bold">2.500c</td>
-                <td className="text-center py-4 px-2 font-bold">3.500c</td>
+                <td className="text-center py-4 px-2 font-bold">{fmt(premiumPrice)}c</td>
+                <td className="text-center py-4 px-2 font-bold">{fmt(elitePrice)}c</td>
+                <td className="text-center py-4 px-2 font-bold">{fmt(ultraPrice)}c</td>
               </tr>
             </tbody>
           </table>
