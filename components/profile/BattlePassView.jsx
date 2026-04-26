@@ -875,12 +875,7 @@ export default function BattlePassView() {
             )}
 
             {/* Free User: Claiming Status */}
-            {claiming && !purchased && (
-              <div className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl md:rounded-2xl border border-green-400/40 bg-green-400/10 backdrop-blur-md shadow-lg">
-                <Loader2 className="w-5 h-5 text-green-400 animate-spin" />
-                <span className="text-green-300 font-bold text-sm">Warte auf HHRP Server...</span>
-              </div>
-            )}
+            {/* ✅ ENTFERNT: Duplikat "claiming" Block - wird weiter unten für ALLE User angezeigt (Zeile 1003) */}
 
             {/* ✅ ENTFERNT: Duplikat "Bereits geclaimt" Block - wird weiter unten für ALLE User angezeigt */}
 
