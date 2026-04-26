@@ -1845,24 +1845,24 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, isMissed, purchased, 
 
       {/* === Content === */}
       <div className="p-1.5 md:p-2 space-y-1.5 md:space-y-2 flex-1 flex flex-col">
-        {/* Free Reward */}
-        <div className="rounded-lg p-1.5 md:p-2 border border-white/8 flex-1 flex flex-col" style={{ background: 'rgba(0,0,0,0.25)' }}>
+        {/* Free Reward - feste Min-Höhe für gleiche Card-Größe */}
+        <div className="rounded-lg p-1.5 md:p-2 border border-white/8 flex flex-col min-h-[78px] md:min-h-[88px]" style={{ background: 'rgba(0,0,0,0.25)' }}>
           <div className="text-[8px] md:text-[9px] uppercase tracking-wider text-white/40 font-bold mb-1">
             Free
           </div>
-          <div className="flex items-center gap-1.5 flex-1">
-            <FreeIcon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${getRewardColor(freeReward)} flex-shrink-0`} />
+          <div className="flex items-start gap-1.5 flex-1">
+            <FreeIcon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${getRewardColor(freeReward)} flex-shrink-0 mt-0.5`} />
             <span className="text-[10px] md:text-[11px] text-white/85 font-semibold line-clamp-2 leading-tight">{freeReward.label}</span>
           </div>
           {/* Alt-Credits Zeile - immer reserviert für gleiche Card-Höhe */}
-          <div className="text-[8px] md:text-[9px] text-white/40 mt-1 font-medium min-h-[10px] md:min-h-[11px]">
+          <div className="text-[8px] md:text-[9px] text-white/40 mt-1 font-medium h-[10px] md:h-[11px] leading-none">
             {freeReward.alternativeCredits ? `Alt: ${freeReward.alternativeCredits}c` : '\u00A0'}
           </div>
         </div>
 
-        {/* Premium Reward */}
+        {/* Premium Reward - feste Min-Höhe für gleiche Card-Größe */}
         <div 
-          className={`relative rounded-lg p-1.5 md:p-2 border transition-all flex-1 flex flex-col ${
+          className={`relative rounded-lg p-1.5 md:p-2 border transition-all flex flex-col min-h-[78px] md:min-h-[88px] ${
             purchased 
               ? 'border-yellow-400/25' 
               : 'border-white/8'
@@ -1884,14 +1884,14 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, isMissed, purchased, 
               <Lock className="w-3.5 h-3.5 md:w-4 md:h-4 text-white/40" />
             </div>
           )}
-          <div className="flex items-center gap-1.5 flex-1">
-            <PremiumIcon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${purchased ? getRewardColor(premiumReward) : 'text-white/30'} flex-shrink-0`} />
+          <div className="flex items-start gap-1.5 flex-1">
+            <PremiumIcon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${purchased ? getRewardColor(premiumReward) : 'text-white/30'} flex-shrink-0 mt-0.5`} />
             <span className={`text-[10px] md:text-[11px] font-semibold line-clamp-2 leading-tight ${purchased ? 'text-white/90' : 'text-white/30'}`}>
               {premiumReward.label}
             </span>
           </div>
           {/* Alt-Credits Zeile - immer reserviert für gleiche Card-Höhe */}
-          <div className="text-[8px] md:text-[9px] text-yellow-300/60 mt-1 font-medium min-h-[10px] md:min-h-[11px]">
+          <div className="text-[8px] md:text-[9px] text-yellow-300/60 mt-1 font-medium h-[10px] md:h-[11px] leading-none">
             {purchased && premiumReward.alternativeCredits ? `Alt: ${premiumReward.alternativeCredits}c` : '\u00A0'}
           </div>
         </div>
