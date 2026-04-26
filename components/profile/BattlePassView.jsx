@@ -790,11 +790,11 @@ export default function BattlePassView() {
 
         {/* ==================== TAB 1: BATTLE PASS ==================== */}
         <TabsContent value="battlepass" className="mt-4 md:mt-6 space-y-4 md:space-y-6">
-        
-        {/* Animated Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 via-transparent to-purple-500/5 animate-pulse pointer-events-none"></div>
-        
-        <div className="relative z-10">
+          <div className="relative">
+            {/* Animated Background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 via-transparent to-purple-500/5 animate-pulse pointer-events-none"></div>
+            
+            <div className="relative z-10 space-y-4 md:space-y-6">
           {/* Title */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
@@ -1639,6 +1639,8 @@ export default function BattlePassView() {
         </AlertDialogContent>
       </AlertDialog>
       
+            </div> {/* Ende relative z-10 */}
+          </div> {/* Ende relative wrapper */}
         </TabsContent> {/* Ende Battle Pass Tab */}
         
         {/* ==================== TAB 2: VORTEILE ==================== */}
