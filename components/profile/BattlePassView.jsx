@@ -1317,7 +1317,7 @@ export default function BattlePassView() {
             return (
           <>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl font-bold text-white text-center mb-3">
+            <AlertDialogTitle className="text-lg md:text-xl font-bold text-white text-center mb-2 md:mb-3">
               Battle Pass kaufen
             </AlertDialogTitle>
             
@@ -1424,13 +1424,13 @@ export default function BattlePassView() {
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-3 mt-2">
-            <AlertDialogCancel className="glass border border-white/[0.12] text-white hover:bg-white/5 font-semibold rounded-xl">
+          <AlertDialogFooter className="gap-2 md:gap-3 mt-2 flex-col-reverse sm:flex-row">
+            <AlertDialogCancel className="glass border border-white/[0.12] text-white hover:bg-white/5 font-semibold rounded-xl w-full sm:w-auto">
               Abbrechen
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handlePurchase}
-              className="rounded-xl font-bold border-0"
+              className="rounded-xl font-bold border-0 w-full sm:w-auto text-sm md:text-base"
               style={{
                 background: tc.color.includes('#fbbf24') 
                   ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' 
@@ -1441,7 +1441,7 @@ export default function BattlePassView() {
                 boxShadow: `0 8px 24px ${tc.color}60`
               }}
             >
-              <TierIcon className="w-5 h-5 mr-2" />
+              <TierIcon className="w-4 h-4 md:w-5 md:h-5 mr-2" />
               Für {tierPrice.toLocaleString('de-DE')} Credits kaufen
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1457,9 +1457,9 @@ export default function BattlePassView() {
       <AlertDialog open={skipConfirmOpen} onOpenChange={setSkipConfirmOpen}>
         <AlertDialogContent className="glass border border-white/[0.12] max-w-[95vw] md:max-w-md mx-4 max-h-[90vh] overflow-y-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-3 text-xl font-bold text-white">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-orange-500/15 border border-orange-400/35">
-                <Zap className="w-6 h-6 text-orange-400" />
+            <AlertDialogTitle className="flex items-center gap-2 md:gap-3 text-lg md:text-xl font-bold text-white">
+              <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center bg-orange-500/15 border border-orange-400/35 flex-shrink-0">
+                <Zap className="w-5 h-5 md:w-6 md:h-6 text-orange-400" />
               </div>
               Tier überspringen?
             </AlertDialogTitle>
@@ -1477,19 +1477,19 @@ export default function BattlePassView() {
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-3 mt-2">
-            <AlertDialogCancel className="glass border border-white/[0.12] text-white hover:bg-white/5 font-semibold rounded-xl">
+          <AlertDialogFooter className="gap-2 md:gap-3 mt-2 flex-col-reverse sm:flex-row">
+            <AlertDialogCancel className="glass border border-white/[0.12] text-white hover:bg-white/5 font-semibold rounded-xl w-full sm:w-auto">
               Abbrechen
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleSkipTier}
-              className="rounded-xl font-bold border-0"
+              className="rounded-xl font-bold border-0 w-full sm:w-auto text-sm md:text-base"
               style={{
                 background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
                 boxShadow: '0 8px 24px rgba(245, 158, 11, 0.4)'
               }}
             >
-              <Zap className="w-5 h-5 mr-2" />
+              <Zap className="w-4 h-4 md:w-5 md:h-5 mr-2" />
               Für 50 Credits überspringen
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1502,9 +1502,9 @@ export default function BattlePassView() {
       <AlertDialog open={autoclaimConfirmOpen} onOpenChange={setAutoclaimConfirmOpen}>
         <AlertDialogContent className="glass border border-white/[0.12] max-w-[95vw] md:max-w-md mx-4 max-h-[90vh] overflow-y-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-3 text-xl font-bold text-white">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-blue-500/15 border border-blue-400/35">
-                <Zap className="w-6 h-6 text-blue-400" />
+            <AlertDialogTitle className="flex items-center gap-2 md:gap-3 text-lg md:text-xl font-bold text-white">
+              <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center bg-blue-500/15 border border-blue-400/35 flex-shrink-0">
+                <Zap className="w-5 h-5 md:w-6 md:h-6 text-blue-400" />
               </div>
               Auto-Claim aktivieren?
             </AlertDialogTitle>
@@ -1536,19 +1536,19 @@ export default function BattlePassView() {
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-3 mt-2">
-            <AlertDialogCancel className="glass border border-white/[0.12] text-white hover:bg-white/5 font-semibold rounded-xl">
+          <AlertDialogFooter className="gap-2 md:gap-3 mt-2 flex-col-reverse sm:flex-row">
+            <AlertDialogCancel className="glass border border-white/[0.12] text-white hover:bg-white/5 font-semibold rounded-xl w-full sm:w-auto">
               Abbrechen
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleBuyAutoclaim}
-              className="rounded-xl font-bold border-0"
+              className="rounded-xl font-bold border-0 w-full sm:w-auto text-sm md:text-base"
               style={{
                 background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
                 boxShadow: '0 8px 24px rgba(59, 130, 246, 0.4)'
               }}
             >
-              <Zap className="w-5 h-5 mr-2" />
+              <Zap className="w-4 h-4 md:w-5 md:h-5 mr-2" />
               Für 100 Credits kaufen
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1561,13 +1561,13 @@ export default function BattlePassView() {
       <AlertDialog open={lifetimeConfirmOpen} onOpenChange={setLifetimeConfirmOpen}>
         <AlertDialogContent className="glass border border-white/[0.12] max-w-[95vw] md:max-w-md mx-4 max-h-[90vh] overflow-y-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-3 text-xl font-bold text-white">
-              <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-purple-500/15 border border-purple-400/35">
-                <Crown className="w-6 h-6 text-purple-400" />
+            <AlertDialogTitle className="flex items-center gap-2 md:gap-3 text-lg md:text-xl font-bold text-white flex-wrap">
+              <div className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center bg-purple-500/15 border border-purple-400/35 flex-shrink-0">
+                <Crown className="w-5 h-5 md:w-6 md:h-6 text-purple-400" />
               </div>
               <span className="flex items-center gap-2">
                 Lifetime Pass kaufen?
-                <Crown className="w-5 h-5 text-purple-300" />
+                <Crown className="w-4 h-4 md:w-5 md:h-5 text-purple-300 flex-shrink-0" />
               </span>
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -1602,19 +1602,19 @@ export default function BattlePassView() {
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-3 mt-2">
-            <AlertDialogCancel className="glass border border-white/[0.12] text-white hover:bg-white/5 font-semibold rounded-xl">
+          <AlertDialogFooter className="gap-2 md:gap-3 mt-2 flex-col-reverse sm:flex-row">
+            <AlertDialogCancel className="glass border border-white/[0.12] text-white hover:bg-white/5 font-semibold rounded-xl w-full sm:w-auto">
               Abbrechen
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleBuyLifetime}
-              className="rounded-xl font-bold border-0"
+              className="rounded-xl font-bold border-0 w-full sm:w-auto text-sm md:text-base"
               style={{
                 background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
                 boxShadow: '0 8px 24px rgba(168, 85, 247, 0.4)'
               }}
             >
-              <Crown className="w-5 h-5 mr-2" />
+              <Crown className="w-4 h-4 md:w-5 md:h-5 mr-2" />
               Für 6000 Credits kaufen
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1625,15 +1625,15 @@ export default function BattlePassView() {
       <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
         <AlertDialogContent className="glass border border-white/[0.12] max-w-[95vw] md:max-w-md mx-4 max-h-[90vh] overflow-y-auto">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-3 text-xl font-bold text-white">
+            <AlertDialogTitle className="flex items-center gap-2 md:gap-3 text-lg md:text-xl font-bold text-white">
               <div
-                className="w-11 h-11 rounded-xl flex items-center justify-center"
+                className="w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center flex-shrink-0"
                 style={{
                   background: 'rgba(251, 146, 60, 0.15)',
                   border: '1px solid rgba(251, 146, 60, 0.35)'
                 }}
               >
-                <AlertTriangle className="w-6 h-6 text-orange-400" />
+                <AlertTriangle className="w-5 h-5 md:w-6 md:h-6 text-orange-400" />
               </div>
               Premium Battle Pass kündigen?
             </AlertDialogTitle>
@@ -1714,7 +1714,7 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, isMissed, purchased, 
     <div
       className={`
         relative rounded-xl md:rounded-2xl overflow-hidden border-2 transition-all duration-300
-        ${isCurrent ? 'border-yellow-400 ring-2 ring-yellow-400/50 ring-offset-2 ring-offset-black scale-105' : ''}
+        ${isCurrent ? 'border-yellow-400 ring-1 md:ring-2 ring-yellow-400/50 scale-[1.02] md:scale-105 z-10' : ''}
         ${isUnlocked && !isCurrent ? 'border-green-400/40' : ''}
         ${isMissed ? 'border-red-500/40 opacity-60' : ''}
         ${isLocked && !isMissed ? 'border-white/10' : ''}
