@@ -746,108 +746,148 @@ export default function BattlePassView() {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      {/* ==================== HEADER  ==================== */}
-      <div className="glass rounded-xl md:rounded-2xl p-4 md:p-6 border border-white/[0.08]">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-black text-white drop-shadow-md">Battle Pass</h1>
-            <p className="text-white/60 text-sm md:text-base mt-1">Season {seasonName}</p>
-          </div>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
-            <div className="text-left sm:text-right w-full sm:w-auto">
-              <div className="text-xs md:text-sm text-white/50">Noch</div>
-              <div className="text-lg md:text-xl font-bold text-white">{daysRemaining} Tage</div>
-            </div>
-            <Button
-              onClick={handleShareProgress}
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto border-white/20 hover:bg-white/10 text-white text-xs md:text-sm px-3 py-2"
-            >
-              <Share2 className="w-3 h-3 md:w-4 md:h-4 mr-2" />
-              Teilen
-            </Button>
-          </div>
-        </div>
-      </div>
-
       {/* ==================== TABS ==================== */}
       <Tabs defaultValue="battlepass" className="w-full">
         <TabsList className="w-full grid grid-cols-2 bg-white/5 border border-white/10 p-1 rounded-xl md:rounded-2xl h-auto">
           <TabsTrigger 
             value="battlepass" 
-            className="rounded-lg md:rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500/20 data-[state=active]:to-orange-500/20 data-[state=active]:text-white text-white/60 font-bold py-2 md:py-3 text-sm md:text-base transition-all"
+            className="rounded-lg md:rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-500/20 data-[state=active]:to-orange-500/20 data-[state=active]:text-white text-white/60 font-bold py-2 md:py-3 text-sm md:text-base transition-all flex items-center justify-center gap-2"
           >
-            🎮 Battle Pass
+            <Crown className="w-4 h-4 md:w-5 md:h-5" />
+            <span>Battle Pass</span>
           </TabsTrigger>
           <TabsTrigger 
             value="benefits" 
-            className="rounded-lg md:rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/20 data-[state=active]:to-pink-500/20 data-[state=active]:text-white text-white/60 font-bold py-2 md:py-3 text-sm md:text-base transition-all"
+            className="rounded-lg md:rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/20 data-[state=active]:to-pink-500/20 data-[state=active]:text-white text-white/60 font-bold py-2 md:py-3 text-sm md:text-base transition-all flex items-center justify-center gap-2"
           >
-            ⭐ Vorteile
+            <Sparkles className="w-4 h-4 md:w-5 md:h-5" />
+            <span>Vorteile</span>
           </TabsTrigger>
         </TabsList>
 
         {/* ==================== TAB 1: BATTLE PASS ==================== */}
         <TabsContent value="battlepass" className="mt-4 md:mt-6 space-y-4 md:space-y-6">
           <div className="relative">
-            {/* Animated Background */}
-            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 via-transparent to-purple-500/5 animate-pulse pointer-events-none"></div>
-            
             <div className="relative z-10 space-y-4 md:space-y-6">
-          {/* Title */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div
-                className="w-12 h-12 rounded-xl flex items-center justify-center"
-                style={{
-                  background: 'rgba(251, 191, 36, 0.15)',
-                  border: '1px solid rgba(251, 191, 36, 0.35)'
-                }}
-              >
-                <Crown className="w-6 h-6 text-yellow-400" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 text-white/40 text-xs uppercase tracking-widest mb-1 font-bold">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  Season {seasonName}
+          {/* ==================== PROGRESS BANNER (Real Battle Pass Look) ==================== */}
+          <div
+            className="rounded-xl border p-4 md:p-6"
+            style={{
+              background: 'linear-gradient(135deg, rgba(251, 191, 36, 0.08), rgba(168, 85, 247, 0.05))',
+              borderColor: 'rgba(255, 255, 255, 0.1)'
+            }}
+          >
+            {/* Top row: Current Tier + Days + Share */}
+            <div className="flex items-start justify-between gap-3 mb-4 md:mb-5">
+              <div className="flex items-center gap-3 min-w-0">
+                <div
+                  className="w-11 h-11 md:w-12 md:h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: 'rgba(251, 191, 36, 0.15)',
+                    border: '1px solid rgba(251, 191, 36, 0.35)'
+                  }}
+                >
+                  <Crown className="w-5 h-5 md:w-6 md:h-6 text-yellow-400" />
                 </div>
-                <h2 className="text-2xl md:text-3xl font-black text-white">Battle Pass</h2>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 text-white/40 text-[10px] md:text-xs uppercase tracking-widest mb-0.5 font-bold">
+                    <Sparkles className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                    Season {seasonName}
+                  </div>
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-2xl md:text-3xl font-black text-white tabular-nums leading-none">Tier {currentTier}</span>
+                    <span className="text-white/40 text-sm md:text-base font-medium">/ 30</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={handleShareProgress}
+                  className="rounded-lg px-2.5 md:px-3 py-1.5 md:py-2 border border-white/10 hover:border-blue-400/40 hover:bg-white/5 transition-all flex items-center gap-1.5"
+                  title="Progress teilen"
+                  style={{ background: 'rgba(255, 255, 255, 0.04)' }}
+                >
+                  <Share2 className="w-3.5 h-3.5 md:w-4 md:h-4 text-blue-400" />
+                  <span className="text-xs md:text-sm font-semibold text-white hidden sm:inline">Teilen</span>
+                </button>
+                <div className="text-right">
+                  <div className="text-[10px] md:text-xs text-white/40 font-semibold mb-0.5 uppercase tracking-wider">Noch</div>
+                  <div className="text-lg md:text-2xl font-black text-white tabular-nums leading-none">{daysRemaining}d</div>
+                </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              {/* 🆕 Share Button */}
-              <button
-                onClick={handleShareProgress}
-                className="glass rounded-xl px-4 py-2 border border-white/10 hover:border-blue-400/40 transition-all hover:scale-105 flex items-center gap-2"
-                title="Progress teilen"
-              >
-                <Share2 className="w-4 h-4 text-blue-400" />
-                <span className="text-sm font-semibold text-white hidden sm:inline">Teilen</span>
-              </button>
-              <div className="text-right">
-                <div className="text-xs text-white/40 font-semibold mb-0.5">Noch</div>
-                <div className="text-2xl font-black text-white">{daysRemaining}d</div>
-              </div>
-            </div>
-          </div>
 
-          {/* Progress Bar */}
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2 text-sm">
-              <span className="text-white/60 font-semibold">Tier {currentTier} / 30</span>
-              <span className="text-white font-bold tabular-nums">{Math.round(progress)}%</span>
+            {/* Progress Percentage */}
+            <div className="flex items-center justify-between mb-2 md:mb-3 text-xs md:text-sm">
+              <span className="text-white/50 font-semibold uppercase tracking-wider text-[10px] md:text-xs">Fortschritt</span>
+              <span className="text-white font-black tabular-nums text-base md:text-lg">{Math.round(progress)}%</span>
             </div>
-            <div className="h-4 rounded-full overflow-hidden bg-white/10 border border-white/20">
-              <div
-                className="h-full rounded-full transition-all duration-700 relative overflow-hidden"
-                style={{
-                  width: `${progress}%`,
-                  background: 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 50%, #ef4444 100%)',
-                }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+
+            {/* Battle Pass Track with Milestones */}
+            <div className="relative pt-2 pb-8 md:pb-10">
+              {/* Background track */}
+              <div className="h-2 md:h-2.5 rounded-full bg-white/5 border border-white/10 relative overflow-hidden">
+                {/* Filled portion */}
+                <div
+                  className="absolute left-0 top-0 h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${progress}%`,
+                    background: 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 50%, #ef4444 100%)',
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer rounded-full"></div>
+                </div>
               </div>
+
+              {/* Milestone Markers */}
+              {[1, 5, 10, 15, 20, 25, 30].map((m) => {
+                const reached = currentTier >= m;
+                const left = ((m - 1) / 29) * 100;
+                return (
+                  <div
+                    key={m}
+                    className="absolute top-2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center"
+                    style={{ left: `${left}%`, top: 'calc(0.5rem + 4px)' }}
+                  >
+                    <div
+                      className={`w-3 h-3 md:w-3.5 md:h-3.5 rounded-full border-2 transition-all duration-300 ${
+                        reached
+                          ? 'bg-amber-400 border-amber-200 shadow-[0_0_10px_rgba(251,191,36,0.6)]'
+                          : 'bg-white/[0.08] border-white/20'
+                      }`}
+                    />
+                    <div className={`mt-2 text-[9px] md:text-[10px] font-bold tabular-nums ${reached ? 'text-amber-300' : 'text-white/40'}`}>
+                      T{m}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Animated Current Tier Marker (floating crown) */}
+              {currentTier > 0 && currentTier < 30 && (
+                <div
+                  className="absolute -translate-x-1/2 transition-all duration-700"
+                  style={{ left: `${progress}%`, top: 'calc(0.5rem - 6px)' }}
+                >
+                  <div className="relative w-5 h-5 md:w-6 md:h-6">
+                    <div className="absolute inset-0 rounded-full bg-amber-400 border-2 border-white shadow-[0_0_16px_rgba(251,191,36,0.8)] flex items-center justify-center animate-pulse">
+                      <Crown className="w-2.5 h-2.5 md:w-3 md:h-3 text-amber-900" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Final Trophy at Tier 30 */}
+              {currentTier >= 30 && (
+                <div
+                  className="absolute -translate-x-1/2"
+                  style={{ left: '100%', top: 'calc(0.5rem - 8px)' }}
+                >
+                  <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-gradient-to-br from-amber-300 to-amber-600 border-2 border-white shadow-[0_0_20px_rgba(251,191,36,0.9)] flex items-center justify-center animate-pulse">
+                    <Award className="w-3 h-3 md:w-4 md:h-4 text-white" />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1104,22 +1144,22 @@ export default function BattlePassView() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Auto-Claim Feature Card */}
         {!auto_claim_enabled && passType !== 'ultra' && (
-          <div className="glass rounded-2xl p-6 border border-blue-400/20 hover:border-blue-400/50 transition-all hover:shadow-xl hover:shadow-blue-500/20">
-            <div className="flex items-start gap-4 mb-4">
-              <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-400/40 shadow-lg">
-                <Zap className="w-7 h-7 text-blue-400" />
+          <div className="glass rounded-xl md:rounded-2xl p-4 md:p-6 border border-blue-400/20 hover:border-blue-400/50 transition-all hover:shadow-xl hover:shadow-blue-500/20">
+            <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+              <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-blue-400/40 shadow-lg flex-shrink-0">
+                <Zap className="w-6 h-6 md:w-7 md:h-7 text-blue-400" />
               </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-white text-xl mb-1.5">Auto-Claim</h3>
-                <p className="text-sm text-white/70 leading-relaxed">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-white text-lg md:text-xl mb-1 md:mb-1.5">Auto-Claim</h3>
+                <p className="text-xs md:text-sm text-white/70 leading-relaxed">
                   Jeden Tag automatisch claimen — nie wieder verpassen!
                 </p>
               </div>
             </div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-white">100</span>
-                <span className="text-sm text-white/50 font-medium">Credits</span>
+            <div className="flex items-center justify-between mb-3 gap-2">
+              <div className="flex items-baseline gap-1.5 md:gap-2">
+                <span className="text-2xl md:text-3xl font-black text-white">100</span>
+                <span className="text-xs md:text-sm text-white/50 font-medium">Credits</span>
               </div>
               <button
                 onClick={() => {
@@ -1127,14 +1167,14 @@ export default function BattlePassView() {
                   setAutoclaimConfirmOpen(true);
                 }}
                 disabled={buyingAutoclaim}
-                className="px-5 py-2.5 rounded-xl font-bold text-white transition-all hover:scale-105 disabled:opacity-50 shadow-lg hover:shadow-blue-500/50"
+                className="px-4 md:px-5 py-2 md:py-2.5 rounded-xl font-bold text-sm md:text-base text-white transition-all hover:scale-105 disabled:opacity-50 shadow-lg hover:shadow-blue-500/50"
                 style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' }}
               >
                 {buyingAutoclaim ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Kaufen'}
               </button>
             </div>
-            <div className="flex items-center gap-2 text-xs text-yellow-300 bg-yellow-400/10 border border-yellow-400/20 rounded-lg px-3 py-2">
-              <Star className="w-4 h-4 flex-shrink-0" />
+            <div className="flex items-center gap-2 text-[11px] md:text-xs text-yellow-300 bg-yellow-400/10 border border-yellow-400/20 rounded-lg px-2.5 md:px-3 py-2">
+              <Star className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
               <span>Ultra+ User haben Auto-Claim kostenlos!</span>
             </div>
           </div>
@@ -1142,17 +1182,17 @@ export default function BattlePassView() {
 
         {/* Auto-Claim Active Status */}
         {(auto_claim_enabled || passType === 'ultra') && (
-          <div className="glass rounded-2xl p-5 border border-green-400/30 bg-green-500/10">
+          <div className="glass rounded-xl md:rounded-2xl p-4 md:p-5 border border-green-400/30 bg-green-500/10">
             <div className="flex items-start gap-3">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-green-500/20 border border-green-400/40">
-                <Check className="w-6 h-6 text-green-400" />
+              <div className="w-11 h-11 md:w-12 md:h-12 rounded-xl flex items-center justify-center bg-green-500/20 border border-green-400/40 flex-shrink-0">
+                <Check className="w-5 h-5 md:w-6 md:h-6 text-green-400" />
               </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-white text-lg flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-white text-base md:text-lg flex items-center gap-2">
                   Auto-Claim Aktiv
-                  <Sparkles className="w-4 h-4 text-green-400" />
+                  <Sparkles className="w-3.5 h-3.5 md:w-4 md:h-4 text-green-400" />
                 </h3>
-                <p className="text-sm text-green-300 mt-1">
+                <p className="text-xs md:text-sm text-green-300 mt-1">
                   {passType === 'ultra' 
                     ? 'Als Ultra+ User hast du Auto-Claim kostenlos!' 
                     : 'Jeden Tag wird automatisch geclaimt!'}
@@ -1164,25 +1204,25 @@ export default function BattlePassView() {
 
         {/* Lifetime Pass Feature Card */}
         {!lifetime_pass && (
-          <div className="glass rounded-2xl p-6 border border-purple-400/20 hover:border-purple-400/50 transition-all hover:shadow-xl hover:shadow-purple-500/20">
-            <div className="flex items-start gap-4 mb-4">
-              <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-400/40 shadow-lg">
-                <Crown className="w-7 h-7 text-purple-400" />
+          <div className="glass rounded-xl md:rounded-2xl p-4 md:p-6 border border-purple-400/20 hover:border-purple-400/50 transition-all hover:shadow-xl hover:shadow-purple-500/20">
+            <div className="flex items-start gap-3 md:gap-4 mb-3 md:mb-4">
+              <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center bg-gradient-to-br from-purple-500/20 to-purple-600/10 border border-purple-400/40 shadow-lg flex-shrink-0">
+                <Crown className="w-6 h-6 md:w-7 md:h-7 text-purple-400" />
               </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-white text-xl mb-1.5 flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-white text-lg md:text-xl mb-1 md:mb-1.5 flex items-center gap-2">
                   Lifetime Pass
-                  <Crown className="w-5 h-5 text-purple-400" />
+                  <Crown className="w-4 h-4 md:w-5 md:h-5 text-purple-400 flex-shrink-0" />
                 </h3>
-                <p className="text-sm text-white/70 leading-relaxed">
+                <p className="text-xs md:text-sm text-white/70 leading-relaxed">
                   Einmalige Zahlung für <strong className="text-purple-300">alle zukünftigen Seasons</strong>!
                 </p>
               </div>
             </div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-white">6000</span>
-                <span className="text-sm text-white/50 font-medium">Credits</span>
+            <div className="flex items-center justify-between mb-3 gap-2">
+              <div className="flex items-baseline gap-1.5 md:gap-2">
+                <span className="text-2xl md:text-3xl font-black text-white">6000</span>
+                <span className="text-xs md:text-sm text-white/50 font-medium">Credits</span>
               </div>
               <button
                 onClick={() => {
@@ -1190,14 +1230,14 @@ export default function BattlePassView() {
                   setLifetimeConfirmOpen(true);
                 }}
                 disabled={buyingLifetime}
-                className="px-5 py-2.5 rounded-xl font-bold text-white transition-all hover:scale-105 disabled:opacity-50 shadow-lg hover:shadow-purple-500/50"
+                className="px-4 md:px-5 py-2 md:py-2.5 rounded-xl font-bold text-sm md:text-base text-white transition-all hover:scale-105 disabled:opacity-50 shadow-lg hover:shadow-purple-500/50"
                 style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)' }}
               >
                 {buyingLifetime ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Kaufen'}
               </button>
             </div>
-            <div className="flex items-center gap-2 text-xs text-emerald-300 bg-emerald-400/10 border border-emerald-400/20 rounded-lg px-3 py-2">
-              <Gem className="w-4 h-4 flex-shrink-0" />
+            <div className="flex items-center gap-2 text-[11px] md:text-xs text-emerald-300 bg-emerald-400/10 border border-emerald-400/20 rounded-lg px-2.5 md:px-3 py-2">
+              <Gem className="w-3.5 h-3.5 md:w-4 md:h-4 flex-shrink-0" />
               <span>Jeden Monat automatisch Ultra+ Pass!</span>
             </div>
           </div>
@@ -1205,17 +1245,17 @@ export default function BattlePassView() {
 
         {/* Lifetime Pass Active Status */}
         {lifetime_pass && (
-          <div className="glass rounded-2xl p-5 border border-purple-400/40 bg-purple-500/10">
+          <div className="glass rounded-xl md:rounded-2xl p-4 md:p-5 border border-purple-400/40 bg-purple-500/10">
             <div className="flex items-start gap-3">
-              <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-purple-500/20 border border-purple-400/50">
-                <Crown className="w-6 h-6 text-purple-400" />
+              <div className="w-11 h-11 md:w-12 md:h-12 rounded-xl flex items-center justify-center bg-purple-500/20 border border-purple-400/50 flex-shrink-0">
+                <Crown className="w-5 h-5 md:w-6 md:h-6 text-purple-400" />
               </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-white text-lg flex items-center gap-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="font-bold text-white text-base md:text-lg flex items-center gap-2">
                   Lifetime Pass Aktiv
-                  <Crown className="w-4 h-4 text-purple-400" />
+                  <Crown className="w-3.5 h-3.5 md:w-4 md:h-4 text-purple-400 flex-shrink-0" />
                 </h3>
-                <p className="text-sm text-purple-300 mt-1">
+                <p className="text-xs md:text-sm text-purple-300 mt-1">
                   Du bekommst jeden Monat automatisch den Ultra+ Pass!
                 </p>
               </div>
@@ -1225,14 +1265,14 @@ export default function BattlePassView() {
       </div>
 
       {/* ==================== TIER GRID (Mobile-Friendly) ==================== */}
-      <div className="glass rounded-2xl p-6 border border-white/[0.08]">
-        <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-          <Gift className="w-5 h-5 text-purple-400" />
+      <div className="glass rounded-xl md:rounded-2xl p-4 md:p-6 border border-white/[0.08]">
+        <h3 className="text-lg md:text-xl font-bold text-white mb-3 md:mb-4 flex items-center gap-2">
+          <Gift className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
           Alle Belohnungen
         </h3>
 
         {/* Grid Layout - Responsive */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-3">
           {rewards.map((tier) => {
             const isMissed = (missedTiers || []).includes(tier.tier); // 🆕 Verpasste Tiers
             const isUnlocked = tier.tier <= currentTier && !isMissed; // ✅ Nur wirklich geclaimte Tiers
@@ -1429,8 +1469,9 @@ export default function BattlePassView() {
                   <p className="text-sm text-white/90">
                     Du kannst <strong>Tier {nextTier}</strong> für <strong className="text-orange-400">50 Credits</strong> überspringen.
                   </p>
-                  <p className="text-xs text-white/60 mt-2">
-                    ⚡ Dein Tier erhöht sich sofort, aber du erhältst <strong>keine Belohnungen</strong> für diesen Tier.
+                  <p className="text-xs text-white/60 mt-2 flex items-start gap-2">
+                    <Zap className="w-4 h-4 text-orange-300 mt-0.5 flex-shrink-0" />
+                    <span>Dein Tier erhöht sich sofort, aber du erhältst <strong>keine Belohnungen</strong> für diesen Tier.</span>
                   </p>
                 </div>
               </div>
@@ -1488,8 +1529,9 @@ export default function BattlePassView() {
                     </li>
                   </ul>
                 </div>
-                <div className="text-xs text-yellow-300 bg-yellow-500/10 border border-yellow-400/30 rounded-lg p-2">
-                  ⭐ Ultra+ User haben Auto-Claim bereits kostenlos!
+                <div className="text-xs text-yellow-300 bg-yellow-500/10 border border-yellow-400/30 rounded-lg p-2 flex items-center gap-2">
+                  <Star className="w-4 h-4 flex-shrink-0" />
+                  <span>Ultra+ User haben Auto-Claim bereits kostenlos!</span>
                 </div>
               </div>
             </AlertDialogDescription>
@@ -1523,7 +1565,10 @@ export default function BattlePassView() {
               <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-purple-500/15 border border-purple-400/35">
                 <Crown className="w-6 h-6 text-purple-400" />
               </div>
-              Lifetime Pass kaufen? 👑
+              <span className="flex items-center gap-2">
+                Lifetime Pass kaufen?
+                <Crown className="w-5 h-5 text-purple-300" />
+              </span>
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
               <div className="space-y-3 pt-3">
@@ -1550,8 +1595,9 @@ export default function BattlePassView() {
                     </li>
                   </ul>
                 </div>
-                <div className="text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-400/30 rounded-lg p-2">
-                  💎 Beste Investition! Spar Credits für andere Items.
+                <div className="text-xs text-emerald-300 bg-emerald-500/10 border border-emerald-400/30 rounded-lg p-2 flex items-center gap-2">
+                  <Gem className="w-4 h-4 flex-shrink-0" />
+                  <span>Beste Investition! Spar Credits für andere Items.</span>
                 </div>
               </div>
             </AlertDialogDescription>
@@ -1778,7 +1824,8 @@ function BenefitsTab({ purchased, passType, lifetime_pass, auto_claim_enabled, t
   const getBenefits = () => {
     if (lifetime_pass) {
       return {
-        title: '♾️ Lifetime Pass',
+        title: 'Lifetime Pass',
+        titleIcon: <Crown className="w-7 h-7 md:w-8 md:h-8 text-purple-300" />,
         color: 'purple',
         benefits: [
           { icon: <Crown />, title: 'Jeden Monat Ultra+ Pass', desc: 'Automatisch bei jedem Season-Reset' },
@@ -1792,7 +1839,8 @@ function BenefitsTab({ purchased, passType, lifetime_pass, auto_claim_enabled, t
     
     if (!purchased) {
       return {
-        title: '🆓 Free Track',
+        title: 'Free Track',
+        titleIcon: <Gift className="w-7 h-7 md:w-8 md:h-8 text-gray-300" />,
         color: 'gray',
         benefits: [
           { icon: <Gift />, title: 'Tägliche kostenlose Rewards', desc: 'XP, Credits, Geld und Items' },
@@ -1806,7 +1854,8 @@ function BenefitsTab({ purchased, passType, lifetime_pass, auto_claim_enabled, t
     switch (passType) {
       case 'ultra':
         return {
-          title: '💎 Ultra+ Pass',
+          title: 'Ultra+ Pass',
+          titleIcon: <Gem className="w-7 h-7 md:w-8 md:h-8 text-rose-300" />,
           color: 'rose',
           benefits: [
             { icon: <Crown />, title: 'Ultra+ Tier', desc: 'Bester Premium Pass verfügbar' },
@@ -1819,20 +1868,22 @@ function BenefitsTab({ purchased, passType, lifetime_pass, auto_claim_enabled, t
       
       case 'elite':
         return {
-          title: '⭐ Elite Pass',
+          title: 'Elite+ Pass',
+          titleIcon: <Star className="w-7 h-7 md:w-8 md:h-8 text-violet-300" />,
           color: 'violet',
           benefits: [
-            { icon: <Crown />, title: 'Elite Tier', desc: 'Mittlerer Premium Pass' },
+            { icon: <Crown />, title: 'Elite+ Tier', desc: 'Mittlerer Premium Pass' },
             { icon: <TrendingUp />, title: '50% Rewards', desc: 'Halbe Rewards für reduzierten Preis' },
             { icon: <Coins />, title: 'Reduzierte Preise', desc: 'Günstiger als Premium Pass' },
             { icon: <Gift />, title: 'Free + Premium Rewards', desc: 'Beide Tracks gleichzeitig' },
-            { icon: <Sparkles />, title: 'Elite Items', desc: 'Spezielle Belohnungen für Elite' },
+            { icon: <Sparkles />, title: 'Elite+ Items', desc: 'Spezielle Belohnungen für Elite+' },
           ],
         };
       
       default: // premium
         return {
-          title: '👑 Premium Pass',
+          title: 'Premium Pass',
+          titleIcon: <Crown className="w-7 h-7 md:w-8 md:h-8 text-yellow-300" />,
           color: 'yellow',
           benefits: [
             { icon: <Crown />, title: 'Premium Tier', desc: 'Basis Premium Pass' },
@@ -1845,7 +1896,7 @@ function BenefitsTab({ purchased, passType, lifetime_pass, auto_claim_enabled, t
     }
   };
   
-  const { title, color, benefits, upgrade } = getBenefits();
+  const { title, titleIcon, color, benefits, upgrade } = getBenefits();
   
   const colorClasses = {
     purple: 'from-purple-500/20 to-purple-600/10 border-purple-400/30',
@@ -1857,42 +1908,46 @@ function BenefitsTab({ purchased, passType, lifetime_pass, auto_claim_enabled, t
   
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className={`glass rounded-xl md:rounded-2xl p-6 md:p-8 border bg-gradient-to-br ${colorClasses[color]}`}>
-        <h2 className="text-2xl md:text-3xl font-black text-white mb-2">{title}</h2>
-        <p className="text-white/60 text-sm md:text-base mb-6">
+      <div className={`glass rounded-xl md:rounded-2xl p-4 md:p-8 border bg-gradient-to-br ${colorClasses[color]}`}>
+        <h2 className="text-xl md:text-3xl font-black text-white mb-1.5 md:mb-2 flex items-center gap-2 md:gap-3">
+          {titleIcon}
+          <span>{title}</span>
+        </h2>
+        <p className="text-white/60 text-xs md:text-base mb-4 md:mb-6">
           {upgrade ? 'Upgrade jetzt für exklusive Vorteile!' : 'Deine aktuellen Vorteile'}
         </p>
         
-        <div className="grid gap-4 md:gap-5">
+        <div className="grid gap-3 md:gap-5">
           {benefits.map((benefit, idx) => (
             <div 
               key={idx}
-              className="flex items-start gap-4 p-4 md:p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
+              className="flex items-start gap-3 md:gap-4 p-3 md:p-5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all"
             >
               <div className="flex-shrink-0 w-10 h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center border border-white/20">
                 {React.cloneElement(benefit.icon, { className: 'w-5 h-5 md:w-6 md:h-6 text-white' })}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-white font-bold text-base md:text-lg mb-1">{benefit.title}</h3>
-                <p className="text-white/60 text-sm md:text-base">{benefit.desc}</p>
+                <h3 className="text-white font-bold text-sm md:text-lg mb-0.5 md:mb-1">{benefit.title}</h3>
+                <p className="text-white/60 text-xs md:text-base leading-relaxed">{benefit.desc}</p>
               </div>
             </div>
           ))}
         </div>
         
         {upgrade && (
-          <div className="mt-6 pt-6 border-t border-white/10">
-            <p className="text-white/70 text-center text-sm md:text-base mb-4">
-              🎁 Upgrade jetzt und erhalte sofort Zugriff auf Premium Rewards!
+          <div className="mt-4 md:mt-6 pt-4 md:pt-6 border-t border-white/10">
+            <p className="text-white/70 text-center text-xs md:text-base mb-3 md:mb-4 flex items-center justify-center gap-2">
+              <Gift className="w-4 h-4 md:w-5 md:h-5 text-pink-300 flex-shrink-0" />
+              <span>Upgrade jetzt und erhalte sofort Zugriff auf Premium Rewards!</span>
             </p>
-            <div className="flex flex-wrap gap-3 justify-center">
-              <span className="px-4 py-2 rounded-lg bg-yellow-500/20 border border-yellow-400/30 text-yellow-300 font-bold text-sm">
+            <div className="flex flex-wrap gap-2 md:gap-3 justify-center">
+              <span className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg bg-yellow-500/20 border border-yellow-400/30 text-yellow-300 font-bold text-xs md:text-sm">
                 Premium: ab {fmt(premiumPrice)}c
               </span>
-              <span className="px-4 py-2 rounded-lg bg-violet-500/20 border border-violet-400/30 text-violet-300 font-bold text-sm">
+              <span className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg bg-violet-500/20 border border-violet-400/30 text-violet-300 font-bold text-xs md:text-sm">
                 Elite+: ab {fmt(elitePrice)}c
               </span>
-              <span className="px-4 py-2 rounded-lg bg-rose-500/20 border border-rose-400/30 text-rose-300 font-bold text-sm">
+              <span className="px-3 md:px-4 py-1.5 md:py-2 rounded-lg bg-rose-500/20 border border-rose-400/30 text-rose-300 font-bold text-xs md:text-sm">
                 Ultra+: ab {fmt(ultraPrice)}c
               </span>
             </div>
@@ -1901,57 +1956,64 @@ function BenefitsTab({ purchased, passType, lifetime_pass, auto_claim_enabled, t
       </div>
       
       {/* Vergleichstabelle */}
-      <div className="glass rounded-xl md:rounded-2xl p-6 md:p-8 border border-white/10 overflow-x-auto">
-        <h3 className="text-xl md:text-2xl font-black text-white mb-6">📊 Pass-Vergleich</h3>
-        <div className="min-w-[600px]">
-          <table className="w-full text-sm md:text-base">
-            <thead>
-              <tr className="border-b border-white/10">
-                <th className="text-left text-white/60 font-bold pb-4 pr-4">Feature</th>
-                <th className="text-center text-white/60 font-bold pb-4 px-2">Free</th>
-                <th className="text-center text-yellow-300 font-bold pb-4 px-2">Premium</th>
-                <th className="text-center text-violet-300 font-bold pb-4 px-2">Elite+</th>
-                <th className="text-center text-rose-300 font-bold pb-4 px-2">Ultra+</th>
-              </tr>
-            </thead>
-            <tbody className="text-white">
-              <tr className="border-b border-white/5">
-                <td className="py-4 pr-4">Free Track Rewards</td>
-                <td className="text-center py-4 px-2"><Check className="w-5 h-5 text-green-400 mx-auto" /></td>
-                <td className="text-center py-4 px-2"><Check className="w-5 h-5 text-green-400 mx-auto" /></td>
-                <td className="text-center py-4 px-2"><Check className="w-5 h-5 text-green-400 mx-auto" /></td>
-                <td className="text-center py-4 px-2"><Check className="w-5 h-5 text-green-400 mx-auto" /></td>
-              </tr>
-              <tr className="border-b border-white/5">
-                <td className="py-4 pr-4">Premium Track Rewards</td>
-                <td className="text-center py-4 px-2"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
-                <td className="text-center py-4 px-2">70%</td>
-                <td className="text-center py-4 px-2">50%</td>
-                <td className="text-center py-4 px-2">30% + Lizenzen</td>
-              </tr>
-              <tr className="border-b border-white/5">
-                <td className="py-4 pr-4">Auto-Claim</td>
-                <td className="text-center py-4 px-2">100c</td>
-                <td className="text-center py-4 px-2">100c</td>
-                <td className="text-center py-4 px-2">100c</td>
-                <td className="text-center py-4 px-2"><Check className="w-5 h-5 text-green-400 mx-auto" /></td>
-              </tr>
-              <tr className="border-b border-white/5">
-                <td className="py-4 pr-4">Skip Feature</td>
-                <td className="text-center py-4 px-2">50c/Tier</td>
-                <td className="text-center py-4 px-2">50c/Tier</td>
-                <td className="text-center py-4 px-2">50c/Tier</td>
-                <td className="text-center py-4 px-2">50c/Tier</td>
-              </tr>
-              <tr>
-                <td className="py-4 pr-4 font-bold">Preis (Tag 1)</td>
-                <td className="text-center py-4 px-2 font-bold text-green-400">Kostenlos</td>
-                <td className="text-center py-4 px-2 font-bold">{fmt(premiumPrice)}c</td>
-                <td className="text-center py-4 px-2 font-bold">{fmt(elitePrice)}c</td>
-                <td className="text-center py-4 px-2 font-bold">{fmt(ultraPrice)}c</td>
-              </tr>
-            </tbody>
-          </table>
+      <div className="glass rounded-xl md:rounded-2xl p-4 md:p-8 border border-white/10">
+        <h3 className="text-lg md:text-2xl font-black text-white mb-3 md:mb-6 flex items-center gap-2 md:gap-3">
+          <Award className="w-5 h-5 md:w-7 md:h-7 text-blue-300" />
+          <span>Pass-Vergleich</span>
+        </h3>
+        {/* Mobile-Hint */}
+        <p className="md:hidden text-[10px] text-white/40 mb-2 italic">← Wische für mehr →</p>
+        <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
+          <div className="min-w-[560px] md:min-w-0">
+            <table className="w-full text-xs md:text-base">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left text-white/60 font-bold pb-3 md:pb-4 pr-2 md:pr-4">Feature</th>
+                  <th className="text-center text-white/60 font-bold pb-3 md:pb-4 px-1 md:px-2">Free</th>
+                  <th className="text-center text-yellow-300 font-bold pb-3 md:pb-4 px-1 md:px-2">Premium</th>
+                  <th className="text-center text-violet-300 font-bold pb-3 md:pb-4 px-1 md:px-2">Elite+</th>
+                  <th className="text-center text-rose-300 font-bold pb-3 md:pb-4 px-1 md:px-2">Ultra+</th>
+                </tr>
+              </thead>
+              <tbody className="text-white">
+                <tr className="border-b border-white/5">
+                  <td className="py-3 md:py-4 pr-2 md:pr-4">Free Track Rewards</td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2"><Check className="w-4 h-4 md:w-5 md:h-5 text-green-400 mx-auto" /></td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2"><Check className="w-4 h-4 md:w-5 md:h-5 text-green-400 mx-auto" /></td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2"><Check className="w-4 h-4 md:w-5 md:h-5 text-green-400 mx-auto" /></td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2"><Check className="w-4 h-4 md:w-5 md:h-5 text-green-400 mx-auto" /></td>
+                </tr>
+                <tr className="border-b border-white/5">
+                  <td className="py-3 md:py-4 pr-2 md:pr-4">Premium Track Rewards</td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2"><X className="w-4 h-4 md:w-5 md:h-5 text-red-400 mx-auto" /></td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2">70%</td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2">50%</td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2">30% + Lizenzen</td>
+                </tr>
+                <tr className="border-b border-white/5">
+                  <td className="py-3 md:py-4 pr-2 md:pr-4">Auto-Claim</td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2">100c</td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2">100c</td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2">100c</td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2"><Check className="w-4 h-4 md:w-5 md:h-5 text-green-400 mx-auto" /></td>
+                </tr>
+                <tr className="border-b border-white/5">
+                  <td className="py-3 md:py-4 pr-2 md:pr-4">Skip Feature</td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2">50c/Tier</td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2">50c/Tier</td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2">50c/Tier</td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2">50c/Tier</td>
+                </tr>
+                <tr>
+                  <td className="py-3 md:py-4 pr-2 md:pr-4 font-bold">Saison-Preis</td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2 font-bold text-green-400">Gratis</td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2 font-bold">{fmt(premiumPrice)}c</td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2 font-bold">{fmt(elitePrice)}c</td>
+                  <td className="text-center py-3 md:py-4 px-1 md:px-2 font-bold">{fmt(ultraPrice)}c</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
