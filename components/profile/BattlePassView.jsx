@@ -1916,6 +1916,15 @@ function BenefitsTab({ purchased, passType, lifetime_pass, auto_claim_enabled, t
   const elitePrice = tierMap.elite?.original;
   const ultraPrice = tierMap.ultra?.original;
 
+  // 🆕 Welche Spalte ist mein aktueller Pass?
+  const currentColumn = lifetime_pass 
+    ? 'ultra' 
+    : !purchased 
+    ? 'free' 
+    : passType; // 'premium' | 'elite' | 'ultra'
+  const isMyPass = (col) => col === currentColumn;
+  const myColCellClass = (col) => isMyPass(col) ? 'bg-yellow-400/[0.06] border-x border-yellow-400/30' : '';
+
   const getBenefits = () => {
     if (lifetime_pass) {
       return {
@@ -2060,51 +2069,86 @@ function BenefitsTab({ purchased, passType, lifetime_pass, auto_claim_enabled, t
         <p className="md:hidden text-[10px] text-white/40 mb-2 italic">← Wische für mehr →</p>
         <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
           <div className="min-w-[560px] md:min-w-0">
-            <table className="w-full text-xs md:text-base">
+            <table className="w-full text-xs md:text-base border-separate border-spacing-0">
               <thead>
+                <tr>
+                  <th className="text-left text-white/60 font-bold pb-2 md:pb-3 pr-2 md:pr-4"></th>
+                  <th className={`text-center font-black pb-1 md:pb-2 px-1 md:px-2 ${isMyPass('free') ? 'text-yellow-300' : 'text-transparent select-none'}`}>
+                    {isMyPass('free') ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 md:px-2 py-0.5 rounded-md bg-yellow-400/15 border border-yellow-400/40 text-[9px] md:text-[10px] uppercase tracking-wider whitespace-nowrap">
+                        <Crown className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                        Dein Pass
+                      </span>
+                    ) : '·'}
+                  </th>
+                  <th className={`text-center font-black pb-1 md:pb-2 px-1 md:px-2 ${isMyPass('premium') ? 'text-yellow-300' : 'text-transparent select-none'}`}>
+                    {isMyPass('premium') ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 md:px-2 py-0.5 rounded-md bg-yellow-400/15 border border-yellow-400/40 text-[9px] md:text-[10px] uppercase tracking-wider whitespace-nowrap">
+                        <Crown className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                        Dein Pass
+                      </span>
+                    ) : '·'}
+                  </th>
+                  <th className={`text-center font-black pb-1 md:pb-2 px-1 md:px-2 ${isMyPass('elite') ? 'text-yellow-300' : 'text-transparent select-none'}`}>
+                    {isMyPass('elite') ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 md:px-2 py-0.5 rounded-md bg-yellow-400/15 border border-yellow-400/40 text-[9px] md:text-[10px] uppercase tracking-wider whitespace-nowrap">
+                        <Crown className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                        Dein Pass
+                      </span>
+                    ) : '·'}
+                  </th>
+                  <th className={`text-center font-black pb-1 md:pb-2 px-1 md:px-2 ${isMyPass('ultra') ? 'text-yellow-300' : 'text-transparent select-none'}`}>
+                    {isMyPass('ultra') ? (
+                      <span className="inline-flex items-center gap-1 px-1.5 md:px-2 py-0.5 rounded-md bg-yellow-400/15 border border-yellow-400/40 text-[9px] md:text-[10px] uppercase tracking-wider whitespace-nowrap">
+                        <Crown className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                        {lifetime_pass ? 'Lifetime' : 'Dein Pass'}
+                      </span>
+                    ) : '·'}
+                  </th>
+                </tr>
                 <tr className="border-b border-white/10">
                   <th className="text-left text-white/60 font-bold pb-3 md:pb-4 pr-2 md:pr-4">Feature</th>
-                  <th className="text-center text-white/60 font-bold pb-3 md:pb-4 px-1 md:px-2">Free</th>
-                  <th className="text-center text-yellow-300 font-bold pb-3 md:pb-4 px-1 md:px-2">Premium</th>
-                  <th className="text-center text-violet-300 font-bold pb-3 md:pb-4 px-1 md:px-2">Elite+</th>
-                  <th className="text-center text-rose-300 font-bold pb-3 md:pb-4 px-1 md:px-2">Ultra+</th>
+                  <th className={`text-center font-bold pb-3 md:pb-4 px-1 md:px-2 ${isMyPass('free') ? 'text-yellow-300 ' + myColCellClass('free') : 'text-white/60'}`}>Free</th>
+                  <th className={`text-center font-bold pb-3 md:pb-4 px-1 md:px-2 ${isMyPass('premium') ? 'text-yellow-300 ' + myColCellClass('premium') : 'text-yellow-300/70'}`}>Premium</th>
+                  <th className={`text-center font-bold pb-3 md:pb-4 px-1 md:px-2 ${isMyPass('elite') ? 'text-yellow-300 ' + myColCellClass('elite') : 'text-violet-300/80'}`}>Elite+</th>
+                  <th className={`text-center font-bold pb-3 md:pb-4 px-1 md:px-2 ${isMyPass('ultra') ? 'text-yellow-300 ' + myColCellClass('ultra') : 'text-rose-300/80'}`}>Ultra+</th>
                 </tr>
               </thead>
               <tbody className="text-white">
                 <tr className="border-b border-white/5">
                   <td className="py-3 md:py-4 pr-2 md:pr-4">Free Track Rewards</td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2"><Check className="w-4 h-4 md:w-5 md:h-5 text-green-400 mx-auto" /></td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2"><Check className="w-4 h-4 md:w-5 md:h-5 text-green-400 mx-auto" /></td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2"><Check className="w-4 h-4 md:w-5 md:h-5 text-green-400 mx-auto" /></td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2"><Check className="w-4 h-4 md:w-5 md:h-5 text-green-400 mx-auto" /></td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 ${myColCellClass('free')}`}><Check className="w-4 h-4 md:w-5 md:h-5 text-green-400 mx-auto" /></td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 ${myColCellClass('premium')}`}><Check className="w-4 h-4 md:w-5 md:h-5 text-green-400 mx-auto" /></td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 ${myColCellClass('elite')}`}><Check className="w-4 h-4 md:w-5 md:h-5 text-green-400 mx-auto" /></td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 ${myColCellClass('ultra')}`}><Check className="w-4 h-4 md:w-5 md:h-5 text-green-400 mx-auto" /></td>
                 </tr>
                 <tr className="border-b border-white/5">
                   <td className="py-3 md:py-4 pr-2 md:pr-4">Premium Track Rewards</td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2"><X className="w-4 h-4 md:w-5 md:h-5 text-red-400 mx-auto" /></td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2">70%</td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2">50%</td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2">30% + Lizenzen</td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 ${myColCellClass('free')}`}><X className="w-4 h-4 md:w-5 md:h-5 text-red-400 mx-auto" /></td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 ${myColCellClass('premium')}`}>70%</td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 ${myColCellClass('elite')}`}>50%</td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 ${myColCellClass('ultra')}`}>30% + Lizenzen</td>
                 </tr>
                 <tr className="border-b border-white/5">
                   <td className="py-3 md:py-4 pr-2 md:pr-4">Auto-Claim</td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2">100c</td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2">100c</td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2">100c</td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2"><Check className="w-4 h-4 md:w-5 md:h-5 text-green-400 mx-auto" /></td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 ${myColCellClass('free')}`}>100c</td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 ${myColCellClass('premium')}`}>100c</td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 ${myColCellClass('elite')}`}>100c</td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 ${myColCellClass('ultra')}`}><Check className="w-4 h-4 md:w-5 md:h-5 text-green-400 mx-auto" /></td>
                 </tr>
                 <tr className="border-b border-white/5">
                   <td className="py-3 md:py-4 pr-2 md:pr-4">Skip Feature</td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2">50c/Tier</td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2">50c/Tier</td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2">50c/Tier</td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2">50c/Tier</td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 ${myColCellClass('free')}`}>50c/Tier</td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 ${myColCellClass('premium')}`}>50c/Tier</td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 ${myColCellClass('elite')}`}>50c/Tier</td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 ${myColCellClass('ultra')}`}>50c/Tier</td>
                 </tr>
                 <tr>
                   <td className="py-3 md:py-4 pr-2 md:pr-4 font-bold">Saison-Preis</td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2 font-bold text-green-400">Gratis</td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2 font-bold">{fmt(premiumPrice)}c</td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2 font-bold">{fmt(elitePrice)}c</td>
-                  <td className="text-center py-3 md:py-4 px-1 md:px-2 font-bold">{fmt(ultraPrice)}c</td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 font-bold text-green-400 ${isMyPass('free') ? 'border-b border-yellow-400/40 bg-yellow-400/[0.06] border-x border-yellow-400/30' : ''}`}>Gratis</td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 font-bold ${isMyPass('premium') ? 'border-b border-yellow-400/40 bg-yellow-400/[0.06] border-x border-yellow-400/30 text-yellow-300' : ''}`}>{fmt(premiumPrice)}c</td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 font-bold ${isMyPass('elite') ? 'border-b border-yellow-400/40 bg-yellow-400/[0.06] border-x border-yellow-400/30 text-yellow-300' : ''}`}>{fmt(elitePrice)}c</td>
+                  <td className={`text-center py-3 md:py-4 px-1 md:px-2 font-bold ${isMyPass('ultra') ? 'border-b border-yellow-400/40 bg-yellow-400/[0.06] border-x border-yellow-400/30 text-yellow-300' : ''}`}>{fmt(ultraPrice)}c</td>
                 </tr>
               </tbody>
             </table>
