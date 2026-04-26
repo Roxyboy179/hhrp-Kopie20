@@ -715,6 +715,23 @@ export default function BattlePassView() {
     }
   }, [_currentTierForScroll]);
 
+  // 🆕 Mausrad scrollt horizontal wenn Cursor über dem Track ist
+  useEffect(() => {
+    const el = rewardsTrackRef.current;
+    if (!el || !data) return;
+    const onWheel = (e) => {
+      if (e.deltaY === 0) return;
+      // Nur intercepten wenn der Track horizontal scrollen kann
+      const canScrollHorizontally = el.scrollWidth > el.clientWidth;
+      if (!canScrollHorizontally) return;
+      e.preventDefault();
+      // Multiplier für angenehmes Scrollen
+      el.scrollLeft += e.deltaY * 1.2;
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [data]);
+
   if (loading) {
     return (
       <div className="bg-gradient-to-br from-white/5 via-white/[0.02] to-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 md:p-10 flex items-center justify-center min-h-[300px] shadow-2xl">
@@ -1767,89 +1784,116 @@ function TierCard({ tier, isUnlocked, isCurrent, isLocked, isMissed, purchased, 
     <div
       className={`
         relative rounded-xl md:rounded-2xl overflow-hidden border-2 transition-all duration-300
-        ${isCurrent ? 'border-yellow-400 ring-1 md:ring-2 ring-yellow-400/50 scale-[1.02] md:scale-105 z-10' : ''}
-        ${isUnlocked && !isCurrent ? 'border-green-400/40' : ''}
-        ${isMissed ? 'border-red-500/40 opacity-60' : ''}
+        ${isCurrent ? 'border-yellow-400 shadow-[0_0_24px_rgba(251,191,36,0.4)] z-10' : ''}
+        ${isUnlocked && !isCurrent ? 'border-emerald-400/40' : ''}
+        ${isMissed ? 'border-red-500/40 opacity-70' : ''}
         ${isLocked && !isMissed ? 'border-white/10' : ''}
       `}
       style={{
         background: isUnlocked 
-          ? 'linear-gradient(135deg, rgba(16,185,129,0.15), rgba(5,150,105,0.1))' 
+          ? 'linear-gradient(135deg, rgba(16,185,129,0.10), rgba(5,150,105,0.04))' 
           : isCurrent 
-          ? 'linear-gradient(135deg, rgba(251,191,36,0.2), rgba(245,158,11,0.15))'
+          ? 'linear-gradient(135deg, rgba(251,191,36,0.12), rgba(245,158,11,0.06))'
           : isMissed
-          ? 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(220,38,38,0.1))'
-          : 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))',
+          ? 'linear-gradient(135deg, rgba(239,68,68,0.08), rgba(220,38,38,0.04))'
+          : 'linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))',
       }}
     >
-      {/* Tier Number */}
-      <div className="absolute top-1 left-1 md:top-1.5 md:left-1.5 bg-black/60 backdrop-blur-sm rounded-lg px-1.5 py-0.5 md:px-2 md:py-1 border border-white/20 z-10">
-        <span className="text-[10px] md:text-xs font-black text-white drop-shadow-md">T{tier.tier}</span>
+      {/* === Header Row: Tier-Nummer + Status-Badge === */}
+      <div className="flex items-center justify-between px-2 md:px-2.5 py-1.5 md:py-2 border-b border-white/5">
+        <div className="flex items-center gap-1.5">
+          <span className={`text-[10px] md:text-xs font-black tabular-nums ${
+            isCurrent ? 'text-yellow-300' : isUnlocked ? 'text-emerald-300' : isMissed ? 'text-red-300' : 'text-white/50'
+          }`}>
+            TIER
+          </span>
+          <span className={`text-base md:text-lg font-black tabular-nums leading-none ${
+            isCurrent ? 'text-yellow-300' : isUnlocked ? 'text-emerald-300' : isMissed ? 'text-red-300' : 'text-white'
+          }`}>
+            {tier.tier}
+          </span>
+        </div>
+        {/* Status Icons */}
+        {isUnlocked && (
+          <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-emerald-500/90 flex items-center justify-center shadow-[0_0_8px_rgba(16,185,129,0.6)]">
+            <Check className="w-2.5 h-2.5 md:w-3 md:h-3 text-white" />
+          </div>
+        )}
+        {isMissed && (
+          <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-red-500/90 flex items-center justify-center">
+            <X className="w-2.5 h-2.5 md:w-3 md:h-3 text-white" />
+          </div>
+        )}
+        {isCurrent && (
+          <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-yellow-400/90 flex items-center justify-center animate-pulse shadow-[0_0_10px_rgba(251,191,36,0.8)]">
+            <Crown className="w-2.5 h-2.5 md:w-3 md:h-3 text-amber-900" />
+          </div>
+        )}
+        {isLocked && !isMissed && (
+          <Lock className="w-3 h-3 md:w-3.5 md:h-3.5 text-white/30" />
+        )}
       </div>
 
-      {/* Unlocked Badge */}
-      {isUnlocked && (
-        <div className="absolute top-1 right-1 md:top-1.5 md:right-1.5 z-10 animate-bounce">
-          <Check className="w-4 h-4 md:w-5 md:h-5 p-0.5 md:p-1 rounded-full bg-green-500 text-white shadow-lg shadow-green-500/50" />
-        </div>
-      )}
-
-      {/* 🆕 Missed Badge */}
+      {/* === Missed Overlay === */}
       {isMissed && (
-        <div className="absolute top-1 right-1 md:top-1.5 md:right-1.5 z-10">
-          <X className="w-4 h-4 md:w-5 md:h-5 p-0.5 md:p-1 rounded-full bg-red-500 text-white shadow-lg shadow-red-500/50" />
-        </div>
-      )}
-
-      {/* Missed Overlay */}
-      {isMissed && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 backdrop-blur-[2px] z-10">
-          <X className="w-6 h-6 md:w-8 md:h-8 text-red-400 mb-1" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/65 backdrop-blur-[1px] z-20 pt-7">
+          <X className="w-5 h-5 md:w-6 md:h-6 text-red-400 mb-0.5" />
           <span className="text-[10px] md:text-xs font-bold text-red-300">Verpasst</span>
           <span className="text-[8px] md:text-[9px] text-red-200/80 mt-0.5">Skip möglich</span>
         </div>
       )}
 
-      {/* Content */}
-      <div className="p-2 md:p-3 space-y-1.5 md:space-y-2">
+      {/* === Content === */}
+      <div className="p-1.5 md:p-2 space-y-1.5 md:space-y-2">
         {/* Free Reward */}
-        <div className="bg-black/40 backdrop-blur-sm rounded-lg p-1.5 md:p-2 border border-white/10">
-          <div className="flex items-center gap-1 mb-1">
-            <div className="text-[8px] md:text-[9px] uppercase tracking-wider text-white/50 font-bold">Free</div>
+        <div className="rounded-lg p-1.5 md:p-2 border border-white/8" style={{ background: 'rgba(0,0,0,0.25)' }}>
+          <div className="text-[8px] md:text-[9px] uppercase tracking-wider text-white/40 font-bold mb-1">
+            Free
           </div>
-          <div className="flex items-center gap-1.5 md:gap-2">
-            <FreeIcon className={`w-4 h-4 md:w-5 md:h-5 ${getRewardColor(freeReward)} flex-shrink-0`} />
-            <span className="text-[10px] md:text-xs text-white/80 font-semibold line-clamp-2">{freeReward.label}</span>
+          <div className="flex items-center gap-1.5">
+            <FreeIcon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${getRewardColor(freeReward)} flex-shrink-0`} />
+            <span className="text-[10px] md:text-[11px] text-white/85 font-semibold line-clamp-2 leading-tight">{freeReward.label}</span>
           </div>
-          {/* Alternative Credits Hinweis */}
           {freeReward.alternativeCredits && (
-            <div className="text-[8px] md:text-[9px] text-yellow-300/70 mt-1 font-medium">
-              Alt: {freeReward.alternativeCredits} Credits
+            <div className="text-[8px] md:text-[9px] text-white/40 mt-1 font-medium">
+              Alt: {freeReward.alternativeCredits}c
             </div>
           )}
         </div>
 
         {/* Premium Reward */}
-        <div className={`relative rounded-lg p-1.5 md:p-2 border transition-all ${purchased ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-black/20 border-white/10'}`}>
+        <div 
+          className={`relative rounded-lg p-1.5 md:p-2 border transition-all ${
+            purchased 
+              ? 'border-yellow-400/25' 
+              : 'border-white/8'
+          }`}
+          style={{
+            background: purchased 
+              ? 'linear-gradient(135deg, rgba(251,191,36,0.06), rgba(251,191,36,0.02))' 
+              : 'rgba(0,0,0,0.15)'
+          }}
+        >
           <div className="flex items-center gap-1 mb-1">
-            <Crown className="w-2.5 h-2.5 md:w-3 md:h-3 text-yellow-400" />
-            <div className="text-[8px] md:text-[9px] uppercase tracking-wider text-yellow-300/70 font-bold">Premium</div>
+            <Crown className={`w-2.5 h-2.5 md:w-3 md:h-3 ${purchased ? 'text-yellow-400' : 'text-white/30'}`} />
+            <div className={`text-[8px] md:text-[9px] uppercase tracking-wider font-bold ${purchased ? 'text-yellow-300/80' : 'text-white/40'}`}>
+              Premium
+            </div>
           </div>
           {!purchased && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[2px] rounded-lg">
-              <Lock className="w-4 h-4 md:w-5 md:h-5 text-white/40" />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/55 backdrop-blur-[1px] rounded-lg">
+              <Lock className="w-3.5 h-3.5 md:w-4 md:h-4 text-white/40" />
             </div>
           )}
-          <div className="flex items-center gap-1.5 md:gap-2">
-            <PremiumIcon className={`w-4 h-4 md:w-5 md:h-5 ${purchased ? getRewardColor(premiumReward) : 'text-white/30'} flex-shrink-0`} />
-            <span className={`text-[10px] md:text-xs font-semibold line-clamp-2 ${purchased ? 'text-yellow-200' : 'text-white/30'}`}>
+          <div className="flex items-center gap-1.5">
+            <PremiumIcon className={`w-3.5 h-3.5 md:w-4 md:h-4 ${purchased ? getRewardColor(premiumReward) : 'text-white/30'} flex-shrink-0`} />
+            <span className={`text-[10px] md:text-[11px] font-semibold line-clamp-2 leading-tight ${purchased ? 'text-white/90' : 'text-white/30'}`}>
               {premiumReward.label}
             </span>
           </div>
-          {/* Alternative Credits Hinweis */}
           {purchased && premiumReward.alternativeCredits && (
-            <div className="text-[8px] md:text-[9px] text-yellow-300/70 mt-1 font-medium">
-              Alt: {premiumReward.alternativeCredits} Credits
+            <div className="text-[8px] md:text-[9px] text-yellow-300/60 mt-1 font-medium">
+              Alt: {premiumReward.alternativeCredits}c
             </div>
           )}
         </div>
