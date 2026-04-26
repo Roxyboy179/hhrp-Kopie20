@@ -151,6 +151,7 @@ export default function BattlePassView() {
   const pollingRef = useRef(null);
   const queueCheckRef = useRef(null);
   const confettiIntervalRef = useRef(null);
+  const rewardsTrackRef = useRef(null);
   // ✅ Refs für Queue-IDs (damit Closure funktioniert)
   const purchaseQueueIdRef = useRef(null);
   const claimQueueIdsRef = useRef([]);
@@ -744,6 +745,20 @@ export default function BattlePassView() {
     };
   });
 
+  // 🆕 Auto-scroll to current tier in horizontal track
+  useEffect(() => {
+    if (!rewardsTrackRef.current || !currentTier) return;
+    const el = rewardsTrackRef.current.querySelector(`[data-tier="${currentTier}"]`);
+    if (el) {
+      // Center the current tier card in the viewport of the track
+      const containerWidth = rewardsTrackRef.current.clientWidth;
+      const cardLeft = el.offsetLeft;
+      const cardWidth = el.clientWidth;
+      const scrollTo = cardLeft - (containerWidth / 2) + (cardWidth / 2);
+      rewardsTrackRef.current.scrollTo({ left: Math.max(0, scrollTo), behavior: 'smooth' });
+    }
+  }, [currentTier]);
+
   return (
     <div className="space-y-4 md:space-y-6">
       {/* ==================== TABS ==================== */}
@@ -1264,34 +1279,72 @@ export default function BattlePassView() {
         )}
       </div>
 
-      {/* ==================== TIER GRID (Mobile-Friendly) ==================== */}
+      {/* ==================== TIER TRACK (Real Battle Pass Look - Horizontal) ==================== */}
       <div className="glass rounded-xl md:rounded-2xl p-4 md:p-6 border border-white/[0.08]">
-        <h3 className="text-lg md:text-xl font-bold text-white mb-3 md:mb-4 flex items-center gap-2">
-          <Gift className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
-          Alle Belohnungen
-        </h3>
+        <div className="flex items-center justify-between mb-3 md:mb-4 flex-wrap gap-2">
+          <h3 className="text-lg md:text-xl font-bold text-white flex items-center gap-2">
+            <Gift className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
+            Alle Belohnungen
+          </h3>
+          <div className="flex items-center gap-1.5 md:gap-2 text-[10px] md:text-xs text-white/50 font-medium">
+            <span className="hidden sm:inline">←</span>
+            <span>Wische horizontal</span>
+            <span>→</span>
+          </div>
+        </div>
 
-        {/* Grid Layout - Responsive */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-3">
-          {rewards.map((tier) => {
-            const isMissed = (missedTiers || []).includes(tier.tier); // 🆕 Verpasste Tiers
-            const isUnlocked = tier.tier <= currentTier && !isMissed; // ✅ Nur wirklich geclaimte Tiers
-            const isCurrent = tier.tier === nextTier;
-            const isLocked = tier.tier > nextTier && !isMissed;
+        {/* Horizontal Scrollable Track */}
+        <div
+          ref={rewardsTrackRef}
+          className="overflow-x-auto overflow-y-visible -mx-4 md:-mx-6 px-4 md:px-6 pb-3 scroll-smooth snap-x snap-mandatory"
+          style={{ scrollbarWidth: 'thin' }}
+        >
+          <div className="flex gap-2 md:gap-3 w-max">
+            {rewards.map((tier) => {
+              const isMissed = (missedTiers || []).includes(tier.tier);
+              const isUnlocked = tier.tier <= currentTier && !isMissed;
+              const isCurrent = tier.tier === nextTier;
+              const isLocked = tier.tier > nextTier && !isMissed;
 
-            return (
-              <TierCard
-                key={tier.tier}
-                tier={tier}
-                isUnlocked={isUnlocked}
-                isCurrent={isCurrent}
-                isLocked={isLocked}
-                isMissed={isMissed}
-                purchased={purchased}
-                canClaim={canClaimToday && isCurrent}
-              />
-            );
-          })}
+              return (
+                <div
+                  key={tier.tier}
+                  data-tier={tier.tier}
+                  className="flex-shrink-0 w-[140px] sm:w-[150px] md:w-[170px] snap-center"
+                >
+                  <TierCard
+                    tier={tier}
+                    isUnlocked={isUnlocked}
+                    isCurrent={isCurrent}
+                    isLocked={isLocked}
+                    isMissed={isMissed}
+                    purchased={purchased}
+                    canClaim={canClaimToday && isCurrent}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Legende unter dem Track */}
+        <div className="flex flex-wrap items-center gap-3 md:gap-4 mt-3 md:mt-4 text-[10px] md:text-xs text-white/60">
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded border-2 border-yellow-400 bg-yellow-400/20"></div>
+            <span>Aktuell</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded border-2 border-green-400 bg-green-500/20"></div>
+            <span>Erhalten</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded border-2 border-red-500/40 bg-red-500/20"></div>
+            <span>Verpasst</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded border-2 border-white/10 bg-white/5"></div>
+            <span>Gesperrt</span>
+          </div>
         </div>
       </div>
 
