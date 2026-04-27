@@ -6,7 +6,7 @@ import confetti from 'canvas-confetti';
 import {
   Crown, Lock, Check, Clock, Gift, Sparkles, AlertTriangle,
   Coins, Banknote, Star, Ticket, Car, Bike, Truck, Crosshair, Shield, X, Zap, Loader2,
-  TrendingUp, Award, Gem, Share2,
+  TrendingUp, Award, Gem, Share2, Trophy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
