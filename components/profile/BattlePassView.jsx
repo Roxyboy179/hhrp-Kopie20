@@ -986,7 +986,7 @@ export default function BattlePassView() {
                 <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-orange-500/30 bg-orange-500/10 backdrop-blur-md shadow-lg flex-1">
                   <Clock className="w-4 h-4 md:w-5 md:h-5 text-orange-400 flex-shrink-0" />
                   <span className="text-orange-300 text-xs md:text-sm font-bold text-center">
-                    Nur noch {daysRemaining}d — Premium-Kauf ab < {minDaysToPurchase ?? 5} Tagen gesperrt
+                    Nur noch {daysRemaining}d — Premium-Kauf ab {'<'} {minDaysToPurchase ?? 5} Tagen gesperrt
                   </span>
                 </div>
                 
