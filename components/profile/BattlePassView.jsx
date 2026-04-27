@@ -1139,15 +1139,16 @@ export default function BattlePassView() {
                     {missedDays > 0 ? `${missedDays} Tag${missedDays > 1 ? 'e' : ''} verpasst` : 'Bereits geclaimt — morgen wieder'}
                   </span>
                 </div>
-                {/* 🆕 Skip Button - Für ALLE User verfügbar (50 Credits) */}
+                {/* 🆕 Skip Button - DEAKTIVIERT (niemand soll ihn drücken) */}
                 {!skipping && (
                   <Button
-                    onClick={() => setSkipConfirmOpen(true)}
-                    className="h-10 md:h-12 px-3 md:px-4 rounded-xl md:rounded-2xl font-bold text-xs md:text-sm text-white shadow-xl hover:shadow-2xl transition-all hover:scale-105 whitespace-nowrap"
-                    style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' }}
+                    disabled
+                    className="h-10 md:h-12 px-3 md:px-4 rounded-xl md:rounded-2xl font-bold text-xs md:text-sm text-white/40 shadow-xl whitespace-nowrap cursor-not-allowed opacity-50"
+                    style={{ background: 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)' }}
+                    title="Funktion ist deaktiviert"
                   >
                     <Zap className="w-4 h-4 mr-1" />
-                    Skip (50 Credits)
+                    Skip (Deaktiviert)
                   </Button>
                 )}
                 {skipping && (
@@ -1158,12 +1159,30 @@ export default function BattlePassView() {
               </div>
             )}
 
-            {allClaimed && purchased && (
-              <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-xl md:rounded-2xl border border-green-400/30 bg-green-400/10 backdrop-blur-md shadow-lg">
-                <Sparkles className="w-4 h-4 text-green-400 drop-shadow-[0_0_6px_rgba(34,197,94,0.8)]" />
-                <span className="text-green-300 text-xs md:text-sm font-bold drop-shadow-md">
-                  Komplett! Nächste Season bald
-                </span>
+            {/* 🎉 ALLES FREIGESCHALTET - Nachricht */}
+            {allClaimed && (
+              <div className="glass rounded-xl md:rounded-2xl p-4 md:p-6 border border-green-400/30 bg-gradient-to-br from-green-500/10 to-emerald-600/10 shadow-2xl">
+                <div className="flex flex-col items-center text-center gap-3 md:gap-4">
+                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-xl animate-pulse">
+                    <Trophy className="w-8 h-8 md:w-10 md:h-10 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl md:text-2xl font-black text-white mb-2 flex items-center justify-center gap-2">
+                      <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-green-400" />
+                      Glückwunsch! Alles freigeschaltet!
+                      <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-green-400" />
+                    </h3>
+                    <p className="text-sm md:text-base text-white/80 mb-2">
+                      Du hast alle 30 Tiers abgeschlossen und alle Belohnungen erhalten!
+                    </p>
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 border border-white/20 mt-2">
+                      <Clock className="w-4 h-4 text-blue-300" />
+                      <span className="text-xs md:text-sm text-white/70">
+                        Nächste Season startet bald – bleib dran!
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
