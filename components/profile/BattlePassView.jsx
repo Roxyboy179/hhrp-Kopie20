@@ -982,11 +982,28 @@ export default function BattlePassView() {
             )}
 
             {!purchased && !purchasing && purchaseBlocked && (
-              <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-orange-500/30 bg-orange-500/10 backdrop-blur-md shadow-lg flex-1">
-                <Clock className="w-4 h-4 md:w-5 md:h-5 text-orange-400 flex-shrink-0" />
-                <span className="text-orange-300 text-xs md:text-sm font-bold text-center">
-                  Nur noch {daysRemaining}d — Premium-Kauf ab &lt; {minDaysToPurchase ?? 5} Tagen gesperrt
-                </span>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex items-center justify-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-orange-500/30 bg-orange-500/10 backdrop-blur-md shadow-lg flex-1">
+                  <Clock className="w-4 h-4 md:w-5 md:h-5 text-orange-400 flex-shrink-0" />
+                  <span className="text-orange-300 text-xs md:text-sm font-bold text-center">
+                    Nur noch {daysRemaining}d — Premium-Kauf ab < {minDaysToPurchase ?? 5} Tagen gesperrt
+                  </span>
+                </div>
+                
+                {/* Claim Button auch wenn Premium-Kauf gesperrt ist */}
+                {canClaimToday && !allClaimed && !claiming && (
+                  <Button
+                    onClick={handleClaim}
+                    className="h-14 px-6 rounded-2xl font-bold text-base text-white shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] relative overflow-hidden group whitespace-nowrap"
+                    style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                    <span className="flex items-center gap-2 relative z-10">
+                      <Zap className="w-5 h-5" />
+                      Tier {nextTier} einlösen
+                    </span>
+                  </Button>
+                )}
               </div>
             )}
 
