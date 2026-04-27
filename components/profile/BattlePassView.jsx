@@ -1159,32 +1159,7 @@ export default function BattlePassView() {
               </div>
             )}
 
-            {/* 🎉 ALLES FREIGESCHALTET - Nachricht */}
-            {allClaimed && (
-              <div className="glass rounded-xl md:rounded-2xl p-4 md:p-6 border border-green-400/30 bg-gradient-to-br from-green-500/10 to-emerald-600/10 shadow-2xl">
-                <div className="flex flex-col items-center text-center gap-3 md:gap-4">
-                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-xl animate-pulse">
-                    <Trophy className="w-8 h-8 md:w-10 md:h-10 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl md:text-2xl font-black text-white mb-2 flex items-center justify-center gap-2">
-                      <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-green-400" />
-                      Glückwunsch! Alles freigeschaltet!
-                      <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-green-400" />
-                    </h3>
-                    <p className="text-sm md:text-base text-white/80 mb-2">
-                      Du hast alle 30 Tiers abgeschlossen und alle Belohnungen erhalten!
-                    </p>
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 border border-white/20 mt-2">
-                      <Clock className="w-4 h-4 text-blue-300" />
-                      <span className="text-xs md:text-sm text-white/70">
-                        Nächste Season startet bald – bleib dran!
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* 🎉 ALLES FREIGESCHALTET - Nachricht (wird weiter unten nach Buttons angezeigt) */}
           </div>
         </div>
       </div>
@@ -1314,6 +1289,33 @@ export default function BattlePassView() {
           </div>
         )}
       </div>
+
+      {/* 🎉 ALLES FREIGESCHALTET - Große Nachricht */}
+      {allClaimed && (
+        <div className="glass rounded-xl md:rounded-2xl p-4 md:p-6 border border-green-400/30 bg-gradient-to-br from-green-500/10 to-emerald-600/10 shadow-2xl">
+          <div className="flex flex-col items-center text-center gap-3 md:gap-4">
+            <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-xl animate-pulse">
+              <Trophy className="w-8 h-8 md:w-10 md:h-10 text-white" />
+            </div>
+            <div>
+              <h3 className="text-xl md:text-2xl font-black text-white mb-2 flex items-center justify-center gap-2">
+                <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-green-400" />
+                Glückwunsch! Alles freigeschaltet!
+                <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-green-400" />
+              </h3>
+              <p className="text-sm md:text-base text-white/80 mb-2">
+                Du hast alle 30 Tiers abgeschlossen und alle Belohnungen erhalten!
+              </p>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 border border-white/20 mt-2">
+                <Clock className="w-4 h-4 text-blue-300" />
+                <span className="text-xs md:text-sm text-white/70">
+                  Nächste Season startet bald – bleib dran!
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ==================== TIER TRACK (Real Battle Pass Look - Horizontal) ==================== */}
       <div className="glass rounded-xl md:rounded-2xl p-4 md:p-6 border border-white/[0.08]">
