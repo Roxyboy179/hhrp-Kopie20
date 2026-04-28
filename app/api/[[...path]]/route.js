@@ -3048,8 +3048,10 @@ export async function GET(request) {
       
       // Rollen-Struktur mit Levels (höher = wichtiger)
       const roles = [
-        { name: 'Projektinhaber', level: 10, category: 'Leitung', desc: 'Gründer & Leitung des Projekts', icon: 'crown' },
-        { name: 'Stl. Projektinhaber', level: 9, category: 'Leitung', desc: 'Stellvertretende Projektleitung', icon: 'crown' },
+        { name: 'Projektinhaber', level: 12, category: 'Leitung', desc: 'Gründer & Leitung des Projekts', icon: 'crown' },
+        { name: 'Stl. Projektinhaber', level: 11, category: 'Leitung', desc: 'Stellvertretende Projektleitung', icon: 'crown' },
+        { name: 'Projektleitung', level: 10, category: 'Leitung', desc: 'Stellvertretende Projektleitung', icon: 'crown' },
+        { name: 'Stl. Projektleitung', level: 9, category: 'Leitung', desc: 'Stellvertretende Projektleitung', icon: 'crown' },
         { name: 'Teamkoordination', level: 8, category: 'Management', desc: 'Koordination des gesamten Teams', icon: 'star' },
         { name: 'Qualitätsmanagement', level: 7, category: 'Management', desc: 'Qualitätssicherung & Standards', icon: 'award' },
         { name: 'Teamvertretung', level: 6, category: 'Führung', desc: 'Vertretung der Teaminteressen', icon: 'shield' },
