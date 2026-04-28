@@ -287,7 +287,7 @@ export default function CountdownOverlay() {
         background:
           phase === 'welcome'
             ? 'radial-gradient(ellipse at center, #0a1628 0%, #050505 70%)'
-            : '#050505',
+            : '#050505'
       }}
       aria-modal="true"
       role="dialog"
@@ -311,52 +311,7 @@ export default function CountdownOverlay() {
       {phase === 'goodbye' && <GoodbyeContent progress={goodbyeProgress} />}
       {phase === 'welcome' && <WelcomeContent progress={welcomeProgress} />}
 
-      {/* Lokales CSS */}
-      <style jsx>{`
-        @keyframes co-fade-up {
-          0% { opacity: 0; transform: translateY(24px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes co-fade-in {
-          0% { opacity: 0; }
-          100% { opacity: 1; }
-        }
-        @keyframes co-pulse-glow {
-          0%, 100% { box-shadow: 0 0 60px rgba(99,102,241,0.25), inset 0 0 0 1px rgba(255,255,255,0.06); }
-          50%      { box-shadow: 0 0 90px rgba(99,102,241,0.45), inset 0 0 0 1px rgba(255,255,255,0.10); }
-        }
-        @keyframes co-blob {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33%      { transform: translate(40px, -30px) scale(1.05); }
-          66%      { transform: translate(-30px, 40px) scale(0.97); }
-        }
-        @keyframes co-shine {
-          0%   { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-        @keyframes co-float {
-          0%, 100% { transform: translateY(0); }
-          50%      { transform: translateY(-12px); }
-        }
-        @keyframes co-spin-slow {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
-        }
-        @keyframes co-particle {
-          0%   { transform: translate(0,0) scale(1); opacity: 0; }
-          10%  { opacity: 1; }
-          100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
-        }
-        @keyframes co-zoom-in {
-          0%   { transform: scale(0.6); opacity: 0; filter: blur(20px); }
-          60%  { opacity: 1; filter: blur(0); }
-          100% { transform: scale(1); opacity: 1; filter: blur(0); }
-        }
-        @keyframes co-progress-shimmer {
-          0% { background-position: 0 0; }
-          100% { background-position: 200px 0; }
-        }
-      `}</style>
+      {/* Keyframes liegen in globals.css */}
     </div>
   );
 }
@@ -379,7 +334,7 @@ function BackgroundFx({ phase }) {
           maskImage:
             'radial-gradient(ellipse at center, rgba(0,0,0,0.9), transparent 70%)',
           WebkitMaskImage:
-            'radial-gradient(ellipse at center, rgba(0,0,0,0.9), transparent 70%)',
+            'radial-gradient(ellipse at center, rgba(0,0,0,0.9), transparent 70%)'
         }}
       />
       {/* Blobs */}
@@ -390,7 +345,7 @@ function BackgroundFx({ phase }) {
           background: isWelcome
             ? 'radial-gradient(circle, rgba(34,197,94,0.30), transparent 70%)'
             : 'radial-gradient(circle, rgba(99,102,241,0.28), transparent 70%)',
-          animation: 'co-blob 14s ease-in-out infinite',
+          animation: 'co-blob 14s ease-in-out infinite'
         }}
       />
       <div
@@ -400,7 +355,7 @@ function BackgroundFx({ phase }) {
           background: isWelcome
             ? 'radial-gradient(circle, rgba(59,130,246,0.30), transparent 70%)'
             : 'radial-gradient(circle, rgba(168,85,247,0.22), transparent 70%)',
-          animation: 'co-blob 18s ease-in-out infinite reverse',
+          animation: 'co-blob 18s ease-in-out infinite reverse'
         }}
       />
       {/* Noise */}
@@ -409,7 +364,7 @@ function BackgroundFx({ phase }) {
         className="absolute inset-0 pointer-events-none opacity-[0.04] mix-blend-overlay"
         style={{
           backgroundImage:
-            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
+            "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")"
         }}
       />
     </>
@@ -426,21 +381,21 @@ function CooldownContent({ remaining, musicEnabled, muted, needsAudioGesture, on
         {/* Logo */}
         <div
           className="relative mb-8 sm:mb-10"
-          style={{ animation: 'co-fade-up 0.9s cubic-bezier(0.22,1,0.36,1) both' }}
+
         >
           <div
             className="absolute inset-0 rounded-3xl"
             style={{
               background: 'radial-gradient(circle, rgba(99,102,241,0.45), transparent 70%)',
               filter: 'blur(40px)',
-              animation: 'co-pulse-glow 3.5s ease-in-out infinite',
+              animation: 'co-pulse-glow 3.5s ease-in-out infinite'
             }}
           />
           <div
             className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-3xl overflow-hidden border"
             style={{
               borderColor: 'rgba(255,255,255,0.10)',
-              boxShadow: '0 30px 80px -20px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)',
+              boxShadow: '0 30px 80px -20px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)'
             }}
           >
             <img src="/logo.webp" alt="HHRP" className="w-full h-full object-cover" />
@@ -457,9 +412,8 @@ function CooldownContent({ remaining, musicEnabled, muted, needsAudioGesture, on
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 border"
           style={{
             background: 'rgba(99,102,241,0.10)',
-            borderColor: 'rgba(99,102,241,0.30)',
-            animation: 'co-fade-up 1s 0.1s both',
-          }}
+            borderColor: 'rgba(99,102,241,0.30)'
+            }}
         >
           <span className="relative flex w-2 h-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-60" />
@@ -473,13 +427,13 @@ function CooldownContent({ remaining, musicEnabled, muted, needsAudioGesture, on
         {/* Headline */}
         <h1
           className="text-center text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-white mb-3"
-          style={{ animation: 'co-fade-up 1s 0.2s both' }}
+
         >
           Willkommen bei <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-sky-300 to-emerald-300">HHRP</span>
         </h1>
         <p
           className="text-center text-base sm:text-xl text-white/60 mb-10 sm:mb-12 max-w-2xl"
-          style={{ animation: 'co-fade-up 1s 0.3s both' }}
+
         >
           Ein neues Kapitel beginnt.
         </p>
@@ -487,7 +441,7 @@ function CooldownContent({ remaining, musicEnabled, muted, needsAudioGesture, on
         {/* Countdown */}
         <div
           className="grid grid-cols-4 gap-2 sm:gap-4 mb-10 sm:mb-12"
-          style={{ animation: 'co-fade-up 1s 0.4s both' }}
+
         >
           {[
             { label: 'Tage',     value: remaining.d },
@@ -502,7 +456,7 @@ function CooldownContent({ remaining, musicEnabled, muted, needsAudioGesture, on
                 background: 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015))',
                 border: '1px solid rgba(255,255,255,0.10)',
                 boxShadow: '0 18px 40px -18px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)',
-                backdropFilter: 'blur(18px)',
+                backdropFilter: 'blur(18px)'
               }}
             >
               <div
@@ -527,9 +481,8 @@ function CooldownContent({ remaining, musicEnabled, muted, needsAudioGesture, on
             background: 'linear-gradient(180deg, rgba(20,20,28,0.88), rgba(8,8,12,0.92))',
             border: '1px solid rgba(255,255,255,0.08)',
             boxShadow: '0 30px 80px -30px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.04)',
-            backdropFilter: 'blur(28px)',
-            animation: 'co-fade-up 1s 0.5s both',
-          }}
+            backdropFilter: 'blur(28px)'
+            }}
         >
           <div
             aria-hidden
@@ -551,7 +504,7 @@ function CooldownContent({ remaining, musicEnabled, muted, needsAudioGesture, on
               style={{
                 background:
                   'linear-gradient(90deg, rgba(99,102,241,0.18), rgba(34,211,238,0.16), rgba(34,197,94,0.18))',
-                borderColor: 'rgba(255,255,255,0.10)',
+                borderColor: 'rgba(255,255,255,0.10)'
               }}
             >
               <Rocket className="w-5 h-5 text-white" />
@@ -575,7 +528,7 @@ function CooldownContent({ remaining, musicEnabled, muted, needsAudioGesture, on
             className="mt-6 p-4 rounded-2xl flex items-start gap-3"
             style={{
               background: 'rgba(99,102,241,0.08)',
-              border: '1px solid rgba(99,102,241,0.22)',
+              border: '1px solid rgba(99,102,241,0.22)'
             }}
           >
             <Music2 className="w-5 h-5 text-indigo-200 flex-shrink-0 mt-0.5" />
@@ -590,7 +543,7 @@ function CooldownContent({ remaining, musicEnabled, muted, needsAudioGesture, on
         {/* Goodbye/Hello Hinweis */}
         <div
           className="text-center mb-2"
-          style={{ animation: 'co-fade-up 1s 0.6s both' }}
+
         >
           <p className="text-white/85 text-base sm:text-lg">
             Goodbye <span className="font-semibold">V0.0.1 Beta</span> 👋
@@ -604,7 +557,7 @@ function CooldownContent({ remaining, musicEnabled, muted, needsAudioGesture, on
         </div>
 
         {/* Audio-Steuerung / Hinweis */}
-        <div className="mt-8" style={{ animation: 'co-fade-in 1s 0.8s both' }}>
+        <div className="mt-8" >
           {needsAudioGesture && !musicEnabled ? (
             <button
               onClick={onToggleMute}
@@ -613,7 +566,7 @@ function CooldownContent({ remaining, musicEnabled, muted, needsAudioGesture, on
                 background: 'rgba(255,255,255,0.06)',
                 borderColor: 'rgba(255,255,255,0.18)',
                 color: 'rgba(255,255,255,0.95)',
-                backdropFilter: 'blur(16px)',
+                backdropFilter: 'blur(16px)'
               }}
             >
               <Volume2 className="w-4 h-4" />
@@ -627,7 +580,7 @@ function CooldownContent({ remaining, musicEnabled, muted, needsAudioGesture, on
                 background: 'rgba(255,255,255,0.04)',
                 borderColor: 'rgba(255,255,255,0.12)',
                 color: 'rgba(255,255,255,0.75)',
-                backdropFilter: 'blur(16px)',
+                backdropFilter: 'blur(16px)'
               }}
               title={muted ? 'Musik einschalten' : 'Musik stummschalten'}
             >
@@ -652,15 +605,14 @@ function GoodbyeContent({ progress }) {
 
       <div
         className="relative text-center max-w-2xl"
-        style={{ animation: 'co-zoom-in 1.4s cubic-bezier(0.22,1,0.36,1) both' }}
+
       >
         <div
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 border"
           style={{
             background: 'rgba(244,114,182,0.10)',
-            borderColor: 'rgba(244,114,182,0.30)',
-            animation: 'co-fade-up 0.8s 0.2s both',
-          }}
+            borderColor: 'rgba(244,114,182,0.30)'
+            }}
         >
           <Heart className="w-3.5 h-3.5 text-pink-300" />
           <span className="text-[11px] uppercase tracking-[0.2em] font-semibold text-pink-200">
@@ -670,7 +622,7 @@ function GoodbyeContent({ progress }) {
 
         <h1
           className="text-4xl sm:text-6xl md:text-7xl font-bold text-white tracking-tight mb-4"
-          style={{ animation: 'co-fade-up 1s 0.4s both' }}
+
         >
           Goodbye{' '}
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-pink-300 via-rose-300 to-amber-200">
@@ -681,7 +633,7 @@ function GoodbyeContent({ progress }) {
 
         <p
           className="text-white/70 text-base sm:text-xl leading-relaxed mb-10"
-          style={{ animation: 'co-fade-up 1s 0.6s both' }}
+
         >
           Eine Ära geht zu Ende. Danke an alle, die mit uns die ersten Schritte
           gegangen sind – euer Feedback hat alles geprägt, was jetzt kommt.
@@ -693,9 +645,8 @@ function GoodbyeContent({ progress }) {
           style={{
             background:
               'linear-gradient(90deg, transparent, rgba(244,114,182,0.8), transparent)',
-            boxShadow: '0 0 20px rgba(244,114,182,0.5)',
-            animation: 'co-fade-in 1.2s 0.8s both, co-float 3s ease-in-out 1s infinite',
-          }}
+            boxShadow: '0 0 20px rgba(244,114,182,0.5)'
+            }}
         />
       </div>
 
@@ -715,7 +666,7 @@ function WelcomeContent({ progress }) {
 
       <div
         className="relative text-center max-w-2xl"
-        style={{ animation: 'co-zoom-in 1.4s cubic-bezier(0.22,1,0.36,1) both' }}
+
       >
         {/* Ring-Logo mit Glow */}
         <div className="relative w-24 h-24 sm:w-28 sm:h-28 mx-auto mb-6">
@@ -725,14 +676,14 @@ function WelcomeContent({ progress }) {
             style={{
               background: 'radial-gradient(circle, rgba(34,197,94,0.5), transparent 70%)',
               filter: 'blur(40px)',
-              animation: 'co-pulse-glow 2.4s ease-in-out infinite',
+              animation: 'co-pulse-glow 2.4s ease-in-out infinite'
             }}
           />
           <div
             className="relative w-full h-full rounded-3xl overflow-hidden border"
             style={{
               borderColor: 'rgba(255,255,255,0.14)',
-              boxShadow: '0 30px 80px -20px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)',
+              boxShadow: '0 30px 80px -20px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)'
             }}
           >
             <img src="/logo.webp" alt="HHRP" className="w-full h-full object-cover" />
@@ -748,9 +699,8 @@ function WelcomeContent({ progress }) {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6 border"
           style={{
             background: 'rgba(34,197,94,0.10)',
-            borderColor: 'rgba(34,197,94,0.30)',
-            animation: 'co-fade-up 0.8s 0.2s both',
-          }}
+            borderColor: 'rgba(34,197,94,0.30)'
+            }}
         >
           <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
           <span className="text-[11px] uppercase tracking-[0.2em] font-semibold text-emerald-200">
@@ -760,7 +710,7 @@ function WelcomeContent({ progress }) {
 
         <h1
           className="text-5xl sm:text-7xl md:text-8xl font-bold tracking-tight mb-4"
-          style={{ animation: 'co-fade-up 1s 0.4s both' }}
+
         >
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-300 via-sky-300 to-indigo-300">
             Hello V1
@@ -769,13 +719,13 @@ function WelcomeContent({ progress }) {
 
         <p
           className="text-white/75 text-base sm:text-xl leading-relaxed mb-2"
-          style={{ animation: 'co-fade-up 1s 0.6s both' }}
+
         >
           Willkommen in unserer ersten vollständigen Version.
         </p>
         <p
           className="text-white/55 text-sm sm:text-base leading-relaxed mb-10"
-          style={{ animation: 'co-fade-up 1s 0.7s both' }}
+
         >
           Mehr Stabilität. Mehr Funktionen. Ein weiterentwickeltes Erlebnis für die gesamte Community.
         </p>
@@ -788,7 +738,7 @@ function WelcomeContent({ progress }) {
               'linear-gradient(90deg, transparent, rgba(94,234,212,0.9), rgba(99,102,241,0.7), transparent)',
             backgroundSize: '200% 100%',
             animation: 'co-shine 2.6s linear infinite',
-            boxShadow: '0 0 20px rgba(94,234,212,0.45)',
+            boxShadow: '0 0 20px rgba(94,234,212,0.45)'
           }}
         />
       </div>
@@ -817,7 +767,7 @@ function FloatingParticles({ color, count = 20 }) {
         dx: `${(r1 - 0.5) * 240}px`,
         dy: `${(r2 - 0.5) * 240}px`,
         delay: `${(r3 * 6).toFixed(2)}s`,
-        dur: `${(4 + r1 * 6).toFixed(2)}s`,
+        dur: `${(4 + r1 * 6).toFixed(2)}s`
       });
     }
     return out;
@@ -839,7 +789,7 @@ function FloatingParticles({ color, count = 20 }) {
             boxShadow: `0 0 12px ${color}`,
             ['--dx']: p.dx,
             ['--dy']: p.dy,
-            animation: `co-particle ${p.dur} ease-out ${p.delay} infinite`,
+            animation: `co-particle ${p.dur} ease-out ${p.delay} infinite`
           }}
         />
       ))}
@@ -854,7 +804,7 @@ function PhaseProgressBar({ progress, colorFrom, colorTo }) {
   return (
     <div
       className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 w-[min(420px,80vw)]"
-      style={{ animation: 'co-fade-in 0.8s 0.4s both' }}
+
     >
       <div
         className="h-1.5 rounded-full overflow-hidden"
@@ -865,7 +815,7 @@ function PhaseProgressBar({ progress, colorFrom, colorTo }) {
           style={{
             width: `${Math.round(progress * 100)}%`,
             background: `linear-gradient(90deg, ${colorFrom}, ${colorTo})`,
-            boxShadow: `0 0 12px ${colorFrom}`,
+            boxShadow: `0 0 12px ${colorFrom}`
           }}
         />
       </div>
