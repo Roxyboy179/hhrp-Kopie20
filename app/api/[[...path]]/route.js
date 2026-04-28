@@ -961,6 +961,8 @@ async function handleAdminLogin(request) {
     const roleConfig = {
       'Projektinhaber': { level: 4, canCreateAccounts: true, canSeeAll: true },
       'Stl. Projektinhaber': { level: 3, canCreateAccounts: false, canSeeAll: true },
+      'Projektleitung': { level: 3, canCreateAccounts: false, canSeeAll: true },
+      'Stl. Projektleitung': { level: 3, canCreateAccounts: false, canSeeAll: true },
       'Teamkoordination': { level: 2, canCreateAccounts: false, canSeeAll: true },
       'Qualitätsmanagement': { level: 2, canCreateAccounts: false, canSeeAll: true },
       'Teamvertretung': { level: 1, canCreateAccounts: false, canSeeAll: false },
