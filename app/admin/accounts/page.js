@@ -33,6 +33,8 @@ function getRoleBadgeStyle(roleName) {
   const map = {
     'Projektinhaber':     { color: 'rgba(252,165,165,0.95)', bg: 'rgba(239,68,68,0.10)',  border: 'rgba(239,68,68,0.22)',  dot: 'rgb(252,165,165)' },
     'Stl. Projektinhaber':{ color: 'rgba(253,186,116,0.95)', bg: 'rgba(249,115,22,0.10)', border: 'rgba(249,115,22,0.22)', dot: 'rgb(253,186,116)' },
+    'Projektleitung':     { color: 'rgba(253,186,116,0.95)', bg: 'rgba(249,115,22,0.10)', border: 'rgba(249,115,22,0.22)', dot: 'rgb(253,186,116)' },
+    'Stl. Projektleitung':{ color: 'rgba(253,186,116,0.95)', bg: 'rgba(249,115,22,0.10)', border: 'rgba(249,115,22,0.22)', dot: 'rgb(253,186,116)' },
     'Teamkoordination':   { color: 'rgba(253,224,71,0.95)',  bg: 'rgba(234,179,8,0.10)',  border: 'rgba(234,179,8,0.22)',  dot: 'rgb(253,224,71)' },
     'Qualitätsmanagement':{ color: 'rgba(216,180,254,0.95)', bg: 'rgba(168,85,247,0.10)', border: 'rgba(168,85,247,0.22)', dot: 'rgb(216,180,254)' },
     'Teamvertretung':     { color: 'rgba(147,197,253,0.95)', bg: 'rgba(59,130,246,0.10)', border: 'rgba(59,130,246,0.22)', dot: 'rgb(147,197,253)' },
@@ -98,11 +100,13 @@ export default function AdminAccountsPage() {
       const roleOrder = {
         'Projektinhaber': 1,
         'Stl. Projektinhaber': 2,
-        'Teamkoordination': 3,
-        'Qualitätsmanagement': 4,
-        'Teamvertretung': 5,
-        'Teamleitung': 6,
-        'Stl. Teamleitung': 7,
+        'Projektleitung': 3,
+        'Stl. Projektleitung': 4,
+        'Teamkoordination': 5,
+        'Qualitätsmanagement': 6,
+        'Teamvertretung': 7,
+        'Teamleitung': 8,
+        'Stl. Teamleitung': 9,
       };
       const sorted = (data.accounts || []).sort((a, b) => {
         const orderA = roleOrder[a.roleName] || 99;
@@ -289,6 +293,8 @@ export default function AdminAccountsPage() {
           {[
             { name: 'Projektinhaber', desc: '(Lv.4) · Vollzugriff' },
             { name: 'Stl. Projektinhaber', desc: '(Lv.3) · Alles sehen' },
+            { name: 'Projektleitung', desc: '(Lv.3) · Alles sehen' },
+            { name: 'Stl. Projektleitung', desc: '(Lv.3) · Alles sehen' },
             { name: 'Teamkoordination', desc: '(Lv.2) · Alles sehen' },
             { name: 'Teamleitung', desc: '(Lv.1) · Eingeschränkt' },
           ].map(r => {
