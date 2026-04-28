@@ -13,6 +13,7 @@ import { CookieBanner } from '@/components/shared/CookieBanner';
 import { WartungsBanner } from '@/components/shared/WartungsBanner';
 import { BetaNotice } from '@/components/shared/BetaNotice';
 import { BetaTesterRecruitmentModal } from '@/components/BetaTesterRecruitmentModal';
+import CountdownOverlay from '@/components/CountdownOverlay';
 import { Toaster } from 'sonner';
 import Link from 'next/link';
 import { Loader2, Sparkles, Zap } from 'lucide-react';
@@ -276,6 +277,8 @@ export default function RootClientLayout({ children }) {
   return (
     <AuthProvider>
       <ThemeProvider>
+        {/* Globales Cooldown-Overlay (1.5. – 3.5.2026 + 20s Goodbye + 20s Hello V1) */}
+        <CountdownOverlay />
         {fxTopLoader && animationen && !datensparmodus && <TopProgressLoader pathname={pathname} />}
         {!splashDone && <SplashScreen onComplete={handleSplashComplete} />}
         
