@@ -94,13 +94,24 @@ export default function AdminBewerbungenPage() {
       }
     })();
 
-    // Stiller Auto-Refresh alle 5 Sekunden
+    // Stiller Auto-Refresh - Egress-optimiert: 30s + visibility-aware
     intervalRef.current = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       silentRefresh();
-    }, 5000);
+    }, 30000);
+
+    const onVis = () => {
+      if (document.visibilityState === 'visible') silentRefresh();
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVis);
+    }
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVis);
+      }
     };
   }, []);
 

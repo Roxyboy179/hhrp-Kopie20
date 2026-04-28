@@ -464,29 +464,99 @@ async function handleDiscordCallback(request) {
   }
 }
 
+// =====================================================================
+// EGRESS-OPTIMIERUNG: In-Memory Cache + Hash für ETag
+// =====================================================================
+// Pro User-ID: { etag, payload (User-Object), userDataEtag, userData, expiresAt }
+const __authMeCache = new Map();
+const AUTH_ME_CACHE_TTL_MS = 30_000;       // Discord-Rollen / Lizenzen pro User max alle 30s neu laden
+const AUTH_ME_CACHE_MAX = 5000;             // Hard cap für Memory
+// LRU-ähnliches Eviction
+function __authMeCacheSet(key, value) {
+  if (__authMeCache.size >= AUTH_ME_CACHE_MAX) {
+    const firstKey = __authMeCache.keys().next().value;
+    if (firstKey) __authMeCache.delete(firstKey);
+  }
+  __authMeCache.set(key, value);
+}
+
+// Pro User-ID: { etag, payload (komplettes user_data Row), expiresAt }
+const __userDataCache = new Map();
+const USER_DATA_CACHE_TTL_MS = 30_000;      // user_data Row max alle 30s neu laden
+const USER_DATA_CACHE_MAX = 5000;
+function __userDataCacheSet(key, value) {
+  if (__userDataCache.size >= USER_DATA_CACHE_MAX) {
+    const firstKey = __userDataCache.keys().next().value;
+    if (firstKey) __userDataCache.delete(firstKey);
+  }
+  __userDataCache.set(key, value);
+}
+
+// Stabiler Hash über JSON-Payload (für ETag)
+function __computeEtag(obj) {
+  try {
+    const json = typeof obj === 'string' ? obj : JSON.stringify(obj);
+    // Schneller, kollisionsarmer 53-bit Hash (cyrb53)
+    let h1 = 0xdeadbeef ^ 0, h2 = 0x41c6ce57 ^ 0;
+    for (let i = 0; i < json.length; i++) {
+      const ch = json.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761);
+      h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    const num = 4294967296 * (2097151 & h2) + (h1 >>> 0);
+    return 'W/"' + num.toString(36) + '"';
+  } catch {
+    return 'W/"' + Date.now().toString(36) + '"';
+  }
+}
+
 async function handleAuthMe(request) {
   const user = getUserFromRequest(request);
   if (!user) return NextResponse.json({ user: null });
-  
+
+  const inm = request.headers.get('if-none-match');
+  const cached = __authMeCache.get(user.id);
+  const nowMs = Date.now();
+
+  // Cache-Hit: noch nicht abgelaufen
+  if (cached && cached.expiresAt > nowMs) {
+    if (inm && inm === cached.etag) {
+      // 304 Not Modified -> 0 Bytes Body
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          'ETag': cached.etag,
+          'Cache-Control': 'private, no-cache',
+        },
+      });
+    }
+    return NextResponse.json({ user: cached.payload }, {
+      headers: {
+        'ETag': cached.etag,
+        'Cache-Control': 'private, no-cache',
+      },
+    });
+  }
+
   try {
     // LIVE Discord-Rollen prüfen
     const member = await getGuildMember(user.id);
-    
+
     if (!member) {
-      // User ist nicht mehr im Discord Server - Token löschen
       const response = NextResponse.json({ user: null });
       response.cookies.delete('auth_token');
+      __authMeCache.delete(user.id);
       return response;
     }
-    
-    // Rollen neu berechnen
+
     const adminRole = getAdminRole(member.roles || []);
     const teamRole = isTeamMember(member.roles || []);
-    
-    // Aktualisierte User-Daten
+
     const updatedUser = {
       ...user,
-      roles: member.roles || [], // Discord Rollen-IDs
+      roles: member.roles || [],
       adminLevel: adminRole?.level || 0,
       adminRole: adminRole?.name || null,
       canCreateAccounts: adminRole?.canCreateAccounts || false,
@@ -494,21 +564,19 @@ async function handleAuthMe(request) {
       isTeamMember: !!(adminRole || teamRole),
       teamRole: teamRole?.name || null,
     };
-    
-    // Lade Lizenzen aus Supabase (data ist ein JSON-Feld)
+
+    // Lizenzen aus Supabase – nur die `data` Spalte (kein SELECT *)
     try {
       const { data: userProfile } = await supabaseAdmin
         .from('user_data')
         .select('data')
         .eq('discord_user_id', user.id)
         .single();
-      
+
       if (userProfile?.data) {
-        // Parse JSON wenn es ein String ist, sonst direkt verwenden
-        const userData = typeof userProfile.data === 'string' 
-          ? JSON.parse(userProfile.data) 
+        const userData = typeof userProfile.data === 'string'
+          ? JSON.parse(userProfile.data)
           : userProfile.data;
-        
         updatedUser.licenses = userData?.licenses || [];
       } else {
         updatedUser.licenses = [];
@@ -517,22 +585,46 @@ async function handleAuthMe(request) {
       console.error('[AUTH ME] Error loading licenses:', licenseError);
       updatedUser.licenses = [];
     }
-    
-    // Token aktualisieren
+
+    const etag = __computeEtag(updatedUser);
+
+    // Cache aktualisieren
+    __authMeCacheSet(user.id, {
+      etag,
+      payload: updatedUser,
+      expiresAt: nowMs + AUTH_ME_CACHE_TTL_MS,
+    });
+
+    // 304 wenn Client gleichen ETag hat (auch nach Re-Compute)
+    if (inm && inm === etag) {
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          'ETag': etag,
+          'Cache-Control': 'private, no-cache',
+        },
+      });
+    }
+
+    // Token aktualisieren (kostet keinen Egress)
     const newToken = createToken(updatedUser);
-    const response = NextResponse.json({ user: updatedUser });
+    const response = NextResponse.json({ user: updatedUser }, {
+      headers: {
+        'ETag': etag,
+        'Cache-Control': 'private, no-cache',
+      },
+    });
     response.cookies.set('auth_token', newToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 7 * 24 * 60 * 60, // 7 Tage
+      maxAge: 7 * 24 * 60 * 60,
     });
-    
+
     return response;
   } catch (error) {
     console.error('[AUTH ME] Error checking Discord roles:', error);
-    // Bei Fehler: Altes Token-Daten zurückgeben
     return NextResponse.json({ user });
   }
 }
@@ -4435,6 +4527,34 @@ async function handleGetUserData(request) {
       return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
     }
 
+    const inm = request.headers.get('if-none-match');
+    const cached = __userDataCache.get(user.id);
+    const nowMs = Date.now();
+
+    // ------------------------------------------------
+    // 1) Memory-Cache hit (TTL nicht abgelaufen)
+    // ------------------------------------------------
+    if (cached && cached.expiresAt > nowMs) {
+      if (inm && inm === cached.etag) {
+        return new NextResponse(null, {
+          status: 304,
+          headers: {
+            'ETag': cached.etag,
+            'Cache-Control': 'private, no-cache',
+          },
+        });
+      }
+      return NextResponse.json(cached.payload, {
+        headers: {
+          'ETag': cached.etag,
+          'Cache-Control': 'private, no-cache',
+        },
+      });
+    }
+
+    // ------------------------------------------------
+    // 2) Cache-miss -> Daten frisch laden
+    // ------------------------------------------------
     const { data, error } = await supabaseAdmin
       .from('user_data')
       .select('*')
@@ -4447,8 +4567,6 @@ async function handleGetUserData(request) {
     }
 
     // Discord Role Checks:
-    // Server Booster Role: 1274419855227093147
-    // Nicht Verifiziert Role: 1273340696916394079
     const BOOSTER_ROLE_ID = '1274419855227093147';
     const NICHT_VERIFIZIERT_ROLE_ID = '1273340696916394079';
     let userData = data || null;
@@ -4457,18 +4575,14 @@ async function handleGetUserData(request) {
     try {
       const member = await getGuildMember(user.id);
       if (member && member.roles) {
-        // Nicht Verifiziert Check
         if (member.roles.includes(NICHT_VERIFIZIERT_ROLE_ID)) {
           nichtVerifiziert = true;
-          console.log(`[UserData] User ${user.id} ist NICHT VERIFIZIERT (hat Rolle ${NICHT_VERIFIZIERT_ROLE_ID})`);
         }
 
-        // Server Booster Check
         if (userData && userData.data) {
           const isBooster = member.roles.includes(BOOSTER_ROLE_ID);
           const licenses = userData.data.licenses || [];
-          
-          // Hilfsfunktion: Prüfe ob User eine Lizenz hat (unterstützt String UND Object Format)
+
           const hasLicense = (licenseId) => {
             return licenses.some(l => {
               if (!l) return false;
@@ -4477,11 +4591,10 @@ async function handleGetUserData(request) {
               return false;
             });
           };
-          
+
           const hasServerBooster = hasLicense('server_booster');
 
           if (isBooster && !hasServerBooster) {
-            // Füge server_booster als Objekt hinzu (konsistent mit neuem Format)
             userData = {
               ...userData,
               data: {
@@ -4496,9 +4609,7 @@ async function handleGetUserData(request) {
                 }]
               }
             };
-            console.log(`[UserData] Added server_booster for user ${user.id}`);
           } else if (!isBooster && hasServerBooster) {
-            // Entferne server_booster (funktioniert mit String UND Object)
             userData = {
               ...userData,
               data: {
@@ -4511,7 +4622,6 @@ async function handleGetUserData(request) {
                 })
               }
             };
-            console.log(`[UserData] Removed server_booster for user ${user.id}`);
           }
         } else if (!userData || !userData.data) {
           const isBooster = member.roles.includes(BOOSTER_ROLE_ID);
@@ -4527,7 +4637,31 @@ async function handleGetUserData(request) {
       console.error('[UserData] Error checking Discord roles:', roleCheckErr.message);
     }
 
-    return NextResponse.json({ data: userData, nichtVerifiziert });
+    const payload = { data: userData, nichtVerifiziert };
+    const etag = __computeEtag(payload);
+
+    __userDataCacheSet(user.id, {
+      etag,
+      payload,
+      expiresAt: nowMs + USER_DATA_CACHE_TTL_MS,
+    });
+
+    if (inm && inm === etag) {
+      return new NextResponse(null, {
+        status: 304,
+        headers: {
+          'ETag': etag,
+          'Cache-Control': 'private, no-cache',
+        },
+      });
+    }
+
+    return NextResponse.json(payload, {
+      headers: {
+        'ETag': etag,
+        'Cache-Control': 'private, no-cache',
+      },
+    });
   } catch (error) {
     console.error('Get user data exception:', error);
     return NextResponse.json({ error: 'Fehler' }, { status: 500 });

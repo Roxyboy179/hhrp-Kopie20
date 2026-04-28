@@ -66,12 +66,24 @@ export function NotificationBell() {
 
     // Sofort beim Mount laden (Hintergrund, User merkt nichts)
     fetchSilently();
-    // Alle 10s refreshen
-    const interval = setInterval(fetchSilently, 10000);
+    // Egress-optimiert: alle 60s statt 10s, pausiert wenn Tab im Hintergrund
+    let interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      fetchSilently();
+    }, 60000);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') fetchSilently();
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVis);
+    }
 
     return () => {
       cancelled = true;
       clearInterval(interval);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVis);
+      }
     };
   }, [user]);
 

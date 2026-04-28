@@ -60,8 +60,23 @@ export default function AdminLogsPage() {
 
   useEffect(() => {
     fetchLogs();
-    const interval = setInterval(fetchLogs, 10000); // Auto-refresh alle 10s
-    return () => clearInterval(interval);
+    // Egress-optimiert: 30s + visibility-aware
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      fetchLogs();
+    }, 30000);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') fetchLogs();
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVis);
+    }
+    return () => {
+      clearInterval(interval);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVis);
+      }
+    };
   }, [page, filters]);
 
   const fetchLogs = async () => {

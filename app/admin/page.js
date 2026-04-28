@@ -138,11 +138,25 @@ export default function AdminPage() {
     }
   }, [admin]);
 
-  // Stiller Auto-Refresh fuer Stats
+  // Stiller Auto-Refresh fuer Stats - Egress-optimiert: 30s + visibility-aware
   useEffect(() => {
     if (!admin) return;
-    const interval = setInterval(fetchStats, 10000);
-    return () => clearInterval(interval);
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      fetchStats();
+    }, 30000);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') fetchStats();
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVis);
+    }
+    return () => {
+      clearInterval(interval);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVis);
+      }
+    };
   }, [admin]);
 
   const handleLogin = async (e) => {

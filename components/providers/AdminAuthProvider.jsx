@@ -46,9 +46,23 @@ export function AdminAuthProvider({ children }) {
     };
     init();
 
-    // Auto-Check alle 15 Sekunden fuer Account-Status & Rollen-Updates
-    const interval = setInterval(refreshAdmin, 15000);
-    return () => clearInterval(interval);
+    // Egress-optimiert: alle 60s statt 15s, visibility-aware
+    let interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      refreshAdmin();
+    }, 60000);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') refreshAdmin();
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVis);
+    }
+    return () => {
+      clearInterval(interval);
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVis);
+      }
+    };
   }, [refreshAdmin]);
 
   return (
