@@ -28,6 +28,8 @@ function getRoleBadgeStyle(roleName) {
   const map = {
     'Projektinhaber':     { color: 'rgba(252,165,165,0.95)', bg: 'rgba(239,68,68,0.10)',  border: 'rgba(239,68,68,0.22)' },
     'Stl. Projektinhaber':{ color: 'rgba(253,186,116,0.95)', bg: 'rgba(249,115,22,0.10)', border: 'rgba(249,115,22,0.22)' },
+    'Projektleitung'     :{ color: 'rgba(253,186,116,0.95)', bg: 'rgba(249,115,22,0.10)', border: 'rgba(249,115,22,0.22)' },
+    'Stl. Projektleitung':{ color: 'rgba(253,186,116,0.95)', bg: 'rgba(249,115,22,0.10)', border: 'rgba(249,115,22,0.22)' },
     'Teamkoordination':   { color: 'rgba(253,224,71,0.95)',  bg: 'rgba(234,179,8,0.10)',  border: 'rgba(234,179,8,0.22)' },
     'Qualitätsmanagement':{ color: 'rgba(216,180,254,0.95)', bg: 'rgba(168,85,247,0.10)', border: 'rgba(168,85,247,0.22)' },
     'Teamvertretung':     { color: 'rgba(147,197,253,0.95)', bg: 'rgba(59,130,246,0.10)', border: 'rgba(59,130,246,0.22)' },

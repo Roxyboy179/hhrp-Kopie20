@@ -54,6 +54,8 @@ const REDIRECT_URI = `${BASE_URL}/api/auth/callback`;
 const ADMIN_ROLES = {
   '1273340696975380572': { name: 'Projektinhaber', level: 4, canCreateAccounts: true, canSeeAll: true },
   '1273340696975380571': { name: 'Stl. Projektinhaber', level: 3, canCreateAccounts: false, canSeeAll: true },
+  '1496129435211006002': { name: 'Projektleitung', level: 3, canCreateAccounts: false, canSeeAll: true },
+  '1490085711448375328': { name: 'Stl. Projektleitung', level: 3, canCreateAccounts: false, canSeeAll: true },
   '1374422438288560209': { name: 'Teamkoordination', level: 2, canCreateAccounts: false, canSeeAll: true },
   '1374422340858810459': { name: 'Qualitätsmanagement', level: 2, canCreateAccounts: false, canSeeAll: true },
   '1374421910301184140': { name: 'Teamvertretung', level: 1, canCreateAccounts: false, canSeeAll: false },
