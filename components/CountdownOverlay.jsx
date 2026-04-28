@@ -83,10 +83,10 @@ export default function CountdownOverlay() {
   const [phaseStart, setPhaseStart] = useState(null); // timestamp wann die aktuelle Phase begann
   const [musicEnabled, setMusicEnabled] = useState(false);
   const [muted, setMuted] = useState(false);
-  const [needsAudioGesture, setNeedsAudioGesture] = useState(false);
   const [mounted, setMounted] = useState(false);
   const audioRef = useRef(null);
   const previewRef = useRef(null); // 'preview-cooldown' | 'preview-goodbye' | 'preview-welcome' | 'skip' | null
+  const interactionCleanupRef = useRef(null);
 
   // -----------------------------------------------------------------------
   // Initialisierung (Phase ermitteln)
@@ -193,32 +193,102 @@ export default function CountdownOverlay() {
   }, [phase, mounted]);
 
   // -----------------------------------------------------------------------
-  // Musiksteuerung – startet nur in der Cooldown-Phase
+  // Musiksteuerung – startet automatisch in der Cooldown-Phase
   // -----------------------------------------------------------------------
-  const tryStartMusic = useCallback(() => {
+  const tryStartMusic = useCallback((opts = {}) => {
     const audio = audioRef.current;
     if (!audio) return;
     audio.loop = true;
     audio.volume = 0.45;
+    // Wenn bereits abspielt, nichts tun
+    if (!audio.paused && !audio.ended) {
+      setMusicEnabled(true);
+      return;
+    }
+    // Optional: Stummgeschaltet starten (umgeht die meisten Autoplay-Sperren),
+    // danach automatisch entstummen.
+    const allowMutedFallback = opts.allowMutedFallback !== false;
+    audio.muted = false;
     const playPromise = audio.play();
     if (playPromise && typeof playPromise.then === 'function') {
       playPromise
         .then(() => {
           setMusicEnabled(true);
-          setNeedsAudioGesture(false);
+          setMuted(false);
+          // Falls schon Listener registriert sind, abräumen
+          if (interactionCleanupRef.current) {
+            interactionCleanupRef.current();
+            interactionCleanupRef.current = null;
+          }
         })
         .catch(() => {
-          // Autoplay blockiert – Nutzer muss klicken
-          setMusicEnabled(false);
-          setNeedsAudioGesture(true);
+          // Erster Versuch (mit Ton) blockiert -> stumm versuchen, dann beim ersten Input entstummen
+          if (allowMutedFallback) {
+            try {
+              audio.muted = true;
+              const p2 = audio.play();
+              if (p2 && typeof p2.then === 'function') {
+                p2.then(() => {
+                  setMusicEnabled(true);
+                  setMuted(true);
+                }).catch(() => {
+                  setMusicEnabled(false);
+                });
+              }
+            } catch {
+              setMusicEnabled(false);
+            }
+          } else {
+            setMusicEnabled(false);
+          }
         });
     }
   }, []);
 
+  // Global silent interaction listeners – erste Berührung/Klick/Tippen aktiviert Audio.
+  // Kein sichtbarer Hinweis, kein extra Knopf nötig.
+  const attachSilentInteractionListeners = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    if (interactionCleanupRef.current) return; // bereits aktiv
+
+    const handler = () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      // Sicherstellen, dass der Sound an ist
+      audio.muted = false;
+      const p = audio.play();
+      if (p && typeof p.then === 'function') {
+        p.then(() => {
+          setMusicEnabled(true);
+          setMuted(false);
+        }).catch(() => { /* ignorieren – nächster Input versucht es erneut */ });
+      } else {
+        setMusicEnabled(true);
+        setMuted(false);
+      }
+      // Listener entfernen, wenn erfolgreich oder nach erstem Versuch
+      cleanup();
+    };
+
+    const events = ['pointerdown', 'touchstart', 'click', 'keydown', 'scroll', 'mousemove'];
+    const opts = { capture: true, passive: true };
+    events.forEach((ev) => window.addEventListener(ev, handler, opts));
+
+    const cleanup = () => {
+      events.forEach((ev) => window.removeEventListener(ev, handler, opts));
+      interactionCleanupRef.current = null;
+    };
+    interactionCleanupRef.current = cleanup;
+  }, []);
+
   useEffect(() => {
     if (phase === 'cooldown') {
-      // Versuch Auto-Play
-      const t = setTimeout(() => tryStartMusic(), 200);
+      // 1) Sofort versuchen abzuspielen (mit Mute-Fallback)
+      const t = setTimeout(() => {
+        tryStartMusic({ allowMutedFallback: true });
+        // 2) Falls noch nicht entstummt: bei erster Interaktion automatisch aktivieren
+        attachSilentInteractionListeners();
+      }, 150);
       return () => clearTimeout(t);
     }
     // In anderen Phasen Musik stoppen
@@ -228,22 +298,29 @@ export default function CountdownOverlay() {
         audioRef.current.currentTime = 0;
       } catch {}
       setMusicEnabled(false);
+      if (interactionCleanupRef.current) {
+        interactionCleanupRef.current();
+        interactionCleanupRef.current = null;
+      }
     }
-  }, [phase, tryStartMusic]);
+  }, [phase, tryStartMusic, attachSilentInteractionListeners]);
 
-  // Wenn Browser Auto-Play blockiert, beim ersten Klick auf das Overlay starten
-  const handleOverlayClick = useCallback(() => {
-    if (phase === 'cooldown' && needsAudioGesture && !musicEnabled) {
-      tryStartMusic();
-    }
-  }, [phase, needsAudioGesture, musicEnabled, tryStartMusic]);
+  // Aufräumen beim Unmount
+  useEffect(() => {
+    return () => {
+      if (interactionCleanupRef.current) {
+        interactionCleanupRef.current();
+        interactionCleanupRef.current = null;
+      }
+    };
+  }, []);
 
   const toggleMute = useCallback((e) => {
     e?.stopPropagation?.();
     const a = audioRef.current;
     if (!a) return;
     if (!musicEnabled) {
-      tryStartMusic();
+      tryStartMusic({ allowMutedFallback: false });
       return;
     }
     a.muted = !a.muted;
@@ -275,43 +352,80 @@ export default function CountdownOverlay() {
   }, [phase, phaseStart, now]);
 
   // -----------------------------------------------------------------------
+  // Sanfte Phasenübergänge (Crossfade) und Overlay-Ein-/Ausblendung
+  // -----------------------------------------------------------------------
+  const [renderPhase, setRenderPhase] = useState(null);
+  const [isExiting, setIsExiting] = useState(false);
+
+  useEffect(() => {
+    if (phase === renderPhase) return;
+
+    if (phase === null) {
+      // Komplettes Overlay sanft ausblenden
+      setIsExiting(true);
+      const t = setTimeout(() => {
+        setRenderPhase(null);
+        setIsExiting(false);
+      }, 600);
+      return () => clearTimeout(t);
+    }
+
+    if (renderPhase === null) {
+      // Erstes Einblenden
+      setRenderPhase(phase);
+      setIsExiting(false);
+      return;
+    }
+
+    // Phasenwechsel -> Crossfade
+    setIsExiting(true);
+    const t = setTimeout(() => {
+      setRenderPhase(phase);
+      setIsExiting(false);
+    }, 380);
+    return () => clearTimeout(t);
+  }, [phase, renderPhase]);
+
+  // -----------------------------------------------------------------------
   // Render
   // -----------------------------------------------------------------------
-  if (!mounted || !phase) return null;
+  if (!mounted || !renderPhase) return null;
 
   return (
     <div
-      onClick={handleOverlayClick}
-      className="fixed inset-0 z-[99999] select-none"
+      className={`fixed inset-0 z-[99999] select-none co-overlay ${isExiting ? 'co-overlay-exit' : 'co-overlay-enter'}`}
       style={{
         background:
-          phase === 'welcome'
+          renderPhase === 'welcome'
             ? 'radial-gradient(ellipse at center, #0a1628 0%, #050505 70%)'
-            : '#050505'
+            : '#050505',
+        WebkitOverflowScrolling: 'touch'
       }}
       aria-modal="true"
       role="dialog"
     >
       {/* Persistentes <audio>-Element */}
-      <audio ref={audioRef} src={AUDIO_SRC} preload="auto" loop />
+      <audio ref={audioRef} src={AUDIO_SRC} preload="auto" loop playsInline />
 
       {/* Animierte Hintergrund-Effekte */}
-      <BackgroundFx phase={phase} />
+      <BackgroundFx phase={renderPhase} />
 
-      {/* Inhalt nach Phase */}
-      {phase === 'cooldown' && (
-        <CooldownContent
-          remaining={remaining}
-          musicEnabled={musicEnabled}
-          muted={muted}
-          needsAudioGesture={needsAudioGesture}
-          onToggleMute={toggleMute}
-        />
-      )}
-      {phase === 'goodbye' && <GoodbyeContent progress={goodbyeProgress} />}
-      {phase === 'welcome' && <WelcomeContent progress={welcomeProgress} />}
-
-      {/* Keyframes liegen in globals.css */}
+      {/* Inhalt nach Phase – mit key remountet bei Phasenwechsel für Crossfade */}
+      <div
+        key={renderPhase + (isExiting ? '-out' : '-in')}
+        className={`relative h-full w-full ${isExiting ? 'co-content-exit' : 'co-content-enter'}`}
+      >
+        {renderPhase === 'cooldown' && (
+          <CooldownContent
+            remaining={remaining}
+            musicEnabled={musicEnabled}
+            muted={muted}
+            onToggleMute={toggleMute}
+          />
+        )}
+        {renderPhase === 'goodbye' && <GoodbyeContent progress={goodbyeProgress} />}
+        {renderPhase === 'welcome' && <WelcomeContent progress={welcomeProgress} />}
+      </div>
     </div>
   );
 }
@@ -374,7 +488,7 @@ function BackgroundFx({ phase }) {
 // ---------------------------------------------------------------------------
 // Cooldown-Phase
 // ---------------------------------------------------------------------------
-function CooldownContent({ remaining, musicEnabled, muted, needsAudioGesture, onToggleMute }) {
+function CooldownContent({ remaining, musicEnabled, muted, onToggleMute }) {
   return (
     <div className="relative h-full w-full overflow-y-auto overflow-x-hidden">
       <div className="min-h-full flex flex-col items-center justify-center px-4 sm:px-6 py-10 sm:py-14">
@@ -556,38 +670,25 @@ function CooldownContent({ remaining, musicEnabled, muted, needsAudioGesture, on
           </p>
         </div>
 
-        {/* Audio-Steuerung / Hinweis */}
-        <div className="mt-8" >
-          {needsAudioGesture && !musicEnabled ? (
-            <button
-              onClick={onToggleMute}
-              className="inline-flex items-center gap-2 px-5 py-3 rounded-full border text-sm font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
-              style={{
-                background: 'rgba(255,255,255,0.06)',
-                borderColor: 'rgba(255,255,255,0.18)',
-                color: 'rgba(255,255,255,0.95)',
-                backdropFilter: 'blur(16px)'
-              }}
-            >
-              <Volume2 className="w-4 h-4" />
-              Klicke, um die Musik zu starten
-            </button>
-          ) : (
-            <button
-              onClick={onToggleMute}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-medium transition-all hover:scale-[1.02] active:scale-[0.98]"
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                borderColor: 'rgba(255,255,255,0.12)',
-                color: 'rgba(255,255,255,0.75)',
-                backdropFilter: 'blur(16px)'
-              }}
-              title={muted ? 'Musik einschalten' : 'Musik stummschalten'}
-            >
-              {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-              <span className="tabular-nums">M83 – Outro · {muted ? 'stumm' : 'läuft'}</span>
-            </button>
-          )}
+        {/* Audio-Steuerung – kleiner Mute-Toggle, kein extra Klick zum Starten nötig */}
+        <div className="mt-8">
+          <button
+            onClick={onToggleMute}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-medium transition-all hover:scale-[1.02] active:scale-[0.98] touch-manipulation"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              borderColor: 'rgba(255,255,255,0.12)',
+              color: 'rgba(255,255,255,0.75)',
+              backdropFilter: 'blur(16px)'
+            }}
+            title={muted ? 'Musik einschalten' : 'Musik stummschalten'}
+            aria-label={muted ? 'Musik einschalten' : 'Musik stummschalten'}
+          >
+            {muted || !musicEnabled ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+            <span className="tabular-nums">
+              M83 – Outro · {muted ? 'stumm' : (musicEnabled ? 'läuft' : 'startet…')}
+            </span>
+          </button>
         </div>
       </div>
     </div>
