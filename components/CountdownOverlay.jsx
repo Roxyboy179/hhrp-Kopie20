@@ -31,7 +31,7 @@ import { Volume2, VolumeX, Sparkles, Heart, Rocket, Music2 } from 'lucide-react'
 // CEST = UTC+2 im Mai. 01.05.2026 00:00 CEST  =>  30.04.2026 22:00 UTC
 const COOLDOWN_START_UTC = Date.UTC(2026, 3, 30, 22, 0, 0); // April = Monat 3 (0-indexed)
 // 04.05.2026 00:00 CEST  =>  03.05.2026 22:00 UTC
-const COOLDOWN_END_UTC   = Date.UTC(2026, 4, 3, 22, 0, 0);  // Mai = Monat 4 (0-indexed)
+const COOLDOWN_END_UTC   = Date.UTC(2026, 4, 3, 20, 0, 0);  // Mai = Monat 4 (0-indexed)
 
 const GOODBYE_DURATION_MS = 20_000;
 const WELCOME_DURATION_MS = 20_000;
