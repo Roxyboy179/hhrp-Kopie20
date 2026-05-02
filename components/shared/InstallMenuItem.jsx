@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { Download } from 'lucide-react';
-import { InstallModal } from './InstallModal';
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu';
 
-export function InstallMenuItem() {
+export function InstallMenuItem({ onShowModal }) {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     // Bereits installiert?
@@ -39,7 +37,8 @@ export function InstallMenuItem() {
       }
       setDeferredPrompt(null);
     } else {
-      setShowModal(true);
+      // Modal über die Navbar-Ebene öffnen (wie das normale Popup)
+      onShowModal?.();
     }
   };
 
@@ -47,19 +46,14 @@ export function InstallMenuItem() {
   if (isInstalled) return null;
 
   return (
-    <>
-      <DropdownMenuItem
-        onSelect={(e) => {
-          e.preventDefault();
-          handleInstall();
-        }}
-        className="cursor-pointer flex items-center gap-2 text-white/70 hover:text-white hover:bg-white/[0.06] focus:bg-white/[0.06] focus:text-white"
-      >
-        <Download className="w-4 h-4" />
-        <span>App installieren</span>
-      </DropdownMenuItem>
-
-      {showModal && <InstallModal onClose={() => setShowModal(false)} />}
-    </>
+    <DropdownMenuItem
+      onSelect={() => {
+        handleInstall();
+      }}
+      className="cursor-pointer flex items-center gap-2 text-white/70 hover:text-white hover:bg-white/[0.06] focus:bg-white/[0.06] focus:text-white"
+    >
+      <Download className="w-4 h-4" />
+      <span>App installieren</span>
+    </DropdownMenuItem>
   );
 }

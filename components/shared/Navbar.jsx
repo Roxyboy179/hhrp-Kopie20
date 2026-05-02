@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ThemeMenuItem } from '@/components/shared/ThemeMenuItem';
 import { InstallMenuItem } from '@/components/shared/InstallMenuItem';
+import { ThemeModal } from '@/components/shared/ThemeModal';
+import { InstallModal } from '@/components/shared/InstallModal';
 
 const DiscordIcon = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 127.14 96.36" fill="currentColor">
@@ -31,6 +33,8 @@ export function Navbar({ user, loading }) {
   const [scrolled, setScrolled] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [themeModalOpen, setThemeModalOpen] = useState(false);
+  const [installModalOpen, setInstallModalOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { refreshUser } = useAuth();
@@ -215,8 +219,8 @@ export function Navbar({ user, loading }) {
                       <span>Voice Support</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-white/[0.06] my-1" />
-                    <ThemeMenuItem />
-                    <InstallMenuItem />
+                    <ThemeMenuItem onOpen={() => setThemeModalOpen(true)} />
+                    <InstallMenuItem onShowModal={() => setInstallModalOpen(true)} />
                     <DropdownMenuSeparator className="bg-white/[0.06] my-1" />
                     <DropdownMenuItem 
                       onClick={handleLogout}
@@ -288,6 +292,12 @@ export function Navbar({ user, loading }) {
       )}
       
       <LoginModal open={loginModalOpen} onOpenChange={setLoginModalOpen} />
+
+      {/* Theme Popup - Wird auf Navbar-Ebene gerendert (nicht im Dropdown verschachtelt) */}
+      <ThemeModal open={themeModalOpen} onClose={() => setThemeModalOpen(false)} />
+
+      {/* PWA Install Popup - Wird auf Navbar-Ebene gerendert (nicht im Dropdown verschachtelt) */}
+      {installModalOpen && <InstallModal onClose={() => setInstallModalOpen(false)} />}
     </nav>
   );
 }

@@ -116,7 +116,7 @@ return NextResponse.json({ accounts: accounts.map(toCamelCase) });
 
 Nach dem SQL-Update teste folgendes:
 
-- [ ] **Admin Login** auf https://auto-sync-profile.preview.emergentagent.com/admin
+- [ ] **Admin Login** auf https://nav-modal-redesign.preview.emergentagent.com/admin
   - Mit `roxyboy2474` einloggen → sollte funktionieren
   - Mit `Roxyboy2474` einloggen → sollte auch funktionieren
   - Mit `roxyboy2474@icloud.com` einloggen → sollte auch funktionieren
