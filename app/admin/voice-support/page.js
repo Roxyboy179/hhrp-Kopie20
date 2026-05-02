@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { getSupabaseBrowser } from '@/lib/supabase-browser';
 import { useVoiceCall } from '@/hooks/useVoiceCall';
+import { useVoiceTranscription } from '@/hooks/useVoiceTranscription';
 
 const HEARTBEAT_MS = 10_000;
 
@@ -19,6 +20,11 @@ export default function AdminVoiceSupportPage() {
   const [notesDraft, setNotesDraft] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
   const [micMuted, setMicMuted] = useState(false);
+
+  // Transkript-Messages
+  const [messages, setMessages] = useState([]);
+  const messagesRef = useRef([]);
+  const txChannelRef = useRef(null);
 
   const heartbeatRef = useRef(null);
 
@@ -194,6 +200,78 @@ export default function AdminVoiceSupportPage() {
     selfId: admin?.discordUserId ? String(admin.discordUserId) : null,
     micMuted,
   });
+
+  // ─── Voice Transcription ───
+  const transcriptionEnabled = Boolean(
+    myActiveSession && admin?.discordUserId && !micMuted && connectionState === 'connected'
+  );
+
+  const handleFinalTranscript = useCallback(({ text, timestamp }) => {
+    if (!myActiveSession?.id || !admin?.discordUserId) return;
+    const msg = {
+      id: `${admin.discordUserId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      role: 'supporter',
+      speakerId: String(admin.discordUserId),
+      speakerName: admin.discordDisplayName || admin.discordUsername || 'Supporter',
+      speakerAvatar: admin.discordAvatar || null,
+      text,
+      timestamp,
+    };
+    messagesRef.current = [...messagesRef.current, msg];
+    setMessages(messagesRef.current);
+    if (txChannelRef.current) {
+      try {
+        txChannelRef.current.send({
+          type: 'broadcast',
+          event: 'transcript',
+          payload: msg,
+        });
+      } catch (e) {
+        console.warn('[transcript] broadcast failed', e);
+      }
+    }
+  }, [myActiveSession?.id, admin]);
+
+  useVoiceTranscription({
+    enabled: transcriptionEnabled,
+    onFinal: handleFinalTranscript,
+  });
+
+  // Channel für Transkript-Broadcast (empfängt Messages vom User)
+  useEffect(() => {
+    if (!myActiveSession?.id || !admin?.discordUserId) {
+      txChannelRef.current = null;
+      return;
+    }
+    const client = getSupabaseBrowser();
+    if (!client) return;
+
+    const channel = client.channel(`vs_tx_${myActiveSession.id}`, {
+      config: { broadcast: { self: false } },
+    });
+
+    channel.on('broadcast', { event: 'transcript' }, ({ payload }) => {
+      if (!payload || payload.speakerId === String(admin.discordUserId)) return;
+      messagesRef.current = [...messagesRef.current, payload];
+      setMessages(messagesRef.current);
+    });
+
+    channel.subscribe();
+    txChannelRef.current = channel;
+
+    return () => {
+      try { client.removeChannel(channel); } catch {}
+      txChannelRef.current = null;
+    };
+  }, [myActiveSession?.id, admin?.discordUserId]);
+
+  // Messages reset wenn keine aktive Session
+  useEffect(() => {
+    if (!myActiveSession) {
+      messagesRef.current = [];
+      setMessages([]);
+    }
+  }, [myActiveSession?.id, myActiveSession]);
 
   useEffect(() => {
     if (micError) toast.error(micError);

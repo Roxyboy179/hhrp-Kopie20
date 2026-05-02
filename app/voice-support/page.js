@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { getSupabaseBrowser } from '@/lib/supabase-browser';
 import { useVoiceCall } from '@/hooks/useVoiceCall';
+import { useVoiceTranscription } from '@/hooks/useVoiceTranscription';
 
 const HEARTBEAT_MS = 10_000;
 const MAX_REASON_LEN = 500;
@@ -33,6 +34,11 @@ export default function VoiceSupportPage() {
   const audioRef = useRef(null);
   const heartbeatTimerRef = useRef(null);
 
+  // Transkript-Messages (lokal + vom Peer empfangen)
+  const [messages, setMessages] = useState([]);
+  const messagesRef = useRef([]);
+  const txChannelRef = useRef(null);
+
   // ─── WebRTC Voice Call (Callee = User) ───
   const isActive = session?.status === 'active';
   const { connectionState, micError, remoteAudioRef } = useVoiceCall({
@@ -42,6 +48,81 @@ export default function VoiceSupportPage() {
     selfId: user?.id ? String(user.id) : null,
     micMuted,
   });
+
+  // ─── Voice Transcription ───
+  // Nur starten, wenn Gespräch aktiv UND Mic nicht muted UND WebRTC connected
+  const transcriptionEnabled = Boolean(
+    isActive && user?.id && !micMuted && connectionState === 'connected'
+  );
+
+  const handleFinalTranscript = useCallback(({ text, timestamp }) => {
+    if (!session?.id || !user?.id) return;
+    const msg = {
+      id: `${user.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      role: 'user',
+      speakerId: String(user.id),
+      speakerName: user.username || user.global_name || 'User',
+      speakerAvatar: user.avatar_url || null,
+      text,
+      timestamp,
+    };
+    // Lokal speichern
+    messagesRef.current = [...messagesRef.current, msg];
+    setMessages(messagesRef.current);
+    // An Peer broadcasten
+    if (txChannelRef.current) {
+      try {
+        txChannelRef.current.send({
+          type: 'broadcast',
+          event: 'transcript',
+          payload: msg,
+        });
+      } catch (e) {
+        console.warn('[transcript] broadcast failed', e);
+      }
+    }
+  }, [session?.id, user]);
+
+  useVoiceTranscription({
+    enabled: transcriptionEnabled,
+    onFinal: handleFinalTranscript,
+  });
+
+  // ─── Transkript-Channel (empfängt Messages vom Supporter) ───
+  useEffect(() => {
+    if (!isActive || !session?.id || !user?.id) {
+      txChannelRef.current = null;
+      return;
+    }
+    const client = getSupabaseBrowser();
+    if (!client) return;
+
+    const channel = client.channel(`vs_tx_${session.id}`, {
+      config: { broadcast: { self: false } },
+    });
+
+    channel.on('broadcast', { event: 'transcript' }, ({ payload }) => {
+      if (!payload || payload.speakerId === String(user.id)) return;
+      messagesRef.current = [...messagesRef.current, payload];
+      setMessages(messagesRef.current);
+    });
+
+    channel.subscribe();
+    txChannelRef.current = channel;
+
+    return () => {
+      try { client.removeChannel(channel); } catch {}
+      txChannelRef.current = null;
+    };
+  }, [isActive, session?.id, user?.id]);
+
+  // Messages-Reset wenn Session wechselt
+  useEffect(() => {
+    if (!session) {
+      messagesRef.current = [];
+      setMessages([]);
+    }
+  }, [session?.id, session]);
 
   useEffect(() => {
     if (micError) toast.error(micError);
@@ -165,7 +246,10 @@ export default function VoiceSupportPage() {
     if (!session) return;
     const handleUnload = () => {
       try {
-        const blob = new Blob([JSON.stringify({ sessionId: session.id })], { type: 'application/json' });
+        const blob = new Blob(
+          [JSON.stringify({ sessionId: session.id, transcript: messagesRef.current || [] })],
+          { type: 'application/json' }
+        );
         navigator.sendBeacon('/api/voice-support/end', blob);
       } catch {}
     };
@@ -201,7 +285,10 @@ export default function VoiceSupportPage() {
       await fetch('/api/voice-support/end', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: session.id }),
+        body: JSON.stringify({
+          sessionId: session.id,
+          transcript: messagesRef.current || [],
+        }),
       });
       setSession(null);
       toast.success('Voice Support beendet');
@@ -238,7 +325,7 @@ export default function VoiceSupportPage() {
         <div className="absolute top-[40%] left-[40%] w-[30%] h-[30%] rounded-full bg-purple-500/[0.05] blur-[100px] animate-pulse-slow" style={{ animationDelay: '4s' }} />
       </div>
 
-      <div className="relative z-10 min-h-screen bg-[#05060a] text-white pt-16 sm:pt-20 pb-16 px-3 sm:px-6">
+      <div className="relative z-10 min-h-screen text-white pt-16 sm:pt-20 pb-16 px-3 sm:px-6">
         <div className="max-w-3xl mx-auto">
           {/* Page Header */}
           <div className="mb-6 sm:mb-8 text-center">
@@ -337,7 +424,7 @@ export default function VoiceSupportPage() {
 
 function LoadingScreen() {
   return (
-    <div className="min-h-screen bg-[#05060a] flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center">
       <div className="flex flex-col items-center gap-3">
         <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
         <p className="text-xs text-white/30 uppercase tracking-widest">Laden…</p>
@@ -348,7 +435,7 @@ function LoadingScreen() {
 
 function LoginRequiredScreen({ onLogin }) {
   return (
-    <div className="min-h-screen bg-[#05060a] flex items-center justify-center px-4 pt-20 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center px-4 pt-20 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
