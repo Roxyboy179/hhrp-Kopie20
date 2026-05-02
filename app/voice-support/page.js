@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { getSupabaseBrowser } from '@/lib/supabase-browser';
-import Navbar from '@/components/shared/Navbar';
 
 const HEARTBEAT_MS = 10_000; // 10s
 
@@ -212,9 +211,7 @@ export default function VoiceSupportPage() {
   // Nicht eingeloggt → Login-Required Card
   if (!user) {
     return (
-      <>
-        <Navbar />
-        <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center px-4 pt-20">
+      <div className="min-h-screen bg-[#0a0a0b] flex items-center justify-center px-4 pt-20">
           <div className="relative max-w-lg w-full overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-br from-zinc-900/50 to-zinc-950/80 backdrop-blur-xl p-10 text-center shadow-2xl">
             <div className="absolute -top-32 -right-32 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -244,13 +241,11 @@ export default function VoiceSupportPage() {
             </div>
           </div>
         </div>
-      </>
     );
   }
 
   return (
     <>
-      <Navbar />
       {/* Audio-Element (immer im DOM, kontrolliert per useEffect) */}
       <audio ref={audioRef} src="/support-voice.mp3" preload="auto" loop />
 
