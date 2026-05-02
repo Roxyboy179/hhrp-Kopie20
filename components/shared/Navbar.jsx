@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Shield, LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2, Bell, Users, ChevronDown, FlaskConical
+  Shield, LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2, Bell, Users, ChevronDown, FlaskConical, Headphones
 } from 'lucide-react';
 import { NotificationBell } from '@/components/shared/NotificationBell';
 import { LoginModal } from '@/components/LoginModal';
@@ -206,6 +206,13 @@ export function Navbar({ user, loading }) {
                     >
                       <User className="w-4 h-4" />
                       <span>Profil</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => router.push('/voice-support')}
+                      className="cursor-pointer flex items-center gap-2 text-white/70 hover:text-white hover:bg-white/[0.06] focus:bg-white/[0.06] focus:text-white"
+                    >
+                      <Headphones className="w-4 h-4" />
+                      <span>Voice Support</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-white/[0.06] my-1" />
                     <ThemeMenuItem />
