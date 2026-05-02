@@ -84,10 +84,14 @@ function BotStatusCard({ status, onRetry }) {
           </div>
           
           <div className="space-y-3">
-            <h3 className="text-2xl font-bold text-white">Oops! Kurze Kaffeepause... ☕</h3>
+            <h3 className="text-2xl font-bold text-white">Verbindung fehlgeschlagen</h3>
             <p className="text-white/70 max-w-lg">
-              Unser Discord-Bot macht gerade eine kleine Pause. Keine Sorge, wir versuchen es automatisch weiter!
+              We could not connect to the HHRP server.
             </p>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+              <code className="text-xs font-mono text-red-300 tracking-wider">CODE: HHRP Server 404</code>
+            </div>
             {status.error && (
               <div className="glass rounded-lg p-4 border border-white/10 bg-white/5">
                 <p className="text-sm text-white/50">{status.error}</p>
@@ -1373,7 +1377,7 @@ export default function ProfilPage() {
         setBotStatus({ 
           isOnline: false, 
           checking: false, 
-          error: 'Der Discord Bot ist derzeit offline. Deine Profildaten können nicht geladen werden.' 
+          error: null
         });
         setLoading(false);
         return;
