@@ -6,7 +6,7 @@ import {
   Headphones, Mic, MicOff, PhoneOff, Loader2,
   Volume2, VolumeX, AlertCircle, Lock, Clock,
   Sparkles, Radio, MessageSquare, ShieldCheck, PhoneCall,
-  ShieldAlert,
+  ShieldAlert, MoonStar, CalendarClock,
 } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,40 @@ import { useVoiceTranscription } from '@/hooks/useVoiceTranscription';
 
 const HEARTBEAT_MS = 10_000;
 const MAX_REASON_LEN = 500;
+
+// ─── Support-Öffnungszeiten (Europe/Berlin) ───
+// Mo–So 12:00–22:00 Uhr
+function getBerlinNow() {
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Europe/Berlin',
+      hour: 'numeric',
+      minute: 'numeric',
+      hour12: false,
+    }).formatToParts(new Date());
+    const hour = parseInt(parts.find((p) => p.type === 'hour')?.value ?? '0', 10);
+    const minute = parseInt(parts.find((p) => p.type === 'minute')?.value ?? '0', 10);
+    return { hour, minute };
+  } catch {
+    const d = new Date();
+    return { hour: d.getHours(), minute: d.getMinutes() };
+  }
+}
+
+function isSupportOpen() {
+  const { hour } = getBerlinNow();
+  return hour >= 12 && hour < 22;
+}
+
+function minutesUntilOpen() {
+  const { hour, minute } = getBerlinNow();
+  // Falls schon geöffnet → 0
+  if (hour >= 12 && hour < 22) return 0;
+  // Vor 12:00 Uhr → heute um 12
+  if (hour < 12) return (12 - hour) * 60 - minute;
+  // Nach 22:00 Uhr → morgen um 12
+  return ((24 - hour) + 12) * 60 - minute;
+}
 
 export default function VoiceSupportPage() {
   const router = useRouter();
@@ -31,8 +65,24 @@ export default function VoiceSupportPage() {
   const [micMuted, setMicMuted] = useState(false);
   const [elapsed, setElapsed] = useState(0);
 
+  // Support-Öffnungszeiten – initial false (SSR-safe), wird im Effect gesetzt
+  const [supportOpen, setSupportOpen] = useState(true);
+  const [minsUntilOpen, setMinsUntilOpen] = useState(0);
+
   const audioRef = useRef(null);
+  const closedAudioRef = useRef(null);
   const heartbeatTimerRef = useRef(null);
+
+  // Öffnungszeiten prüfen + periodisch aktualisieren
+  useEffect(() => {
+    const update = () => {
+      setSupportOpen(isSupportOpen());
+      setMinsUntilOpen(minutesUntilOpen());
+    };
+    update();
+    const t = setInterval(update, 30_000);
+    return () => clearInterval(t);
+  }, []);
 
   // Transkript-Messages (lokal + vom Peer empfangen)
   const [messages, setMessages] = useState([]);
@@ -131,6 +181,11 @@ export default function VoiceSupportPage() {
   // Session laden
   const fetchMySession = useCallback(async () => {
     try {
+      // Fake-Session (simuliert) nicht überschreiben
+      if (session?.simulated) {
+        setLoadingSession(false);
+        return;
+      }
       const res = await fetch('/api/voice-support/me', { cache: 'no-store' });
       if (!res.ok) {
         setSession(null);
@@ -143,7 +198,7 @@ export default function VoiceSupportPage() {
     } finally {
       setLoadingSession(false);
     }
-  }, []);
+  }, [session?.simulated]);
 
   useEffect(() => {
     if (!authLoading && !user) return;
@@ -190,7 +245,13 @@ export default function VoiceSupportPage() {
       return;
     }
 
+    // ── Audio: Close-Audio für simulierte Session, sonst normale Hold-Musik ──
     if (audioRef.current) {
+      const desiredSrc = session.simulated ? '/support-voice-close.mp3' : '/support-voice.mp3';
+      const current = audioRef.current.currentSrc || audioRef.current.src;
+      if (!current || !current.endsWith(desiredSrc)) {
+        audioRef.current.src = desiredSrc;
+      }
       if (session.status === 'waiting') {
         audioRef.current.loop = true;
         audioRef.current.muted = holdMuted;
@@ -198,6 +259,15 @@ export default function VoiceSupportPage() {
       } else if (session.status === 'active') {
         audioRef.current.pause();
       }
+    }
+
+    // ── Bei Fake-Session: nur lokaler Elapsed-Timer, KEINE API-Calls ──
+    if (session.simulated) {
+      const startTs = new Date(session.created_at).getTime();
+      const elapsedTimer = setInterval(() => {
+        setElapsed(Math.floor((Date.now() - startTs) / 1000));
+      }, 1000);
+      return () => clearInterval(elapsedTimer);
     }
 
     const sendHb = async () => {
@@ -244,6 +314,7 @@ export default function VoiceSupportPage() {
   // Session auto-beenden bei Page-Close
   useEffect(() => {
     if (!session) return;
+    if (session.simulated) return; // Fake-Session: nichts ans Backend
     const handleUnload = () => {
       try {
         const blob = new Blob(
@@ -258,6 +329,22 @@ export default function VoiceSupportPage() {
   }, [session]);
 
   const startSession = async () => {
+    // Außerhalb Support-Zeiten: Fake-Session starten (lokal only),
+    // Close-Audio abspielen, KEIN API-Call, KEINE Team-Benachrichtigung
+    if (!isSupportOpen()) {
+      const fakeSession = {
+        id: `closed-${Date.now()}`,
+        status: 'waiting',
+        user_id: user?.id,
+        user_name: user?.username || user?.global_name || 'Du',
+        user_avatar: user?.avatar_url || null,
+        reason: reason || null,
+        created_at: new Date().toISOString(),
+        simulated: true, // Flag: keine API-Calls, keine WebRTC, Close-Audio
+      };
+      setSession(fakeSession);
+      return;
+    }
     setCreating(true);
     try {
       const res = await fetch('/api/voice-support/create', {
@@ -281,6 +368,11 @@ export default function VoiceSupportPage() {
 
   const endSession = async () => {
     if (!session) return;
+    // Fake-Session: nur lokal schließen, kein API-Call
+    if (session.simulated) {
+      setSession(null);
+      return;
+    }
     try {
       await fetch('/api/voice-support/end', {
         method: 'POST',
@@ -316,6 +408,7 @@ export default function VoiceSupportPage() {
   return (
     <>
       <audio ref={audioRef} src="/support-voice.mp3" preload="auto" loop />
+      <audio ref={closedAudioRef} src="/support-voice-close.mp3" preload="auto" />
       <audio ref={remoteAudioRef} autoPlay playsInline />
 
       {/* Animated Gradient Background */}
@@ -348,6 +441,8 @@ export default function VoiceSupportPage() {
               setReason={setReason}
               onStart={startSession}
               creating={creating}
+              supportOpen={supportOpen}
+              minsUntilOpen={minsUntilOpen}
             />
           ) : (
             <ActiveSessionCard
@@ -471,7 +566,15 @@ function LoginRequiredScreen({ onLogin }) {
   );
 }
 
-function StartCard({ reason, setReason, onStart, creating }) {
+function StartCard({ reason, setReason, onStart, creating, supportOpen = true, minsUntilOpen = 0 }) {
+  const openIn = (() => {
+    if (supportOpen || !minsUntilOpen || minsUntilOpen <= 0) return null;
+    const h = Math.floor(minsUntilOpen / 60);
+    const m = minsUntilOpen % 60;
+    if (h === 0) return `in ${m} Min`;
+    return `in ${h} Std ${m} Min`;
+  })();
+
   return (
     <div className="relative overflow-hidden rounded-[28px] border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.01] backdrop-blur-2xl shadow-2xl">
       {/* Subtle top highlight */}
@@ -770,6 +873,184 @@ function InfoPill({ icon, title, text }) {
           <div className="text-sm font-semibold text-white">{title}</div>
           <div className="text-xs text-white/50 mt-0.5">{text}</div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/*  SUPPORT CLOSED CARD                                         */
+/* ──────────────────────────────────────────────────────────── */
+
+function SupportClosedCard({ audioRef, minsUntilOpen }) {
+  const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const [tried, setTried] = useState(false);
+
+  // Autoplay versuchen (klappt oft nur wenn User kurz vorher interagiert hat)
+  useEffect(() => {
+    const el = audioRef?.current;
+    if (!el || tried) return;
+    setTried(true);
+    el.muted = false;
+    const p = el.play();
+    if (p && typeof p.then === 'function') {
+      p.then(() => setPlaying(true)).catch(() => setPlaying(false));
+    }
+    const onEnd = () => setPlaying(false);
+    el.addEventListener('ended', onEnd);
+    return () => el.removeEventListener('ended', onEnd);
+  }, [audioRef, tried]);
+
+  const toggleAudio = () => {
+    const el = audioRef?.current;
+    if (!el) return;
+    if (el.paused) {
+      el.muted = false;
+      el.currentTime = 0;
+      el.play().then(() => setPlaying(true)).catch(() => {});
+    } else {
+      el.pause();
+      setPlaying(false);
+    }
+  };
+
+  const toggleMute = () => {
+    const el = audioRef?.current;
+    if (!el) return;
+    const next = !muted;
+    el.muted = next;
+    setMuted(next);
+  };
+
+  // nächster Öffnungszeitpunkt als HH:MM
+  const openIn = (() => {
+    if (!minsUntilOpen || minsUntilOpen <= 0) return null;
+    const h = Math.floor(minsUntilOpen / 60);
+    const m = minsUntilOpen % 60;
+    if (h === 0) return `in ${m} Min`;
+    return `in ${h} Std ${m} Min`;
+  })();
+
+  return (
+    <div className="relative overflow-hidden rounded-[28px] border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.01] backdrop-blur-2xl shadow-2xl">
+      {/* Top highlight */}
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+
+      {/* Ambient glow */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[420px] h-[420px] bg-indigo-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-24 right-0 w-[300px] h-[300px] bg-purple-500/10 rounded-full blur-3xl" />
+      </div>
+
+      <div className="relative p-6 sm:p-10 space-y-6 sm:space-y-8">
+        {/* Status Header */}
+        <div className="flex items-center justify-center gap-2.5">
+          <span className="relative w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse">
+            <span className="absolute inset-0 rounded-full bg-red-400 animate-ping opacity-50" />
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-red-200/90">
+            Support geschlossen
+          </span>
+        </div>
+
+        {/* Hero */}
+        <div className="flex flex-col items-center text-center space-y-4">
+          <div className="relative w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 blur-2xl animate-pulse" />
+            <div className="absolute inset-2 rounded-full border border-indigo-400/15" />
+            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-indigo-500/25 to-purple-500/25 border border-white/[0.15] backdrop-blur-xl flex items-center justify-center shadow-2xl">
+              <MoonStar className="w-9 h-9 sm:w-11 sm:h-11 text-indigo-200" />
+            </div>
+          </div>
+
+          <div className="space-y-2 max-w-md">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              Unser Support macht gerade Pause
+            </h2>
+            <p className="text-sm sm:text-base text-white/60 leading-relaxed">
+              Aktuell ist niemand vom Team im Voice-Support erreichbar.
+              Bitte probier es innerhalb unserer Öffnungszeiten erneut.
+            </p>
+          </div>
+        </div>
+
+        {/* Öffnungszeiten-Card */}
+        <div className="rounded-2xl bg-black/25 border border-white/[0.08] p-5 space-y-3">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-white/60">
+            <CalendarClock className="w-4 h-4 text-indigo-300" />
+            Öffnungszeiten
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-white/80">Montag – Sonntag</span>
+            <span className="text-sm font-mono font-semibold text-white tabular-nums">
+              12:00 – 22:00 Uhr
+            </span>
+          </div>
+          {openIn && (
+            <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between gap-3">
+              <span className="text-xs text-white/50">Support öffnet wieder</span>
+              <span className="text-xs font-medium text-emerald-300">{openIn}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Audio-Steuerung */}
+        <div className="rounded-2xl bg-gradient-to-br from-indigo-500/[0.08] to-purple-500/[0.06] border border-indigo-500/[0.2] p-4">
+          <div className="flex items-center gap-3">
+            <div className="relative flex-shrink-0">
+              <div className={`absolute inset-0 rounded-full blur-md ${playing ? 'bg-indigo-400/40 animate-pulse' : 'bg-indigo-500/20'}`} />
+              <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500/30 to-purple-500/30 border border-white/[0.12] flex items-center justify-center">
+                {playing ? (
+                  <div className="flex items-end gap-0.5 h-4">
+                    <span className="w-0.5 bg-indigo-200 rounded-full wave-bar" style={{ height: '100%', animationDelay: '0s' }} />
+                    <span className="w-0.5 bg-indigo-200 rounded-full wave-bar" style={{ height: '60%', animationDelay: '0.15s' }} />
+                    <span className="w-0.5 bg-indigo-200 rounded-full wave-bar" style={{ height: '90%', animationDelay: '0.3s' }} />
+                    <span className="w-0.5 bg-indigo-200 rounded-full wave-bar" style={{ height: '50%', animationDelay: '0.45s' }} />
+                  </div>
+                ) : (
+                  <Volume2 className="w-5 h-5 text-indigo-200" />
+                )}
+              </div>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-white">Sprachnachricht</div>
+              <div className="text-xs text-white/50">
+                {playing ? 'Wird abgespielt…' : 'Tippe auf Play, um die Nachricht zu hören'}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Button
+                onClick={toggleAudio}
+                size="sm"
+                className="h-9 px-3 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-white font-medium"
+                title={playing ? 'Pause' : 'Play'}
+              >
+                {playing ? 'Pause' : 'Play'}
+              </Button>
+              <button
+                onClick={toggleMute}
+                className="w-9 h-9 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-white/70 hover:text-white flex items-center justify-center transition"
+                title={muted ? 'Ton an' : 'Stumm'}
+              >
+                {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Disabled Button (visuell klar machen, dass nichts startbar ist) */}
+        <Button
+          disabled
+          className="w-full h-14 rounded-2xl text-base font-semibold bg-white/[0.03] border border-white/[0.06] text-white/40 cursor-not-allowed"
+        >
+          <Lock className="w-5 h-5 mr-2" />
+          Voice Support aktuell nicht verfügbar
+        </Button>
+
+        <p className="text-center text-[11px] text-white/30 leading-relaxed">
+          Für dringende Anliegen außerhalb der Support-Zeiten nutze bitte unseren Discord-Server.
+        </p>
       </div>
     </div>
   );
