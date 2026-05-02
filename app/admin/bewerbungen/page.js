@@ -12,6 +12,7 @@ import {
   FileText, Briefcase, TrendingUp, Sparkles
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { useRealtime } from '@/hooks/useRealtime';
 
 function formatDateTime(dateStr) {
   if (!dateStr) return '-';
@@ -140,6 +141,13 @@ export default function AdminBewerbungenPage() {
       // Still fehlschlagen - kein UI-Update
     }
   }, []);
+
+  // Echtzeit: Bewerbungen aktualisieren sobald sich irgendetwas ändert
+  useRealtime({
+    'bewerbung.created': () => silentRefresh(),
+    'bewerbung.updated': () => silentRefresh(),
+    'bewerbung.deleted': () => silentRefresh(),
+  });
 
   // Aktuelle ausgewählte Bewerbung aus der Liste
   const selected = bewerbungen.find(b => b.id === selectedId) || null;

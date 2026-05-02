@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Power, AlertTriangle, Clock, Save, RefreshCw, ShieldAlert, Calendar, Flag, MessageSquare, Monitor } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAdminAuth } from '@/components/providers/AdminAuthProvider';
+import { useRealtime } from '@/hooks/useRealtime';
 
 const cardStyle = {
   background: 'linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.01))',
@@ -38,6 +39,20 @@ export default function SystemStatusPage() {
     }
     fetchStatus();
   }, []);
+
+  // Echtzeit: Status-Änderungen live übernehmen (auch von anderen Admins)
+  useRealtime({
+    'system.status.updated': (evt) => {
+      if (evt.data) {
+        setStatus((prev) => ({
+          ...prev,
+          ...evt.data,
+        }));
+      } else {
+        fetchStatus();
+      }
+    },
+  });
 
   const fetchStatus = async () => {
     try {

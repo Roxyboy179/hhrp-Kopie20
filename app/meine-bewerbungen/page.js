@@ -11,6 +11,8 @@ import {
   User, Gamepad2, Users, Target, MessageSquare, Shield, Mic, BookOpen, Heart,
   TrendingUp, Briefcase, Sparkles
 } from 'lucide-react';
+import { useRealtime } from '@/hooks/useRealtime';
+import { RealtimeIndicator } from '@/components/shared/RealtimeIndicator';
 
 function formatDateTime(dateStr) {
   if (!dateStr) return '-';
@@ -58,13 +60,41 @@ export default function MeineBewerbungenPage() {
       setTimeout(() => setVisible(true), 100);
     }
     
-    // Auto-Refresh alle 10 Sekunden
+    // Auto-Refresh Fallback alle 60s (falls SSE abbricht)
     const interval = setInterval(() => {
       if (user) silentRefresh();
-    }, 10000);
+    }, 60000);
     
     return () => clearInterval(interval);
   }, [user, authLoading, router]);
+
+  // Echtzeit: Status-Änderungen sofort sehen + Toast mit neuem Status
+  const { connected } = useRealtime({
+    'bewerbung.updated': (evt) => {
+      if (!user) return;
+      // Nur interessant wenn die Bewerbung zu uns gehört
+      if (evt.data?.userId && evt.data.userId !== user.id) return;
+      silentRefresh();
+      if (evt.data?.byAdmin && evt.data?.status) {
+        const statusLabel = evt.data.status;
+        if (statusLabel === 'Angenommen') {
+          toast.success('Deine Bewerbung wurde angenommen! 🎉', {
+            description: `Von ${evt.data.adminName || 'einem Teammitglied'}`,
+          });
+        } else if (statusLabel === 'Abgelehnt') {
+          toast.error('Deine Bewerbung wurde abgelehnt', {
+            description: `Von ${evt.data.adminName || 'einem Teammitglied'}`,
+          });
+        } else if (statusLabel === 'In Bearbeitung') {
+          toast.info('Bewerbung wird bearbeitet', {
+            description: `${evt.data.adminName || 'Ein Teammitglied'} bearbeitet deine Bewerbung.`,
+          });
+        }
+      }
+    },
+    'bewerbung.deleted': () => { if (user) silentRefresh(); },
+    'bewerbung.created': () => { if (user) silentRefresh(); },
+  });
 
   const fetchBewerbungen = async () => {
     try {
@@ -142,7 +172,10 @@ export default function MeineBewerbungenPage() {
 
         <div className={`flex items-end justify-between mb-10 transition-all duration-700 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}>
           <div>
-            <h1 className="text-3xl md:text-5xl font-bold text-white/90">Meine Bewerbungen</h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-3xl md:text-5xl font-bold text-white/90">Meine Bewerbungen</h1>
+              <RealtimeIndicator connected={connected} />
+            </div>
             <p className="mt-2" style={{ color: 'rgba(var(--theme-accent-rgb), 0.3)' }}>{bewerbungen.length} Bewerbung{bewerbungen.length !== 1 ? 'en' : ''}</p>
           </div>
           <div className="flex gap-2">

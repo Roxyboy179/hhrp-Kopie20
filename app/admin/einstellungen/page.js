@@ -10,6 +10,7 @@ import {
   Loader2, Mail, Key, User, Shield, Eye, EyeOff,
   Save, AlertTriangle, CheckCircle2
 } from 'lucide-react';
+import { useRealtime } from '@/hooks/useRealtime';
 
 const inputClass = "bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/25 focus:border-white/30 focus:ring-white/10 rounded-xl h-11";
 
@@ -76,6 +77,22 @@ export default function AdminEinstellungenPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  // Echtzeit: Eigene Account-Änderungen (z.B. durch anderen Admin) live reflektieren
+  useRealtime({
+    'account.updated': (evt) => {
+      if (admin && evt.data?.discordUserId === admin.discordUserId) {
+        loadData();
+      }
+    },
+    'account.deleted': (evt) => {
+      // Wenn der eigene Account gelöscht wird → zurück zum Login
+      if (admin && evt.data?.discordUserId === admin.discordUserId) {
+        toast.error('Dein Account wurde gelöscht', { description: 'Du wirst abgemeldet.' });
+        setTimeout(() => { window.location.href = '/admin'; }, 1200);
+      }
+    },
+  });
 
   const loadData = async () => {
     try {

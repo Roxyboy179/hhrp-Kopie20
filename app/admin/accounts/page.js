@@ -10,6 +10,7 @@ import {
   Loader2, UserPlus, Trash2, RefreshCw, Shield, AlertTriangle,
   Search, CheckCircle2, XCircle, Eye, EyeOff, Ban, CheckCheck
 } from 'lucide-react';
+import { useRealtime } from '@/hooks/useRealtime';
 
 const inputClass = "bg-white/[0.04] border-white/[0.1] text-white placeholder:text-white/25 focus:border-white/30 focus:ring-white/10 rounded-xl h-11";
 
@@ -120,6 +121,13 @@ export default function AdminAccountsPage() {
       setLoading(false);
     }
   };
+
+  // Echtzeit: Accounts-Liste live aktualisieren
+  useRealtime({
+    'account.created': () => { if (admin) fetchAccounts(); },
+    'account.updated': () => { if (admin) fetchAccounts(); },
+    'account.deleted': () => { if (admin) fetchAccounts(); },
+  });
 
   // Discord User ID eingeben -> Rolle automatisch prüfen
   const checkDiscordRole = async (userId) => {

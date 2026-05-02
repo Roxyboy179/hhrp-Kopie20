@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2, Save, CheckCircle2, XCircle, FileText, Briefcase, TrendingUp, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useRealtime } from '@/hooks/useRealtime';
 
 export default function BewerbungVerwaltungPage() {
   const router = useRouter();
@@ -22,6 +23,20 @@ export default function BewerbungVerwaltungPage() {
     checkAdmin();
     fetchSettings();
   }, []);
+
+  // Echtzeit: Settings sofort aktualisieren wenn ein anderer Admin sie ändert
+  useRealtime({
+    'settings.updated': (evt) => {
+      if (evt.data?.scope === 'bewerbung' && evt.data?.settings) {
+        setSettings({
+          normal_open: !!evt.data.settings.normalOpen,
+          praktikum_open: !!evt.data.settings.praktikumOpen,
+          uprank_open: !!evt.data.settings.uprankOpen,
+          beta_tester_open: !!evt.data.settings.betaTesterOpen,
+        });
+      }
+    },
+  });
 
   const checkAdmin = async () => {
     try {

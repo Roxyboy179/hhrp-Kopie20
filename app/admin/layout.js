@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminAuthProvider, useAdminAuth } from '@/components/providers/AdminAuthProvider';
+import { RealtimeAdminProvider, useRealtimeAdmin } from '@/components/providers/RealtimeAdminProvider';
+import { RealtimeIndicator } from '@/components/shared/RealtimeIndicator';
 
 export default function AdminLayout({ children }) {
   return (
@@ -19,9 +21,19 @@ export default function AdminLayout({ children }) {
 }
 
 function AdminLayoutInner({ children }) {
+  const { admin } = useAdminAuth();
+  return (
+    <RealtimeAdminProvider admin={admin}>
+      <AdminShell>{children}</AdminShell>
+    </RealtimeAdminProvider>
+  );
+}
+
+function AdminShell({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const { admin, logout } = useAdminAuth();
+  const { connected } = useRealtimeAdmin();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Navigation basierend auf Rechten
@@ -101,8 +113,13 @@ function AdminLayoutInner({ children }) {
               className="mx-3 mt-3 px-3 py-2.5 rounded-xl border border-white/[0.06]"
               style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.005))' }}
             >
-              <p className="text-[12.5px] text-white/80 font-medium truncate">{admin.discordUsername}</p>
-              <p className="text-[10px] text-white/35 mt-0.5">{admin.roleName} · Lv.{admin.roleLevel}</p>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12.5px] text-white/80 font-medium truncate">{admin.discordUsername}</p>
+                  <p className="text-[10px] text-white/35 mt-0.5">{admin.roleName} · Lv.{admin.roleLevel}</p>
+                </div>
+                <RealtimeIndicator connected={connected} size="sm" />
+              </div>
             </div>
           )}
 

@@ -27,6 +27,7 @@ import {
 import { sendNewBewerbungNotification, sendStatusUpdateNotification, sendAccountStatusChangeNotification, sendPasswordChangeNotification, assignDiscordRole } from '@/lib/discord-bot';
 import { logActivity, cleanupOldLogs, getLogs, getIpAddress, LOG_ACTIONS } from '@/lib/activity-logger';
 import { createNotification, getUserNotifications, getUnreadCount, markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/notifications';
+import { RT, emitEvent } from '@/lib/realtime-bus';
 
 // Web Push Configuration
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -736,6 +737,17 @@ async function handleCreateBewerbung(request) {
       ipAddress: getIpAddress(request),
     });
 
+    // Realtime Event → Admins sehen sofort die neue Bewerbung
+    try {
+      RT.bewerbungCreated({
+        id: bewerbung.id,
+        userId: user.id,
+        username: user.globalName || user.username,
+        status: bewerbung.status || 'Eingereicht',
+        bewerbungType: bewerbungType || 'normal',
+      });
+    } catch (e) { /* noop */ }
+
     return NextResponse.json({ bewerbung, success: true });
   } catch (error) {
     console.error('Create bewerbung error:', error);
@@ -790,6 +802,11 @@ async function handleUpdateUsername(request) {
     // Für jetzt returnen wir Success
     // In einer echten Implementierung würde man hier die User-Tabelle updaten
     
+    // Realtime → Profil live updaten
+    try {
+      emitEvent({ type: 'user.updated', data: { userId: user.id, username: username.trim() }, scope: `user:${user.id}` });
+    } catch (e) {}
+
     return NextResponse.json({ success: true, username: username.trim() });
   } catch (error) {
     console.error('Update username error:', error);
@@ -846,6 +863,7 @@ async function handleAdminUpdateSettings(request) {
         .update({ email: value.trim() })
         .eq('discord_user_id', admin.discordUserId);
       if (error) throw error;
+      try { RT.accountUpdated({ discordUserId: admin.discordUserId, field: 'email' }); } catch (e) {}
       return NextResponse.json({ success: true, message: 'E-Mail wurde aktualisiert' });
     }
     
@@ -908,6 +926,7 @@ async function handleAdminUpdateSettings(request) {
         .update({ mitarbeiter_nummer: value.trim() })
         .eq('discord_user_id', admin.discordUserId);
       if (error) throw error;
+      try { RT.accountUpdated({ discordUserId: admin.discordUserId, field: 'mitarbeiterNummer' }); } catch (e) {}
       return NextResponse.json({ success: true, message: 'Mitarbeiter-Nummer wurde aktualisiert' });
     }
 
@@ -979,6 +998,17 @@ async function handleWithdrawBewerbung(request, id) {
       },
       ipAddress: getIpAddress(request),
     });
+
+    // Realtime → User + Admin sehen sofort den neuen Status
+    try {
+      RT.bewerbungUpdated({
+        id: updated.id,
+        userId: user.id,
+        status: 'Zurückgezogen',
+        oldStatus: bewerbung.status,
+        byUser: true,
+      });
+    } catch (e) {}
 
     return NextResponse.json({ bewerbung: updated, success: true });
   } catch (error) {
@@ -1311,6 +1341,20 @@ async function handleAdminUpdateBewerbung(request, id) {
         ipAddress: getIpAddress(request),
       });
     }
+
+    // Realtime → Alle Admins + der User sehen die Änderung sofort
+    try {
+      RT.bewerbungUpdated({
+        id: updated.id,
+        userId: updated.discord_user_id,
+        status: newStatus,
+        oldStatus,
+        claimedBy: updated.claimed_by || null,
+        claimedByName: updated.claimed_by_name || null,
+        byAdmin: true,
+        adminName: admin.discordUsername,
+      });
+    } catch (e) {}
 
     return NextResponse.json({ bewerbung: toCamelCase(updated) });
   } catch (error) {
@@ -2682,6 +2726,18 @@ async function handleAdminCreateAccount(request) {
       ipAddress: getIpAddress(request),
     });
 
+    // Realtime → neuer Admin-Account sofort in allen Admin-Panels
+    try {
+      RT.accountCreated({
+        id: account.id,
+        mitarbeiterNummer: body.mitarbeiterNummer,
+        discordUserId: body.discordUserId,
+        discordUsername: member.user.username,
+        roleName: adminRole.name,
+        roleLevel: adminRole.level,
+      });
+    } catch (e) {}
+
     return NextResponse.json({ 
       account, 
       detectedRole: adminRole.name,
@@ -2695,7 +2751,6 @@ async function handleAdminCreateAccount(request) {
     return NextResponse.json({ error: 'Fehler beim Erstellen: ' + error.message }, { status: 500 });
   }
 }
-
 // Discord-Rolle für eine User-ID prüfen (für Account-Formular)
 async function handleCheckDiscordRole(request) {
   const admin = getAdminContext(request);
@@ -2762,6 +2817,15 @@ async function handleAdminDeleteAccount(request, id) {
       ipAddress: getIpAddress(request),
     });
     
+    // Realtime → Account aus allen Admin-Views entfernen
+    try {
+      RT.accountDeleted({
+        id,
+        mitarbeiterNummer: targetAccount?.mitarbeiter_nummer,
+        discordUserId: targetAccount?.discord_user_id,
+      });
+    } catch (e) {}
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Delete account error:', error);
@@ -2809,6 +2873,15 @@ async function handleAdminToggleAccountStatus(request, id) {
       ipAddress: getIpAddress(request),
     });
     
+    // Realtime → Status-Änderung sofort in allen Admin-Panels
+    try {
+      RT.accountUpdated({
+        id: account.id,
+        mitarbeiterNummer: account.mitarbeiter_nummer,
+        isActive,
+      });
+    } catch (e) {}
+
     return NextResponse.json({ 
       success: true, 
       account,
@@ -2819,7 +2892,6 @@ async function handleAdminToggleAccountStatus(request, id) {
     return NextResponse.json({ error: 'Fehler beim Aktualisieren' }, { status: 500 });
   }
 }
-
 async function handleGetBewerbungSettings(request) {
   try {
     const settings = await getBewerbungSettings();
@@ -2864,6 +2936,14 @@ async function handleUpdateBewerbungSettings(request) {
       ipAddress: getIpAddress(request),
     });
     
+    // Realtime → Bewerbungs-Settings live in allen Seiten updaten
+    try {
+      RT.settingsUpdated({
+        scope: 'bewerbung',
+        settings: { normalOpen, praktikumOpen, uprankOpen, betaTesterOpen },
+      });
+    } catch (e) {}
+
     return NextResponse.json({ success: true, settings });
   } catch (error) {
     console.error('Update bewerbung settings error:', error);
@@ -4439,6 +4519,17 @@ async function handleUpdateSystemStatus(request) {
       },
       ipAddress: getIpAddress(request),
     });
+
+    // Realtime → System-Status live (Wartungsmodus, geplante Wartung) überall pushen
+    try {
+      RT.systemStatusUpdated({
+        wartungsmodus: updateData.wartungsmodus,
+        geplante_wartung: updateData.geplante_wartung,
+        wartung_start: updateData.wartung_start || null,
+        wartung_ende: updateData.wartung_ende || null,
+        wartung_nachricht: updateData.wartung_nachricht || null,
+      });
+    } catch (e) {}
 
     return NextResponse.json({ success: true, status: result.data?.[0] || result.data });
   } catch (error) {

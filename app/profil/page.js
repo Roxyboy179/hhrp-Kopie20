@@ -47,6 +47,8 @@ import HamburgHorizonTab from '@/components/profile/HamburgHorizonTab';
 import LicensesView from '@/components/profile/LicensesView';
 import ProfileTour, { TourStartButton, hasCompletedProfileTour } from '@/components/profile/ProfileTour';
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
+import { useRealtime } from '@/hooks/useRealtime';
+import { RealtimeIndicator } from '@/components/shared/RealtimeIndicator';
 
 function SkeletonCard({ className = "" }) {
   return (
@@ -1105,6 +1107,44 @@ export default function ProfilPage() {
     }
   }, [user, authLoading, router]);
 
+  // Echtzeit: Profil live updaten bei User/Bewerbungs/Notification-Events
+  const { connected: realtimeConnected } = useRealtime({
+    'user.updated': (evt) => {
+      if (!user) return;
+      if (evt.data?.userId && evt.data.userId !== user.id) return;
+      loadData();
+    },
+    'user.notification': (evt) => {
+      if (!user) return;
+      if (evt.data?.title) {
+        toast.message(evt.data.title, { description: evt.data.message });
+      }
+      loadData();
+    },
+    'bewerbung.updated': (evt) => {
+      if (!user) return;
+      if (evt.data?.userId && evt.data.userId !== user.id) return;
+      loadData();
+      if (evt.data?.byAdmin && evt.data?.status) {
+        if (evt.data.status === 'Angenommen') toast.success('Deine Bewerbung wurde angenommen! 🎉');
+        else if (evt.data.status === 'Abgelehnt') toast.error('Deine Bewerbung wurde abgelehnt');
+        else if (evt.data.status === 'In Bearbeitung') toast.info('Bewerbung wird bearbeitet');
+      }
+    },
+    'bewerbung.created': (evt) => {
+      if (!user || evt.data?.userId !== user.id) return;
+      loadData();
+    },
+    'bewerbung.deleted': (evt) => {
+      if (!user) return;
+      if (evt.data?.userId && evt.data.userId !== user.id) return;
+      loadData();
+    },
+    'system.status.updated': () => {
+      // Optional: Wartungsmodus-Änderungen nicht aggressiv neu laden
+    },
+  });
+
   // Lade Einstellungen aus localStorage
   useEffect(() => {
     // Custom Background
@@ -1378,7 +1418,10 @@ export default function ProfilPage() {
               </div>
             )}
             <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white break-all">{user.username}</h1>
+              <div className="flex items-center gap-2 justify-center sm:justify-start flex-wrap">
+                <h1 className="text-2xl sm:text-3xl font-bold text-white break-all">{user.username}</h1>
+                <RealtimeIndicator connected={realtimeConnected} />
+              </div>
               <p className="text-white/40 text-xs sm:text-sm break-all">Discord ID: {user.id}</p>
             </div>
             {userData?.lastSync && (

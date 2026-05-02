@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { 
   Filter, ChevronLeft, ChevronRight, Clock, RefreshCw, Loader2
 } from 'lucide-react';
+import { useRealtime } from '@/hooks/useRealtime';
 
 const ACTION_LABELS = {
   USER_LOGIN: 'User Login',
@@ -78,6 +79,13 @@ export default function AdminLogsPage() {
       }
     };
   }, [page, filters]);
+
+  // Echtzeit: Logs live aktualisieren sobald ein neuer Log-Eintrag entsteht
+  useRealtime({
+    'log.created': () => {
+      if (page === 1) fetchLogs();
+    },
+  });
 
   const fetchLogs = async () => {
     try {

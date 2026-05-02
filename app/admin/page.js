@@ -12,6 +12,7 @@ import {
   Users, Shield, Eye, EyeOff, ArrowRight
 } from 'lucide-react';
 import { useAdminAuth } from '@/components/providers/AdminAuthProvider';
+import { useRealtime } from '@/hooks/useRealtime';
 
 // ────────────────────────────────────────────────────────────
 // Shared Style Constants (Überweisungsstil – monochrom)
@@ -158,6 +159,13 @@ export default function AdminPage() {
       }
     };
   }, [admin]);
+
+  // Echtzeit: Stats sofort neu laden sobald sich eine Bewerbung ändert
+  useRealtime({
+    'bewerbung.created': () => { if (admin) fetchStats(); },
+    'bewerbung.updated': () => { if (admin) fetchStats(); },
+    'bewerbung.deleted': () => { if (admin) fetchStats(); },
+  });
 
   const handleLogin = async (e) => {
     e.preventDefault();
