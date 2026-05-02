@@ -1157,16 +1157,20 @@ export default function ProfilPage() {
   useEffect(() => {
     if (!user?.id) return;
     const client = getSupabaseBrowser();
-    if (!client) return;
+    if (!client) {
+      console.warn('[Supabase Realtime] client not available');
+      return;
+    }
+
+    console.log('[Supabase Realtime] Setting up subscription for user:', user.id);
 
     let reloadTimer = null;
-    const scheduleReload = (source) => {
+    const scheduleReload = (source, payload) => {
       if (reloadTimer) clearTimeout(reloadTimer);
+      console.log('[Supabase Realtime] 🔔 Event received:', source, payload);
       // Debounce: innerhalb von 400ms mehrere Changes → 1 Reload
       reloadTimer = setTimeout(() => {
-        if (process.env.NODE_ENV !== 'production') {
-          console.log(`[Supabase Realtime] Reload triggered by ${source}`);
-        }
+        console.log('[Supabase Realtime] 🔄 Reloading data (force=true)');
         // force=true → bypasst den 30s Server-Cache,
         // damit externe Änderungen sofort sichtbar sind.
         loadData(true);
@@ -1184,12 +1188,31 @@ export default function ProfilPage() {
           filter: `discord_user_id=eq.${user.id}`,
         },
         (payload) => {
-          scheduleReload(`user_data.${payload?.eventType || 'change'}`);
+          scheduleReload(`user_data.${payload?.eventType || 'change'}`, payload);
         }
       )
-      .subscribe((status) => {
-        if (process.env.NODE_ENV !== 'production') {
-          console.log('[Supabase Realtime] user_data channel status:', status);
+      // Fallback: ohne Filter horchen (falls Filter wegen Typ-Mismatch nicht greift)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_data',
+        },
+        (payload) => {
+          const rowDiscordId = String(payload?.new?.discord_user_id ?? payload?.old?.discord_user_id ?? '');
+          if (rowDiscordId && rowDiscordId === String(user.id)) {
+            scheduleReload(`user_data.${payload?.eventType || 'change'} (unfiltered-match)`, payload);
+          }
+        }
+      )
+      .subscribe((status, err) => {
+        console.log('[Supabase Realtime] channel status:', status, err || '');
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.error('[Supabase Realtime] ❌ Subscription issue:', status, err);
+        }
+        if (status === 'SUBSCRIBED') {
+          console.log('[Supabase Realtime] ✅ Live-Updates aktiv für user_data (discord_user_id=' + user.id + ')');
         }
       });
 
