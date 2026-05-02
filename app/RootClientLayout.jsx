@@ -5,10 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { AuthProvider, useAuth } from '@/components/providers/AuthProvider';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { Navbar } from '@/components/shared/Navbar';
-import { ThemeButton } from '@/components/shared/ThemeButton';
 import { SplashScreen } from '@/components/shared/SplashScreen';
 import { InstallPrompt } from '@/components/shared/InstallPrompt';
-import { InstallButton } from '@/components/shared/InstallButton';
 import { CookieBanner } from '@/components/shared/CookieBanner';
 import { WartungsBanner } from '@/components/shared/WartungsBanner';
 import { BetaNotice } from '@/components/shared/BetaNotice';
@@ -387,7 +385,6 @@ export default function RootClientLayout({ children }) {
           <BetaNotice />
           <BetaTesterRecruitmentModalWrapper />
           {!isProfilePage && !isLegalPage && <InstallPrompt />}
-          {!isProfilePage && !isLegalPage && <InstallButton />}
           <Toaster 
             position="bottom-right" 
             theme="dark"
@@ -464,7 +461,6 @@ function LayoutContent({ children }) {
       <Navbar user={user} loading={loading} />
       <main className={showBanner ? "pt-16 min-h-screen" : "pt-16 min-h-screen"}>{children}</main>
       <Footer />
-      {!isProfilePage && !isLegalPage && <ThemeButton />}
     </>
   );
 }

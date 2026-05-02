@@ -678,6 +678,7 @@ function ActiveSessionCard({
 }) {
   const isWaiting = session.status === 'waiting';
   const isActive = session.status === 'active';
+  const isSimulated = Boolean(session.simulated);
 
   // Connection-Label + Farben
   const rtc = (() => {
@@ -708,6 +709,26 @@ function ActiveSessionCard({
       </div>
 
       <div className="relative p-6 sm:p-10 space-y-6 sm:space-y-8">
+        {/* Support-geschlossen Banner (nur bei simulierter Fake-Session) */}
+        {isSimulated && (
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500/[0.1] via-purple-500/[0.08] to-indigo-500/[0.1] border border-indigo-500/[0.25] p-4 flex gap-3">
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-300/40 to-transparent" />
+            <div className="relative flex-shrink-0">
+              <div className="absolute inset-0 bg-indigo-400/30 rounded-full blur-md animate-pulse" />
+              <MoonStar className="relative w-5 h-5 text-indigo-200 mt-0.5" strokeWidth={2.2} />
+            </div>
+            <div className="text-xs sm:text-sm text-white/85 leading-relaxed space-y-1">
+              <div className="font-semibold text-indigo-100 uppercase tracking-wider text-[11px]">
+                Support aktuell geschlossen
+              </div>
+              <div>
+                Unsere Support-Zeiten sind <strong className="text-white">Mo–So, 12:00–22:00 Uhr</strong>.
+                Bitte probiere es innerhalb dieser Zeiten erneut.
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Status-Header */}
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -739,10 +760,12 @@ function ActiveSessionCard({
               </div>
               <div className="space-y-1.5">
                 <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-                  Verbinde dich mit einem Supporter…
+                  {isSimulated ? 'Versuche zu verbinden…' : 'Verbinde dich mit einem Supporter…'}
                 </h2>
                 <p className="text-sm text-white/50 max-w-sm mx-auto">
-                  Bitte kurz warten – das Team wurde informiert und ruft dich gleich an.
+                  {isSimulated
+                    ? 'Es ist aktuell kein Supporter erreichbar. Unser Team ist außerhalb der Support-Zeiten nicht verfügbar.'
+                    : 'Bitte kurz warten – das Team wurde informiert und ruft dich gleich an.'}
                 </p>
               </div>
             </>

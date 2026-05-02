@@ -14,8 +14,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { ThemeMenuItem } from '@/components/shared/ThemeMenuItem';
+import { InstallMenuItem } from '@/components/shared/InstallMenuItem';
 
 const DiscordIcon = ({ size = 16 }) => (
   <svg width={size} height={size} viewBox="0 0 127.14 96.36" fill="currentColor">
@@ -204,6 +207,10 @@ export function Navbar({ user, loading }) {
                       <User className="w-4 h-4" />
                       <span>Profil</span>
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-white/[0.06] my-1" />
+                    <ThemeMenuItem />
+                    <InstallMenuItem />
+                    <DropdownMenuSeparator className="bg-white/[0.06] my-1" />
                     <DropdownMenuItem 
                       onClick={handleLogout}
                       className="cursor-pointer flex items-center gap-2 text-red-400/70 hover:text-red-400 hover:bg-white/[0.06] focus:bg-white/[0.06] focus:text-red-400"
