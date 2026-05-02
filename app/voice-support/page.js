@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Headphones, Mic, MicOff, PhoneOff, Loader2, Volume2, AlertCircle, Lock, Clock, Shield, Sparkles } from 'lucide-react';
+import { Headphones, Mic, MicOff, PhoneOff, Loader2, Volume2, VolumeX, AlertCircle, Lock, Clock, Shield, Sparkles } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { getSupabaseBrowser } from '@/lib/supabase-browser';
+import { useVoiceCall } from '@/hooks/useVoiceCall';
 
 const HEARTBEAT_MS = 10_000; // 10s
 
@@ -19,11 +20,27 @@ export default function VoiceSupportPage() {
   const [creating, setCreating] = useState(false);
   const [session, setSession] = useState(null);
   const [loadingSession, setLoadingSession] = useState(true);
-  const [muted, setMuted] = useState(false);
+  const [holdMuted, setHoldMuted] = useState(false); // Wartemusik stumm
+  const [micMuted, setMicMuted] = useState(false);   // Mikrofon stumm (aktiver Call)
   const [elapsed, setElapsed] = useState(0);
 
   const audioRef = useRef(null);
   const heartbeatTimerRef = useRef(null);
+
+  // ─── WebRTC Voice Call (Callee = User) ───
+  const isActive = session?.status === 'active';
+  const { connectionState, micError, remoteAudioRef } = useVoiceCall({
+    sessionId: isActive ? session?.id : null,
+    role: 'callee',
+    enabled: Boolean(isActive && user?.id),
+    selfId: user?.id ? String(user.id) : null,
+    micMuted,
+  });
+
+  // Toast bei Mic-Fehler
+  useEffect(() => {
+    if (micError) toast.error(micError);
+  }, [micError]);
 
   // Session laden
   const fetchMySession = useCallback(async () => {
@@ -95,7 +112,7 @@ export default function VoiceSupportPage() {
     if (audioRef.current) {
       if (session.status === 'waiting') {
         audioRef.current.loop = true;
-        audioRef.current.muted = muted;
+        audioRef.current.muted = holdMuted;
         audioRef.current.play().catch((err) => {
           console.warn('[voice-support] autoplay blocked:', err);
         });
@@ -138,7 +155,7 @@ export default function VoiceSupportPage() {
       }
       clearInterval(elapsedTimer);
     };
-  }, [session, muted]);
+  }, [session, holdMuted]);
 
   // Beim Verlassen der Seite Session beenden
   useEffect(() => {
@@ -249,6 +266,9 @@ export default function VoiceSupportPage() {
       {/* Audio-Element (immer im DOM, kontrolliert per useEffect) */}
       <audio ref={audioRef} src="/support-voice.mp3" preload="auto" loop />
 
+      {/* Remote-Audio (Supporter-Stream) – wird von useVoiceCall befüllt */}
+      <audio ref={remoteAudioRef} autoPlay playsInline />
+
       <div className="min-h-screen bg-[#0a0a0b] pt-20 pb-12 px-4">
         {/* Hintergrund-Glow */}
         <div className="fixed inset-0 pointer-events-none">
@@ -344,8 +364,11 @@ export default function VoiceSupportPage() {
             <ActiveSessionView
               session={session}
               elapsed={elapsed}
-              muted={muted}
-              setMuted={setMuted}
+              holdMuted={holdMuted}
+              setHoldMuted={setHoldMuted}
+              micMuted={micMuted}
+              setMicMuted={setMicMuted}
+              connectionState={connectionState}
               onEnd={endSession}
               formatTime={formatTime}
             />
@@ -372,9 +395,20 @@ function InfoTile({ icon, title, subtitle }) {
   );
 }
 
-function ActiveSessionView({ session, elapsed, muted, setMuted, onEnd, formatTime }) {
+function ActiveSessionView({ session, elapsed, holdMuted, setHoldMuted, micMuted, setMicMuted, connectionState, onEnd, formatTime }) {
   const isWaiting = session.status === 'waiting';
   const isActive = session.status === 'active';
+
+  // Status-Label für WebRTC-Verbindung (nur wenn aktiv)
+  const rtcLabel = (() => {
+    if (!isActive) return null;
+    switch (connectionState) {
+      case 'connected': return { text: 'Mikrofon & Audio verbunden', color: 'text-emerald-300' };
+      case 'connecting': return { text: 'Verbinde Audio…', color: 'text-amber-300' };
+      case 'failed': return { text: 'Audio-Verbindung fehlgeschlagen', color: 'text-red-300' };
+      default: return { text: 'Audio wird initialisiert…', color: 'text-white/50' };
+    }
+  })();
 
   return (
     <div className="space-y-4">
@@ -451,16 +485,37 @@ function ActiveSessionView({ session, elapsed, muted, setMuted, onEnd, formatTim
               <span>{formatTime(elapsed)}</span>
             </div>
 
+            {/* WebRTC Audio Status */}
+            {isActive && rtcLabel && (
+              <div className={`flex items-center gap-2 text-xs ${rtcLabel.color}`}>
+                <span className="relative flex h-2 w-2">
+                  <span className={`relative rounded-full h-2 w-2 ${connectionState === 'connected' ? 'bg-emerald-400' : connectionState === 'failed' ? 'bg-red-400' : 'bg-amber-400 animate-pulse'}`} />
+                </span>
+                <span className="font-medium uppercase tracking-wider">{rtcLabel.text}</span>
+              </div>
+            )}
+
             {/* Controls */}
             <div className="flex gap-3 pt-2">
-              <Button
-                onClick={() => setMuted(!muted)}
-                variant="outline"
-                className="rounded-xl h-14 w-14 p-0 border-white/10 hover:bg-white/[0.05]"
-                title={muted ? 'Audio einschalten' : 'Audio stummschalten'}
-              >
-                {muted ? <MicOff className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-              </Button>
+              {isActive ? (
+                <Button
+                  onClick={() => setMicMuted(!micMuted)}
+                  variant="outline"
+                  className={`rounded-xl h-14 w-14 p-0 border-white/10 hover:bg-white/[0.05] ${micMuted ? 'bg-red-500/10 border-red-500/30 text-red-300' : ''}`}
+                  title={micMuted ? 'Mikrofon an' : 'Mikrofon stumm'}
+                >
+                  {micMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => setHoldMuted(!holdMuted)}
+                  variant="outline"
+                  className="rounded-xl h-14 w-14 p-0 border-white/10 hover:bg-white/[0.05]"
+                  title={holdMuted ? 'Wartemusik an' : 'Wartemusik stumm'}
+                >
+                  {holdMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                </Button>
+              )}
               <Button
                 onClick={onEnd}
                 className="rounded-xl h-14 px-6 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-lg shadow-red-500/20"

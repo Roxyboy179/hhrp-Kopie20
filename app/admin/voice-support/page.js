@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Headphones, Mic, PhoneOff, Loader2, Volume2, Save, RefreshCw, Clock, User, Users, Sparkles } from 'lucide-react';
+import { Headphones, Mic, MicOff, PhoneOff, Loader2, Volume2, Save, RefreshCw, Clock, User, Users, Sparkles } from 'lucide-react';
 import { useAdminAuth } from '@/components/providers/AdminAuthProvider';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { getSupabaseBrowser } from '@/lib/supabase-browser';
+import { useVoiceCall } from '@/hooks/useVoiceCall';
 
 const HEARTBEAT_MS = 10_000;
 
@@ -17,6 +18,7 @@ export default function AdminVoiceSupportPage() {
   const [activeSessionId, setActiveSessionId] = useState(null);
   const [notesDraft, setNotesDraft] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
+  const [micMuted, setMicMuted] = useState(false);
 
   const heartbeatRef = useRef(null);
 
@@ -39,6 +41,20 @@ export default function AdminVoiceSupportPage() {
   useEffect(() => {
     if (admin) fetchSessions();
   }, [admin, fetchSessions]);
+
+  // Auto-Detect: Wenn der eingeloggte Admin bereits eine aktive Session hat
+  // (z. B. nach Seiten-Reload), setze activeSessionId automatisch
+  useEffect(() => {
+    if (!admin?.discordUserId) return;
+    if (activeSessionId) return;
+    const mine = sessions.find(
+      (s) => s.status === 'active' && s.supporter_id === admin.discordUserId
+    );
+    if (mine) {
+      setActiveSessionId(mine.id);
+      setNotesDraft(mine.notes || '');
+    }
+  }, [sessions, admin, activeSessionId]);
 
   // Realtime
   useEffect(() => {
@@ -166,6 +182,23 @@ export default function AdminVoiceSupportPage() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  // ─── WebRTC Voice Call (Caller = Supporter) ───
+  // Nur aktiv, wenn ich selbst eine aktive Session habe
+  const myActiveSession = sessions.find(
+    (s) => s.id === activeSessionId && s.supporter_id === admin?.discordUserId && s.status === 'active'
+  );
+  const { connectionState, micError, remoteAudioRef } = useVoiceCall({
+    sessionId: myActiveSession?.id || null,
+    role: 'caller',
+    enabled: Boolean(myActiveSession && admin?.discordUserId),
+    selfId: admin?.discordUserId ? String(admin.discordUserId) : null,
+    micMuted,
+  });
+
+  useEffect(() => {
+    if (micError) toast.error(micError);
+  }, [micError]);
+
   if (authLoading || !admin) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -180,6 +213,9 @@ export default function AdminVoiceSupportPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto">
+      {/* Remote-Audio (User-Stream) – wird von useVoiceCall befüllt */}
+      <audio ref={remoteAudioRef} autoPlay playsInline />
+
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -223,6 +259,9 @@ export default function AdminVoiceSupportPage() {
             onEnd={() => endSession(mySession.id)}
             savingNotes={savingNotes}
             formatDuration={formatDuration}
+            micMuted={micMuted}
+            setMicMuted={setMicMuted}
+            connectionState={connectionState}
           />
         </div>
       )}
@@ -366,7 +405,16 @@ function SessionCard({ session, active = false, onClaim, onEnd, formatDuration }
   );
 }
 
-function ActiveSessionPanel({ session, notesDraft, setNotesDraft, onSaveNotes, onEnd, savingNotes, formatDuration }) {
+function ActiveSessionPanel({ session, notesDraft, setNotesDraft, onSaveNotes, onEnd, savingNotes, formatDuration, micMuted, setMicMuted, connectionState }) {
+  const rtcLabel = (() => {
+    switch (connectionState) {
+      case 'connected': return { text: 'Live verbunden – Sprache aktiv', color: 'text-emerald-300', dot: 'bg-emerald-400' };
+      case 'connecting': return { text: 'Baue Audio-Verbindung auf…', color: 'text-amber-300', dot: 'bg-amber-400 animate-pulse' };
+      case 'failed': return { text: 'Audio-Verbindung fehlgeschlagen – Session beenden und neu versuchen', color: 'text-red-300', dot: 'bg-red-400' };
+      default: return { text: 'Mikrofon wird initialisiert…', color: 'text-white/50', dot: 'bg-white/40 animate-pulse' };
+    }
+  })();
+
   return (
     <div className="relative overflow-hidden rounded-3xl border border-emerald-500/20 bg-gradient-to-br from-emerald-950/30 via-zinc-950/60 to-zinc-950/80 backdrop-blur-xl shadow-2xl shadow-emerald-900/20">
       <div className="absolute -top-32 -right-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -433,13 +481,30 @@ function ActiveSessionPanel({ session, notesDraft, setNotesDraft, onSaveNotes, o
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3 pt-2 border-t border-white/[0.06]">
+        <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-white/[0.06]">
+          {/* WebRTC Status */}
+          <div className={`flex-1 flex items-center gap-2.5 px-4 py-3 rounded-xl bg-black/30 border border-white/[0.08] ${rtcLabel.color}`}>
+            <span className={`w-2 h-2 rounded-full ${rtcLabel.dot}`} />
+            <span className="text-xs font-semibold uppercase tracking-wider">{rtcLabel.text}</span>
+          </div>
+
+          {/* Mic-Mute */}
+          <Button
+            onClick={() => setMicMuted(!micMuted)}
+            variant="outline"
+            className={`rounded-xl h-12 px-5 border-white/10 hover:bg-white/[0.05] ${micMuted ? 'bg-red-500/10 border-red-500/30 text-red-300' : 'text-white/80'}`}
+            title={micMuted ? 'Mikrofon einschalten' : 'Mikrofon stummschalten'}
+          >
+            {micMuted ? <MicOff className="w-5 h-5 mr-2" /> : <Mic className="w-5 h-5 mr-2" />}
+            {micMuted ? 'Mic aus' : 'Mic an'}
+          </Button>
+
           <Button
             onClick={onEnd}
-            className="flex-1 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-lg shadow-red-500/20"
+            className="rounded-xl h-12 px-6 bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-lg shadow-red-500/20"
           >
             <PhoneOff className="w-5 h-5 mr-2" />
-            Session beenden & löschen
+            Beenden
           </Button>
         </div>
       </div>
