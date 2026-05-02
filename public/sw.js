@@ -1,7 +1,7 @@
 // Service Worker für HHRP PWA - OPTIMIERT FÜR MOBILE PERFORMANCE 🚀
-const CACHE_NAME = 'hhrp-v6-turbo';
-const RUNTIME_CACHE = 'hhrp-runtime-v6';
-const IMAGE_CACHE = 'hhrp-images-v6';
+const CACHE_NAME = 'hhrp-v7-turbo';
+const RUNTIME_CACHE = 'hhrp-runtime-v7';
+const IMAGE_CACHE = 'hhrp-images-v7';
 
 // Kritische Assets für sofortiges Laden
 const CRITICAL_ASSETS = [
@@ -51,10 +51,26 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Range-Requests (Audio/Video) NICHT intercepten – caches.put() unterstützt
+  // keine 206-Responses und das brickt den Audio-Stream.
+  if (request.headers.get('range')) {
+    return;
+  }
+
+  // Cross-Origin NICHT intercepten (CDN-Avatare, Supabase Realtime,
+  // STUN/ICE-Traffic, Discord, etc.) – verhindert "Failed to convert value to
+  // 'Response'" Fehler, wenn Fetch scheitert und nichts gecacht ist.
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+
+  // Offline-Fallback-Response (immer valide Response)
+  const offlineResponse = () => new Response('', { status: 504, statusText: 'Offline' });
+
   // API Calls - Network Only (nie cachen!)
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      fetch(request).catch(() => 
+      fetch(request).catch(() =>
         new Response(JSON.stringify({ error: 'Offline' }), {
           status: 503,
           headers: { 'Content-Type': 'application/json' }
@@ -71,14 +87,14 @@ self.addEventListener('fetch', (event) => {
         return cache.match(request).then((cached) => {
           const fetchPromise = fetch(request).then((response) => {
             if (response && response.ok) {
-              cache.put(request, response.clone());
+              cache.put(request, response.clone()).catch(() => {});
             }
             return response;
-          }).catch(() => cached);
-          
-          return cached || fetchPromise; // Cache First
+          }).catch(() => cached || offlineResponse());
+
+          return cached || fetchPromise;
         });
-      })
+      }).catch(() => offlineResponse())
     );
     return;
   }
@@ -90,15 +106,15 @@ self.addEventListener('fetch', (event) => {
         return cache.match(request).then((cached) => {
           const fetchPromise = fetch(request).then((response) => {
             if (response && response.ok) {
-              cache.put(request, response.clone());
+              cache.put(request, response.clone()).catch(() => {});
             }
             return response;
-          });
-          
+          }).catch(() => cached || offlineResponse());
+
           // Sofort gecachte Version zurückgeben, Update im Hintergrund
           return cached || fetchPromise;
         });
-      })
+      }).catch(() => offlineResponse())
     );
     return;
   }
@@ -178,7 +194,9 @@ self.addEventListener('fetch', (event) => {
 
   // Default: Network First
   event.respondWith(
-    fetch(request).catch(() => caches.match(request))
+    fetch(request).catch(() =>
+      caches.match(request).then((cached) => cached || offlineResponse())
+    )
   );
 });
 

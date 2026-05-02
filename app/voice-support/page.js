@@ -135,12 +135,24 @@ export default function VoiceSupportPage() {
           if (data.status === 'gone') {
             setSession(null);
             toast.info('Voice Support beendet');
+          } else if (data.status && data.status !== session.status) {
+            // Status hat sich geändert (z. B. waiting → active) – neu laden
+            fetchMySession();
           }
         }
       } catch {}
     };
     sendHb();
     heartbeatTimerRef.current = setInterval(sendHb, HEARTBEAT_MS);
+
+    // Schneller Status-Poll während "waiting" – damit der Wechsel auf "active"
+    // sofort ankommt, falls Supabase-Realtime mal nicht zuverlässig feuert.
+    let waitingPollTimer = null;
+    if (session.status === 'waiting') {
+      waitingPollTimer = setInterval(() => {
+        fetchMySession();
+      }, 3000);
+    }
 
     // Elapsed-Timer
     const startTs = new Date(session.created_at).getTime();
@@ -153,6 +165,7 @@ export default function VoiceSupportPage() {
         clearInterval(heartbeatTimerRef.current);
         heartbeatTimerRef.current = null;
       }
+      if (waitingPollTimer) clearInterval(waitingPollTimer);
       clearInterval(elapsedTimer);
     };
   }, [session, holdMuted]);
