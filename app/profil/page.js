@@ -1227,6 +1227,57 @@ export default function ProfilPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  // ──────────────────────────────────────────────────────────────────────
+  // Polling-Fallback: alle 30 Sekunden automatisch frische Daten holen.
+  // Ergänzt Supabase Realtime (falls WebSocket mal abbricht, verpasstes
+  // Event, etc.). Pausiert wenn Tab im Hintergrund ist → spart Egress.
+  // ──────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const POLL_MS = 30_000;
+    let intervalId = null;
+
+    const tick = () => {
+      // Nur pollen wenn Tab sichtbar ist
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return;
+      }
+      loadData(true);
+    };
+
+    const start = () => {
+      if (intervalId) return;
+      intervalId = setInterval(tick, POLL_MS);
+    };
+
+    const stop = () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        // Sofort einmal aktualisieren wenn Tab wieder in den Vordergrund kommt
+        loadData(true);
+        start();
+      } else {
+        stop();
+      }
+    };
+
+    start();
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
   // Lade Einstellungen aus localStorage
   useEffect(() => {
     // Custom Background
