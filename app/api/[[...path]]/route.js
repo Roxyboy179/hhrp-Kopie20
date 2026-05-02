@@ -8219,27 +8219,39 @@ async function handleVoiceSupportMe(request) {
       return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
     }
 
-    // Stale Sessions aufräumen
-    await cleanupStaleSessions();
-
-    const { data, error } = await supabaseAdmin
-      .from('voice_support_sessions')
-      .select('*')
-      .eq('user_id', user.id)
-      .in('status', ['waiting', 'active'])
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if (error && error.code !== 'PGRST116') {
-      console.error('[VoiceSupport] me error:', error);
-      return NextResponse.json({ error: 'Datenbank-Fehler' }, { status: 500 });
+    // Stale Sessions aufräumen – darf /me NICHT blockieren oder zum Crash bringen
+    try {
+      await cleanupStaleSessions();
+    } catch (cleanupErr) {
+      console.warn('[VoiceSupport] cleanup warn in /me:', cleanupErr?.message || cleanupErr);
     }
 
-    return NextResponse.json({ session: data || null });
+    // Supabase-Abfrage mit Fallback: Fehler hier sind kein 500 wert,
+    // dem User reicht es zu wissen "keine Session"
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('voice_support_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .in('status', ['waiting', 'active'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('[VoiceSupport] me supabase error:', error);
+        return NextResponse.json({ session: null, warn: 'db_error' });
+      }
+
+      return NextResponse.json({ session: data || null });
+    } catch (dbErr) {
+      console.error('[VoiceSupport] me db exception:', dbErr);
+      return NextResponse.json({ session: null, warn: 'db_exception' });
+    }
   } catch (e) {
     console.error('[VoiceSupport] me exception:', e);
-    return NextResponse.json({ error: 'Server-Fehler' }, { status: 500 });
+    // Fallback: NIE 500 werfen – sonst kann das Frontend sich nicht initialisieren
+    return NextResponse.json({ session: null, warn: 'server_error' });
   }
 }
 
