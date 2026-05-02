@@ -13,7 +13,7 @@ import time
 import uuid
 
 # Configuration
-BASE_URL = "https://chat-messaging-hub-1.preview.emergentagent.com"
+BASE_URL = "https://dynamic-web-12.preview.emergentagent.com"
 JWT_SECRET = "hhrp-jwt-secret-hamburg-horizon-2025"
 
 def create_jwt_token(payload):

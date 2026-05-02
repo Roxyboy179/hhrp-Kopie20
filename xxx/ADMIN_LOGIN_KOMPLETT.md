@@ -102,7 +102,7 @@ is_active: true
 
 ### 3. Login testen
 
-**URL:** https://chat-messaging-hub-1.preview.emergentagent.com/admin
+**URL:** https://dynamic-web-12.preview.emergentagent.com/admin
 
 **Eingeben:**
 - Mitarbeiter-Nummer: `MA-001`
