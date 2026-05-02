@@ -28,7 +28,7 @@ import { sendNewBewerbungNotification, sendStatusUpdateNotification, sendAccount
 import { logActivity, cleanupOldLogs, getLogs, getIpAddress, LOG_ACTIONS } from '@/lib/activity-logger';
 import { createNotification, getUserNotifications, getUnreadCount, markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/notifications';
 import { RT, emitEvent } from '@/lib/realtime-bus';
-import { sendVoiceSupportWebhook, updateVoiceSupportWebhook, cleanupStaleSessions } from '@/lib/voice-support';
+import { sendVoiceSupportWebhook, updateVoiceSupportWebhook, cleanupStaleSessions, sendVoiceSupportTranscript } from '@/lib/voice-support';
 
 // Web Push Configuration
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -8450,12 +8450,26 @@ async function handleVoiceSupportEnd(request) {
       return NextResponse.json({ error: 'Keine Berechtigung' }, { status: 403 });
     }
 
+    const endedAt = new Date().toISOString();
+    const endedBy = isOwner ? 'user' : isSupporter ? 'supporter' : 'admin';
+
     // Webhook updaten
     await updateVoiceSupportWebhook({
       ...session,
       status: 'ended',
-      ended_at: new Date().toISOString(),
+      ended_at: endedAt,
     });
+
+    // Transcript an den Transcript-Webhook senden (best effort)
+    try {
+      await sendVoiceSupportTranscript({
+        ...session,
+        ended_at: endedAt,
+        end_reason: `Beendet durch ${endedBy}`,
+      });
+    } catch (e) {
+      console.warn('[VoiceSupport] end transcript failed:', e?.message);
+    }
 
     // LÖSCHEN aus DB (User-Anforderung)
     await supabaseAdmin.from('voice_support_sessions').delete().eq('id', sessionId);
@@ -8571,11 +8585,24 @@ async function handleVoiceSupportAdminEnd(request, sessionId) {
 
     if (!session) return NextResponse.json({ ok: true });
 
+    const endedAt = new Date().toISOString();
+
     await updateVoiceSupportWebhook({
       ...session,
       status: 'ended',
-      ended_at: new Date().toISOString(),
+      ended_at: endedAt,
     });
+
+    // Transcript an den Transcript-Webhook senden (best effort)
+    try {
+      await sendVoiceSupportTranscript({
+        ...session,
+        ended_at: endedAt,
+        end_reason: `Beendet durch Admin-Panel (${actor?.name || 'Admin'})`,
+      });
+    } catch (e) {
+      console.warn('[VoiceSupport] admin-end transcript failed:', e?.message);
+    }
 
     await supabaseAdmin.from('voice_support_sessions').delete().eq('id', sessionId);
 
