@@ -28,6 +28,7 @@ import { sendNewBewerbungNotification, sendStatusUpdateNotification, sendAccount
 import { logActivity, cleanupOldLogs, getLogs, getIpAddress, LOG_ACTIONS } from '@/lib/activity-logger';
 import { createNotification, getUserNotifications, getUnreadCount, markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/notifications';
 import { RT, emitEvent } from '@/lib/realtime-bus';
+import { sendVoiceSupportWebhook, updateVoiceSupportWebhook, cleanupStaleSessions } from '@/lib/voice-support';
 
 // Web Push Configuration
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -2956,6 +2957,14 @@ export async function GET(request) {
   const url = new URL(request.url);
   const p = url.pathname.replace('/api/', '');
 
+  // ===== VOICE SUPPORT GET =====
+  if (p === 'voice-support/me') {
+    return handleVoiceSupportMe(request);
+  }
+  if (p === 'voice-support/list') {
+    return handleVoiceSupportList(request);
+  }
+
   // DEBUG ENDPOINT - Supabase Test
   if (p === 'debug/test-supabase') {
     try {
@@ -4027,6 +4036,29 @@ export async function POST(request) {
   
   console.log('[POST] Path:', p);
   console.log('[POST] Full URL:', url.pathname);
+
+  // ===== VOICE SUPPORT POST =====
+  if (p === 'voice-support/create') {
+    return handleVoiceSupportCreate(request);
+  }
+  if (p === 'voice-support/heartbeat') {
+    return handleVoiceSupportHeartbeat(request);
+  }
+  if (p === 'voice-support/end') {
+    return handleVoiceSupportEnd(request);
+  }
+  if (p.startsWith('voice-support/claim/')) {
+    const id = p.replace('voice-support/claim/', '');
+    return handleVoiceSupportClaim(request, id);
+  }
+  if (p.startsWith('voice-support/update/')) {
+    const id = p.replace('voice-support/update/', '');
+    return handleVoiceSupportUpdate(request, id);
+  }
+  if (p.startsWith('voice-support/admin-end/')) {
+    const id = p.replace('voice-support/admin-end/', '');
+    return handleVoiceSupportAdminEnd(request, id);
+  }
 
   // ===== BATTLE PASS POST ENDPOINTS =====
   if (p === 'battle-pass/purchase') {
@@ -8172,4 +8204,384 @@ function _buildFallbackTranscript(ticket) {
 ${ticket.closedAt ? ` • Geschlossen: ${_escapeHtml(new Date(ticket.closedAt).toLocaleString('de-DE'))}` : ''}</p>
 ${msgs || '<p style="color:#71717a">Keine Nachrichten gespeichert.</p>'}
 </body></html>`;
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// VOICE SUPPORT HANDLERS
+// ═══════════════════════════════════════════════════════════════════════
+
+// User holt seine eigene aktive Session
+async function handleVoiceSupportMe(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    // Stale Sessions aufräumen
+    await cleanupStaleSessions();
+
+    const { data, error } = await supabaseAdmin
+      .from('voice_support_sessions')
+      .select('*')
+      .eq('user_id', user.id)
+      .in('status', ['waiting', 'active'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('[VoiceSupport] me error:', error);
+      return NextResponse.json({ error: 'Datenbank-Fehler' }, { status: 500 });
+    }
+
+    return NextResponse.json({ session: data || null });
+  } catch (e) {
+    console.error('[VoiceSupport] me exception:', e);
+    return NextResponse.json({ error: 'Server-Fehler' }, { status: 500 });
+  }
+}
+
+// Hilfs-Funktion: gibt einen "actor" zurück, egal ob User oder Admin
+function getVoiceSupportActor(request) {
+  const admin = getAdminContext(request);
+  if (admin) {
+    return {
+      isAdmin: true,
+      id: admin.discordUserId,
+      name: admin.discordUsername || 'Admin',
+      avatar: null,
+      adminLevel: admin.roleLevel || 1,
+    };
+  }
+  const user = getUserFromRequest(request);
+  if (user) {
+    return {
+      isAdmin: !!(user.adminLevel && user.adminLevel >= 1),
+      id: user.id,
+      name: user.username || user.global_name || 'User',
+      avatar: user.avatar
+        ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
+        : null,
+      adminLevel: user.adminLevel || 0,
+    };
+  }
+  return null;
+}
+
+// Admin: Liste aller Sessions
+async function handleVoiceSupportList(request) {
+  try {
+    const actor = getVoiceSupportActor(request);
+    if (!actor || !actor.isAdmin) {
+      return NextResponse.json({ error: 'Keine Berechtigung' }, { status: 403 });
+    }
+
+    await cleanupStaleSessions();
+
+    const { data, error } = await supabaseAdmin
+      .from('voice_support_sessions')
+      .select('*')
+      .in('status', ['waiting', 'active'])
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[VoiceSupport] list error:', error);
+      return NextResponse.json({ error: 'Datenbank-Fehler' }, { status: 500 });
+    }
+
+    return NextResponse.json({ sessions: data || [] });
+  } catch (e) {
+    console.error('[VoiceSupport] list exception:', e);
+    return NextResponse.json({ error: 'Server-Fehler' }, { status: 500 });
+  }
+}
+
+// User erstellt neue Session
+async function handleVoiceSupportCreate(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const reason = (body.reason || '').toString().trim().substring(0, 1000);
+
+    // Stale aufräumen
+    await cleanupStaleSessions();
+
+    // Hat User schon eine offene Session? → zurückgeben
+    const { data: existing } = await supabaseAdmin
+      .from('voice_support_sessions')
+      .select('*')
+      .eq('user_id', user.id)
+      .in('status', ['waiting', 'active'])
+      .limit(1)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json({ session: existing, alreadyExists: true });
+    }
+
+    // Anlegen
+    const { data: created, error: insErr } = await supabaseAdmin
+      .from('voice_support_sessions')
+      .insert({
+        user_id: user.id,
+        user_name: user.username || user.global_name || 'Unbekannt',
+        user_avatar: user.avatar
+          ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
+          : null,
+        reason: reason || null,
+        status: 'waiting',
+        user_heartbeat: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (insErr || !created) {
+      console.error('[VoiceSupport] create insert error:', insErr);
+      return NextResponse.json({ error: 'Konnte Session nicht erstellen' }, { status: 500 });
+    }
+
+    // Discord Webhook senden
+    const messageId = await sendVoiceSupportWebhook(created);
+    if (messageId) {
+      await supabaseAdmin
+        .from('voice_support_sessions')
+        .update({ webhook_message_id: messageId })
+        .eq('id', created.id);
+      created.webhook_message_id = messageId;
+    }
+
+    return NextResponse.json({ session: created });
+  } catch (e) {
+    console.error('[VoiceSupport] create exception:', e);
+    return NextResponse.json({ error: 'Server-Fehler' }, { status: 500 });
+  }
+}
+
+// Heartbeat: User ODER Supporter pingt → wir wissen, dass die Seite offen ist
+async function handleVoiceSupportHeartbeat(request) {
+  try {
+    const actor = getVoiceSupportActor(request);
+    if (!actor) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const sessionId = body.sessionId;
+    const role = body.role; // 'user' | 'supporter'
+
+    if (!sessionId || !role) {
+      return NextResponse.json({ error: 'Fehlende Parameter' }, { status: 400 });
+    }
+
+    const { data: session } = await supabaseAdmin
+      .from('voice_support_sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .maybeSingle();
+
+    if (!session) {
+      return NextResponse.json({ status: 'gone' });
+    }
+
+    if (role === 'user' && session.user_id !== actor.id) {
+      return NextResponse.json({ error: 'Keine Berechtigung' }, { status: 403 });
+    }
+    if (role === 'supporter') {
+      if (!actor.isAdmin) {
+        return NextResponse.json({ error: 'Keine Berechtigung' }, { status: 403 });
+      }
+      if (session.supporter_id && session.supporter_id !== actor.id) {
+        return NextResponse.json({ error: 'Anderer Supporter aktiv' }, { status: 403 });
+      }
+    }
+
+    const update =
+      role === 'user'
+        ? { user_heartbeat: new Date().toISOString() }
+        : { supporter_heartbeat: new Date().toISOString() };
+
+    await supabaseAdmin
+      .from('voice_support_sessions')
+      .update({ ...update, updated_at: new Date().toISOString() })
+      .eq('id', sessionId);
+
+    return NextResponse.json({ ok: true, status: session.status });
+  } catch (e) {
+    console.error('[VoiceSupport] heartbeat exception:', e);
+    return NextResponse.json({ error: 'Server-Fehler' }, { status: 500 });
+  }
+}
+
+// User beendet seine Session manuell (oder Supporter via End-Button)
+async function handleVoiceSupportEnd(request) {
+  try {
+    const actor = getVoiceSupportActor(request);
+    if (!actor) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const sessionId = body.sessionId;
+    if (!sessionId) {
+      return NextResponse.json({ error: 'Fehlende Session-ID' }, { status: 400 });
+    }
+
+    const { data: session } = await supabaseAdmin
+      .from('voice_support_sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .maybeSingle();
+
+    if (!session) {
+      return NextResponse.json({ ok: true });
+    }
+
+    // Berechtigung: User selbst, oder zugewiesener Supporter, oder Admin
+    const isOwner = session.user_id === actor.id;
+    const isSupporter = session.supporter_id === actor.id;
+
+    if (!isOwner && !isSupporter && !actor.isAdmin) {
+      return NextResponse.json({ error: 'Keine Berechtigung' }, { status: 403 });
+    }
+
+    // Webhook updaten
+    await updateVoiceSupportWebhook({
+      ...session,
+      status: 'ended',
+      ended_at: new Date().toISOString(),
+    });
+
+    // LÖSCHEN aus DB (User-Anforderung)
+    await supabaseAdmin.from('voice_support_sessions').delete().eq('id', sessionId);
+
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error('[VoiceSupport] end exception:', e);
+    return NextResponse.json({ error: 'Server-Fehler' }, { status: 500 });
+  }
+}
+
+// Admin übernimmt eine Session
+async function handleVoiceSupportClaim(request, sessionId) {
+  try {
+    const actor = getVoiceSupportActor(request);
+    if (!actor || !actor.isAdmin) {
+      return NextResponse.json({ error: 'Keine Berechtigung' }, { status: 403 });
+    }
+
+    const { data: session } = await supabaseAdmin
+      .from('voice_support_sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .maybeSingle();
+
+    if (!session) {
+      return NextResponse.json({ error: 'Session nicht gefunden' }, { status: 404 });
+    }
+
+    if (session.supporter_id && session.supporter_id !== actor.id) {
+      return NextResponse.json({ error: 'Bereits von anderem Supporter übernommen' }, { status: 409 });
+    }
+
+    const { data: updated, error: updErr } = await supabaseAdmin
+      .from('voice_support_sessions')
+      .update({
+        status: 'active',
+        supporter_id: actor.id,
+        supporter_name: actor.name,
+        supporter_avatar: actor.avatar,
+        supporter_heartbeat: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', sessionId)
+      .select()
+      .single();
+
+    if (updErr || !updated) {
+      console.error('[VoiceSupport] claim update error:', updErr);
+      return NextResponse.json({ error: 'Konnte nicht übernehmen' }, { status: 500 });
+    }
+
+    // Webhook updaten (best effort)
+    updateVoiceSupportWebhook(updated).catch(() => {});
+
+    return NextResponse.json({ session: updated });
+  } catch (e) {
+    console.error('[VoiceSupport] claim exception:', e);
+    return NextResponse.json({ error: 'Server-Fehler' }, { status: 500 });
+  }
+}
+
+// Admin updated Notes/Reason
+async function handleVoiceSupportUpdate(request, sessionId) {
+  try {
+    const actor = getVoiceSupportActor(request);
+    if (!actor || !actor.isAdmin) {
+      return NextResponse.json({ error: 'Keine Berechtigung' }, { status: 403 });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const update = {};
+    if (typeof body.notes === 'string') update.notes = body.notes.substring(0, 4000);
+    if (typeof body.reason === 'string') update.reason = body.reason.substring(0, 1000);
+
+    if (Object.keys(update).length === 0) {
+      return NextResponse.json({ error: 'Keine Änderungen' }, { status: 400 });
+    }
+
+    update.updated_at = new Date().toISOString();
+
+    const { data: updated, error: updErr } = await supabaseAdmin
+      .from('voice_support_sessions')
+      .update(update)
+      .eq('id', sessionId)
+      .select()
+      .single();
+
+    if (updErr || !updated) {
+      return NextResponse.json({ error: 'Update fehlgeschlagen' }, { status: 500 });
+    }
+
+    return NextResponse.json({ session: updated });
+  } catch (e) {
+    console.error('[VoiceSupport] update exception:', e);
+    return NextResponse.json({ error: 'Server-Fehler' }, { status: 500 });
+  }
+}
+
+// Admin beendet Session (via Admin-Panel)
+async function handleVoiceSupportAdminEnd(request, sessionId) {
+  try {
+    const actor = getVoiceSupportActor(request);
+    if (!actor || !actor.isAdmin) {
+      return NextResponse.json({ error: 'Keine Berechtigung' }, { status: 403 });
+    }
+
+    const { data: session } = await supabaseAdmin
+      .from('voice_support_sessions')
+      .select('*')
+      .eq('id', sessionId)
+      .maybeSingle();
+
+    if (!session) return NextResponse.json({ ok: true });
+
+    await updateVoiceSupportWebhook({
+      ...session,
+      status: 'ended',
+      ended_at: new Date().toISOString(),
+    });
+
+    await supabaseAdmin.from('voice_support_sessions').delete().eq('id', sessionId);
+
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error('[VoiceSupport] admin-end exception:', e);
+    return NextResponse.json({ error: 'Server-Fehler' }, { status: 500 });
+  }
 }
