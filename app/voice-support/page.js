@@ -15,6 +15,9 @@ import { toast } from 'sonner';
 import { getSupabaseBrowser } from '@/lib/supabase-browser';
 import { useVoiceCall } from '@/hooks/useVoiceCall';
 import { useVoiceTranscription } from '@/hooks/useVoiceTranscription';
+import { LiveTranscript } from '@/components/voice-support/LiveTranscript';
+import { MicTester } from '@/components/voice-support/MicTester';
+import { AudioWave } from '@/components/voice-support/AudioWave';
 
 const HEARTBEAT_MS = 10_000;
 const MAX_REASON_LEN = 500;
@@ -91,7 +94,16 @@ export default function VoiceSupportPage() {
 
   // ─── WebRTC Voice Call (Callee = User) ───
   const isActive = session?.status === 'active';
-  const { connectionState, micError, remoteAudioRef } = useVoiceCall({
+  const {
+    connectionState,
+    micError,
+    remoteAudioRef,
+    remoteStream,
+    localStream,
+    reconnectAttempt,
+    maxReconnect,
+    manualReconnect,
+  } = useVoiceCall({
     sessionId: isActive ? session?.id : null,
     role: 'callee',
     enabled: Boolean(isActive && user?.id),
@@ -173,6 +185,35 @@ export default function VoiceSupportPage() {
       setMessages([]);
     }
   }, [session?.id, session]);
+
+  // ─── Queue-Info Polling (Position + geschätzte Wartezeit) ───
+  const [queueInfo, setQueueInfo] = useState(null);
+  useEffect(() => {
+    if (!session?.id || session?.status !== 'waiting' || session?.simulated) {
+      setQueueInfo(null);
+      return;
+    }
+    let cancelled = false;
+    const fetchQueueInfo = async () => {
+      try {
+        const res = await fetch(
+          `/api/voice-support/queue-info?sessionId=${encodeURIComponent(session.id)}`,
+          { cache: 'no-store' }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setQueueInfo(data);
+      } catch (e) {
+        // silent
+      }
+    };
+    fetchQueueInfo();
+    const interval = setInterval(fetchQueueInfo, 12_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [session?.id, session?.status, session?.simulated]);
 
   useEffect(() => {
     if (micError) toast.error(micError);
@@ -443,6 +484,7 @@ export default function VoiceSupportPage() {
               creating={creating}
               supportOpen={supportOpen}
               minsUntilOpen={minsUntilOpen}
+              queueInfo={queueInfo}
             />
           ) : (
             <ActiveSessionCard
@@ -455,6 +497,14 @@ export default function VoiceSupportPage() {
               connectionState={connectionState}
               onEnd={endSession}
               formatTime={formatTime}
+              messages={messages}
+              currentUserId={user?.id}
+              remoteStream={remoteStream}
+              localStream={localStream}
+              reconnectAttempt={reconnectAttempt}
+              maxReconnect={maxReconnect}
+              onManualReconnect={manualReconnect}
+              queueInfo={queueInfo}
             />
           )}
 
@@ -566,7 +616,7 @@ function LoginRequiredScreen({ onLogin }) {
   );
 }
 
-function StartCard({ reason, setReason, onStart, creating, supportOpen = true, minsUntilOpen = 0 }) {
+function StartCard({ reason, setReason, onStart, creating, supportOpen = true, minsUntilOpen = 0, queueInfo }) {
   const openIn = (() => {
     if (supportOpen || !minsUntilOpen || minsUntilOpen <= 0) return null;
     const h = Math.floor(minsUntilOpen / 60);
@@ -619,6 +669,22 @@ function StartCard({ reason, setReason, onStart, creating, supportOpen = true, m
             </div>
           </div>
         </div>
+
+        {/* Mikrofon-Test */}
+        <MicTester />
+
+        {/* Geschätzte Wartezeit (nur wenn Daten vorliegen UND Sinn macht) */}
+        {queueInfo && queueInfo.totalWaiting > 0 && (
+          <div className="rounded-2xl bg-amber-500/[0.06] border border-amber-500/[0.15] px-4 py-3 flex items-center gap-3">
+            <Clock className="w-4 h-4 text-amber-300 flex-shrink-0" />
+            <div className="text-xs sm:text-sm text-white/70 leading-relaxed flex-1">
+              Aktuell warten <strong className="text-white">{queueInfo.totalWaiting}</strong>{' '}
+              {queueInfo.totalWaiting === 1 ? 'Person' : 'Personen'} ·{' '}
+              <strong className="text-white">~{queueInfo.avgWaitMins} Min</strong>{' '}
+              durchschnittliche Wartezeit
+            </div>
+          </div>
+        )}
 
         {/* Info Box */}
         <div className="rounded-2xl bg-blue-500/[0.06] border border-blue-500/[0.15] p-4 flex gap-3">
@@ -675,6 +741,9 @@ function StartCard({ reason, setReason, onStart, creating, supportOpen = true, m
 function ActiveSessionCard({
   session, elapsed, holdMuted, setHoldMuted,
   micMuted, setMicMuted, connectionState, onEnd, formatTime,
+  messages = [], currentUserId, remoteStream, localStream,
+  reconnectAttempt = 0, maxReconnect = 3, onManualReconnect,
+  queueInfo,
 }) {
   const isWaiting = session.status === 'waiting';
   const isActive = session.status === 'active';
@@ -688,6 +757,8 @@ function ActiveSessionCard({
         return { text: 'Live verbunden', color: 'text-emerald-300', dot: 'bg-emerald-400' };
       case 'connecting':
         return { text: 'Verbinde Audio…', color: 'text-amber-300', dot: 'bg-amber-400 animate-pulse' };
+      case 'reconnecting':
+        return { text: `Verbinde neu… (${reconnectAttempt}/${maxReconnect})`, color: 'text-amber-300', dot: 'bg-amber-400 animate-pulse' };
       case 'failed':
         return { text: 'Audio-Fehler', color: 'text-red-300', dot: 'bg-red-400' };
       default:
@@ -768,6 +839,26 @@ function ActiveSessionCard({
                     : 'Bitte kurz warten – das Team wurde informiert und ruft dich gleich an.'}
                 </p>
               </div>
+
+              {/* Queue-Position + Wartezeit (nur bei echter Session) */}
+              {!isSimulated && queueInfo && queueInfo.position > 0 && (
+                <div className="flex items-center gap-3 mt-3 px-4 py-2.5 rounded-2xl bg-blue-500/[0.08] border border-blue-500/[0.18]">
+                  <div className="relative flex items-center justify-center w-9 h-9 rounded-xl bg-blue-500/15 border border-blue-400/20">
+                    <span className="text-sm font-bold text-blue-200">{queueInfo.position}</span>
+                  </div>
+                  <div className="text-left flex-1 min-w-0">
+                    <div className="text-xs text-white/80 leading-tight">
+                      Position <strong className="text-white">{queueInfo.position}</strong> von{' '}
+                      <strong className="text-white">{queueInfo.totalWaiting}</strong>
+                    </div>
+                    {queueInfo.estimatedWaitMins > 0 && (
+                      <div className="text-[10px] text-white/40 mt-0.5">
+                        ca. {queueInfo.estimatedWaitMins} Min Wartezeit
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -797,8 +888,11 @@ function ActiveSessionCard({
                 )}
               </div>
 
-              {/* Voice bars */}
-              {connectionState === 'connected' && (
+              {/* Voice bars - ECHTE Wave-Animation basierend auf Remote-Stream */}
+              {connectionState === 'connected' && remoteStream && (
+                <AudioWave stream={remoteStream} bands={9} color="emerald" className="h-6" />
+              )}
+              {connectionState === 'connected' && !remoteStream && (
                 <div className="flex items-end gap-1 h-5">
                   {[0.8, 1, 0.6, 1.2, 0.9, 1.1, 0.7].map((h, i) => (
                     <span
@@ -841,6 +935,60 @@ function ActiveSessionCard({
               </div>
             </div>
           </div>
+        )}
+
+        {/* Reconnect-Banner */}
+        {isActive && (connectionState === 'reconnecting' || connectionState === 'failed') && (
+          <div
+            className={`relative overflow-hidden rounded-2xl border p-4 flex items-start gap-3 ${
+              connectionState === 'reconnecting'
+                ? 'bg-amber-500/[0.08] border-amber-500/[0.25]'
+                : 'bg-red-500/[0.08] border-red-500/[0.25]'
+            }`}
+          >
+            <div className="flex-shrink-0 mt-0.5">
+              {connectionState === 'reconnecting' ? (
+                <Loader2 className="w-5 h-5 text-amber-300 animate-spin" />
+              ) : (
+                <AlertCircle className="w-5 h-5 text-red-300" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div
+                className={`text-xs font-semibold uppercase tracking-wider mb-1 ${
+                  connectionState === 'reconnecting' ? 'text-amber-200' : 'text-red-200'
+                }`}
+              >
+                {connectionState === 'reconnecting'
+                  ? `Verbindung wiederherstellen… (${reconnectAttempt}/${maxReconnect})`
+                  : 'Verbindung verloren'}
+              </div>
+              <div className="text-xs text-white/65 leading-relaxed">
+                {connectionState === 'reconnecting'
+                  ? 'Die Audio-Verbindung wurde unterbrochen — wir versuchen automatisch neu zu verbinden.'
+                  : 'Die Audio-Verbindung konnte nicht wiederhergestellt werden. Klicke auf "Erneut verbinden" oder beende den Anruf.'}
+              </div>
+              {connectionState === 'failed' && onManualReconnect && (
+                <Button
+                  onClick={onManualReconnect}
+                  size="sm"
+                  className="mt-3 h-8 rounded-lg bg-red-500/20 hover:bg-red-500/30 border border-red-400/30 text-red-100 text-xs font-medium"
+                >
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5" />
+                  Erneut verbinden
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Live-Transkript (nur bei aktiver Session) */}
+        {isActive && (
+          <LiveTranscript
+            messages={messages}
+            currentUserId={currentUserId}
+            supporterAvatar={session.supporter_avatar}
+          />
         )}
 
         {/* Controls */}

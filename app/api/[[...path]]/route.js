@@ -2964,6 +2964,9 @@ export async function GET(request) {
   if (p === 'voice-support/list') {
     return handleVoiceSupportList(request);
   }
+  if (p === 'voice-support/queue-info') {
+    return handleVoiceSupportQueueInfo(request);
+  }
 
   // DEBUG ENDPOINT - Supabase Test
   if (p === 'debug/test-supabase') {
@@ -8252,6 +8255,112 @@ async function handleVoiceSupportMe(request) {
     console.error('[VoiceSupport] me exception:', e);
     // Fallback: NIE 500 werfen – sonst kann das Frontend sich nicht initialisieren
     return NextResponse.json({ session: null, warn: 'server_error' });
+  }
+}
+
+// User holt Queue-Position + geschätzte Wartezeit
+async function handleVoiceSupportQueueInfo(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const url = new URL(request.url);
+    const sessionId = url.searchParams.get('sessionId');
+
+    // 1) Alle wartenden Sessions sortiert nach created_at
+    const { data: waiting, error: wErr } = await supabaseAdmin
+      .from('voice_support_sessions')
+      .select('id, user_id, created_at')
+      .eq('status', 'waiting')
+      .order('created_at', { ascending: true });
+
+    if (wErr) {
+      console.warn('[VoiceSupport] queue-info waiting error:', wErr);
+    }
+
+    const waitingList = waiting || [];
+    const totalWaiting = waitingList.length;
+
+    // 2) Queue-Position der eigenen Session
+    let position = 0;
+    if (sessionId) {
+      const idx = waitingList.findIndex((s) => s.id === sessionId);
+      if (idx >= 0) position = idx + 1;
+    }
+    if (!position) {
+      // Fallback: User-Session per user_id finden
+      const idx = waitingList.findIndex((s) => String(s.user_id) === String(user.id));
+      if (idx >= 0) position = idx + 1;
+    }
+
+    // 3) Durchschnittliche Wartezeit aus letzten beendeten Sessions
+    // (Dauer waiting → active = wait time)
+    let avgWaitMins = 2; // Fallback
+    try {
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: recent } = await supabaseAdmin
+        .from('voice_support_sessions')
+        .select('created_at, updated_at, status')
+        .gte('created_at', oneDayAgo)
+        .in('status', ['active', 'ended'])
+        .limit(20);
+
+      if (recent && recent.length > 0) {
+        // Sehr grobe Schätzung: gehe davon aus, dass updated_at das Claim-Event war
+        const waits = recent
+          .map((r) => {
+            const c = new Date(r.created_at).getTime();
+            const u = new Date(r.updated_at || r.created_at).getTime();
+            return Math.max(0, (u - c) / 60000);
+          })
+          .filter((m) => m > 0 && m < 30); // nur sinnvolle Werte
+
+        if (waits.length > 0) {
+          avgWaitMins = Math.round(waits.reduce((a, b) => a + b, 0) / waits.length);
+        }
+      }
+    } catch (e) {
+      console.warn('[VoiceSupport] queue-info avg calc warn:', e?.message);
+    }
+
+    // 4) Anzahl aktiver Supporter (über supporter_heartbeat in letzten 60s)
+    let activeSupporters = 0;
+    try {
+      const oneMinAgo = new Date(Date.now() - 60_000).toISOString();
+      const { data: active } = await supabaseAdmin
+        .from('voice_support_sessions')
+        .select('supporter_id')
+        .eq('status', 'active')
+        .gte('supporter_heartbeat', oneMinAgo);
+      if (active) {
+        activeSupporters = new Set(active.map((s) => s.supporter_id).filter(Boolean)).size;
+      }
+    } catch {}
+
+    // Wartezeit-Schätzung: Position * avgWait, geteilt durch Anzahl Supporter (mind. 1)
+    const supporters = Math.max(1, activeSupporters || 1);
+    const estimatedWaitMins = position > 0
+      ? Math.max(1, Math.ceil((position * avgWaitMins) / supporters))
+      : 0;
+
+    return NextResponse.json({
+      position,
+      totalWaiting,
+      avgWaitMins,
+      activeSupporters,
+      estimatedWaitMins,
+    });
+  } catch (e) {
+    console.error('[VoiceSupport] queue-info exception:', e);
+    return NextResponse.json({
+      position: 0,
+      totalWaiting: 0,
+      avgWaitMins: 2,
+      activeSupporters: 0,
+      estimatedWaitMins: 0,
+    });
   }
 }
 

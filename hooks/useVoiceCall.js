@@ -34,8 +34,11 @@ const ICE_SERVERS = [
  * @param {boolean} [params.micMuted] – Mic stummschalten
  */
 export function useVoiceCall({ sessionId, role, enabled, selfId, micMuted = false }) {
-  const [connectionState, setConnectionState] = useState('idle'); // idle | connecting | connected | failed
+  const [connectionState, setConnectionState] = useState('idle'); // idle | connecting | connected | failed | reconnecting
   const [micError, setMicError] = useState(null);
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
+  const [remoteStream, setRemoteStream] = useState(null);
+  const [localStream, setLocalStream] = useState(null);
 
   const pcRef = useRef(null);
   const localStreamRef = useRef(null);
@@ -44,9 +47,47 @@ export function useVoiceCall({ sessionId, role, enabled, selfId, micMuted = fals
   const offerSentRef = useRef(false);
   const pendingIceRef = useRef([]); // ICE-Candidates, die vor setRemoteDescription ankommen
   const remoteSetRef = useRef(false);
+  const reconnectTimerRef = useRef(null);
+  const reconnectAttemptRef = useRef(0);
+  const setupKeyRef = useRef(0); // Inkrementiert bei jedem Reconnect
+
+  // ─── Auto-Reconnect ───
+  const MAX_RECONNECT = 3;
+  const scheduleReconnect = useCallback(() => {
+    if (reconnectAttemptRef.current >= MAX_RECONNECT) return false;
+    if (reconnectTimerRef.current) return true;
+    const nextAttempt = reconnectAttemptRef.current + 1;
+    setConnectionState('reconnecting');
+    const delays = [1500, 3000, 6000];
+    const delay = delays[nextAttempt - 1] || 6000;
+    console.log(`[voice-call] scheduling reconnect ${nextAttempt}/${MAX_RECONNECT} in ${delay}ms`);
+    reconnectTimerRef.current = setTimeout(() => {
+      reconnectTimerRef.current = null;
+      reconnectAttemptRef.current = nextAttempt;
+      // Trigger useEffect rerun via state change
+      setReconnectAttempt(nextAttempt);
+    }, delay);
+    return true;
+  }, []);
+
+  const manualReconnect = useCallback(() => {
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    reconnectAttemptRef.current = 0;
+    setConnectionState('connecting');
+    // Force re-run via state bump
+    setReconnectAttempt((prev) => prev + 1000); // unique value to retrigger
+    setTimeout(() => {
+      reconnectAttemptRef.current = 0;
+      setReconnectAttempt(0);
+    }, 50);
+  }, []);
 
   // ─── Hilfsfunktion: Attach Remote Stream ───
   const attachRemoteStream = useCallback((stream) => {
+    setRemoteStream(stream);
     if (!remoteAudioRef.current) return;
     try {
       remoteAudioRef.current.srcObject = stream;
@@ -118,6 +159,7 @@ export function useVoiceCall({ sessionId, role, enabled, selfId, micMuted = fals
         }
 
         localStreamRef.current = stream;
+        setLocalStream(stream);
 
         // Wenn wir bereits gemutet starten, direkt anwenden
         stream.getAudioTracks().forEach((t) => (t.enabled = !micMuted));
@@ -138,9 +180,19 @@ export function useVoiceCall({ sessionId, role, enabled, selfId, micMuted = fals
         pc.onconnectionstatechange = () => {
           const s = pc.connectionState;
           console.log('[voice-call] pc state:', s);
-          if (s === 'connected') setConnectionState('connected');
-          else if (s === 'failed' || s === 'closed') setConnectionState('failed');
-          else if (s === 'disconnected') setConnectionState('connecting');
+          if (s === 'connected') {
+            setConnectionState('connected');
+            // Bei erfolgreicher Verbindung Reconnect-Counter zurücksetzen
+            reconnectAttemptRef.current = 0;
+            setReconnectAttempt(0);
+          } else if (s === 'failed' || s === 'closed') {
+            // Versuche Reconnect (nur wenn noch enabled)
+            if (enabled && !scheduleReconnect()) {
+              setConnectionState('failed');
+            }
+          } else if (s === 'disconnected') {
+            setConnectionState('connecting');
+          }
         };
 
         // 3) Signalling-Channel
@@ -341,10 +393,13 @@ export function useVoiceCall({ sessionId, role, enabled, selfId, micMuted = fals
       offerSentRef.current = false;
       remoteSetRef.current = false;
       pendingIceRef.current = [];
-      setConnectionState('idle');
+      setRemoteStream(null);
+      setLocalStream(null);
+      // connectionState wird nicht resettet wenn reconnect läuft
+      setConnectionState((prev) => (prev === 'reconnecting' ? prev : 'idle'));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId, role, enabled, selfId]);
+  }, [sessionId, role, enabled, selfId, reconnectAttempt]);
 
   // Mic-Mute anwenden
   useEffect(() => {
@@ -353,5 +408,24 @@ export function useVoiceCall({ sessionId, role, enabled, selfId, micMuted = fals
     stream.getAudioTracks().forEach((t) => (t.enabled = !micMuted));
   }, [micMuted]);
 
-  return { connectionState, micError, remoteAudioRef };
+  // Cleanup Reconnect-Timer beim Unmount
+  useEffect(() => {
+    return () => {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+    };
+  }, []);
+
+  return {
+    connectionState,
+    micError,
+    remoteAudioRef,
+    remoteStream,
+    localStream,
+    reconnectAttempt,
+    maxReconnect: MAX_RECONNECT,
+    manualReconnect,
+  };
 }
