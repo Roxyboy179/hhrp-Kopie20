@@ -61,79 +61,102 @@ function SkeletonCard({ className = "" }) {
 }
 
 function BotStatusCard({ status, onRetry }) {
-  // Zeige immer nur die gelbe Error-Karte, keine blaue Loading-Karte
+  // Zeige immer nur die rote Error-Karte, keine blaue Loading-Karte
   if (!status.isOnline || status.error || status.checking) {
-    // Error State - NUR GELBE KARTE
     return (
-      <div className="glass-card animate-fade-in-scale rounded-2xl p-8 border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-orange-500/10">
-        <div className="flex flex-col items-center justify-center text-center space-y-6">
-          <div className="w-24 h-24 rounded-full bg-yellow-500/20 flex items-center justify-center animate-pulse-soft">
-            <svg 
-              className="w-12 h-12 text-yellow-400" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" 
-              />
-            </svg>
-          </div>
-          
-          <div className="space-y-3">
-            <h3 className="text-2xl font-bold text-white">Verbindung fehlgeschlagen</h3>
-            <p className="text-white/70 max-w-lg">
-              We could not connect to the HHRP server.
-            </p>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
-              <code className="text-xs font-mono text-red-300 tracking-wider">CODE: HHRP Server 404</code>
-            </div>
-            {status.error && (
-              <div className="glass rounded-lg p-4 border border-white/10 bg-white/5">
-                <p className="text-sm text-white/50">{status.error}</p>
-              </div>
-            )}
-          </div>
+      <div className="relative overflow-hidden rounded-3xl border border-red-500/20 bg-gradient-to-br from-red-950/40 via-zinc-950/60 to-zinc-950/80 backdrop-blur-xl shadow-2xl shadow-red-900/20 animate-fade-in-scale">
+        {/* Animierter Hintergrund-Gradient */}
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(239,68,68,0.15),transparent_50%)] pointer-events-none" />
+        <div className="absolute -top-24 -right-24 w-96 h-96 bg-red-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="space-y-3 w-full max-w-md">
-            {/* Automatischer Retry Hinweis */}
-            <div className="flex items-center justify-center gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-              <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
-              <div className="text-left">
-                <p className="text-sm font-medium text-blue-300">Automatische Prüfung läuft</p>
-                <p className="text-xs text-blue-400/60">Versucht alle 15 Sekunden erneut zu verbinden...</p>
+        <div className="relative p-8 md:p-12">
+          <div className="flex flex-col items-center text-center space-y-8 max-w-xl mx-auto">
+            {/* Icon mit Pulse-Ring */}
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
+              <div className="absolute inset-0 rounded-full bg-red-500/10 animate-pulse" />
+              <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-red-500/30 to-red-600/20 border border-red-500/30 flex items-center justify-center backdrop-blur-sm">
+                <svg
+                  className="w-12 h-12 text-red-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M18.364 5.636L5.636 18.364m0-12.728l12.728 12.728"
+                  />
+                </svg>
               </div>
             </div>
-            
-            <p className="text-xs text-white/40">
-              💡 Die Seite wird automatisch aktualisiert, sobald der Bot wieder online ist.
-            </p>
-            
-            {/* Manueller Retry Button (optional) */}
-            <Button
-              onClick={onRetry}
-              variant="outline"
-              className="w-full button-hover border-white/10 hover:bg-white/5"
-            >
-              <svg 
-                className="w-5 h-5 mr-2" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
+
+            {/* Titel */}
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-red-300">Connection Error</span>
+              </div>
+              <h3 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
+                Verbindung fehlgeschlagen
+              </h3>
+              <p className="text-white/60 text-base md:text-lg leading-relaxed">
+                We could not connect to the HHRP server.
+              </p>
+            </div>
+
+            {/* Error Code Badge */}
+            <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-black/40 border border-red-500/20 backdrop-blur-sm">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-red-500/60 animate-pulse" style={{ animationDelay: '200ms' }} />
+                <span className="w-2 h-2 rounded-full bg-red-500/30 animate-pulse" style={{ animationDelay: '400ms' }} />
+              </div>
+              <code className="text-sm font-mono text-red-300 tracking-widest font-semibold">
+                CODE: HHRP Server 404
+              </code>
+            </div>
+
+            {/* Status-Zeile */}
+            <div className="w-full space-y-3">
+              <div className="flex items-center gap-3 p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm">
+                <div className="relative shrink-0">
+                  <Loader2 className="w-5 h-5 text-blue-400 animate-spin" />
+                </div>
+                <div className="text-left flex-1">
+                  <p className="text-sm font-medium text-white/90">Automatische Wiederverbindung</p>
+                  <p className="text-xs text-white/40 mt-0.5">Nächster Versuch in wenigen Sekunden …</p>
+                </div>
+              </div>
+
+              <Button
+                onClick={onRetry}
+                variant="outline"
+                className="w-full h-12 rounded-xl border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20 text-white/80 hover:text-white transition-all duration-200 group"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" 
-                />
-              </svg>
-              Jetzt manuell versuchen
-            </Button>
+                <svg
+                  className="w-4 h-4 mr-2 group-hover:rotate-180 transition-transform duration-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                Jetzt manuell verbinden
+              </Button>
+            </div>
+
+            {/* Footer Hint */}
+            <p className="text-[11px] text-white/30 tracking-wide">
+              Die Seite aktualisiert sich automatisch, sobald die Verbindung wiederhergestellt ist.
+            </p>
           </div>
         </div>
       </div>
@@ -141,6 +164,118 @@ function BotStatusCard({ status, onRetry }) {
   }
 
   return null;
+}
+
+// Wird angezeigt, wenn der Battle Pass vom Website-Betreiber deaktiviert wurde.
+function BattlePassBlockedCard() {
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-amber-500/20 bg-gradient-to-br from-amber-950/30 via-zinc-950/60 to-zinc-950/80 backdrop-blur-xl shadow-2xl shadow-amber-900/20 animate-fade-in-scale">
+      {/* Animierter Hintergrund */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(245,158,11,0.12),transparent_55%)] pointer-events-none" />
+      <div className="absolute -top-32 -right-32 w-[500px] h-[500px] bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-yellow-500/10 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Diagonale Schraffur-Overlay (Baustellen-Look) */}
+      <div
+        className="absolute inset-0 opacity-[0.04] pointer-events-none"
+        style={{
+          backgroundImage:
+            'repeating-linear-gradient(45deg, #f59e0b 0 10px, transparent 10px 20px)',
+        }}
+      />
+
+      <div className="relative p-8 md:p-14">
+        <div className="flex flex-col items-center text-center space-y-8 max-w-2xl mx-auto">
+          {/* Icon */}
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full bg-amber-500/10 animate-pulse" />
+            <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-amber-500/25 to-amber-600/15 border border-amber-500/30 flex items-center justify-center backdrop-blur-sm">
+              <svg
+                className="w-14 h-14 text-amber-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                />
+              </svg>
+            </div>
+          </div>
+
+          {/* Status Pill */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inset-0 rounded-full bg-amber-400 animate-ping opacity-75" />
+              <span className="relative rounded-full h-2 w-2 bg-amber-400" />
+            </span>
+            <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-amber-300">
+              Feature deactivated
+            </span>
+          </div>
+
+          {/* Titel */}
+          <div className="space-y-4">
+            <h3 className="text-3xl md:text-5xl font-bold text-white tracking-tight bg-gradient-to-br from-white via-white to-amber-200/80 bg-clip-text text-transparent">
+              Battle Pass nicht verfügbar
+            </h3>
+            <p className="text-white/70 text-base md:text-lg leading-relaxed max-w-xl mx-auto">
+              We're sorry, but the connection to the HHRP server has been blocked by the website operator.
+              Therefore, the <span className="text-amber-300 font-semibold">Battle Pass</span> is no longer active and no longer works.
+            </p>
+          </div>
+
+          {/* Info-Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full pt-4">
+            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
+                <svg className="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+              </div>
+              <p className="text-xs font-semibold text-white/90 mb-0.5">Server-Verbindung</p>
+              <p className="text-[11px] text-white/40">Blockiert</p>
+            </div>
+            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+                <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-xs font-semibold text-white/90 mb-0.5">Battle Pass</p>
+              <p className="text-[11px] text-white/40">Inaktiv</p>
+            </div>
+            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.06] backdrop-blur-sm">
+              <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center">
+                <svg className="w-5 h-5 text-white/70" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="text-xs font-semibold text-white/90 mb-0.5">Betreiber</p>
+              <p className="text-[11px] text-white/40">Entscheidung</p>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="w-full pt-4 border-t border-white/[0.06]">
+            <div className="inline-flex items-center gap-3 px-5 py-3 rounded-xl bg-black/40 border border-amber-500/20 backdrop-blur-sm">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-amber-500/60 animate-pulse" style={{ animationDelay: '200ms' }} />
+                <span className="w-2 h-2 rounded-full bg-amber-500/30 animate-pulse" style={{ animationDelay: '400ms' }} />
+              </div>
+              <code className="text-sm font-mono text-amber-300 tracking-widest font-semibold">
+                CODE: FEATURE_BLOCKED
+              </code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 
@@ -4392,7 +4527,7 @@ export default function ProfilPage() {
         {/* Battle Pass Tab */}
         {activeTab === 'battle-pass' && (
           <div data-tour-card="HHRP Battle Pass|Schalte täglich neue Belohnungen frei! Premium für doppelte Rewards. Credits, Geld, Items und mehr warten auf dich.">
-            <BattlePassView />
+            <BattlePassBlockedCard />
           </div>
         )}
 
