@@ -1,11 +1,30 @@
 'use client';
 
+import { useEffect } from 'react';
 import { X, Smartphone, Monitor, Chrome, Menu, Share2, MoreVertical } from 'lucide-react';
 
 export function InstallModal({ onClose }) {
+  // ESC-Taste zum Schließen
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === 'Escape') onClose?.();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  // Body-Scroll blockieren wenn Modal offen
+  useEffect(() => {
+    const original = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, []);
+
   return (
     <div 
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto"
       style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}
       onClick={onClose}
     >
