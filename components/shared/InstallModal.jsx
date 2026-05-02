@@ -1,9 +1,16 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Smartphone, Monitor, Chrome, Menu, Share2, MoreVertical } from 'lucide-react';
 
 export function InstallModal({ onClose }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // ESC-Taste zum Schließen
   useEffect(() => {
     const handler = (e) => {
@@ -22,9 +29,11 @@ export function InstallModal({ onClose }) {
     };
   }, []);
 
-  return (
+  if (!mounted) return null;
+
+  const modal = (
     <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto"
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-y-auto"
       style={{ background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)' }}
       onClick={onClose}
     >
@@ -183,4 +192,6 @@ export function InstallModal({ onClose }) {
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

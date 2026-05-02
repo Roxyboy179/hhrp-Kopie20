@@ -1,12 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useTheme, THEMES, CATEGORIES } from '@/components/providers/ThemeProvider';
 import { Palette, X, Check } from 'lucide-react';
 
 export function ThemeModal({ open, onClose }) {
   const [activeCategory, setActiveCategory] = useState('Alle');
+  const [mounted, setMounted] = useState(false);
   const { currentTheme, setTheme } = useTheme();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // ESC-Taste zum Schließen
   useEffect(() => {
@@ -28,7 +34,7 @@ export function ThemeModal({ open, onClose }) {
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
   const filtered =
     activeCategory === 'Alle'
@@ -37,8 +43,8 @@ export function ThemeModal({ open, onClose }) {
 
   const allCategories = ['Alle', ...CATEGORIES];
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+  const modal = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/70 backdrop-blur-sm"
@@ -150,4 +156,6 @@ export function ThemeModal({ open, onClose }) {
       `}</style>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }
