@@ -8306,6 +8306,27 @@ async function handleVoiceSupportCreate(request) {
       return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
     }
 
+    // ─── Support-Öffnungszeiten prüfen: Mo–So 12:00–22:00 (Europe/Berlin) ───
+    try {
+      const berlinHourStr = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Europe/Berlin',
+        hour: 'numeric',
+        hour12: false,
+      }).format(new Date());
+      const berlinHour = parseInt(berlinHourStr, 10);
+      if (!(berlinHour >= 12 && berlinHour < 22)) {
+        return NextResponse.json(
+          {
+            error: 'Support ist aktuell geschlossen. Öffnungszeiten: täglich 12:00–22:00 Uhr.',
+            code: 'SUPPORT_CLOSED',
+          },
+          { status: 423 }
+        );
+      }
+    } catch (tzErr) {
+      console.warn('[VoiceSupport] TZ check failed:', tzErr);
+    }
+
     const body = await request.json().catch(() => ({}));
     const reason = (body.reason || '').toString().trim().substring(0, 1000);
 
