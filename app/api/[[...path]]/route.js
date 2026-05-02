@@ -4618,14 +4618,30 @@ async function handleGetUserData(request) {
       return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
     }
 
+    // Cache-Bypass per ?nocache=1 ODER Cache-Control: no-cache Header.
+    // Wird vom Frontend bei Supabase-Realtime-Events genutzt, damit
+    // externe Änderungen (Bot/Dashboard/SQL) sofort sichtbar werden.
+    const url = new URL(request.url);
+    const cacheControl = request.headers.get('cache-control') || '';
+    const bypassCache =
+      url.searchParams.get('nocache') === '1' ||
+      cacheControl.includes('no-cache') ||
+      cacheControl.includes('no-store');
+
     const inm = request.headers.get('if-none-match');
     const cached = __userDataCache.get(user.id);
     const nowMs = Date.now();
 
+    // Bei Cache-Bypass: Eintrag verwerfen, damit auch andere Anfragen
+    // danach frische Daten bekommen.
+    if (bypassCache) {
+      __userDataCache.delete(user.id);
+    }
+
     // ------------------------------------------------
     // 1) Memory-Cache hit (TTL nicht abgelaufen)
     // ------------------------------------------------
-    if (cached && cached.expiresAt > nowMs) {
+    if (!bypassCache && cached && cached.expiresAt > nowMs) {
       if (inm && inm === cached.etag) {
         return new NextResponse(null, {
           status: 304,

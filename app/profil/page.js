@@ -1113,19 +1113,19 @@ export default function ProfilPage() {
     'user.updated': (evt) => {
       if (!user) return;
       if (evt.data?.userId && evt.data.userId !== user.id) return;
-      loadData();
+      loadData(true);
     },
     'user.notification': (evt) => {
       if (!user) return;
       if (evt.data?.title) {
         toast.message(evt.data.title, { description: evt.data.message });
       }
-      loadData();
+      loadData(true);
     },
     'bewerbung.updated': (evt) => {
       if (!user) return;
       if (evt.data?.userId && evt.data.userId !== user.id) return;
-      loadData();
+      loadData(true);
       if (evt.data?.byAdmin && evt.data?.status) {
         if (evt.data.status === 'Angenommen') toast.success('Deine Bewerbung wurde angenommen! 🎉');
         else if (evt.data.status === 'Abgelehnt') toast.error('Deine Bewerbung wurde abgelehnt');
@@ -1134,12 +1134,12 @@ export default function ProfilPage() {
     },
     'bewerbung.created': (evt) => {
       if (!user || evt.data?.userId !== user.id) return;
-      loadData();
+      loadData(true);
     },
     'bewerbung.deleted': (evt) => {
       if (!user) return;
       if (evt.data?.userId && evt.data.userId !== user.id) return;
-      loadData();
+      loadData(true);
     },
     'system.status.updated': () => {
       // Optional: Wartungsmodus-Änderungen nicht aggressiv neu laden
@@ -1167,7 +1167,9 @@ export default function ProfilPage() {
         if (process.env.NODE_ENV !== 'production') {
           console.log(`[Supabase Realtime] Reload triggered by ${source}`);
         }
-        loadData();
+        // force=true → bypasst den 30s Server-Cache,
+        // damit externe Änderungen sofort sichtbar sind.
+        loadData(true);
       }, 400);
     };
 
@@ -1281,7 +1283,7 @@ export default function ProfilPage() {
     return () => clearInterval(retryInterval);
   }, [user, authLoading, botStatus.isOnline, botStatus.checking]);
 
-  const loadData = async () => {
+  const loadData = async (force = false) => {
     try {
       // Behalte den vorherigen isOnline Status, setze nur checking auf true
       setBotStatus(prev => ({ ...prev, checking: true }));
@@ -1304,11 +1306,13 @@ export default function ProfilPage() {
       }
       
       // 2. Bot ist online, lade die Daten
+      const nocache = force ? '?nocache=1' : '';
+      const headers = force ? { 'Cache-Control': 'no-cache' } : {};
       const [userRes, rewardsRes, bewerbungenRes, battlePassRes] = await Promise.all([
-        fetch('/api/user/data', { cache: 'no-store' }),
-        fetch('/api/user/rewards', { cache: 'no-store' }),
-        fetch('/api/bewerbungen/me', { cache: 'no-store' }),
-        fetch('/api/battle-pass/current', { cache: 'no-store' }).catch(() => null)
+        fetch(`/api/user/data${nocache}`, { cache: 'no-store', headers }),
+        fetch(`/api/user/rewards${nocache}`, { cache: 'no-store', headers }),
+        fetch(`/api/bewerbungen/me${nocache}`, { cache: 'no-store', headers }),
+        fetch(`/api/battle-pass/current${nocache}`, { cache: 'no-store', headers }).catch(() => null)
       ]);
 
       if (userRes.ok) {
