@@ -49,6 +49,7 @@ import ProfileTour, { TourStartButton, hasCompletedProfileTour } from '@/compone
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
 import { useRealtime } from '@/hooks/useRealtime';
 import { RealtimeIndicator } from '@/components/shared/RealtimeIndicator';
+import { getSupabaseBrowser } from '@/lib/supabase-browser';
 
 function SkeletonCard({ className = "" }) {
   return (
@@ -1144,6 +1145,62 @@ export default function ProfilPage() {
       // Optional: Wartungsmodus-Änderungen nicht aggressiv neu laden
     },
   });
+
+  // ──────────────────────────────────────────────────────────────────────
+  // Supabase Realtime: user_data Tabelle live beobachten
+  // Damit werden Änderungen (z. B. via Discord-Bot, SQL, Dashboard) sofort
+  // im Profil reflektiert, OHNE dass der Nutzer neu laden muss.
+  //
+  // Voraussetzung: In Supabase Dashboard → Database → Replication muss die
+  // Tabelle `user_data` für `supabase_realtime` aktiviert sein.
+  // ──────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!user?.id) return;
+    const client = getSupabaseBrowser();
+    if (!client) return;
+
+    let reloadTimer = null;
+    const scheduleReload = (source) => {
+      if (reloadTimer) clearTimeout(reloadTimer);
+      // Debounce: innerhalb von 400ms mehrere Changes → 1 Reload
+      reloadTimer = setTimeout(() => {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log(`[Supabase Realtime] Reload triggered by ${source}`);
+        }
+        loadData();
+      }, 400);
+    };
+
+    const channel = client
+      .channel(`user_data_profile_${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'user_data',
+          filter: `discord_user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          scheduleReload(`user_data.${payload?.eventType || 'change'}`);
+        }
+      )
+      .subscribe((status) => {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[Supabase Realtime] user_data channel status:', status);
+        }
+      });
+
+    return () => {
+      if (reloadTimer) clearTimeout(reloadTimer);
+      try {
+        client.removeChannel(channel);
+      } catch (e) {
+        // ignore
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   // Lade Einstellungen aus localStorage
   useEffect(() => {
