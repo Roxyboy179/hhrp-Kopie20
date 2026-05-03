@@ -250,8 +250,10 @@ export default function RadioPage() {
         artist: 'HHRP Radio',
         album: 'Hamburg Horizon Radio',
         artwork: [
-          { src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/icon-96.png',  sizes: '96x96',   type: 'image/png' },
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
         ],
       });
       navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
