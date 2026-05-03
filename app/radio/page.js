@@ -125,6 +125,20 @@ export default function RadioPage() {
 
   const audioRef = useRef(null);
   const startedAtRef = useRef(null);
+  const currentTrack = shuffled[index] || null;
+
+  // Next-Track Helper (damit Media Session & Ended-Handler beide drauf zugreifen)
+  const gotoNextTrack = useCallback(() => {
+    setIndex((prev) => {
+      const next = prev + 1;
+      if (next >= shuffled.length) {
+        const reshuffled = shuffleArray(tracks);
+        setShuffled(reshuffled);
+        return 0;
+      }
+      return next;
+    });
+  }, [shuffled, tracks]);
 
   // Tracks laden – statische tracks.json → API als Fallback
   useEffect(() => {
@@ -157,8 +171,6 @@ export default function RadioPage() {
     })();
     return () => { cancelled = true; };
   }, []);
-
-  const currentTrack = shuffled[index] || null;
 
   // Elapsed-Timer (nur wenn wirklich playing)
   useEffect(() => {
@@ -252,17 +264,7 @@ export default function RadioPage() {
     const onMeta = () => setDuration(el.duration || 0);
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
-    const onEnded = () => {
-      setIndex((prev) => {
-        const next = prev + 1;
-        if (next >= shuffled.length) {
-          const reshuffled = shuffleArray(tracks);
-          setShuffled(reshuffled);
-          return 0;
-        }
-        return next;
-      });
-    };
+    const onEnded = () => { gotoNextTrack(); };
     el.addEventListener('timeupdate', onTime);
     el.addEventListener('loadedmetadata', onMeta);
     el.addEventListener('durationchange', onMeta);
@@ -277,24 +279,69 @@ export default function RadioPage() {
       el.removeEventListener('pause', onPause);
       el.removeEventListener('ended', onEnded);
     };
-  }, [shuffled, tracks]);
+  }, [gotoNextTrack]);
 
-  // Auto-Resume bei ungewollter Pause (z.B. System-Handler)
+  // Media Session API: Zeigt Song-Name + Controls auf Sperrbildschirm / Notification Center / 
+  // Bluetooth-Kopfhörer. Ermöglicht Background-Playback auf iOS / Android PWAs.
   useEffect(() => {
-    const el = audioRef.current;
-    if (!el) return;
-    const onPause = () => {
-      if (listening && !el.ended) {
-        setTimeout(() => {
-          if (listening && el.paused && !el.ended) el.play().catch(() => {});
-        }, 200);
+    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+    if (!listening || !currentTrack) {
+      try {
+        navigator.mediaSession.metadata = null;
+        navigator.mediaSession.playbackState = 'none';
+      } catch {}
+      return;
+    }
+
+    try {
+      navigator.mediaSession.metadata = new window.MediaMetadata({
+        title: currentTrack.name,
+        artist: 'HHRP Radio',
+        album: 'Hamburg Horizon Radio',
+        artwork: [
+          { src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+        ],
+      });
+      navigator.mediaSession.playbackState = playing ? 'playing' : 'paused';
+    } catch (e) {
+      console.warn('[radio] MediaSession metadata error', e);
+    }
+
+    // Action Handlers
+    const handlers = {
+      play: () => {
+        const el = audioRef.current;
+        if (el) el.play().catch(() => {});
+      },
+      pause: () => {
+        const el = audioRef.current;
+        if (el) el.pause();
+      },
+      stop: () => stopListening(),
+      // Keine Seek/Skip-Actions: User soll nur zuhören (kein Vorspulen)
+    };
+    const unsupported = [];
+    for (const [action, handler] of Object.entries(handlers)) {
+      try {
+        navigator.mediaSession.setActionHandler(action, handler);
+      } catch {
+        unsupported.push(action);
+      }
+    }
+    // Seek/next/previous explizit DEAKTIVIEREN (falls Browser sie sonst zeigt)
+    for (const action of ['seekto', 'seekbackward', 'seekforward', 'nexttrack', 'previoustrack']) {
+      try { navigator.mediaSession.setActionHandler(action, null); } catch {}
+    }
+
+    return () => {
+      for (const action of Object.keys(handlers)) {
+        try { navigator.mediaSession.setActionHandler(action, null); } catch {}
       }
     };
-    el.addEventListener('pause', onPause);
-    return () => el.removeEventListener('pause', onPause);
-  }, [listening]);
+  }, [listening, currentTrack, playing]); // eslint-disable-line
 
-  // Seek blockieren
+  // Seek blockieren (User darf nicht innerhalb des Songs springen)
   const lastTimeRef = useRef(0);
   useEffect(() => {
     const el = audioRef.current;
@@ -324,8 +371,13 @@ export default function RadioPage() {
 
   return (
     <>
-      {/* Hidden Audio Element */}
-      <audio ref={audioRef} preload="auto" />
+      {/* Hidden Audio Element - playsInline für iOS Background-Playback */}
+      <audio
+        ref={audioRef}
+        preload="auto"
+        playsInline
+        x-webkit-airplay="allow"
+      />
 
       {/* Animated Ambient Background */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
