@@ -362,8 +362,6 @@ export default function RadioPage() {
             <NowPlayingCard
               track={currentTrack}
               playing={playing}
-              currentTime={currentTime}
-              duration={duration}
               elapsed={elapsed}
               volume={volume}
               setVolume={setVolume}
@@ -591,10 +589,9 @@ function ConnectingCard({ onCancel }) {
 /* ──────────────────────────────────────────────────────────── */
 
 function NowPlayingCard({
-  track, playing, currentTime, duration, elapsed,
+  track, playing, elapsed,
   volume, setVolume, muted, setMuted, onStop, audioEl,
 }) {
-  const progressPct = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
 
   return (
     <CardShell glowColor="fuchsia">
@@ -661,18 +658,18 @@ function NowPlayingCard({
         </div>
 
         {/* Progress-Bar (read-only) */}
-        <div className="rounded-2xl bg-black/20 border border-white/[0.06] p-4 space-y-2.5">
-          <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-widest text-white/40">
-            <span>Song-Fortschritt</span>
-            <span className="font-mono tabular-nums text-white/50">
-              {formatTime(currentTime)} / {formatTime(duration)}
+        <div className="rounded-2xl bg-black/20 border border-white/[0.06] p-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="relative w-2 h-2 rounded-full bg-fuchsia-400">
+              <span className="absolute inset-0 rounded-full bg-fuchsia-400 animate-ping opacity-70" />
+            </span>
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-white/60">
+              Live-Übertragung
             </span>
           </div>
-          <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-fuchsia-400 via-pink-400 to-amber-300 transition-all duration-300"
-              style={{ width: `${progressPct}%` }}
-            />
+          <div className="flex items-center gap-1.5 text-white/50 text-xs font-mono tabular-nums">
+            <Radio className="w-3.5 h-3.5 text-fuchsia-300" />
+            <span>HHRP · FM</span>
           </div>
         </div>
 
