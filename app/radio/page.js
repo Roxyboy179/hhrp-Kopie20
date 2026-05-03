@@ -32,73 +32,24 @@ function formatTime(s) {
 }
 
 /* ──────────────────────────────────────────────────────────── */
-/*  AUDIO WAVE (Canvas-basiert, zeigt Audio-Level)              */
+/*  FAUX AUDIO WAVE (CSS only, berührt NICHT den AudioContext)  */
+/*  → Wichtig für Background-Playback auf iOS/Android PWAs.     */
 /* ──────────────────────────────────────────────────────────── */
 
-function LiveAudioWave({ audioEl, playing, bars = 9 }) {
-  const [levels, setLevels] = useState(() => Array(bars).fill(0.2));
-  const rafRef = useRef(null);
-  const ctxRef = useRef(null);
-  const analyserRef = useRef(null);
-  const srcRef = useRef(null);
-
-  useEffect(() => {
-    if (!audioEl || !playing) {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      return;
-    }
-    try {
-      if (!ctxRef.current) {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        ctxRef.current = new AudioCtx();
-      }
-      if (!srcRef.current) {
-        srcRef.current = ctxRef.current.createMediaElementSource(audioEl);
-        analyserRef.current = ctxRef.current.createAnalyser();
-        analyserRef.current.fftSize = 64;
-        srcRef.current.connect(analyserRef.current);
-        analyserRef.current.connect(ctxRef.current.destination);
-      }
-      if (ctxRef.current.state === 'suspended') {
-        ctxRef.current.resume().catch(() => {});
-      }
-    } catch (e) {
-      console.warn('[radio] audio analyser init failed', e);
-      return;
-    }
-
-    const analyser = analyserRef.current;
-    const data = new Uint8Array(analyser.frequencyBinCount);
-    const step = Math.max(1, Math.floor(data.length / bars));
-
-    const tick = () => {
-      analyser.getByteFrequencyData(data);
-      const next = [];
-      for (let i = 0; i < bars; i++) {
-        let sum = 0;
-        for (let j = 0; j < step; j++) {
-          sum += data[i * step + j] || 0;
-        }
-        const avg = sum / step / 255;
-        next.push(Math.max(0.15, Math.min(1, avg * 1.6)));
-      }
-      setLevels(next);
-      rafRef.current = requestAnimationFrame(tick);
-    };
-    rafRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [audioEl, playing, bars]);
-
+function LiveAudioWave({ playing, bars = 9 }) {
   return (
     <div className="flex items-end justify-center gap-1 h-6">
-      {levels.map((v, i) => (
+      {Array.from({ length: bars }).map((_, i) => (
         <span
           key={i}
-          className="w-1 rounded-full bg-gradient-to-t from-fuchsia-400 to-pink-300 transition-all duration-75"
-          style={{ height: `${Math.round(v * 100)}%` }}
+          className={`w-1 rounded-full bg-gradient-to-t from-fuchsia-400 to-pink-300 ${
+            playing ? 'wave-bar-live' : 'wave-bar-idle'
+          }`}
+          style={{
+            height: `${30 + (i % 3) * 20}%`,
+            animationDelay: `${(i * 0.12).toFixed(2)}s`,
+            animationDuration: `${(0.8 + (i % 4) * 0.15).toFixed(2)}s`,
+          }}
         />
       ))}
     </div>
@@ -420,7 +371,6 @@ export default function RadioPage() {
               muted={muted}
               setMuted={setMuted}
               onStop={stopListening}
-              audioEl={audioRef.current}
             />
           )}
         </div>
@@ -438,6 +388,23 @@ export default function RadioPage() {
           50% { transform: scaleY(1); }
         }
         .wave-bar { animation: wave-bar 1s ease-in-out infinite; transform-origin: bottom; }
+
+        @keyframes wave-live {
+          0% { transform: scaleY(0.3); }
+          25% { transform: scaleY(1); }
+          50% { transform: scaleY(0.5); }
+          75% { transform: scaleY(0.9); }
+          100% { transform: scaleY(0.3); }
+        }
+        .wave-bar-live {
+          animation: wave-live 0.9s ease-in-out infinite;
+          transform-origin: bottom;
+        }
+        .wave-bar-idle {
+          opacity: 0.5;
+          transform: scaleY(0.5);
+          transform-origin: bottom;
+        }
 
         input[type="range"].volume-slider::-webkit-slider-thumb {
           appearance: none;
@@ -642,7 +609,7 @@ function ConnectingCard({ onCancel }) {
 
 function NowPlayingCard({
   track, playing, elapsed,
-  volume, setVolume, muted, setMuted, onStop, audioEl,
+  volume, setVolume, muted, setMuted, onStop,
 }) {
 
   return (
@@ -680,7 +647,7 @@ function NowPlayingCard({
 
           {/* Live Wave (echt, basierend auf Audio) */}
           {playing && (
-            <LiveAudioWave audioEl={audioEl} playing={playing} bars={9} />
+            <LiveAudioWave playing={playing} bars={9} />
           )}
           {!playing && (
             <div className="flex items-end gap-1 h-6">
