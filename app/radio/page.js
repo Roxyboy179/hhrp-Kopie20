@@ -657,11 +657,6 @@ function NowPlayingCard({
           <PhoneOff className="w-5 h-5 mr-2" />
           Radio verlassen
         </Button>
-
-        {/* Hinweis */}
-        <p className="text-center text-[11px] text-white/30 leading-relaxed">
-          Kein Pausieren, kein Vorspulen – die Musik läuft durch. Viel Spaß beim Hören!
-        </p>
       </div>
     </div>
   );
