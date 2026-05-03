@@ -102,7 +102,7 @@ is_active: true
 
 ### 3. Login testen
 
-**URL:** https://nav-modal-redesign.preview.emergentagent.com/admin
+**URL:** https://hhrp-radio.preview.emergentagent.com/admin
 
 **Eingeben:**
 - Mitarbeiter-Nummer: `MA-001`

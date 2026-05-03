@@ -2968,6 +2968,34 @@ export async function GET(request) {
     return handleVoiceSupportQueueInfo(request);
   }
 
+  // ===== HHRP RADIO =====
+  // Listet alle MP3-Dateien im Ordner /public/radio dynamisch auf.
+  // Einfach neue MP3s in /app/public/radio/ legen – sie erscheinen sofort.
+  if (p === 'radio/tracks') {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      const dir = path.join(process.cwd(), 'public', 'radio');
+      if (!fs.existsSync(dir)) {
+        return NextResponse.json({ tracks: [] });
+      }
+      const files = fs.readdirSync(dir)
+        .filter((f) => f.toLowerCase().endsWith('.mp3'))
+        .sort();
+      const tracks = files.map((f) => ({
+        name: f.replace(/\.mp3$/i, ''),
+        url: `/radio/${encodeURIComponent(f)}`,
+      }));
+      return NextResponse.json(
+        { tracks, total: tracks.length },
+        { headers: { 'Cache-Control': 'no-store' } }
+      );
+    } catch (e) {
+      console.error('[radio/tracks] error', e);
+      return NextResponse.json({ tracks: [], error: 'Failed to read radio folder' }, { status: 500 });
+    }
+  }
+
   // DEBUG ENDPOINT - Supabase Test
   if (p === 'debug/test-supabase') {
     try {

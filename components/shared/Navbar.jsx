@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Shield, LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2, Bell, Users, ChevronDown, FlaskConical, Headphones
+  Shield, LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2, Bell, Users, ChevronDown, FlaskConical, Headphones, Radio
 } from 'lucide-react';
 import { NotificationBell } from '@/components/shared/NotificationBell';
 import { LoginModal } from '@/components/LoginModal';
@@ -217,6 +217,13 @@ export function Navbar({ user, loading }) {
                     >
                       <Headphones className="w-4 h-4" />
                       <span>Voice Support</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => router.push('/radio')}
+                      className="cursor-pointer flex items-center gap-2 text-white/70 hover:text-white hover:bg-white/[0.06] focus:bg-white/[0.06] focus:text-white"
+                    >
+                      <Radio className="w-4 h-4" />
+                      <span>HHRP Radio</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-white/[0.06] my-1" />
                     <ThemeMenuItem onOpen={() => setThemeModalOpen(true)} />
