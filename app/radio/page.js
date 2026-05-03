@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Radio, Music2, Play, PhoneOff, Loader2, Volume2, VolumeX,
-  ListMusic, Sparkles, Info, Headphones,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -122,6 +121,7 @@ export default function RadioPage() {
   const [loops, setLoops] = useState(0); // Wie oft Playlist neu gemischt wurde
 
   const audioRef = useRef(null);
+  const [connecting, setConnecting] = useState(false); // "Verbinde mit HHRP Radio…"
 
   // Tracks laden – zuerst statische tracks.json (immer verfügbar, auch auf jedem Deploy),
   // dann die API (für frisch hinzugefügte Tracks ohne Rebuild).
@@ -163,7 +163,7 @@ export default function RadioPage() {
 
   const currentTrack = shuffled[index] || null;
 
-  // Start-Funktion: Shuffle + Play
+  // Start-Funktion: Shuffle + Play (mit "Verbinde mich…" Phase)
   const startListening = useCallback(async () => {
     if (!tracks || tracks.length === 0) {
       toast.error('Keine Musik verfügbar');
@@ -173,8 +173,8 @@ export default function RadioPage() {
     setShuffled(list);
     setIndex(0);
     setLoops(0);
+    setConnecting(true);
     setListening(true);
-
     // Audio-Element wird im Effect gestartet, da sich src erst dann ändert
   }, [tracks]);
 
@@ -190,6 +190,7 @@ export default function RadioPage() {
       } catch {}
     }
     setListening(false);
+    setConnecting(false);
     setPlaying(false);
     setShuffled([]);
     setIndex(0);
@@ -212,10 +213,14 @@ export default function RadioPage() {
     const playPromise = el.play();
     if (playPromise && typeof playPromise.then === 'function') {
       playPromise
-        .then(() => setPlaying(true))
+        .then(() => {
+          setPlaying(true);
+          setConnecting(false);
+        })
         .catch((err) => {
           console.warn('[radio] autoplay failed', err);
           setPlaying(false);
+          setConnecting(false);
           toast.error('Automatische Wiedergabe wurde vom Browser blockiert. Klick erneut auf Radio hören.');
           setListening(false);
         });
@@ -358,12 +363,12 @@ export default function RadioPage() {
           ) : tracks.length === 0 ? (
             <EmptyCard />
           ) : !listening ? (
-            <StartCard onStart={startListening} trackCount={tracks.length} />
+            <StartCard onStart={startListening} />
+          ) : connecting ? (
+            <ConnectingCard onCancel={stopListening} />
           ) : (
             <NowPlayingCard
               track={currentTrack}
-              index={index}
-              total={shuffled.length}
               playing={playing}
               currentTime={currentTime}
               duration={duration}
@@ -373,29 +378,7 @@ export default function RadioPage() {
               setMuted={setMuted}
               onStop={stopListening}
               audioEl={audioRef.current}
-              loops={loops}
             />
-          )}
-
-          {/* Info Pills */}
-          {!listening && tracks.length > 0 && (
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <InfoPill
-                icon={<ListMusic className="w-4 h-4" />}
-                title={`${tracks.length} Tracks`}
-                text="in der Rotation"
-              />
-              <InfoPill
-                icon={<Sparkles className="w-4 h-4" />}
-                title="Zufallsmix"
-                text="immer neu gemischt"
-              />
-              <InfoPill
-                icon={<Headphones className="w-4 h-4" />}
-                title="Lean-back"
-                text="einfach reinhören"
-              />
-            </div>
           )}
         </div>
       </div>
@@ -459,14 +442,14 @@ function EmptyCard() {
   );
 }
 
-function StartCard({ onStart, trackCount }) {
+function StartCard({ onStart }) {
   return (
     <div className="relative overflow-hidden rounded-[28px] border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.01] backdrop-blur-2xl shadow-2xl">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
       <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[400px] h-[400px] bg-fuchsia-500/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="relative p-6 sm:p-10 space-y-6">
-        {/* Icon + Title */}
+        {/* Icon + Title (wie Voice Support) */}
         <div className="flex items-center gap-4">
           <div className="relative flex-shrink-0">
             <div className="absolute inset-0 bg-gradient-to-br from-fuchsia-500/40 to-amber-500/40 rounded-2xl blur-lg" />
@@ -476,50 +459,22 @@ function StartCard({ onStart, trackCount }) {
           </div>
           <div className="min-w-0">
             <h2 className="text-lg sm:text-xl font-semibold text-white leading-tight">
-              Bereit für deinen Soundtrack?
+              Radio starten
             </h2>
             <p className="text-xs sm:text-sm text-white/50 mt-0.5">
-              Drück auf Play – die Musik läuft durch.
+              Lehn dich zurück und genieß die Musik.
             </p>
           </div>
         </div>
 
-        {/* Hero Disc */}
-        <div className="flex flex-col items-center text-center space-y-4 py-6">
-          <div className="relative w-40 h-40 sm:w-48 sm:h-48">
+        {/* Hero Disc (wie Voice Support Hero) */}
+        <div className="flex flex-col items-center text-center space-y-4 py-4 sm:py-6">
+          <div className="relative w-32 h-32 sm:w-40 sm:h-40 flex items-center justify-center">
             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-fuchsia-500/25 to-amber-500/25 blur-2xl animate-pulse" />
-            <div className="absolute inset-0 rounded-full bg-black border border-white/20 shadow-2xl flex items-center justify-center">
-              {/* Ringe auf der Disc */}
-              <div className="absolute inset-3 rounded-full border border-white/10" />
-              <div className="absolute inset-6 rounded-full border border-white/10" />
-              <div className="absolute inset-10 rounded-full border border-white/10" />
-              {/* Label */}
-              <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-fuchsia-500 via-pink-500 to-amber-400 flex items-center justify-center shadow-inner">
-                <Radio className="w-9 h-9 text-black/80" strokeWidth={2.2} />
-              </div>
-              <div className="absolute w-2 h-2 rounded-full bg-white/70" />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-fuchsia-500/10 border border-fuchsia-500/20 text-[11px] font-medium uppercase tracking-wider text-fuchsia-200">
-              <ListMusic className="w-3 h-3" />
-              {trackCount} Tracks in Rotation
-            </div>
-          </div>
-        </div>
-
-        {/* Info Box */}
-        <div className="rounded-2xl bg-fuchsia-500/[0.06] border border-fuchsia-500/[0.15] p-4 flex gap-3">
-          <Info className="w-5 h-5 text-fuchsia-200 flex-shrink-0 mt-0.5" />
-          <div className="text-xs sm:text-sm text-white/70 leading-relaxed space-y-1.5">
-            <div>
-              Die Titel werden <strong className="text-white">zufällig</strong> abgespielt.
-              Wenn alle Songs durch sind, wird die Playlist <strong className="text-white">neu gemischt</strong>{' '}
-              und läuft weiter.
-            </div>
-            <div className="text-white/50">
-              Du kannst nur zuhören – kein Pausieren, kein Vorspulen. Einfach genießen.
+            <div className="absolute inset-3 rounded-full border border-fuchsia-400/20 animate-ping" style={{ animationDuration: '2.5s' }} />
+            <div className="absolute inset-6 rounded-full border border-fuchsia-400/30 animate-ping" style={{ animationDuration: '2.5s', animationDelay: '0.6s' }} />
+            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-amber-500/30 border border-white/[0.15] backdrop-blur-xl flex items-center justify-center shadow-2xl">
+              <Radio className="w-9 h-9 sm:w-11 sm:h-11 text-fuchsia-200" />
             </div>
           </div>
         </div>
@@ -537,9 +492,63 @@ function StartCard({ onStart, trackCount }) {
   );
 }
 
+function ConnectingCard({ onCancel }) {
+  return (
+    <div className="relative overflow-hidden rounded-[28px] border border-white/[0.08] bg-gradient-to-b from-white/[0.04] to-white/[0.01] backdrop-blur-2xl shadow-2xl">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+      <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[400px] h-[400px] bg-fuchsia-500/10 rounded-full blur-3xl pointer-events-none" />
+
+      <div className="relative p-6 sm:p-10 space-y-6 sm:space-y-8">
+        {/* Status Header */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="relative w-2.5 h-2.5 rounded-full bg-amber-400">
+              <span className="absolute inset-0 rounded-full bg-amber-400 animate-ping opacity-60" />
+            </span>
+            <span className="text-xs font-semibold uppercase tracking-[0.15em] text-amber-300">
+              Verbinde…
+            </span>
+          </div>
+        </div>
+
+        {/* Pulsing Hero (exakt Voice-Support-Stil) */}
+        <div className="flex flex-col items-center text-center space-y-4">
+          <div className="relative w-32 h-32 sm:w-40 sm:h-40 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-fuchsia-500/20 to-amber-500/20 blur-2xl animate-pulse" />
+            <div className="absolute inset-3 rounded-full border border-fuchsia-400/20 animate-ping" style={{ animationDuration: '2s' }} />
+            <div className="absolute inset-6 rounded-full border border-fuchsia-400/30 animate-ping" style={{ animationDuration: '2s', animationDelay: '0.5s' }} />
+            <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-amber-500/30 border border-white/[0.15] backdrop-blur-xl flex items-center justify-center shadow-2xl">
+              <Radio className="w-9 h-9 sm:w-11 sm:h-11 text-fuchsia-200" />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+              Verbinde mich mit dem HHRP Radio
+            </h2>
+            <p className="text-sm text-white/50 max-w-sm mx-auto inline-flex items-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Bitte warten…
+            </p>
+          </div>
+        </div>
+
+        {/* Abbrechen Button */}
+        <Button
+          onClick={onCancel}
+          variant="outline"
+          className="w-full h-12 rounded-2xl font-semibold bg-white/[0.03] hover:bg-white/[0.08] border-white/[0.1] text-white/70 hover:text-white transition"
+        >
+          Abbrechen
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function NowPlayingCard({
-  track, index, total, playing, currentTime, duration,
-  volume, setVolume, muted, setMuted, onStop, audioEl, loops,
+  track, playing, currentTime, duration,
+  volume, setVolume, muted, setMuted, onStop, audioEl,
 }) {
   const progressPct = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0;
 
@@ -559,14 +568,9 @@ function NowPlayingCard({
               On Air
             </span>
           </div>
-          <div className="flex items-center gap-1.5 text-white/40 text-xs font-mono tabular-nums">
-            <ListMusic className="w-3.5 h-3.5" />
-            <span>{index + 1} / {total}</span>
-            {loops > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-white/[0.05] text-[10px]">
-                Loop {loops}
-              </span>
-            )}
+          <div className="flex items-center gap-1.5 text-fuchsia-200 text-[11px] font-semibold uppercase tracking-wider">
+            <Radio className="w-3.5 h-3.5" />
+            <span>Live</span>
           </div>
         </div>
 
@@ -658,22 +662,6 @@ function NowPlayingCard({
         <p className="text-center text-[11px] text-white/30 leading-relaxed">
           Kein Pausieren, kein Vorspulen – die Musik läuft durch. Viel Spaß beim Hören!
         </p>
-      </div>
-    </div>
-  );
-}
-
-function InfoPill({ icon, title, text }) {
-  return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-xl p-4 transition-all hover:bg-white/[0.04] hover:border-white/[0.1]">
-      <div className="flex items-start gap-3">
-        <div className="w-8 h-8 rounded-xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center text-fuchsia-300 flex-shrink-0">
-          {icon}
-        </div>
-        <div className="min-w-0">
-          <div className="text-sm font-semibold text-white">{title}</div>
-          <div className="text-xs text-white/50 mt-0.5">{text}</div>
-        </div>
       </div>
     </div>
   );
