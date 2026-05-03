@@ -123,21 +123,39 @@ export default function RadioPage() {
 
   const audioRef = useRef(null);
 
-  // Tracks laden
+  // Tracks laden – zuerst statische tracks.json (immer verfügbar, auch auf jedem Deploy),
+  // dann die API (für frisch hinzugefügte Tracks ohne Rebuild).
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      let loaded = [];
+      // 1) Statische JSON aus /public/radio/tracks.json versuchen
       try {
-        const res = await fetch('/api/radio/tracks', { cache: 'no-store' });
-        if (!res.ok) throw new Error('fetch failed');
-        const data = await res.json();
-        if (!cancelled) {
-          setTracks(data.tracks || []);
+        const r1 = await fetch('/radio/tracks.json', { cache: 'no-store' });
+        if (r1.ok) {
+          const d1 = await r1.json();
+          if (Array.isArray(d1?.tracks)) loaded = d1.tracks;
         }
-      } catch (e) {
-        if (!cancelled) toast.error('Radio-Playlist konnte nicht geladen werden');
-      } finally {
-        if (!cancelled) setLoadingTracks(false);
+      } catch {}
+
+      // 2) API-Endpoint – falls er mehr Tracks kennt (neu hinzugefügte Dateien),
+      //    verwende die API-Liste.
+      try {
+        const r2 = await fetch('/api/radio/tracks', { cache: 'no-store' });
+        if (r2.ok) {
+          const d2 = await r2.json();
+          if (Array.isArray(d2?.tracks) && d2.tracks.length >= loaded.length) {
+            loaded = d2.tracks;
+          }
+        }
+      } catch {}
+
+      if (!cancelled) {
+        setTracks(loaded);
+        setLoadingTracks(false);
+        if (loaded.length === 0) {
+          toast.error('Radio-Playlist konnte nicht geladen werden');
+        }
       }
     })();
     return () => { cancelled = true; };

@@ -1,7 +1,7 @@
 // Service Worker für HHRP PWA - OPTIMIERT FÜR MOBILE PERFORMANCE 🚀
-const CACHE_NAME = 'hhrp-v8-radio';
-const RUNTIME_CACHE = 'hhrp-runtime-v8';
-const IMAGE_CACHE = 'hhrp-images-v8';
+const CACHE_NAME = 'hhrp-v9-radio-fix';
+const RUNTIME_CACHE = 'hhrp-runtime-v9';
+const IMAGE_CACHE = 'hhrp-images-v9';
 
 // Kritische Assets für sofortiges Laden
 const CRITICAL_ASSETS = [
