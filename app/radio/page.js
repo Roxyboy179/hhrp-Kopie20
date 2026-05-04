@@ -21,6 +21,24 @@ function shuffleArray(arr) {
   return a;
 }
 
+// Shuffle, aber stelle sicher dass der erste Track nicht "avoidUrl" ist (z.B. gerade beendet)
+function shuffleAvoidFirst(arr, avoidUrl) {
+  if (!arr || arr.length === 0) return [];
+  if (arr.length === 1) return [...arr];
+  let attempts = 0;
+  while (attempts < 8) {
+    const out = shuffleArray(arr);
+    if (out[0]?.url !== avoidUrl) return out;
+    attempts++;
+  }
+  // Fallback: Falls 8x zufällig der gleiche zuerst kam, manuell tauschen
+  const out = shuffleArray(arr);
+  if (out.length > 1 && out[0]?.url === avoidUrl) {
+    [out[0], out[1]] = [out[1], out[0]];
+  }
+  return out;
+}
+
 function formatTime(s) {
   if (!Number.isFinite(s) || s < 0) return '00:00';
   const h = Math.floor(s / 3600);
@@ -83,7 +101,10 @@ export default function RadioPage() {
     setIndex((prev) => {
       const next = prev + 1;
       if (next >= shuffled.length) {
-        const reshuffled = shuffleArray(tracks);
+        // Komplette Playlist durchgespielt → neu mischen.
+        // Letzten Track merken, damit er nicht direkt nochmal kommt.
+        const lastUrl = shuffled[prev]?.url;
+        const reshuffled = shuffleAvoidFirst(tracks, lastUrl);
         setShuffled(reshuffled);
         return 0;
       }
@@ -207,7 +228,7 @@ export default function RadioPage() {
     el.muted = muted;
   }, [volume, muted]);
 
-  // Audio-Events (Next-Track on ended, Zeit-Tracking)
+  // Audio-Events (Next-Track on ended, Zeit-Tracking, Recovery on error)
   useEffect(() => {
     const el = audioRef.current;
     if (!el) return;
@@ -216,12 +237,24 @@ export default function RadioPage() {
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
     const onEnded = () => { gotoNextTrack(); };
+    // Recovery: Wenn ein Track nicht geladen werden kann (404, Netzwerk, korrupt),
+    // einfach den nächsten Track abspielen → Endlos-Loop bleibt unterbrechungsfrei.
+    const onError = () => {
+      console.warn('[radio] track error, skipping to next');
+      setTimeout(() => gotoNextTrack(), 500);
+    };
+    const onStalled = () => {
+      // Buffer leer / Netzwerk hängt → nach 10s Recovery
+      console.warn('[radio] stalled');
+    };
     el.addEventListener('timeupdate', onTime);
     el.addEventListener('loadedmetadata', onMeta);
     el.addEventListener('durationchange', onMeta);
     el.addEventListener('play', onPlay);
     el.addEventListener('pause', onPause);
     el.addEventListener('ended', onEnded);
+    el.addEventListener('error', onError);
+    el.addEventListener('stalled', onStalled);
     return () => {
       el.removeEventListener('timeupdate', onTime);
       el.removeEventListener('loadedmetadata', onMeta);
@@ -229,6 +262,8 @@ export default function RadioPage() {
       el.removeEventListener('play', onPlay);
       el.removeEventListener('pause', onPause);
       el.removeEventListener('ended', onEnded);
+      el.removeEventListener('error', onError);
+      el.removeEventListener('stalled', onStalled);
     };
   }, [gotoNextTrack]);
 
