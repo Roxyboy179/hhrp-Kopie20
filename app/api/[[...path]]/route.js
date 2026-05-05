@@ -4771,6 +4771,7 @@ export async function POST(request) {
     case 'check-daily': return handleCheckDaily(request);
     case 'bot/status': return handleBotStatus(request);
     case 'beta/feedback': return handleCreateBetaFeedback(request);
+    case 'team/beschwerde': return handleCreateTeamBeschwerde(request);
     case 'profile/stats': return handleGetProfileStats(request);
     case 'kredite': return handleGetKredite(request);
     case 'transfer': return handleTransferMoney(request);
@@ -5676,6 +5677,148 @@ async function handleCreateBetaFeedback(request) {
     return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500 });
   }
 }
+
+// ===== Team Beschwerde Handler =====
+async function handleCreateTeamBeschwerde(request) {
+  try {
+    const user = getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 });
+    }
+
+    // Nur Team-Mitglieder (inkl. Admins, da isTeamMember dort auch true)
+    if (!user.isTeamMember) {
+      return NextResponse.json({ error: 'Keine Berechtigung — Nur für Team-Mitglieder' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const teamlerName = (body.teamlerName || '').trim();
+    const grund = (body.grund || '').trim();
+    const vorfall = (body.vorfall || '').trim();
+    const bestaetigt = !!body.bestaetigt;
+
+    if (!teamlerName || !grund || !vorfall) {
+      return NextResponse.json({ error: 'Bitte fülle alle Felder aus.' }, { status: 400 });
+    }
+    if (teamlerName.length > 80 || grund.length > 1500 || vorfall.length > 1500) {
+      return NextResponse.json({ error: 'Eingaben sind zu lang.' }, { status: 400 });
+    }
+    if (!bestaetigt) {
+      return NextResponse.json({ error: 'Bitte bestätige die Hinweis-Box.' }, { status: 400 });
+    }
+
+    const webhookUrl = 'https://discord.com/api/webhooks/1501272739678261298/IM9BV_xZCThWJaoE5W5z3HAtbfTntvqX41YY9WoQ7UCdjyMuNOJVqorK-OiReRmaFeQb';
+
+    const reporterName = user.globalName || user.username || 'Unbekannt';
+    const reporterRole = user.adminRole || user.teamRole || 'Team-Mitglied';
+    const avatarUrl = user.avatar
+      ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.${user.avatar.startsWith('a_') ? 'gif' : 'png'}?size=128`
+      : `https://cdn.discordapp.com/embed/avatars/${(parseInt(user.id) >> 22) % 6}.png`;
+
+    const embed = {
+      title: '⚠️ Neue Team-Beschwerde',
+      description: `Eine neue Beschwerde gegen ein Teammitglied wurde eingereicht.\n\u200b`,
+      color: 0xef4444, // Rot
+      author: {
+        name: `Eingereicht von ${reporterName}`,
+        icon_url: avatarUrl,
+      },
+      fields: [
+        {
+          name: '👤 Beschuldigter Teamler',
+          value: `\`\`\`${teamlerName}\`\`\``,
+          inline: false,
+        },
+        {
+          name: '📝 Grund der Beschwerde',
+          value: grund.length > 1024 ? grund.substring(0, 1020) + '…' : grund,
+          inline: false,
+        },
+        {
+          name: '🔎 Was hat der Teamler getan?',
+          value: vorfall.length > 1024 ? vorfall.substring(0, 1020) + '…' : vorfall,
+          inline: false,
+        },
+        {
+          name: '\u200b',
+          value: '\u200b',
+          inline: false,
+        },
+        {
+          name: '🪪 Beschwerdeführer',
+          value: `${reporterName}`,
+          inline: true,
+        },
+        {
+          name: '🛡️ Rolle',
+          value: reporterRole,
+          inline: true,
+        },
+        {
+          name: '🆔 User ID',
+          value: `\`${user.id}\``,
+          inline: true,
+        },
+        {
+          name: '✅ Hinweis bestätigt',
+          value: 'Ja — falsche Beschwerden werden mit einer Team-Verwarnung geahndet.',
+          inline: false,
+        },
+      ],
+      footer: {
+        text: 'HHRP • Team-Beschwerde-System',
+        icon_url: 'https://cdn.discordapp.com/embed/avatars/0.png',
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      const webhookResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'HHRP Team-Beschwerden',
+          embeds: [embed],
+        }),
+      });
+
+      if (!webhookResponse.ok) {
+        const errText = await webhookResponse.text().catch(() => '');
+        console.error('[Team-Beschwerde] Webhook error:', webhookResponse.status, errText);
+        throw new Error('Discord Webhook fehlgeschlagen');
+      }
+
+      // Activity log (best-effort)
+      try {
+        await logActivity({
+          actionType: 'TEAM_COMPLAINT_SUBMITTED',
+          userId: user.id,
+          username: user.username,
+          details: {
+            against: teamlerName,
+            reporterRole,
+          },
+          ipAddress: getIpAddress(request),
+        });
+      } catch (logErr) {
+        console.warn('[Team-Beschwerde] log skipped:', logErr?.message);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Deine Beschwerde wurde sicher übermittelt.',
+      });
+    } catch (webhookError) {
+      console.error('[Team-Beschwerde] Discord webhook error:', webhookError);
+      return NextResponse.json({ error: 'Fehler beim Übermitteln der Beschwerde.' }, { status: 502 });
+    }
+  } catch (e) {
+    console.error('[Team-Beschwerde] Handler error:', e);
+    return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500 });
+  }
+}
+
+
 
 // Get Kredite Handler
 async function handleGetKredite(request) {
