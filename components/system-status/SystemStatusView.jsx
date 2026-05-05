@@ -89,7 +89,7 @@ const OVERALL_HERO = {
 };
 
 const REFRESH_INTERVAL_MS = 30_000;
-const UPTIME_DAYS = 90;
+const UPTIME_DAYS = 30;
 
 // ──────────────────────────────────────────────────────────────
 // Deterministische Uptime-History-Generator
