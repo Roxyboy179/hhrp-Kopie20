@@ -115,24 +115,14 @@ export default function TeamBeschwerdePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#0a0a0b' }}>
+      <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="w-7 h-7 text-white/40 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen relative" style={{ background: '#0a0a0b' }}>
-      {/* Ambient glow */}
-      <div
-        aria-hidden="true"
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(ellipse 80% 60% at 50% -20%, rgba(239,68,68,0.06), transparent 60%), radial-gradient(ellipse 60% 40% at 80% 100%, rgba(255,255,255,0.025), transparent 60%)',
-        }}
-      />
-
+    <div className="min-h-screen relative page-transition-enter">
       <div className="relative max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         {/* Back link */}
         <Link
