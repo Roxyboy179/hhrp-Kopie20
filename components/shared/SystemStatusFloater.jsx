@@ -5,23 +5,46 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Activity, Loader2 } from 'lucide-react';
 
-const STATUS_DOT = {
-  operational: { color: 'rgb(34, 197, 94)', label: 'Alle Systeme online' },
-  degraded: { color: 'rgb(245, 158, 11)', label: 'Eingeschränkter Service' },
-  partial_outage: { color: 'rgb(249, 115, 22)', label: 'Teilausfall' },
-  major_outage: { color: 'rgb(239, 68, 68)', label: 'Großstörung' },
-  loading: { color: 'rgb(107, 114, 128)', label: 'Status wird geprüft' },
-  error: { color: 'rgb(107, 114, 128)', label: 'Status nicht verfügbar' },
+const STATUS_META = {
+  operational: {
+    color: 'rgb(34, 197, 94)',
+    label: 'Alle Systeme online',
+    short: 'Online',
+  },
+  degraded: {
+    color: 'rgb(245, 158, 11)',
+    label: 'Eingeschränkter Service',
+    short: 'Eingeschränkt',
+  },
+  partial_outage: {
+    color: 'rgb(249, 115, 22)',
+    label: 'Teilausfall',
+    short: 'Teilausfall',
+  },
+  major_outage: {
+    color: 'rgb(239, 68, 68)',
+    label: 'Großstörung',
+    short: 'Störung',
+  },
+  loading: {
+    color: 'rgb(107, 114, 128)',
+    label: 'Status wird geprüft',
+    short: 'Prüfe …',
+  },
+  error: {
+    color: 'rgb(107, 114, 128)',
+    label: 'Status nicht verfügbar',
+    short: 'Status n/v',
+  },
 };
 
 const REFRESH_INTERVAL_MS = 60_000;
 
 /**
  * Floating Status-Widget — fixed unten rechts auf jeder Seite.
- * - Auf /system-status selbst ausgeblendet (sonst redundant)
- * - Permanent sichtbar (nicht wegklickbar)
- * - Pingt /api/system-status/check alle 60s
- * - Compact: nur Pulse-Dot + Label, klickbar → /system-status
+ * - Mobile: besser sichtbar, größerer Touch-Target, Short-Label, Safe-Area-Padding
+ * - Desktop: vollständiges Label + Activity-Icon
+ * - Permanent sichtbar, auf /system-status selbst ausgeblendet
  */
 export function SystemStatusFloater() {
   const pathname = usePathname();
@@ -29,12 +52,10 @@ export function SystemStatusFloater() {
   const [, setSummary] = useState(null);
   const [mounted, setMounted] = useState(false);
 
-  // Mount-Check
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Status-Polling
   useEffect(() => {
     if (!mounted) return;
     let cancelled = false;
@@ -60,12 +81,10 @@ export function SystemStatusFloater() {
     };
   }, [mounted]);
 
-  // ─── Rendering Bedingungen ───
   if (!mounted) return null;
-  // Auf der Status-Page selbst ausblenden
   if (pathname === '/system-status') return null;
 
-  const meta = STATUS_DOT[statusKey] || STATUS_DOT.loading;
+  const meta = STATUS_META[statusKey] || STATUS_META.loading;
   const isOk = statusKey === 'operational';
   const isLoading = statusKey === 'loading';
   const isProblem =
@@ -73,73 +92,96 @@ export function SystemStatusFloater() {
     statusKey === 'partial_outage' ||
     statusKey === 'major_outage';
 
-  // Bei Problemen: leichte Skalierung für Aufmerksamkeit (subtil)
+  // Farben basierend auf Status
+  const accentRgba = (alpha) => meta.color.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
+
   return (
     <div
-      className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-[9990] flex items-stretch"
-      style={{ pointerEvents: 'none' }}
+      className="fixed z-[9990] flex items-stretch"
+      style={{
+        right: 'max(0.75rem, env(safe-area-inset-right))',
+        bottom: 'max(0.75rem, calc(env(safe-area-inset-bottom) + 0.5rem))',
+        pointerEvents: 'none',
+      }}
       role="status"
       aria-live="polite"
     >
       <Link
         href="/system-status"
-        className="group relative inline-flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full border backdrop-blur-md transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl"
+        aria-label={`System-Status: ${meta.label}. Tippen für Details.`}
+        title={`${meta.label} — Tippen für Details`}
+        className="group relative inline-flex items-center gap-2 sm:gap-2.5 rounded-full border-[1.5px] backdrop-blur-xl transition-all duration-300 hover:scale-[1.04] active:scale-95 hover:shadow-2xl"
         style={{
+          paddingLeft: '0.875rem',
+          paddingRight: '0.875rem',
+          paddingTop: '0.625rem',
+          paddingBottom: '0.625rem',
+          minHeight: '40px',
           background:
-            'linear-gradient(135deg, rgba(20, 20, 20, 0.85), rgba(15, 15, 15, 0.9))',
-          borderColor: isProblem
-            ? `${meta.color}40`
-            : 'rgba(255, 255, 255, 0.08)',
+            'linear-gradient(135deg, rgba(18,18,20,0.92), rgba(10,10,12,0.95))',
+          borderColor: accentRgba(isProblem ? 0.55 : isOk ? 0.35 : 0.25),
           boxShadow: isProblem
-            ? `0 8px 32px ${meta.color}25, 0 0 0 1px ${meta.color}15 inset`
-            : '0 8px 24px rgba(0, 0, 0, 0.4)',
+            ? `0 10px 30px ${accentRgba(0.35)}, 0 0 0 1px ${accentRgba(0.2)} inset, 0 0 20px ${accentRgba(0.18)}`
+            : isOk
+            ? `0 8px 24px rgba(0,0,0,0.45), 0 0 0 1px ${accentRgba(0.12)} inset, 0 0 14px ${accentRgba(0.12)}`
+            : '0 8px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04)',
           pointerEvents: 'auto',
-          animation: isProblem ? 'hhrp-status-attention 2.4s ease-in-out infinite' : 'none',
+          animation: isProblem ? 'hhrp-status-attention 2s ease-in-out infinite' : 'none',
         }}
-        title={`${meta.label} — Klicken für Details`}
       >
-        {/* Status Dot */}
+        {/* Status Dot — größer für bessere Sichtbarkeit */}
         {isLoading ? (
-          <Loader2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 animate-spin text-white/40" />
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-white/50 flex-shrink-0" />
         ) : (
-          <span className="relative inline-flex w-2 h-2 sm:w-2.5 sm:h-2.5 flex-shrink-0">
+          <span className="relative inline-flex w-3 h-3 flex-shrink-0">
             {isOk && (
               <span
                 className="absolute inset-0 rounded-full animate-ping"
-                style={{ background: meta.color, opacity: 0.55 }}
+                style={{ background: meta.color, opacity: 0.65 }}
+              />
+            )}
+            {isProblem && (
+              <span
+                className="absolute inset-0 rounded-full animate-ping"
+                style={{ background: meta.color, opacity: 0.7 }}
               />
             )}
             <span
               className="relative w-full h-full rounded-full"
               style={{
                 background: meta.color,
-                boxShadow: `0 0 10px ${meta.color}`,
+                boxShadow: `0 0 12px ${meta.color}, 0 0 4px ${meta.color}`,
               }}
             />
           </span>
         )}
 
-        {/* Label — auf sehr kleinen Screens versteckt */}
-        <span className="hidden xs:inline text-[11px] sm:text-xs font-medium text-white/75 group-hover:text-white transition-colors whitespace-nowrap">
-          {meta.label}
+        {/* Short Label (mobile) / Long Label (desktop) */}
+        <span
+          className="text-[12px] sm:text-[12.5px] font-semibold tracking-tight whitespace-nowrap transition-colors"
+          style={{
+            color: isProblem ? meta.color : 'rgba(255,255,255,0.9)',
+          }}
+        >
+          {/* Mobile: kurz */}
+          <span className="sm:hidden">{meta.short}</span>
+          {/* Desktop: lang */}
+          <span className="hidden sm:inline">{meta.label}</span>
         </span>
 
-        {/* Activity-Icon (auf sm+) */}
-        <Activity className="hidden sm:inline-block w-3 h-3 text-white/30 group-hover:text-white/65 transition-colors flex-shrink-0" />
+        {/* Activity-Icon (ab sm) */}
+        <Activity
+          className="hidden sm:inline-block w-3.5 h-3.5 text-white/35 group-hover:text-white/70 transition-colors flex-shrink-0"
+        />
       </Link>
 
       <style jsx>{`
         @keyframes hhrp-status-attention {
           0%, 100% {
-            transform: translateY(0);
+            transform: translateY(0) scale(1);
           }
           50% {
-            transform: translateY(-2px);
-          }
-        }
-        @media (min-width: 380px) {
-          .xs\\:inline {
-            display: inline !important;
+            transform: translateY(-3px) scale(1.02);
           }
         }
       `}</style>

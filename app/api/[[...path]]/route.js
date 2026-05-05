@@ -3325,6 +3325,27 @@ async function handleSystemStatusCheck(request) {
   );
 
   // Gesamt-Status berechnen
+  // ─── Bot-Abhängigkeit: wenn Discord-Bot offline ist, gelten abhängige Services als offline ───
+  const BOT_DEPENDENT_IDS = [
+    'discord_auth',     // Anmeldung & Authentifizierung
+    'database',         // Datenspeicher
+    'service_profil',   // Mein Profil
+    'service_team',     // Team-Übersicht
+    'service_voice',    // Voice Support
+    'discord_cdn',      // Bilder & Medien
+  ];
+  const botResult = results.find((r) => r.id === 'discord_bot');
+  const botOffline = botResult && botResult.status === 'down';
+  if (botOffline) {
+    for (const svc of results) {
+      if (BOT_DEPENDENT_IDS.includes(svc.id) && svc.status !== 'down') {
+        svc.status = 'down';
+        svc.serviceOffline = true; // Flag für UI
+        svc.error = 'Service ist offline – Discord-Bot ist nicht erreichbar';
+      }
+    }
+  }
+
   const summary = {
     operational: results.filter((r) => r.status === 'operational').length,
     degraded: results.filter((r) => r.status === 'degraded').length,
