@@ -226,13 +226,6 @@ function ServiceRow({ service, expanded, onToggle }) {
         <div className="flex-1 min-w-0">
           <h3 className="text-sm sm:text-[15px] font-semibold text-white truncate">{service.name}</h3>
           <p className="text-[11px] sm:text-xs text-white/45 mt-0.5 truncate">{service.description}</p>
-          {/* Explicit offline message for down services */}
-          {service.status === 'down' && (
-            <p className="text-xs font-semibold text-red-400 mt-1 flex items-center gap-1.5">
-              <XCircle className="w-3.5 h-3.5" />
-              Service ist offline
-            </p>
-          )}
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
