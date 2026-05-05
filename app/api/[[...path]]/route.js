@@ -77,6 +77,7 @@ const TEAM_ROLES = {
   '1273340696954273895': { name: 'Discord Team', isTeamMember: true },
 };
 
+
 // ===== JWT HELPERS =====
 function createToken(payload) {
   const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
@@ -4282,6 +4283,8 @@ export async function GET(request) {
     case 'battle-pass/current': return handleBattlePassCurrent(request);
     
     case 'team/members': return handleGetTeamMembers(request);
+    case 'social/youtube-latest': return handleSocialYoutubeLatest(request);
+    case 'social/tiktok-latest': return handleSocialTiktokLatest(request);
     case 'shop/items': return handleGetShopItems(request);
     case 'licenses/pending-actions': return handleGetPendingLicenseActions(request);
     case 'shop/pending-purchases': return handleGetPendingShopPurchases(request);
@@ -5817,6 +5820,275 @@ async function handleCreateTeamBeschwerde(request) {
     return NextResponse.json({ error: 'Interner Serverfehler' }, { status: 500 });
   }
 }
+
+
+// ===== Social Media: YouTube & TikTok Latest Video =====
+const SOCIAL_YT_HANDLE = 'hamburghorizonrphhrp';
+const SOCIAL_TT_HANDLE = 'hamburghorizonrp';
+const SOCIAL_CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
+
+// In-memory Cache
+let __ytChannelIdCache = null; // stabil, einmal auflösen reicht
+const __socialCache = { youtube: null, tiktok: null };
+// __socialCache[key] = { data, expiresAt, soft?: true/false }
+
+async function resolveYouTubeChannelId() {
+  if (__ytChannelIdCache) return __ytChannelIdCache;
+  try {
+    const res = await fetch(`https://www.youtube.com/@${SOCIAL_YT_HANDLE}`, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'de,en;q=0.8',
+      },
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    let m = html.match(/"channelId":"(UC[\w-]{20,})"/);
+    if (!m) m = html.match(/<link rel="canonical" href="https:\/\/www\.youtube\.com\/channel\/(UC[\w-]{20,})"/);
+    if (!m) m = html.match(/"externalId":"(UC[\w-]{20,})"/);
+    if (m) {
+      __ytChannelIdCache = m[1];
+      return __ytChannelIdCache;
+    }
+  } catch (e) {
+    console.warn('[Social] resolveYouTubeChannelId failed:', e?.message);
+  }
+  return null;
+}
+
+function parseYouTubeRSS(xml) {
+  // Extrahiert die ersten Einträge — simple Regex-Parser (RSS-Struktur ist stabil)
+  const entries = [];
+  const entryBlocks = xml.match(/<entry>[\s\S]*?<\/entry>/g) || [];
+  for (const block of entryBlocks) {
+    const idMatch = block.match(/<yt:videoId>([^<]+)<\/yt:videoId>/);
+    const titleMatch = block.match(/<title>([^<]+)<\/title>/);
+    const pubMatch = block.match(/<published>([^<]+)<\/published>/);
+    const authorMatch = block.match(/<author>[\s\S]*?<name>([^<]+)<\/name>/);
+    const viewsMatch = block.match(/statistics[^>]*views="(\d+)"/);
+    if (!idMatch) continue;
+    const videoId = idMatch[1];
+    entries.push({
+      videoId,
+      title: titleMatch ? decodeXmlEntities(titleMatch[1]) : '',
+      publishedAt: pubMatch ? pubMatch[1] : null,
+      author: authorMatch ? decodeXmlEntities(authorMatch[1]) : '',
+      views: viewsMatch ? parseInt(viewsMatch[1], 10) : null,
+      url: `https://www.youtube.com/watch?v=${videoId}`,
+      thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+      thumbnailHigh: `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`,
+    });
+  }
+  return entries;
+}
+
+function decodeXmlEntities(s) {
+  if (!s) return s;
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+}
+
+async function handleSocialYoutubeLatest(_request) {
+  const now = Date.now();
+  const cached = __socialCache.youtube;
+  if (cached && cached.expiresAt > now) {
+    return NextResponse.json(cached.data, {
+      headers: { 'Cache-Control': 'public, max-age=300' },
+    });
+  }
+
+  try {
+    const channelId = await resolveYouTubeChannelId();
+    if (!channelId) {
+      const fallback = {
+        ok: false,
+        error: 'channel_not_found',
+        profileUrl: `https://www.youtube.com/@${SOCIAL_YT_HANDLE}`,
+        videos: [],
+      };
+      return NextResponse.json(fallback, { status: 200 });
+    }
+
+    const rssRes = await fetch(
+      `https://www.youtube.com/feeds/videos.xml?channel_id=${channelId}`,
+      {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        },
+        cache: 'no-store',
+      }
+    );
+    if (!rssRes.ok) throw new Error(`RSS HTTP ${rssRes.status}`);
+    const xml = await rssRes.text();
+    const videos = parseYouTubeRSS(xml).slice(0, 6);
+
+    const data = {
+      ok: true,
+      channelId,
+      handle: `@${SOCIAL_YT_HANDLE}`,
+      profileUrl: `https://www.youtube.com/@${SOCIAL_YT_HANDLE}`,
+      videos,
+      fetchedAt: new Date().toISOString(),
+    };
+
+    __socialCache.youtube = { data, expiresAt: now + SOCIAL_CACHE_TTL_MS };
+
+    return NextResponse.json(data, {
+      headers: { 'Cache-Control': 'public, max-age=300' },
+    });
+  } catch (e) {
+    console.error('[Social] YouTube error:', e?.message);
+    // Stale-Cache zurückgeben falls vorhanden
+    if (cached) {
+      return NextResponse.json(
+        { ...cached.data, stale: true },
+        { status: 200 }
+      );
+    }
+    return NextResponse.json(
+      {
+        ok: false,
+        error: 'fetch_failed',
+        profileUrl: `https://www.youtube.com/@${SOCIAL_YT_HANDLE}`,
+        videos: [],
+      },
+      { status: 200 }
+    );
+  }
+}
+
+async function handleSocialTiktokLatest(_request) {
+  const now = Date.now();
+  const cached = __socialCache.tiktok;
+  if (cached && cached.expiresAt > now) {
+    return NextResponse.json(cached.data, {
+      headers: { 'Cache-Control': 'public, max-age=300' },
+    });
+  }
+
+  try {
+    const res = await fetch(`https://www.tiktok.com/@${SOCIAL_TT_HANDLE}`, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'de,en;q=0.8',
+        'Accept':
+          'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      },
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const html = await res.text();
+
+    // TikTok rendert die Daten in <script id="__UNIVERSAL_DATA_FOR_REHYDRATION__">...</script>
+    const m = html.match(
+      /<script[^>]*id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>([\s\S]*?)<\/script>/
+    );
+    let videos = [];
+    let profileInfo = null;
+
+    if (m && m[1]) {
+      try {
+        const parsed = JSON.parse(m[1]);
+        const scope = parsed?.__DEFAULT_SCOPE__ || {};
+        const userDetail = scope['webapp.user-detail'];
+        const userPostList =
+          scope['webapp.video-detail'] || scope['webapp.post-list'] || null;
+
+        if (userDetail?.userInfo) {
+          profileInfo = {
+            nickname: userDetail.userInfo?.user?.nickname || null,
+            avatar:
+              userDetail.userInfo?.user?.avatarLarger ||
+              userDetail.userInfo?.user?.avatarMedium ||
+              null,
+            followerCount: userDetail.userInfo?.stats?.followerCount ?? null,
+            videoCount: userDetail.userInfo?.stats?.videoCount ?? null,
+            heartCount: userDetail.userInfo?.stats?.heartCount ?? null,
+          };
+        }
+
+        // Items können unter verschiedenen Keys liegen
+        let items =
+          userDetail?.userInfo?.itemList ||
+          userDetail?.itemList ||
+          userPostList?.itemList ||
+          (scope['webapp.post-list']?.itemList) ||
+          [];
+
+        // Alternative: ItemList in userDetail?.items
+        if (!items?.length && userDetail?.items) items = userDetail.items;
+
+        if (Array.isArray(items) && items.length) {
+          videos = items.slice(0, 6).map((it) => ({
+            videoId: it.id,
+            title: it.desc || '',
+            url: `https://www.tiktok.com/@${SOCIAL_TT_HANDLE}/video/${it.id}`,
+            thumbnail:
+              it.video?.cover ||
+              it.video?.originCover ||
+              it.video?.dynamicCover ||
+              null,
+            publishedAt: it.createTime
+              ? new Date(it.createTime * 1000).toISOString()
+              : null,
+            stats: {
+              views: it.stats?.playCount ?? null,
+              likes: it.stats?.diggCount ?? null,
+              comments: it.stats?.commentCount ?? null,
+              shares: it.stats?.shareCount ?? null,
+            },
+          }));
+        }
+      } catch (parseErr) {
+        console.warn('[Social] TikTok parse error:', parseErr?.message);
+      }
+    }
+
+    // Fallback: Wenn kein Videolisting verfügbar (z.B. TikTok rendert leere SSR-Page) — profileUrl reicht
+    const data = {
+      ok: true,
+      handle: `@${SOCIAL_TT_HANDLE}`,
+      profileUrl: `https://www.tiktok.com/@${SOCIAL_TT_HANDLE}`,
+      profile: profileInfo,
+      videos,
+      fetchedAt: new Date().toISOString(),
+    };
+
+    __socialCache.tiktok = { data, expiresAt: now + SOCIAL_CACHE_TTL_MS };
+
+    return NextResponse.json(data, {
+      headers: { 'Cache-Control': 'public, max-age=300' },
+    });
+  } catch (e) {
+    console.error('[Social] TikTok error:', e?.message);
+    if (cached) {
+      return NextResponse.json(
+        { ...cached.data, stale: true },
+        { status: 200 }
+      );
+    }
+    return NextResponse.json(
+      {
+        ok: false,
+        error: 'fetch_failed',
+        handle: `@${SOCIAL_TT_HANDLE}`,
+        profileUrl: `https://www.tiktok.com/@${SOCIAL_TT_HANDLE}`,
+        videos: [],
+      },
+      { status: 200 }
+    );
+  }
+}
+
 
 
 
