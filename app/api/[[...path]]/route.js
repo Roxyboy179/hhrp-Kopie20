@@ -3087,131 +3087,99 @@ async function checkDatabaseReal() {
   }
 }
 
-// Discord-Bot Online-Check via Widget-API
-// Schritt 1: Bot-Token gültig? (GET /users/@me)
-// Schritt 2: Bot wirklich online im Guild? (GET /guilds/{id}/widget.json)
+// Discord-Bot Online-Check via DB-Heartbeat (gleicher Mechanismus wie /api/bot/status)
+// Der Bot synct alle 5 Minuten Daten in `user_data`. Wenn `updated_at` < 10 Min → online.
+// Das ist zuverlässiger als das Discord Widget, weil es echten Bot-Aktivitätsnachweis ist.
 async function checkDiscordBotReal() {
   const start = Date.now();
-  const botToken = process.env.DISCORD_BOT_TOKEN;
-  const guildId = process.env.DISCORD_GUILD_ID;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!botToken) {
+  if (!supabaseUrl || !supabaseKey) {
     return {
       status: 'down',
       httpCode: null,
       latency: 0,
-      error: 'DISCORD_BOT_TOKEN nicht gesetzt',
+      error: 'Service-Konfiguration unvollständig',
     };
   }
 
   try {
-    // ─── 1) Bot-Token validieren + User-ID holen ───
-    if (!_cachedBotUserId) {
-      const meAc = new AbortController();
-      const meTimer = setTimeout(() => meAc.abort(), 5000);
-      const meRes = await fetch('https://discord.com/api/v10/users/@me', {
-        headers: { Authorization: `Bot ${botToken}` },
-        cache: 'no-store',
-        signal: meAc.signal,
-      });
-      clearTimeout(meTimer);
-
-      if (!meRes.ok) {
-        return {
-          status: 'down',
-          httpCode: meRes.status,
-          latency: Date.now() - start,
-          error: meRes.status === 401 ? 'Service-Authentifizierung ungültig' : `Discord API ${meRes.status}`,
-        };
-      }
-      const me = await meRes.json();
-      _cachedBotUserId = me.id;
-    }
-
-    if (!guildId) {
-      // Ohne Guild-ID können wir die Online-Präsenz nicht prüfen → nur Token gültig
-      return {
-        status: 'degraded',
-        httpCode: 200,
-        latency: Date.now() - start,
-        error: null,
-        note: 'Authentifizierung gültig — Live-Status nicht prüfbar',
-      };
-    }
-
-    // ─── 2) Widget-API: prüfen ob Bot im Guild online ist ───
-    const wAc = new AbortController();
-    const wTimer = setTimeout(() => wAc.abort(), 5000);
-    const widgetRes = await fetch(`https://discord.com/api/guilds/${guildId}/widget.json`, {
-      cache: 'no-store',
-      signal: wAc.signal,
+    // eslint-disable-next-line global-require
+    const { createClient } = require('@supabase/supabase-js');
+    const client = createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
     });
-    clearTimeout(wTimer);
 
+    // Jüngste Sync-Zeit aus user_data holen (max 6s Timeout)
+    const queryPromise = client
+      .from('user_data')
+      .select('id, updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Query timeout (6s)')), 6000)
+    );
+
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
     const latency = Date.now() - start;
 
-    if (widgetRes.status === 403 || widgetRes.status === 404) {
-      // Widget nicht aktiviert in diesem Server
-      return {
-        status: 'degraded',
-        httpCode: widgetRes.status,
-        latency,
-        error: null,
-        note: 'Server-Widget nicht aktiviert — Live-Status nicht prüfbar',
-      };
-    }
-
-    if (!widgetRes.ok) {
+    if (error) {
       return {
         status: 'down',
-        httpCode: widgetRes.status,
+        httpCode: null,
         latency,
-        error: `Service-Endpunkt antwortet mit ${widgetRes.status}`,
+        error: 'Service-Status nicht abrufbar',
       };
     }
 
-    const widget = await widgetRes.json();
-    const members = Array.isArray(widget.members) ? widget.members : [];
-    const presenceCount = widget.presence_count ?? members.length;
-
-    // Bot in Online-Member-Liste suchen
-    const botEntry = members.find((m) => m.id === _cachedBotUserId);
-
-    if (!botEntry) {
+    if (!data || data.length === 0) {
       return {
         status: 'down',
         httpCode: 200,
         latency,
         error: 'Service ist offline',
-        note: `${presenceCount} aktive Verbindungen im Server`,
+        note: 'Keine Sync-Daten vorhanden',
       };
     }
 
-    if (botEntry.status === 'offline' || botEntry.status === 'invisible') {
-      return {
-        status: 'down',
-        httpCode: 200,
-        latency,
-        error: 'Service ist offline',
-      };
-    }
+    // Bot synct alle 5 Min — wir vergleichen mit `updated_at`
+    const lastUpdate = new Date(data[0].updated_at);
+    const minutesSince = (Date.now() - lastUpdate.getTime()) / (1000 * 60);
+    const MAX_AGE_ONLINE = 10; // < 10 Min = online
+    const MAX_AGE_DEGRADED = 15; // 10–15 Min = verzögert
 
-    // Bot ist online (online / idle / dnd)
-    let status = 'operational';
-    if (botEntry.status === 'idle' || botEntry.status === 'dnd') status = 'degraded';
-    if (latency > 2500) status = 'degraded';
+    let status;
+    let error_msg = null;
+    let note;
+
+    if (minutesSince < MAX_AGE_ONLINE) {
+      status = 'operational';
+      if (minutesSince < 1) {
+        note = 'Live · Letzte Synchronisation gerade eben';
+      } else {
+        note = `Live · Letzte Synchronisation vor ${Math.round(minutesSince)} Min.`;
+      }
+    } else if (minutesSince < MAX_AGE_DEGRADED) {
+      status = 'degraded';
+      note = `Verzögert · Letzte Synchronisation vor ${Math.round(minutesSince)} Min.`;
+    } else {
+      status = 'down';
+      error_msg = 'Service ist offline';
+      note = `Letzte Synchronisation vor ${Math.round(minutesSince)} Min.`;
+    }
 
     return {
       status,
       httpCode: 200,
       latency,
-      error: null,
-      note: `Live · ${presenceCount} aktive Verbindungen`,
+      error: error_msg,
+      note,
     };
   } catch (err) {
     const latency = Date.now() - start;
     const msg = err.message || String(err);
-    const isTimeout = err.name === 'AbortError' || /timeout/i.test(msg);
+    const isTimeout = /timeout/i.test(msg);
     return {
       status: 'down',
       httpCode: null,
