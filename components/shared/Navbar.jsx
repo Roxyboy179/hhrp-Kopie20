@@ -254,17 +254,18 @@ export function Navbar({ user, loading }) {
                   <DropdownMenuContent
                     align="end"
                     sideOffset={8}
-                    className="w-72 p-0 overflow-hidden border border-white/[0.07] shadow-2xl shadow-black/60 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200"
+                    className="w-72 p-0 overflow-hidden border border-white/[0.07] shadow-2xl shadow-black/60 animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-200 flex flex-col"
                     style={{
                       background:
                         'linear-gradient(180deg, rgba(20,20,22,0.96) 0%, rgba(13,13,15,0.97) 100%)',
                       backdropFilter: 'blur(40px) saturate(160%)',
                       WebkitBackdropFilter: 'blur(40px) saturate(160%)',
+                      maxHeight: 'calc(100vh - 80px)',
                     }}
                   >
-                    {/* User Header */}
+                    {/* User Header (sticky) */}
                     <div
-                      className="relative px-4 pt-4 pb-3 border-b border-white/[0.05]"
+                      className="relative px-4 pt-4 pb-3 border-b border-white/[0.05] flex-shrink-0"
                       style={{
                         background:
                           'radial-gradient(ellipse 70% 80% at 0% 0%, rgba(var(--theme-accent-rgb), 0.15), transparent 60%)',
@@ -322,8 +323,8 @@ export function Navbar({ user, loading }) {
                       </div>
                     </div>
 
-                    {/* Sections */}
-                    <div className="p-1.5">
+                    {/* Sections (scrollable) */}
+                    <div className="p-1.5 overflow-y-auto overflow-x-hidden flex-1 hh-scroll">
                       {dropdownSections.map((section, sIdx) => (
                         <div key={section.label} className={sIdx > 0 ? 'mt-1' : ''}>
                           <div className="px-2.5 pt-2 pb-1">
@@ -422,18 +423,19 @@ export function Navbar({ user, loading }) {
       {/* ── Mobile Menu ── */}
       {mobileOpen && (
         <div
-          className="md:hidden mx-3 mb-3 rounded-2xl overflow-hidden border border-white/[0.07] animate-fade-in-down shadow-2xl shadow-black/60"
+          className="md:hidden mx-3 mb-3 rounded-2xl overflow-hidden border border-white/[0.07] animate-fade-in-down shadow-2xl shadow-black/60 flex flex-col"
           style={{
             background:
               'linear-gradient(180deg, rgba(20,20,22,0.96) 0%, rgba(13,13,15,0.97) 100%)',
             backdropFilter: 'blur(40px) saturate(160%)',
             WebkitBackdropFilter: 'blur(40px) saturate(160%)',
+            maxHeight: 'calc(100vh - 80px)',
           }}
         >
-          {/* User Header (mobile) */}
+          {/* User Header (mobile, sticky) */}
           {user && (
             <div
-              className="px-4 pt-4 pb-3 border-b border-white/[0.05]"
+              className="px-4 pt-4 pb-3 border-b border-white/[0.05] flex-shrink-0"
               style={{
                 background:
                   'radial-gradient(ellipse 70% 80% at 0% 0%, rgba(var(--theme-accent-rgb), 0.15), transparent 60%)',
@@ -479,8 +481,8 @@ export function Navbar({ user, loading }) {
             </div>
           )}
 
-          {/* Navigation Section */}
-          <div className="p-2">
+          {/* Navigation Section (scrollable) */}
+          <div className="p-2 overflow-y-auto overflow-x-hidden flex-1 hh-scroll">
             <p className="px-3 pt-1.5 pb-1 text-[9.5px] font-semibold uppercase tracking-[0.1em] text-white/35">
               Navigation
             </p>
