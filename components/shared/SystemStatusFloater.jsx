@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Activity, Loader2, X } from 'lucide-react';
+import { Activity, Loader2 } from 'lucide-react';
 
 const STATUS_DOT = {
   operational: { color: 'rgb(34, 197, 94)', label: 'Alle Systeme online' },
@@ -15,34 +15,28 @@ const STATUS_DOT = {
 };
 
 const REFRESH_INTERVAL_MS = 60_000;
-const DISMISS_KEY = 'hhrp_status_floater_dismissed';
 
 /**
  * Floating Status-Widget — fixed unten rechts auf jeder Seite.
  * - Auf /system-status selbst ausgeblendet (sonst redundant)
- * - User kann es per X-Button dismissen (für die Session)
+ * - Permanent sichtbar (nicht wegklickbar)
  * - Pingt /api/system-status/check alle 60s
  * - Compact: nur Pulse-Dot + Label, klickbar → /system-status
  */
 export function SystemStatusFloater() {
   const pathname = usePathname();
   const [statusKey, setStatusKey] = useState('loading');
-  const [summary, setSummary] = useState(null);
-  const [dismissed, setDismissed] = useState(true); // start true → render erst nach mount
+  const [, setSummary] = useState(null);
   const [mounted, setMounted] = useState(false);
 
-  // Mount-Check + Dismiss-State aus sessionStorage
+  // Mount-Check
   useEffect(() => {
     setMounted(true);
-    if (typeof window !== 'undefined') {
-      const isDismissed = sessionStorage.getItem(DISMISS_KEY) === '1';
-      setDismissed(isDismissed);
-    }
   }, []);
 
   // Status-Polling
   useEffect(() => {
-    if (dismissed) return;
+    if (!mounted) return;
     let cancelled = false;
 
     const load = async () => {
@@ -64,20 +58,10 @@ export function SystemStatusFloater() {
       cancelled = true;
       clearInterval(id);
     };
-  }, [dismissed]);
-
-  const handleDismiss = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDismissed(true);
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem(DISMISS_KEY, '1');
-    }
-  };
+  }, [mounted]);
 
   // ─── Rendering Bedingungen ───
   if (!mounted) return null;
-  if (dismissed) return null;
   // Auf der Status-Page selbst ausblenden
   if (pathname === '/system-status') return null;
 
@@ -99,7 +83,7 @@ export function SystemStatusFloater() {
     >
       <Link
         href="/system-status"
-        className="group relative inline-flex items-center gap-2 sm:gap-2.5 pl-3 pr-2 sm:pl-4 sm:pr-3 py-2 sm:py-2.5 rounded-full border backdrop-blur-md transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl"
+        className="group relative inline-flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full border backdrop-blur-md transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl"
         style={{
           background:
             'linear-gradient(135deg, rgba(20, 20, 20, 0.85), rgba(15, 15, 15, 0.9))',
@@ -142,17 +126,6 @@ export function SystemStatusFloater() {
 
         {/* Activity-Icon (auf sm+) */}
         <Activity className="hidden sm:inline-block w-3 h-3 text-white/30 group-hover:text-white/65 transition-colors flex-shrink-0" />
-
-        {/* Dismiss Button */}
-        <button
-          type="button"
-          onClick={handleDismiss}
-          className="ml-0.5 sm:ml-1 -mr-0.5 w-5 h-5 rounded-full flex items-center justify-center text-white/30 hover:text-white/80 hover:bg-white/10 transition-colors flex-shrink-0"
-          aria-label="System-Status-Anzeige ausblenden"
-          title="Ausblenden"
-        >
-          <X className="w-3 h-3" />
-        </button>
       </Link>
 
       <style jsx>{`
