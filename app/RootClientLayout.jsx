@@ -16,6 +16,7 @@ import { Toaster } from 'sonner';
 import Link from 'next/link';
 import { Loader2, Sparkles, Zap } from 'lucide-react';
 import { FooterStatusBar } from '@/components/shared/FooterStatusBar';
+import { SystemStatusFloater } from '@/components/shared/SystemStatusFloater';
 
 export default function RootClientLayout({ children }) {
   const [splashDone, setSplashDone] = useState(false);
@@ -462,6 +463,7 @@ function LayoutContent({ children }) {
       <Navbar user={user} loading={loading} />
       <main className={showBanner ? "pt-16 min-h-screen" : "pt-16 min-h-screen"}>{children}</main>
       <Footer />
+      <SystemStatusFloater />
     </>
   );
 }
