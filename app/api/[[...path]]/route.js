@@ -2953,9 +2953,218 @@ async function handleUpdateBewerbungSettings(request) {
 }
 
 // ===== ROUTER =====
+// ─────────────────────────────────────────────────────────────────────
+// SYSTEM STATUS HANDLER
+// Pingt alle HHRP-Services parallel und liefert ihren Status zurück.
+// Server-side fetch → keine CORS-Probleme, echte Latenz-Messung.
+// ─────────────────────────────────────────────────────────────────────
+async function pingService({ id, name, description, url, method = 'GET', headers = {}, expectedStatus, timeoutMs = 6000 }) {
+  const start = Date.now();
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers,
+      cache: 'no-store',
+      redirect: 'manual',
+      signal: ac.signal,
+    });
+
+    const latency = Date.now() - start;
+    const code = res.status;
+
+    // Status bewerten
+    let status = 'operational';
+    if (expectedStatus) {
+      // erlaubte Codes (Array) vergleichen
+      const allowed = Array.isArray(expectedStatus) ? expectedStatus : [expectedStatus];
+      if (!allowed.includes(code)) {
+        status = code >= 500 ? 'down' : 'degraded';
+      }
+    } else if (code >= 500) {
+      status = 'down';
+    } else if (code >= 400 && code !== 401 && code !== 403) {
+      // 401/403 sind OK (heißt Service antwortet, nur kein Auth)
+      status = 'degraded';
+    }
+
+    // Hohe Latenz → degraded
+    if (status === 'operational' && latency > 2500) {
+      status = 'degraded';
+    }
+
+    return { id, name, description, status, httpCode: code, latency, error: null };
+  } catch (err) {
+    const latency = Date.now() - start;
+    const isTimeout = err.name === 'AbortError';
+    return {
+      id,
+      name,
+      description,
+      status: 'down',
+      httpCode: null,
+      latency,
+      error: isTimeout ? 'Timeout' : (err.message || 'Network error'),
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function handleSystemStatusCheck(request) {
+  const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const DISCORD_BOT = process.env.DISCORD_BOT_TOKEN;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+
+  // In Dev (localhost) verhindern self-pings einen Single-Thread-Deadlock.
+  // Wir erkennen dev und liefern für Self-Services direkt "operational".
+  const reqHost = request.nextUrl.host;
+  const baseHost = (() => {
+    try { return new URL(baseUrl).host; } catch { return ''; }
+  })();
+  const isDev = process.env.NODE_ENV !== 'production';
+  const isSelf = reqHost === baseHost || reqHost.startsWith('localhost') || reqHost.startsWith('0.0.0.0');
+
+  // Service-Definitionen — leicht erweiterbar
+  const services = [
+    {
+      id: 'discord_auth',
+      name: 'HHRP Discord Auth',
+      description: 'Discord OAuth2 Login & Authentifizierung',
+      url: 'https://discord.com/api/v10/gateway',
+      method: 'GET',
+      expectedStatus: 200,
+    },
+    {
+      id: 'discord_bot',
+      name: 'HHRP Discord Bot',
+      description: 'Bot-Token gültig & Discord-API erreichbar',
+      url: 'https://discord.com/api/v10/users/@me',
+      method: 'GET',
+      headers: DISCORD_BOT ? { Authorization: `Bot ${DISCORD_BOT}` } : {},
+      expectedStatus: DISCORD_BOT ? 200 : [200, 401],
+    },
+    {
+      id: 'database',
+      name: 'HHRP Datenbank',
+      description: 'Supabase Postgres + REST API',
+      url: SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/` : 'https://invalid.local',
+      method: 'GET',
+      headers: SUPABASE_ANON ? { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } : {},
+      // 401/404 ohne table-name ist OK — Service antwortet
+      expectedStatus: [200, 401, 404],
+    },
+    {
+      id: 'service_main',
+      name: 'HHRP Service',
+      description: 'Bewerbungsportal Frontend',
+      url: `${baseUrl}/`,
+      method: 'GET',
+      expectedStatus: [200, 304],
+      internal: true,
+    },
+    {
+      id: 'service_profil',
+      name: 'HHRP Service Profil',
+      description: 'Profil-Seite & User-Daten',
+      url: `${baseUrl}/profil`,
+      method: 'GET',
+      expectedStatus: [200, 304, 307],
+      internal: true,
+    },
+    {
+      id: 'service_bewerbung',
+      name: 'HHRP Service Bewerbung',
+      description: 'Bewerbungsformular & Submission',
+      url: `${baseUrl}/bewerbung`,
+      method: 'GET',
+      expectedStatus: [200, 304, 307],
+      internal: true,
+    },
+    {
+      id: 'service_team',
+      name: 'HHRP Service Team',
+      description: 'Öffentliche Team-Übersicht',
+      url: `${baseUrl}/team`,
+      method: 'GET',
+      expectedStatus: [200, 304],
+      internal: true,
+    },
+    {
+      id: 'service_voice',
+      name: 'HHRP Voice Support',
+      description: 'Live Voice Support Channel',
+      url: `${baseUrl}/voice-support`,
+      method: 'GET',
+      expectedStatus: [200, 304, 307],
+      internal: true,
+    },
+    {
+      id: 'discord_cdn',
+      name: 'HHRP Discord CDN',
+      description: 'Avatar & Asset Delivery',
+      url: 'https://cdn.discordapp.com/embed/avatars/0.png',
+      method: 'GET',
+      expectedStatus: 200,
+    },
+  ];
+
+  // Im Dev: interne Services als "self-check" markieren statt zu pingen
+  // (verhindert Deadlock im Single-Thread-Dev-Server)
+  const results = await Promise.all(
+    services.map(async (svc) => {
+      if (svc.internal && isDev && isSelf) {
+        return {
+          id: svc.id,
+          name: svc.name,
+          description: svc.description,
+          status: 'operational',
+          httpCode: 200,
+          latency: 0,
+          error: null,
+          note: 'self-check (dev)',
+        };
+      }
+      return pingService(svc);
+    })
+  );
+
+  // Gesamt-Status berechnen
+  const summary = {
+    operational: results.filter((r) => r.status === 'operational').length,
+    degraded: results.filter((r) => r.status === 'degraded').length,
+    down: results.filter((r) => r.status === 'down').length,
+    total: results.length,
+  };
+
+  let overall = 'operational';
+  if (summary.down > 0) overall = summary.down >= summary.total / 2 ? 'major_outage' : 'partial_outage';
+  else if (summary.degraded > 0) overall = 'degraded';
+
+  return NextResponse.json(
+    {
+      overall,
+      summary,
+      services: results,
+      checkedAt: new Date().toISOString(),
+    },
+    { headers: { 'Cache-Control': 'no-store' } }
+  );
+}
+
 export async function GET(request) {
   const url = new URL(request.url);
   const p = url.pathname.replace('/api/', '');
+
+  // ===== SYSTEM STATUS CHECK =====
+  // Prüft alle wichtigen HHRP-Services per HTTP-Ping (server-side, umgeht CORS).
+  // Liefert pro Service: status (operational/degraded/down), Latenz, HTTP-Code.
+  if (p === 'system-status/check') {
+    return handleSystemStatusCheck(request);
+  }
 
   // ===== VOICE SUPPORT GET =====
   if (p === 'voice-support/me') {
