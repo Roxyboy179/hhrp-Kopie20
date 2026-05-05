@@ -3121,7 +3121,7 @@ async function checkDiscordBotReal() {
           status: 'down',
           httpCode: meRes.status,
           latency: Date.now() - start,
-          error: meRes.status === 401 ? 'Bot-Token ungültig' : `Discord API ${meRes.status}`,
+          error: meRes.status === 401 ? 'Service-Authentifizierung ungültig' : `Discord API ${meRes.status}`,
         };
       }
       const me = await meRes.json();
@@ -3135,7 +3135,7 @@ async function checkDiscordBotReal() {
         httpCode: 200,
         latency: Date.now() - start,
         error: null,
-        note: 'Token gültig — Online-Status nicht prüfbar (DISCORD_GUILD_ID fehlt)',
+        note: 'Authentifizierung gültig — Live-Status nicht prüfbar',
       };
     }
 
@@ -3157,7 +3157,7 @@ async function checkDiscordBotReal() {
         httpCode: widgetRes.status,
         latency,
         error: null,
-        note: 'Server-Widget nicht aktiviert — Online-Status nicht prüfbar',
+        note: 'Server-Widget nicht aktiviert — Live-Status nicht prüfbar',
       };
     }
 
@@ -3166,7 +3166,7 @@ async function checkDiscordBotReal() {
         status: 'down',
         httpCode: widgetRes.status,
         latency,
-        error: `Widget-API antwortet mit ${widgetRes.status}`,
+        error: `Service-Endpunkt antwortet mit ${widgetRes.status}`,
       };
     }
 
@@ -3182,8 +3182,8 @@ async function checkDiscordBotReal() {
         status: 'down',
         httpCode: 200,
         latency,
-        error: 'Bot ist offline (nicht in Online-Mitglieder)',
-        note: `${presenceCount} Mitglieder online im Server`,
+        error: 'Service ist offline',
+        note: `${presenceCount} aktive Verbindungen im Server`,
       };
     }
 
@@ -3192,7 +3192,7 @@ async function checkDiscordBotReal() {
         status: 'down',
         httpCode: 200,
         latency,
-        error: `Bot-Status: ${botEntry.status}`,
+        error: 'Service ist offline',
       };
     }
 
@@ -3206,7 +3206,7 @@ async function checkDiscordBotReal() {
       httpCode: 200,
       latency,
       error: null,
-      note: `Bot-Status: ${botEntry.status} · ${presenceCount} Online`,
+      note: `Live · ${presenceCount} aktive Verbindungen`,
     };
   } catch (err) {
     const latency = Date.now() - start;
@@ -3216,7 +3216,7 @@ async function checkDiscordBotReal() {
       status: 'down',
       httpCode: null,
       latency,
-      error: isTimeout ? 'Discord API Timeout' : msg,
+      error: isTimeout ? 'Service antwortet nicht (Timeout)' : 'Service nicht erreichbar',
     };
   }
 }

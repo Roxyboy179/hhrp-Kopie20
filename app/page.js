@@ -7,6 +7,7 @@ import { GlassCard } from '@/components/shared/GlassCard';
 import { Button } from '@/components/ui/button';
 import { ScrollProgressBar } from '@/components/shared/ScrollProgressBar';
 import { LoginModal } from '@/components/LoginModal';
+import { PageFooter } from '@/components/shared/PageFooter';
 import WebsiteStatsTracker from '@/components/WebsiteStatsTracker';
 import { PromoBanner } from '@/components/shop/PromoBanner';
 import { getActiveBannerPromotions } from '@/lib/shop-promotions';
@@ -722,7 +723,10 @@ export default function HomePage() {
           </GlassCard>
         </div>
       </section>
-      
+
+      {/* Footer mit System-Status & Version */}
+      <PageFooter />
+
       {/* Login Modal */}
       <LoginModal open={loginModalOpen} onOpenChange={setLoginModalOpen} />
     </div>
