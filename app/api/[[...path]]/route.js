@@ -67,8 +67,8 @@ const ADMIN_ROLES = {
 
 // ===== TEAM ROLES (Kein Admin-Zugriff, nur Uprank-Bewerbungen) =====
 const TEAM_ROLES = {
-  '1273340696975380565': { name: 'Roblox Manager', isTeamMember: true },
-  '1273340696975380566': { name: 'Discord Manager', isTeamMember: true },
+  '1273340696975380566': { name: 'Roblox Manager', isTeamMember: true },
+  '1273340696975380565': { name: 'Discord Manager', isTeamMember: true },
   '1273340696954273900': { name: 'Roblox Team', isTeamMember: true },
   '1273340696954273899': { name: 'Roblox Team', isTeamMember: true },
   '1273340696954273898': { name: 'Roblox Team', isTeamMember: true },
