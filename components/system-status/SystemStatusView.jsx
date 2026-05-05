@@ -589,7 +589,7 @@ export function SystemStatusView() {
           <div className="text-xs text-white/45 mt-0.5">Folge unserem Discord für Live-Updates zu Vorfällen.</div>
         </div>
         <a
-          href="https://discord.gg/hhrp"
+          href="https://discord.gg/ucyAXhVQj"
           target="_blank"
           rel="noopener noreferrer"
           className="flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded-md transition-colors"
