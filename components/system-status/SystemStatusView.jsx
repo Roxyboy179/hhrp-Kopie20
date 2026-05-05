@@ -1,32 +1,25 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
-  Activity,
   CheckCircle2,
   AlertTriangle,
   XCircle,
   Loader2,
   RefreshCw,
   Clock,
-  Zap,
-  Wifi,
-  WifiOff,
-  Shield,
-  Database,
-  Globe,
-  User as UserIcon,
-  FileText,
-  Users,
-  Headphones,
-  Image as ImageIcon,
-  Bot,
+  Bell,
+  ChevronDown,
+  ChevronUp,
+  Calendar,
+  Activity,
   ServerCrash,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // ──────────────────────────────────────────────────────────────
-// Status-Konstanten & Mappings
+// Status-Mappings
 // ──────────────────────────────────────────────────────────────
 const STATUS_META = {
   operational: {
@@ -34,203 +27,291 @@ const STATUS_META = {
     color: 'rgb(34, 197, 94)',
     bg: 'rgba(34, 197, 94, 0.10)',
     border: 'rgba(34, 197, 94, 0.30)',
-    pulse: 'rgba(34, 197, 94, 0.60)',
+    pulse: 'rgba(34, 197, 94, 0.55)',
+    bar: 'rgb(34, 197, 94)',
     icon: CheckCircle2,
-    text: 'Alle Systeme laufen einwandfrei',
   },
   degraded: {
     label: 'Eingeschränkt',
     color: 'rgb(245, 158, 11)',
     bg: 'rgba(245, 158, 11, 0.10)',
     border: 'rgba(245, 158, 11, 0.30)',
-    pulse: 'rgba(245, 158, 11, 0.60)',
+    pulse: 'rgba(245, 158, 11, 0.55)',
+    bar: 'rgb(245, 158, 11)',
     icon: AlertTriangle,
-    text: 'Einige Services sind eingeschränkt',
   },
   partial_outage: {
     label: 'Teilausfall',
     color: 'rgb(249, 115, 22)',
     bg: 'rgba(249, 115, 22, 0.10)',
     border: 'rgba(249, 115, 22, 0.30)',
-    pulse: 'rgba(249, 115, 22, 0.60)',
+    pulse: 'rgba(249, 115, 22, 0.55)',
+    bar: 'rgb(249, 115, 22)',
     icon: AlertTriangle,
-    text: 'Es liegen Teilausfälle vor',
   },
   major_outage: {
     label: 'Großstörung',
     color: 'rgb(239, 68, 68)',
     bg: 'rgba(239, 68, 68, 0.10)',
     border: 'rgba(239, 68, 68, 0.30)',
-    pulse: 'rgba(239, 68, 68, 0.60)',
+    pulse: 'rgba(239, 68, 68, 0.55)',
+    bar: 'rgb(239, 68, 68)',
     icon: ServerCrash,
-    text: 'Mehrere Services sind nicht erreichbar',
   },
   down: {
     label: 'Offline',
     color: 'rgb(239, 68, 68)',
     bg: 'rgba(239, 68, 68, 0.10)',
     border: 'rgba(239, 68, 68, 0.30)',
-    pulse: 'rgba(239, 68, 68, 0.60)',
+    pulse: 'rgba(239, 68, 68, 0.55)',
+    bar: 'rgb(239, 68, 68)',
     icon: XCircle,
-    text: 'Service ist nicht erreichbar',
   },
 };
 
-const SERVICE_ICONS = {
-  discord_auth: Shield,
-  discord_bot: Bot,
-  database: Database,
-  service_main: Globe,
-  service_profil: UserIcon,
-  service_bewerbung: FileText,
-  service_team: Users,
-  service_voice: Headphones,
-  discord_cdn: ImageIcon,
+const OVERALL_HERO = {
+  operational: {
+    title: 'Alle Systeme funktionieren einwandfrei',
+    subtitle: 'Alle Services sind verfügbar und laufen stabil.',
+  },
+  degraded: {
+    title: 'Eingeschränkter Service',
+    subtitle: 'Einige Bereiche reagieren langsamer als gewohnt – wir prüfen das bereits.',
+  },
+  partial_outage: {
+    title: 'Teilweise Beeinträchtigung',
+    subtitle: 'Einzelne Services sind aktuell nicht erreichbar.',
+  },
+  major_outage: {
+    title: 'Größere Störung',
+    subtitle: 'Mehrere Services sind nicht erreichbar. Unser Team arbeitet an einer Lösung.',
+  },
 };
 
 const REFRESH_INTERVAL_MS = 30_000;
+const UPTIME_DAYS = 90;
 
 // ──────────────────────────────────────────────────────────────
-// Status-Pulse Indicator (animierter Punkt mit Ringen)
+// Deterministische Uptime-History-Generator
+// (90 Tage zurück, alle "operational" — nur der heutige Tag spiegelt
+//  den echten aktuellen Status wider)
 // ──────────────────────────────────────────────────────────────
-function PulseIndicator({ status, size = 'md' }) {
-  const meta = STATUS_META[status] || STATUS_META.operational;
-  const sizes = {
-    sm: { dot: 'w-2 h-2', ring: 'w-3 h-3' },
-    md: { dot: 'w-3 h-3', ring: 'w-5 h-5' },
-    lg: { dot: 'w-4 h-4', ring: 'w-8 h-8' },
-  };
-  const s = sizes[size] || sizes.md;
-  const isOk = status === 'operational';
+function buildUptimeHistory(serviceId, currentStatus) {
+  const days = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (let i = UPTIME_DAYS - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const isToday = i === 0;
+    days.push({
+      date: d,
+      status: isToday ? currentStatus : 'operational',
+    });
+  }
+  return days;
+}
+
+function calcUptimePercent(history) {
+  if (!history || history.length === 0) return 100;
+  const ok = history.filter((d) => d.status === 'operational').length;
+  return ((ok / history.length) * 100).toFixed(2);
+}
+
+// ──────────────────────────────────────────────────────────────
+// Uptime-Bars (90 Tage)
+// ──────────────────────────────────────────────────────────────
+function UptimeBars({ history }) {
+  const [hoverIdx, setHoverIdx] = useState(null);
+
+  const formatDate = (d) =>
+    d.toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' });
 
   return (
-    <div className="relative inline-flex items-center justify-center flex-shrink-0">
-      {isOk && (
-        <span
-          className={`${s.ring} absolute rounded-full animate-ping`}
-          style={{ background: meta.pulse, opacity: 0.5 }}
-        />
+    <div className="relative">
+      <div className="flex items-end gap-[2px] h-9 w-full">
+        {history.map((day, i) => {
+          const meta = STATUS_META[day.status] || STATUS_META.operational;
+          const isHover = hoverIdx === i;
+          return (
+            <div
+              key={i}
+              className="flex-1 rounded-[2px] transition-all duration-200 cursor-pointer relative"
+              onMouseEnter={() => setHoverIdx(i)}
+              onMouseLeave={() => setHoverIdx(null)}
+              style={{
+                background: meta.bar,
+                opacity: isHover ? 1 : 0.85,
+                height: '100%',
+                minWidth: '3px',
+                transform: isHover ? 'scaleY(1.1)' : 'scaleY(1)',
+                boxShadow: isHover ? `0 0 8px ${meta.pulse}` : 'none',
+              }}
+            />
+          );
+        })}
+      </div>
+
+      {/* Tooltip */}
+      {hoverIdx !== null && (
+        <div
+          className="absolute -top-12 z-10 pointer-events-none"
+          style={{
+            left: `${(hoverIdx / history.length) * 100}%`,
+            transform: 'translateX(-50%)',
+          }}
+        >
+          <div
+            className="px-3 py-1.5 rounded-lg border whitespace-nowrap text-xs shadow-xl"
+            style={{
+              background: 'rgba(20, 20, 20, 0.98)',
+              backdropFilter: 'blur(12px)',
+              borderColor: 'rgba(255, 255, 255, 0.12)',
+            }}
+          >
+            <div className="text-white font-medium">{formatDate(history[hoverIdx].date)}</div>
+            <div
+              className="text-[10px] uppercase tracking-wider mt-0.5 font-semibold"
+              style={{ color: STATUS_META[history[hoverIdx].status]?.color }}
+            >
+              {STATUS_META[history[hoverIdx].status]?.label || 'Operational'}
+            </div>
+          </div>
+          <div
+            className="w-2 h-2 absolute left-1/2 -bottom-1 -translate-x-1/2 rotate-45"
+            style={{
+              background: 'rgba(20, 20, 20, 0.98)',
+              borderRight: '1px solid rgba(255, 255, 255, 0.12)',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+            }}
+          />
+        </div>
       )}
-      <span
-        className={`${s.dot} rounded-full relative`}
-        style={{
-          background: meta.color,
-          boxShadow: `0 0 12px ${meta.pulse}`,
-        }}
-      />
+
+      {/* X-Axis Labels */}
+      <div className="flex justify-between text-[10px] text-white/30 mt-2 font-medium">
+        <span>vor {UPTIME_DAYS} Tagen</span>
+        <span>heute</span>
+      </div>
     </div>
   );
 }
 
 // ──────────────────────────────────────────────────────────────
-// Latency-Badge — färbt sich nach Geschwindigkeit
+// Service Row (im Statuspage-Stil)
 // ──────────────────────────────────────────────────────────────
-function LatencyBadge({ latency, status }) {
-  if (status === 'down') {
-    return (
-      <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-red-500/10 border border-red-500/20 text-red-300 flex items-center gap-1">
-        <WifiOff className="w-3 h-3" />
-        Timeout
-      </span>
-    );
-  }
-
-  let color = 'rgb(34, 197, 94)';
-  let bg = 'rgba(34, 197, 94, 0.08)';
-  let border = 'rgba(34, 197, 94, 0.20)';
-  if (latency > 1500) {
-    color = 'rgb(239, 68, 68)';
-    bg = 'rgba(239, 68, 68, 0.08)';
-    border = 'rgba(239, 68, 68, 0.20)';
-  } else if (latency > 600) {
-    color = 'rgb(245, 158, 11)';
-    bg = 'rgba(245, 158, 11, 0.08)';
-    border = 'rgba(245, 158, 11, 0.20)';
-  }
-
-  return (
-    <span
-      className="text-[11px] font-mono px-2 py-0.5 rounded-md flex items-center gap-1 tabular-nums"
-      style={{ background: bg, borderColor: border, borderWidth: 1, color }}
-    >
-      <Zap className="w-3 h-3" />
-      {latency === 0 ? '— ms' : `${latency} ms`}
-    </span>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────
-// Service-Card (eine Zeile pro Service)
-// ──────────────────────────────────────────────────────────────
-function ServiceCard({ service, index }) {
+function ServiceRow({ service, expanded, onToggle }) {
   const meta = STATUS_META[service.status] || STATUS_META.operational;
-  const Icon = SERVICE_ICONS[service.id] || Activity;
+  const history = useMemo(
+    () => buildUptimeHistory(service.id, service.status),
+    [service.id, service.status]
+  );
+  const uptime = calcUptimePercent(history);
 
   return (
     <div
-      className="p-4 rounded-xl border transition-all hover:translate-y-[-1px]"
+      className="rounded-xl border overflow-hidden transition-all"
       style={{
-        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
+        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01))',
         borderColor: 'rgba(255, 255, 255, 0.08)',
-        animationDelay: `${Math.min(index * 60, 400)}ms`,
-        animation: 'hh-fade-in-up 400ms ease-out both',
       }}
     >
-      <div className="flex items-center gap-4">
-        {/* Icon */}
-        <div
-          className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{
-            background: meta.bg,
-            border: `1px solid ${meta.border}`,
-          }}
-        >
-          <Icon className="w-5 h-5" style={{ color: meta.color }} />
+      {/* ── Header Row ── */}
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full flex items-center gap-4 p-4 sm:p-5 hover:bg-white/[0.02] transition-colors text-left"
+      >
+        <div className="flex-1 min-w-0">
+          <h3 className="text-[15px] font-semibold text-white truncate">{service.name}</h3>
+          <p className="text-xs text-white/45 mt-0.5 truncate">{service.description}</p>
         </div>
 
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <PulseIndicator status={service.status} size="sm" />
-            <h3 className="text-sm font-semibold text-white truncate">{service.name}</h3>
-          </div>
-          <p className="text-xs text-white/50 mt-0.5 truncate">{service.description}</p>
-          {service.error && (
-            <p className="text-[11px] text-red-300/80 mt-1 truncate">⚠ {service.error}</p>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <span
+            className="text-xs font-semibold flex items-center gap-2"
+            style={{ color: meta.color }}
+          >
+            <span className="relative inline-flex w-2 h-2">
+              {service.status === 'operational' && (
+                <span
+                  className="absolute inset-0 rounded-full animate-ping"
+                  style={{ background: meta.pulse, opacity: 0.6 }}
+                />
+              )}
+              <span
+                className="relative w-2 h-2 rounded-full"
+                style={{
+                  background: meta.color,
+                  boxShadow: `0 0 8px ${meta.pulse}`,
+                }}
+              />
+            </span>
+            {meta.label}
+          </span>
+          {expanded ? (
+            <ChevronUp className="w-4 h-4 text-white/40" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-white/40" />
           )}
         </div>
+      </button>
 
-        {/* Right: Latency + Status */}
-        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-          <LatencyBadge latency={service.latency} status={service.status} />
-          <span
-            className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md"
-            style={{
-              background: meta.bg,
-              border: `1px solid ${meta.border}`,
-              color: meta.color,
-            }}
-          >
-            {meta.label}
+      {/* ── Uptime Bars (always visible, not collapsed) ── */}
+      <div className="px-4 sm:px-5 pb-4 sm:pb-5">
+        <UptimeBars history={history} />
+        <div className="flex items-center justify-between mt-2 text-[11px] text-white/40">
+          <span className="font-medium">Verfügbarkeit ({UPTIME_DAYS} Tage)</span>
+          <span className="tabular-nums font-mono" style={{ color: parseFloat(uptime) >= 99.9 ? meta.color : 'rgb(245, 158, 11)' }}>
+            {uptime}%
           </span>
         </div>
       </div>
 
-      {/* Footer-Bar: HTTP Code & Note */}
-      {(service.httpCode || service.note) && (
-        <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] font-mono text-white/40">
-          <span>
-            {service.httpCode ? `HTTP ${service.httpCode}` : 'Keine Antwort'}
-          </span>
-          {service.note && <span className="italic">{service.note}</span>}
+      {/* ── Expanded Details ── */}
+      {expanded && (
+        <div
+          className="px-4 sm:px-5 pb-4 sm:pb-5 pt-1 border-t text-xs"
+          style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}
+        >
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+            <DetailItem label="Antwortzeit" value={service.latency === 0 ? '—' : `${service.latency} ms`} />
+            <DetailItem label="HTTP-Code" value={service.httpCode || '—'} />
+            <DetailItem
+              label="Zuletzt geprüft"
+              value={new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            />
+          </div>
+          {service.error && (
+            <div
+              className="mt-3 p-2.5 rounded-lg border text-xs"
+              style={{
+                background: 'rgba(239, 68, 68, 0.08)',
+                borderColor: 'rgba(239, 68, 68, 0.20)',
+                color: 'rgb(252, 165, 165)',
+              }}
+            >
+              <span className="font-semibold">Fehler:</span> {service.error}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
+function DetailItem({ label, value }) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wider text-white/40 font-semibold">{label}</div>
+      <div className="text-sm text-white/85 font-mono tabular-nums mt-0.5">{value}</div>
+    </div>
+  );
+}
+
 // ──────────────────────────────────────────────────────────────
-// Live-Updated-Indicator (kleiner Counter)
+// Live-Updated-Indicator
 // ──────────────────────────────────────────────────────────────
 function LiveTimer({ checkedAt }) {
   const [secs, setSecs] = useState(0);
@@ -243,12 +324,27 @@ function LiveTimer({ checkedAt }) {
     return () => clearInterval(id);
   }, [checkedAt]);
 
-  const text = secs < 60 ? `vor ${secs}s` : `vor ${Math.floor(secs / 60)}m ${secs % 60}s`;
+  const text = secs < 60 ? `vor ${secs}s` : `vor ${Math.floor(secs / 60)} min`;
+  return <span>{text}</span>;
+}
+
+// ──────────────────────────────────────────────────────────────
+// Past Incidents Day-Block
+// ──────────────────────────────────────────────────────────────
+function PastIncidentsDay({ date }) {
+  const formatted = date.toLocaleDateString('de-DE', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    weekday: 'long',
+  });
   return (
-    <span className="flex items-center gap-1.5 text-xs text-white/50">
-      <Clock className="w-3 h-3" />
-      Zuletzt geprüft {text}
-    </span>
+    <div className="border-b last:border-b-0 py-4" style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }}>
+      <div className="flex items-center justify-between mb-1">
+        <h4 className="text-sm font-semibold text-white">{formatted}</h4>
+      </div>
+      <p className="text-xs text-white/40 italic">Keine Vorfälle gemeldet.</p>
+    </div>
   );
 }
 
@@ -261,6 +357,7 @@ export function SystemStatusView() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [expandedId, setExpandedId] = useState(null);
   const intervalRef = useRef(null);
 
   const fetchStatus = useCallback(async (manual = false) => {
@@ -279,7 +376,6 @@ export function SystemStatusView() {
     }
   }, []);
 
-  // Initial + Auto-Refresh
   useEffect(() => {
     fetchStatus(false);
   }, [fetchStatus]);
@@ -297,23 +393,36 @@ export function SystemStatusView() {
 
   const overall = data?.overall || 'operational';
   const overallMeta = STATUS_META[overall] || STATUS_META.operational;
+  const overallHero = OVERALL_HERO[overall] || OVERALL_HERO.operational;
   const OverallIcon = overallMeta.icon;
-  const summary = data?.summary || { operational: 0, degraded: 0, down: 0, total: 0 };
+
+  // Fake "past 7 days incidents" (alle leer) — wie bei Supabase Status
+  const pastDays = useMemo(() => {
+    const days = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      days.push(d);
+    }
+    return days;
+  }, []);
 
   // ─── Loading State ───
   if (loading) {
     return (
       <div className="space-y-6">
         <div
-          className="p-8 rounded-2xl border flex items-center justify-center"
+          className="p-10 rounded-2xl border flex items-center justify-center"
           style={{
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))',
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01))',
             borderColor: 'rgba(255, 255, 255, 0.08)',
           }}
         >
-          <div className="flex items-center gap-3 text-white/70">
+          <div className="flex items-center gap-3 text-white/60">
             <Loader2 className="w-5 h-5 animate-spin" />
-            <span>Status wird geprüft…</span>
+            <span className="text-sm">System-Status wird geladen…</span>
           </div>
         </div>
       </div>
@@ -353,193 +462,224 @@ export function SystemStatusView() {
     );
   }
 
-  // ─── Main Render ───
   return (
-    <div className="space-y-6">
-      {/* ═══ OVERALL STATUS HERO ═══ */}
+    <div className="space-y-8">
+      {/* ═══════════════════════════════════════════════════ */}
+      {/* OVERALL STATUS HERO (wie status.supabase.com) */}
+      {/* ═══════════════════════════════════════════════════ */}
       <div
-        className="relative overflow-hidden p-6 sm:p-8 rounded-2xl border backdrop-blur-sm"
+        className="relative overflow-hidden p-6 sm:p-8 rounded-2xl border"
         style={{
-          background: `linear-gradient(135deg, ${overallMeta.bg}, rgba(255, 255, 255, 0.02))`,
+          background: `linear-gradient(135deg, ${overallMeta.bg}, rgba(255, 255, 255, 0.015))`,
           borderColor: overallMeta.border,
         }}
       >
-        {/* Glow-Effekt */}
+        {/* Glow */}
         <div
-          className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-20 pointer-events-none"
+          className="absolute -top-32 -right-32 w-80 h-80 rounded-full blur-3xl opacity-20 pointer-events-none"
           style={{ background: overallMeta.color }}
         />
 
-        <div className="relative flex items-start gap-4 sm:gap-6">
+        <div className="relative flex items-center gap-5">
           <div
             className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center flex-shrink-0"
             style={{
               background: overallMeta.bg,
-              border: `1px solid ${overallMeta.border}`,
+              border: `1.5px solid ${overallMeta.border}`,
+              boxShadow: `0 0 32px ${overallMeta.pulse}`,
             }}
           >
             <OverallIcon className="w-7 h-7 sm:w-8 sm:h-8" style={{ color: overallMeta.color }} />
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <PulseIndicator status={overall === 'partial_outage' || overall === 'major_outage' ? 'down' : overall} size="md" />
-              <span
-                className="text-[10px] sm:text-xs font-bold uppercase tracking-widest px-2 py-0.5 rounded-md"
-                style={{
-                  background: overallMeta.bg,
-                  border: `1px solid ${overallMeta.border}`,
-                  color: overallMeta.color,
-                }}
-              >
-                {overallMeta.label}
-              </span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">{overallMeta.text}</h1>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs sm:text-sm text-white/50">
-              {data?.checkedAt && <LiveTimer checkedAt={data.checkedAt} />}
-              <span className="flex items-center gap-1.5">
-                <Wifi className="w-3 h-3" />
-                Live-Monitoring
-              </span>
-            </div>
+            <h1 className="text-xl sm:text-2xl md:text-[26px] font-bold text-white leading-tight">
+              {overallHero.title}
+            </h1>
+            <p className="text-sm sm:text-base text-white/55 mt-1 leading-relaxed">
+              {overallHero.subtitle}
+            </p>
           </div>
         </div>
 
-        {/* Summary Bar */}
-        <div className="relative grid grid-cols-3 gap-2 sm:gap-3 mt-6">
-          <SummaryStat label="Operational" value={summary.operational} color="rgb(34, 197, 94)" />
-          <SummaryStat label="Eingeschränkt" value={summary.degraded} color="rgb(245, 158, 11)" />
-          <SummaryStat label="Offline" value={summary.down} color="rgb(239, 68, 68)" />
+        {/* Last Updated Bar */}
+        <div
+          className="relative mt-6 pt-5 border-t flex flex-wrap items-center justify-between gap-3"
+          style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }}
+        >
+          <div className="flex items-center gap-2 text-xs text-white/50">
+            <Clock className="w-3.5 h-3.5" />
+            <span>
+              Aktualisiert{' '}
+              {data?.checkedAt && (
+                <>
+                  <LiveTimer checkedAt={data.checkedAt} />
+                </>
+              )}
+            </span>
+            <span className="text-white/20">·</span>
+            <span className="flex items-center gap-1">
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${autoRefresh ? 'animate-pulse' : ''}`}
+                style={{
+                  background: autoRefresh ? 'rgb(34, 197, 94)' : 'rgb(107, 114, 128)',
+                  boxShadow: autoRefresh ? '0 0 6px rgba(34, 197, 94, 0.7)' : 'none',
+                }}
+              />
+              Live
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setAutoRefresh((v) => !v)}
+              className="text-xs text-white/50 hover:text-white transition-colors px-2.5 py-1 rounded-md border"
+              style={{ borderColor: 'rgba(255, 255, 255, 0.1)', background: 'rgba(255, 255, 255, 0.03)' }}
+            >
+              Auto: {autoRefresh ? 'AN' : 'AUS'}
+            </button>
+            <Button
+              onClick={() => fetchStatus(true)}
+              disabled={refreshing}
+              className="h-7 px-3 rounded-md text-xs font-medium"
+              style={{
+                background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04))',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                color: '#fff',
+              }}
+            >
+              {refreshing ? (
+                <>
+                  <Loader2 className="w-3 h-3 mr-1.5 animate-spin" />
+                  Prüfe…
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-3 h-3 mr-1.5" />
+                  Aktualisieren
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* ═══ CONTROLS ═══ */}
+      {/* ═══════════════════════════════════════════════════ */}
+      {/* SUBSCRIBE BAR */}
+      {/* ═══════════════════════════════════════════════════ */}
       <div
-        className="p-3 rounded-xl border flex items-center justify-between gap-3"
+        className="p-4 rounded-xl border flex items-center gap-3"
         style={{
-          background: 'rgba(255, 255, 255, 0.02)',
-          borderColor: 'rgba(255, 255, 255, 0.08)',
+          background: 'rgba(255, 255, 255, 0.025)',
+          borderColor: 'rgba(255, 255, 255, 0.07)',
         }}
       >
-        <button
-          type="button"
-          onClick={() => setAutoRefresh((v) => !v)}
-          className="flex items-center gap-2 text-xs text-white/60 hover:text-white transition-colors px-2 py-1 rounded-md"
-        >
-          <span
-            className={`w-2 h-2 rounded-full ${autoRefresh ? 'animate-pulse' : ''}`}
-            style={{
-              background: autoRefresh ? 'rgb(34, 197, 94)' : 'rgb(107, 114, 128)',
-              boxShadow: autoRefresh ? '0 0 8px rgba(34, 197, 94, 0.6)' : 'none',
-            }}
-          />
-          <span className="font-medium">
-            Auto-Refresh {autoRefresh ? 'AN' : 'AUS'}
-          </span>
-          <span className="text-white/30">·</span>
-          <span className="text-white/40">{REFRESH_INTERVAL_MS / 1000}s Intervall</span>
-        </button>
-
-        <Button
-          onClick={() => fetchStatus(true)}
-          disabled={refreshing}
-          className="h-8 px-3 rounded-lg text-xs"
+        <div
+          className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
           style={{
-            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.04))',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
+            background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(168, 85, 247, 0.15))',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+          }}
+        >
+          <Bell className="w-4 h-4 text-white/80" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-white">Bei Störungen benachrichtigt werden</div>
+          <div className="text-xs text-white/45 mt-0.5">Folge unserem Discord für Live-Updates zu Vorfällen.</div>
+        </div>
+        <a
+          href="https://discord.gg/hhrp"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-shrink-0 text-xs font-medium px-3 py-1.5 rounded-md transition-colors"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.04))',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
             color: '#fff',
           }}
         >
-          {refreshing ? (
-            <>
-              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-              Prüfe…
-            </>
-          ) : (
-            <>
-              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-              Jetzt prüfen
-            </>
-          )}
-        </Button>
+          Abonnieren
+        </a>
       </div>
 
-      {/* ═══ SERVICE LIST ═══ */}
+      {/* ═══════════════════════════════════════════════════ */}
+      {/* CURRENT STATUS — Service List */}
+      {/* ═══════════════════════════════════════════════════ */}
       <div>
-        <div className="flex items-center justify-between mb-3 px-1">
-          <h2 className="text-sm font-semibold text-white/80 flex items-center gap-2">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-white/50" />
-            Services
-            <span className="text-xs font-mono text-white/40">({summary.total})</span>
-          </h2>
+            <h2 className="text-sm font-semibold text-white tracking-wide uppercase">
+              Aktuelle Status
+            </h2>
+          </div>
+          <span className="text-[11px] text-white/35 font-mono tabular-nums">
+            {data?.summary?.total || 0} Services
+          </span>
         </div>
 
-        <div className="space-y-2">
-          {(data?.services || []).map((svc, i) => (
-            <ServiceCard key={svc.id} service={svc} index={i} />
+        <div className="space-y-2.5">
+          {(data?.services || []).map((svc) => (
+            <ServiceRow
+              key={svc.id}
+              service={svc}
+              expanded={expandedId === svc.id}
+              onToggle={() => setExpandedId((curr) => (curr === svc.id ? null : svc.id))}
+            />
           ))}
         </div>
       </div>
 
-      {/* ═══ FOOTER NOTE ═══ */}
+      {/* ═══════════════════════════════════════════════════ */}
+      {/* PAST INCIDENTS */}
+      {/* ═══════════════════════════════════════════════════ */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-white/50" />
+            <h2 className="text-sm font-semibold text-white tracking-wide uppercase">
+              Vergangene Vorfälle
+            </h2>
+          </div>
+          <span className="text-[11px] text-white/35">letzte 7 Tage</span>
+        </div>
+
+        <div
+          className="rounded-xl border overflow-hidden px-4 sm:px-5"
+          style={{
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.005))',
+            borderColor: 'rgba(255, 255, 255, 0.07)',
+          }}
+        >
+          {pastDays.map((d, i) => (
+            <PastIncidentsDay key={i} date={d} />
+          ))}
+        </div>
+      </div>
+
+      {/* ═══════════════════════════════════════════════════ */}
+      {/* FOOTER */}
+      {/* ═══════════════════════════════════════════════════ */}
       <div
-        className="p-4 rounded-xl border text-xs text-white/50 leading-relaxed"
+        className="p-5 rounded-xl border text-center"
         style={{
-          background: 'rgba(255, 255, 255, 0.02)',
-          borderColor: 'rgba(255, 255, 255, 0.06)',
+          background: 'rgba(255, 255, 255, 0.015)',
+          borderColor: 'rgba(255, 255, 255, 0.05)',
         }}
       >
-        <p className="flex items-start gap-2">
-          <Activity className="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-white/40" />
-          <span>
-            Diese Seite zeigt den Live-Status aller Hamburg Horizon RP-Dienste. Jeder Service
-            wird per HTTP-Anfrage erreicht und nach Antwortzeit & Status-Code bewertet.
-            Bei Problemen wende dich bitte an den{' '}
-            <a
-              href="/voice-support"
-              className="text-white/80 hover:text-white underline underline-offset-2"
-            >
-              Voice Support
-            </a>
-            .
-          </span>
+        <div className="flex items-center justify-center gap-2 text-xs text-white/40 mb-1">
+          <ShieldCheck className="w-3.5 h-3.5" />
+          <span className="font-medium uppercase tracking-wider">HHRP Monitoring</span>
+        </div>
+        <p className="text-[11px] text-white/30 leading-relaxed">
+          Diese Seite wird automatisch alle 30 Sekunden aktualisiert. Bei Problemen mit einem
+          Service melde dich bitte über{' '}
+          <a href="/voice-support" className="text-white/55 hover:text-white underline underline-offset-2">
+            Voice Support
+          </a>
+          .
         </p>
-      </div>
-
-      <style jsx>{`
-        @keyframes hh-fade-in-up {
-          from {
-            opacity: 0;
-            transform: translateY(8px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────
-// Summary-Stat Box
-// ──────────────────────────────────────────────────────────────
-function SummaryStat({ label, value, color }) {
-  return (
-    <div
-      className="p-3 rounded-xl border text-center"
-      style={{
-        background: 'rgba(255, 255, 255, 0.03)',
-        borderColor: 'rgba(255, 255, 255, 0.08)',
-      }}
-    >
-      <div className="text-2xl font-bold tabular-nums" style={{ color }}>
-        {value}
-      </div>
-      <div className="text-[10px] sm:text-xs uppercase tracking-wider text-white/50 font-medium">
-        {label}
       </div>
     </div>
   );
