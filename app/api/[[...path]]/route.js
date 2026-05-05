@@ -3013,6 +3013,214 @@ async function pingService({ id, name, description, url, method = 'GET', headers
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// SPEZIAL-CHECKS für Database & Discord Bot
+// (Echte Funktionalitäts-Checks statt nur Endpoint-Reachability)
+// ─────────────────────────────────────────────────────────────────────
+
+let _cachedBotUserId = null;
+
+// Echter DB-Query-Check: SELECT auf user_data
+// Pausierte Supabase-Projekte schlagen hier zuverlässig fehl.
+async function checkDatabaseReal() {
+  const start = Date.now();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    return {
+      status: 'down',
+      httpCode: null,
+      latency: 0,
+      error: 'Supabase Env-Vars nicht gesetzt',
+    };
+  }
+
+  try {
+    // eslint-disable-next-line global-require
+    const { createClient } = require('@supabase/supabase-js');
+    const client = createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    // Promise.race für 6s Timeout
+    const queryPromise = client.from('user_data').select('id').limit(1);
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Query timeout (6s)')), 6000)
+    );
+
+    const { data, error } = await Promise.race([queryPromise, timeoutPromise]);
+    const latency = Date.now() - start;
+
+    if (error) {
+      // Pausierte / nicht-erreichbare DB
+      const msg = error.message || String(error);
+      const isPaused = /paused|fetch failed|ECONNREFUSED|ENOTFOUND|timeout/i.test(msg);
+      return {
+        status: 'down',
+        httpCode: error.status || error.code || null,
+        latency,
+        error: isPaused ? 'Datenbank pausiert oder offline' : msg,
+      };
+    }
+
+    // Hohe Latenz → degraded
+    let status = 'operational';
+    if (latency > 2500) status = 'degraded';
+
+    return {
+      status,
+      httpCode: 200,
+      latency,
+      error: null,
+      note: `Query: SELECT id FROM user_data LIMIT 1 (${data?.length ?? 0} Zeile)`,
+    };
+  } catch (err) {
+    const latency = Date.now() - start;
+    const msg = err.message || String(err);
+    return {
+      status: 'down',
+      httpCode: null,
+      latency,
+      error: /timeout/i.test(msg) ? 'Datenbank antwortet nicht (Timeout)' : msg,
+    };
+  }
+}
+
+// Discord-Bot Online-Check via Widget-API
+// Schritt 1: Bot-Token gültig? (GET /users/@me)
+// Schritt 2: Bot wirklich online im Guild? (GET /guilds/{id}/widget.json)
+async function checkDiscordBotReal() {
+  const start = Date.now();
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+  const guildId = process.env.DISCORD_GUILD_ID;
+
+  if (!botToken) {
+    return {
+      status: 'down',
+      httpCode: null,
+      latency: 0,
+      error: 'DISCORD_BOT_TOKEN nicht gesetzt',
+    };
+  }
+
+  try {
+    // ─── 1) Bot-Token validieren + User-ID holen ───
+    if (!_cachedBotUserId) {
+      const meAc = new AbortController();
+      const meTimer = setTimeout(() => meAc.abort(), 5000);
+      const meRes = await fetch('https://discord.com/api/v10/users/@me', {
+        headers: { Authorization: `Bot ${botToken}` },
+        cache: 'no-store',
+        signal: meAc.signal,
+      });
+      clearTimeout(meTimer);
+
+      if (!meRes.ok) {
+        return {
+          status: 'down',
+          httpCode: meRes.status,
+          latency: Date.now() - start,
+          error: meRes.status === 401 ? 'Bot-Token ungültig' : `Discord API ${meRes.status}`,
+        };
+      }
+      const me = await meRes.json();
+      _cachedBotUserId = me.id;
+    }
+
+    if (!guildId) {
+      // Ohne Guild-ID können wir die Online-Präsenz nicht prüfen → nur Token gültig
+      return {
+        status: 'degraded',
+        httpCode: 200,
+        latency: Date.now() - start,
+        error: null,
+        note: 'Token gültig — Online-Status nicht prüfbar (DISCORD_GUILD_ID fehlt)',
+      };
+    }
+
+    // ─── 2) Widget-API: prüfen ob Bot im Guild online ist ───
+    const wAc = new AbortController();
+    const wTimer = setTimeout(() => wAc.abort(), 5000);
+    const widgetRes = await fetch(`https://discord.com/api/guilds/${guildId}/widget.json`, {
+      cache: 'no-store',
+      signal: wAc.signal,
+    });
+    clearTimeout(wTimer);
+
+    const latency = Date.now() - start;
+
+    if (widgetRes.status === 403 || widgetRes.status === 404) {
+      // Widget nicht aktiviert in diesem Server
+      return {
+        status: 'degraded',
+        httpCode: widgetRes.status,
+        latency,
+        error: null,
+        note: 'Server-Widget nicht aktiviert — Online-Status nicht prüfbar',
+      };
+    }
+
+    if (!widgetRes.ok) {
+      return {
+        status: 'down',
+        httpCode: widgetRes.status,
+        latency,
+        error: `Widget-API antwortet mit ${widgetRes.status}`,
+      };
+    }
+
+    const widget = await widgetRes.json();
+    const members = Array.isArray(widget.members) ? widget.members : [];
+    const presenceCount = widget.presence_count ?? members.length;
+
+    // Bot in Online-Member-Liste suchen
+    const botEntry = members.find((m) => m.id === _cachedBotUserId);
+
+    if (!botEntry) {
+      return {
+        status: 'down',
+        httpCode: 200,
+        latency,
+        error: 'Bot ist offline (nicht in Online-Mitglieder)',
+        note: `${presenceCount} Mitglieder online im Server`,
+      };
+    }
+
+    if (botEntry.status === 'offline' || botEntry.status === 'invisible') {
+      return {
+        status: 'down',
+        httpCode: 200,
+        latency,
+        error: `Bot-Status: ${botEntry.status}`,
+      };
+    }
+
+    // Bot ist online (online / idle / dnd)
+    let status = 'operational';
+    if (botEntry.status === 'idle' || botEntry.status === 'dnd') status = 'degraded';
+    if (latency > 2500) status = 'degraded';
+
+    return {
+      status,
+      httpCode: 200,
+      latency,
+      error: null,
+      note: `Bot-Status: ${botEntry.status} · ${presenceCount} Online`,
+    };
+  } catch (err) {
+    const latency = Date.now() - start;
+    const msg = err.message || String(err);
+    const isTimeout = err.name === 'AbortError' || /timeout/i.test(msg);
+    return {
+      status: 'down',
+      httpCode: null,
+      latency,
+      error: isTimeout ? 'Discord API Timeout' : msg,
+    };
+  }
+}
+
 async function handleSystemStatusCheck(request) {
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -3051,11 +3259,8 @@ async function handleSystemStatusCheck(request) {
       id: 'database',
       name: 'Datenspeicher',
       description: 'Bewerbungen, Profile & Einstellungen',
-      url: SUPABASE_URL ? `${SUPABASE_URL}/rest/v1/` : 'https://invalid.local',
-      method: 'GET',
-      headers: SUPABASE_ANON ? { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } : {},
-      // 401/404 ohne table-name ist OK — Service antwortet
-      expectedStatus: [200, 401, 404],
+      // Spezial-Check: echte SELECT-Query auf user_data
+      customCheck: 'database',
     },
     {
       id: 'service_profil',
@@ -3097,10 +3302,8 @@ async function handleSystemStatusCheck(request) {
       id: 'discord_bot',
       name: 'Echtzeit-Benachrichtigungen',
       description: 'Status-Updates & Push-Mitteilungen',
-      url: 'https://discord.com/api/v10/users/@me',
-      method: 'GET',
-      headers: DISCORD_BOT ? { Authorization: `Bot ${DISCORD_BOT}` } : {},
-      expectedStatus: DISCORD_BOT ? 200 : [200, 401],
+      // Spezial-Check: echter Bot-Online-Status via Discord Widget
+      customCheck: 'discord_bot',
     },
     {
       id: 'discord_cdn',
@@ -3116,6 +3319,26 @@ async function handleSystemStatusCheck(request) {
   // (verhindert Deadlock im Single-Thread-Dev-Server)
   const results = await Promise.all(
     services.map(async (svc) => {
+      // ─── Spezial-Checks ───
+      if (svc.customCheck === 'database') {
+        const r = await checkDatabaseReal();
+        return {
+          id: svc.id,
+          name: svc.name,
+          description: svc.description,
+          ...r,
+        };
+      }
+      if (svc.customCheck === 'discord_bot') {
+        const r = await checkDiscordBotReal();
+        return {
+          id: svc.id,
+          name: svc.name,
+          description: svc.description,
+          ...r,
+        };
+      }
+      // ─── Self-Check für interne Services im Dev ───
       if (svc.internal && isDev && isSelf) {
         return {
           id: svc.id,
