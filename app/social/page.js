@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   Youtube,
@@ -8,7 +8,6 @@ import {
   Loader2,
   Eye,
   Heart,
-  MessageCircle,
   Users,
   Video,
   Calendar,
@@ -296,20 +295,6 @@ function TikTokCard({ tt }) {
   const latest = videos[0];
   const rest = videos.slice(1, 4);
 
-  // TikTok Embed-Script lazy laden (lädt das offizielle Profil-Widget bei Bedarf)
-  const embedRef = useRef(null);
-  useEffect(() => {
-    // Nur wenn wir KEINE Videos via API haben, das offizielle Embed laden
-    if (videos.length > 0) return;
-    if (!embedRef.current) return;
-    if (document.querySelector('script[data-tiktok-embed]')) return;
-    const s = document.createElement('script');
-    s.src = 'https://www.tiktok.com/embed.js';
-    s.async = true;
-    s.dataset.tiktokEmbed = 'true';
-    document.body.appendChild(s);
-  }, [videos.length]);
-
   return (
     <section
       className="rounded-3xl border border-white/[0.06] overflow-hidden flex flex-col"
@@ -362,47 +347,65 @@ function TikTokCard({ tt }) {
           <SkeletonVideo />
         ) : (
           <>
-            {/* Profile Mini-Card */}
-            {profile && (
-              <div
-                className="rounded-2xl border border-white/[0.06] p-4 flex items-center gap-3"
-                style={{ background: 'rgba(255,255,255,0.02)' }}
-              >
-                {profile.avatar ? (
+            {/* Profile Hero-Card */}
+            <div
+              className="relative rounded-2xl border border-white/[0.06] overflow-hidden"
+              style={{
+                background:
+                  'radial-gradient(ellipse at top right, rgba(255,0,79,0.18), transparent 55%), radial-gradient(ellipse at bottom left, rgba(0,242,234,0.12), transparent 55%), rgba(255,255,255,0.02)',
+              }}
+            >
+              <div className="p-5 flex flex-col items-center text-center gap-4 sm:gap-5">
+                {profile?.avatar ? (
                   <img
                     src={profile.avatar}
                     alt={profile.nickname || 'TikTok'}
-                    className="w-12 h-12 rounded-full object-cover border border-white/10 flex-shrink-0"
+                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-2 border-white/15"
                     referrerPolicy="no-referrer"
+                    style={{ boxShadow: '0 10px 30px rgba(0,0,0,0.45)' }}
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0">
-                    <TikTokIcon className="w-5 h-5" />
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white/5 flex items-center justify-center border-2 border-white/15">
+                    <TikTokIcon className="w-10 h-10" />
                   </div>
                 )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-semibold text-white truncate">
-                    {profile.nickname || 'Hamburg Horizon RP'}
+                <div>
+                  <p className="text-[16px] sm:text-[17px] font-semibold text-white">
+                    {profile?.nickname || 'Hamburg Horizon RP'}
                   </p>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-white/55 mt-0.5">
-                    <span className="inline-flex items-center gap-1">
-                      <Users className="w-3 h-3" />
-                      {formatNumber(profile.followerCount)} Follower
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Video className="w-3 h-3" />
-                      {formatNumber(profile.videoCount)} Videos
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Heart className="w-3 h-3" />
-                      {formatNumber(profile.heartCount)} Likes
-                    </span>
-                  </div>
+                  <p className="text-[12px] text-white/50 mt-0.5">
+                    {data?.handle || '@hamburghorizonrp'}
+                  </p>
                 </div>
-              </div>
-            )}
 
-            {/* Videos via API */}
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
+                  <Stat icon={<Users className="w-3.5 h-3.5" />} label="Follower" value={formatNumber(profile?.followerCount)} />
+                  <Stat icon={<Video className="w-3.5 h-3.5" />} label="Videos" value={formatNumber(profile?.videoCount)} />
+                  <Stat icon={<Heart className="w-3.5 h-3.5" />} label="Likes" value={formatNumber(profile?.heartCount)} />
+                </div>
+
+                {/* CTA */}
+                <a
+                  href={profileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full font-medium text-[13px] text-white transition-all active:scale-[0.98] mt-1"
+                  style={{
+                    background:
+                      'linear-gradient(135deg, rgba(255,0,79,0.95), rgba(220,0,60,0.95))',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    boxShadow:
+                      '0 10px 30px rgba(255,0,79,0.35), inset 0 1px 0 rgba(255,255,255,0.18)',
+                  }}
+                >
+                  <TikTokIcon className="w-4 h-4" />
+                  Auf TikTok ansehen
+                </a>
+              </div>
+            </div>
+
+            {/* Videos via API (falls vorhanden) */}
             {videos.length > 0 ? (
               <>
                 {latest && (
@@ -455,12 +458,6 @@ function TikTokCard({ tt }) {
                               {formatNumber(latest.stats.likes)}
                             </span>
                           )}
-                          {latest.stats?.comments != null && (
-                            <span className="inline-flex items-center gap-1">
-                              <MessageCircle className="w-3 h-3" />
-                              {formatNumber(latest.stats.comments)}
-                            </span>
-                          )}
                         </div>
                       </div>
                     </a>
@@ -505,47 +502,31 @@ function TikTokCard({ tt }) {
                 )}
               </>
             ) : (
-              /* Fallback: TikTok offizielles Embed-Widget für Profilfeed */
-              <div className="space-y-3" ref={embedRef}>
-                <p className="text-[11px] uppercase tracking-wider text-white/40 font-medium">
-                  Live-Feed
-                </p>
-                <div
-                  className="rounded-2xl overflow-hidden border border-white/[0.06] p-1"
-                  style={{ background: '#000' }}
-                >
-                  <blockquote
-                    className="tiktok-embed"
-                    cite={profileUrl}
-                    data-unique-id="hamburghorizonrp"
-                    data-embed-from="oembed"
-                    data-embed-type="creator"
-                    style={{ maxWidth: '100%', minWidth: '288px', margin: 0 }}
-                  >
-                    <section>
-                      <a target="_blank" rel="noreferrer" href={profileUrl}>
-                        @hamburghorizonrp
-                      </a>
-                    </section>
-                  </blockquote>
-                </div>
-                <p className="text-[11px] text-white/40 text-center">
-                  Falls der Feed nicht lädt:
-                  <a
-                    href={profileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-white/70 hover:text-white underline ml-1"
-                  >
-                    Profil auf TikTok öffnen
-                  </a>
-                </p>
-              </div>
+              /* Hinweis, dass TikTok-Videofeed nur direkt auf TikTok abrufbar ist */
+              <p className="text-[11px] text-white/35 text-center leading-relaxed px-2">
+                TikTok schützt seine Video-Listen serverseitig — die neuesten Clips
+                findest du immer direkt auf dem Profil.
+              </p>
             )}
           </>
         )}
       </div>
     </section>
+  );
+}
+
+function Stat({ icon, label, value }) {
+  return (
+    <div
+      className="rounded-xl border border-white/[0.06] py-2.5 px-2 text-center"
+      style={{ background: 'rgba(255,255,255,0.025)' }}
+    >
+      <div className="flex items-center justify-center gap-1 text-white/55">
+        {icon}
+        <span className="text-[10px] uppercase tracking-wider">{label}</span>
+      </div>
+      <p className="text-[15px] font-semibold text-white mt-1 tabular-nums">{value}</p>
+    </div>
   );
 }
 
