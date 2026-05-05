@@ -15,6 +15,7 @@ import CountdownOverlay from '@/components/CountdownOverlay';
 import { Toaster } from 'sonner';
 import Link from 'next/link';
 import { Loader2, Sparkles, Zap } from 'lucide-react';
+import { FooterStatusBar } from '@/components/shared/FooterStatusBar';
 
 export default function RootClientLayout({ children }) {
   const [splashDone, setSplashDone] = useState(false);
@@ -753,8 +754,17 @@ function Footer() {
           </div>
         </div>
 
-        <div className="mt-8 pt-6 text-center text-xs" style={{ borderTop: '1px solid var(--theme-glass-border)', color: 'rgba(var(--theme-accent-rgb), 0.2)' }}>
-          © 2026 Hamburg Horizon RP. Alle Rechte vorbehalten.
+        <div
+          className="mt-8 pt-6 flex flex-col items-center gap-4 text-xs"
+          style={{ borderTop: '1px solid var(--theme-glass-border)', color: 'rgba(var(--theme-accent-rgb), 0.2)' }}
+        >
+          {/* System-Status & Version */}
+          <FooterStatusBar />
+
+          {/* Copyright */}
+          <div className="text-center">
+            © 2026 Hamburg Horizon RP. Alle Rechte vorbehalten.
+          </div>
         </div>
       </div>
     </footer>
