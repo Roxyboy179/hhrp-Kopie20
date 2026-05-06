@@ -3343,72 +3343,120 @@ async function sendDiscordStatusNotification(changes, allServices) {
       return (priority[svc.status] || 0) > (priority[worst] || 0) ? svc.status : worst;
     }, 'operational');
 
-    // Erstelle Fields für alle Services
-    const fields = allServices.map(svc => {
-      const emoji = statusEmoji[svc.status] || '❓';
-      const label = statusLabel[svc.status] || 'Unbekannt';
-      
-      // Prüfe ob dieser Service sich geändert hat
-      const change = changes.find(c => c.serviceId === svc.id);
-      const changedMark = change ? ' **[GEÄNDERT]**' : '';
-      
-      let value = `${emoji} **${label}**${changedMark}`;
-      
-      // Füge alte Status-Info hinzu bei Änderungen
-      if (change) {
-        const oldEmoji = statusEmoji[change.oldStatus] || '❓';
-        const oldLabel = statusLabel[change.oldStatus] || 'Unbekannt';
-        value += `\n↩️ War: ${oldEmoji} ${oldLabel}`;
-      }
-      
-      // Füge Fehlerinfo hinzu bei Offline-Services
-      if (svc.status === 'down' && svc.error) {
-        value += `\n⚠️ ${svc.error}`;
-      }
-      
-      return {
-        name: svc.name,
-        value: value,
-        inline: true
-      };
-    });
-
     // Zusammenfassung erstellen
     const summary = allServices.reduce((acc, svc) => {
       acc[svc.status] = (acc[svc.status] || 0) + 1;
       return acc;
     }, {});
 
-    const summaryText = [
-      summary.operational ? `✅ ${summary.operational} Operational` : null,
-      summary.degraded ? `⚠️ ${summary.degraded} Eingeschränkt` : null,
-      summary.down ? `🔴 ${summary.down} Offline` : null
-    ].filter(Boolean).join(' • ');
+    // Gruppiere Services nach Status
+    const operationalServices = allServices.filter(s => s.status === 'operational');
+    const degradedServices = allServices.filter(s => s.status === 'degraded');
+    const downServices = allServices.filter(s => s.status === 'down');
 
-    // Hauptbeschreibung
-    const description = changes.length === 1
-      ? `**${changes[0].serviceName}** hat den Status geändert.`
-      : `**${changes.length} Services** haben ihren Status geändert.`;
+    const fields = [];
 
-    // Ein großes Embed mit allen Services
+    // Geänderte Services zuerst (hervorgehoben)
+    const changedServices = changes.map(c => {
+      const svc = allServices.find(s => s.serviceId === c.serviceId);
+      const newEmoji = statusEmoji[c.newStatus] || '❓';
+      const oldEmoji = statusEmoji[c.oldStatus] || '❓';
+      const oldLabel = statusLabel[c.oldStatus] || 'Unbekannt';
+      
+      let value = `${newEmoji} **${statusLabel[c.newStatus]}**`;
+      value += `\n${oldEmoji} → ${newEmoji} (war: ${oldLabel})`;
+      
+      if (c.error) {
+        value += `\n💬 *${c.error}*`;
+      }
+      
+      return {
+        name: `🔄 ${c.serviceName}`,
+        value: value,
+        inline: true
+      };
+    });
+
+    if (changedServices.length > 0) {
+      fields.push({
+        name: '━━━━━━━━━━━━━━━━━━━━━━━━',
+        value: '**📋 Geänderte Services**',
+        inline: false
+      });
+      fields.push(...changedServices);
+    }
+
+    // Offline Services (falls vorhanden)
+    if (downServices.length > 0) {
+      const downField = downServices
+        .filter(s => !changes.find(c => c.serviceId === s.id))
+        .map(s => `🔴 ${s.name}`)
+        .join('\n');
+      
+      if (downField) {
+        fields.push({
+          name: '━━━━━━━━━━━━━━━━━━━━━━━━',
+          value: '**🔴 Weiterhin Offline**',
+          inline: false
+        });
+        fields.push({
+          name: '\u200b',
+          value: downField || 'Keine',
+          inline: false
+        });
+      }
+    }
+
+    // Operational Services (zusammengefasst)
+    if (operationalServices.length > 0) {
+      const opList = operationalServices
+        .filter(s => !changes.find(c => c.serviceId === s.id))
+        .map(s => s.name)
+        .join(' • ');
+      
+      if (opList) {
+        fields.push({
+          name: '━━━━━━━━━━━━━━━━━━━━━━━━',
+          value: '**✅ Operational**',
+          inline: false
+        });
+        fields.push({
+          name: '\u200b',
+          value: opList || 'Keine',
+          inline: false
+        });
+      }
+    }
+
+    // Haupt-Embed
     const embed = {
-      title: '🔄 System Status Update',
-      description: `${description}\n\n📊 **Übersicht:** ${summaryText}`,
+      author: {
+        name: 'HHRP System Status',
+        icon_url: 'https://cdn.discordapp.com/embed/avatars/0.png'
+      },
+      title: '🔔 Status-Änderung erkannt',
+      description: changes.length === 1
+        ? `**${changes[0].serviceName}** hat den Status geändert.`
+        : `**${changes.length} Services** haben ihren Status geändert.`,
       color: statusColor[worstStatus] || 0x6B7280,
       fields: fields,
-      timestamp: new Date().toISOString(),
       footer: {
-        text: `HHRP System Status • ${allServices.length} Services überwacht`
+        text: `📊 ${summary.operational || 0} Operational • ${summary.degraded || 0} Eingeschränkt • ${summary.down || 0} Offline`,
+        icon_url: 'https://cdn.discordapp.com/embed/avatars/0.png'
+      },
+      timestamp: new Date().toISOString(),
+      thumbnail: {
+        url: worstStatus === 'operational' 
+          ? 'https://cdn.discordapp.com/emojis/1234567890.png' // Grünes Check-Icon
+          : 'https://cdn.discordapp.com/emojis/1234567891.png'  // Rotes X-Icon
       }
     };
 
-    // Webhook senden
+    // Webhook senden mit Standard-Format
     const response = await fetch(DISCORD_WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        username: 'System Status',
-        avatar_url: 'https://cdn.discordapp.com/embed/avatars/0.png',
         embeds: [embed]
       })
     });
