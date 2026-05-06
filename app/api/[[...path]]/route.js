@@ -3197,6 +3197,7 @@ async function checkDiscordBotReal() {
 
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1501605144037429278/sOcPlEFvE_4r_zjuxOUv4dfOQmTb5a9RB-3JLT7bib5nTzw90VX8yHoeUfkJHDOuU_-K';
 const STATUS_CACHE_FILE = '/tmp/system-status-cache.json';
+const NOTIFICATION_LOCK_FILE = '/tmp/system-status-notification-lock.json';
 
 // Lade letzten bekannten Status
 function loadLastStatus() {
@@ -3221,12 +3222,58 @@ function saveCurrentStatus(services) {
       statusMap[svc.id] = {
         status: svc.status,
         name: svc.name,
-        error: svc.error
+        error: svc.error,
+        notifiedAt: Date.now() // Timestamp wann benachrichtigt wurde
       };
     });
     fs.writeFileSync(STATUS_CACHE_FILE, JSON.stringify(statusMap, null, 2), 'utf8');
   } catch (e) {
     console.error('[Status Notify] Fehler beim Speichern:', e);
+  }
+}
+
+// Prüfe ob Benachrichtigung bereits gesendet wurde (verhindert Duplikate)
+function hasBeenNotified(serviceId, status) {
+  try {
+    const fs = require('fs');
+    if (fs.existsSync(NOTIFICATION_LOCK_FILE)) {
+      const data = fs.readFileSync(NOTIFICATION_LOCK_FILE, 'utf8');
+      const locks = JSON.parse(data);
+      const key = `${serviceId}_${status}`;
+      // Benachrichtigung gilt als gesendet, wenn sie innerhalb der letzten 5 Minuten gesendet wurde
+      if (locks[key] && (Date.now() - locks[key]) < 300000) {
+        return true;
+      }
+    }
+  } catch (e) {
+    console.error('[Status Notify] Fehler beim Lock-Check:', e);
+  }
+  return false;
+}
+
+// Markiere Benachrichtigung als gesendet
+function markAsNotified(serviceId, status) {
+  try {
+    const fs = require('fs');
+    let locks = {};
+    if (fs.existsSync(NOTIFICATION_LOCK_FILE)) {
+      const data = fs.readFileSync(NOTIFICATION_LOCK_FILE, 'utf8');
+      locks = JSON.parse(data);
+    }
+    const key = `${serviceId}_${status}`;
+    locks[key] = Date.now();
+    
+    // Cleanup alte Locks (älter als 10 Minuten)
+    const now = Date.now();
+    Object.keys(locks).forEach(k => {
+      if (now - locks[k] > 600000) {
+        delete locks[k];
+      }
+    });
+    
+    fs.writeFileSync(NOTIFICATION_LOCK_FILE, JSON.stringify(locks, null, 2), 'utf8');
+  } catch (e) {
+    console.error('[Status Notify] Fehler beim Lock-Setzen:', e);
   }
 }
 
@@ -3260,6 +3307,12 @@ async function sendDiscordStatusNotification(changes) {
 
   try {
     for (const change of changes) {
+      // Prüfe ob diese Benachrichtigung bereits gesendet wurde
+      if (hasBeenNotified(change.serviceId, change.newStatus)) {
+        console.log(`[Status Notify] ⏭️ Überspringe: ${change.serviceName} (bereits benachrichtigt)`);
+        continue;
+      }
+
       const emoji = statusEmoji[change.newStatus] || '❓';
       const color = statusColor[change.newStatus] || 0x6B7280;
       const label = statusLabel[change.newStatus] || 'Unbekannt';
@@ -3313,6 +3366,8 @@ async function sendDiscordStatusNotification(changes) {
         console.error('[Status Notify] Discord-Webhook Fehler:', response.status);
       } else {
         console.log(`[Status Notify] ✅ Benachrichtigung gesendet: ${change.serviceName} → ${label}`);
+        // Markiere als benachrichtigt, damit es nicht nochmal gesendet wird
+        markAsNotified(change.serviceId, change.newStatus);
       }
 
       // Rate-Limiting beachten (Discord erlaubt 5 Webhooks pro 2 Sekunden)
