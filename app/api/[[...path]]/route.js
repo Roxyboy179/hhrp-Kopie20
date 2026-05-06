@@ -3190,6 +3190,159 @@ async function checkDiscordBotReal() {
   }
 }
 
+
+// ══════════════════════════════════════════════════════════════
+// Discord Status Notifications
+// ══════════════════════════════════════════════════════════════
+
+const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1501605144037429278/sOcPlEFvE_4r_zjuxOUv4dfOQmTb5a9RB-3JLT7bib5nTzw90VX8yHoeUfkJHDOuU_-K';
+const STATUS_CACHE_FILE = '/tmp/system-status-cache.json';
+
+// Lade letzten bekannten Status
+function loadLastStatus() {
+  try {
+    const fs = require('fs');
+    if (fs.existsSync(STATUS_CACHE_FILE)) {
+      const data = fs.readFileSync(STATUS_CACHE_FILE, 'utf8');
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.error('[Status Notify] Fehler beim Laden:', e);
+  }
+  return {};
+}
+
+// Speichere aktuellen Status
+function saveCurrentStatus(services) {
+  try {
+    const fs = require('fs');
+    const statusMap = {};
+    services.forEach(svc => {
+      statusMap[svc.id] = {
+        status: svc.status,
+        name: svc.name,
+        error: svc.error
+      };
+    });
+    fs.writeFileSync(STATUS_CACHE_FILE, JSON.stringify(statusMap, null, 2), 'utf8');
+  } catch (e) {
+    console.error('[Status Notify] Fehler beim Speichern:', e);
+  }
+}
+
+// Sende Discord-Benachrichtigung bei Status-Änderung
+async function sendDiscordStatusNotification(changes) {
+  if (!changes || changes.length === 0) return;
+
+  const statusEmoji = {
+    operational: '✅',
+    degraded: '⚠️',
+    partial_outage: '🟧',
+    major_outage: '🔴',
+    down: '🔴'
+  };
+
+  const statusColor = {
+    operational: 0x22C55E,  // Grün
+    degraded: 0xF59E0B,     // Orange
+    partial_outage: 0xF97316, // Orange-Rot
+    major_outage: 0xEF4444,  // Rot
+    down: 0xEF4444          // Rot
+  };
+
+  const statusLabel = {
+    operational: 'Operational',
+    degraded: 'Eingeschränkt',
+    partial_outage: 'Teilausfall',
+    major_outage: 'Großstörung',
+    down: 'Offline'
+  };
+
+  try {
+    for (const change of changes) {
+      const emoji = statusEmoji[change.newStatus] || '❓';
+      const color = statusColor[change.newStatus] || 0x6B7280;
+      const label = statusLabel[change.newStatus] || 'Unbekannt';
+
+      // Embed erstellen
+      const embed = {
+        title: `${emoji} Status-Änderung: ${change.serviceName}`,
+        description: change.newStatus === 'operational' 
+          ? `**${change.serviceName}** ist wieder erreichbar und funktioniert normal.`
+          : `**${change.serviceName}** ist momentan nicht erreichbar.`,
+        color: color,
+        fields: [
+          {
+            name: 'Vorheriger Status',
+            value: `${statusEmoji[change.oldStatus] || '❓'} ${statusLabel[change.oldStatus] || 'Unbekannt'}`,
+            inline: true
+          },
+          {
+            name: 'Aktueller Status',
+            value: `${emoji} ${label}`,
+            inline: true
+          }
+        ],
+        timestamp: new Date().toISOString(),
+        footer: {
+          text: 'HHRP System Status'
+        }
+      };
+
+      // Wenn Service offline ist, füge Fehlerinfo hinzu
+      if (change.newStatus === 'down' && change.error) {
+        embed.fields.push({
+          name: 'Details',
+          value: change.error,
+          inline: false
+        });
+      }
+
+      // Webhook senden
+      const response = await fetch(DISCORD_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'System Status',
+          avatar_url: 'https://cdn.discordapp.com/embed/avatars/0.png',
+          embeds: [embed]
+        })
+      });
+
+      if (!response.ok) {
+        console.error('[Status Notify] Discord-Webhook Fehler:', response.status);
+      } else {
+        console.log(`[Status Notify] ✅ Benachrichtigung gesendet: ${change.serviceName} → ${label}`);
+      }
+
+      // Rate-Limiting beachten (Discord erlaubt 5 Webhooks pro 2 Sekunden)
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  } catch (e) {
+    console.error('[Status Notify] Fehler beim Senden:', e);
+  }
+}
+
+// Vergleiche Status und erkenne Änderungen
+function detectStatusChanges(currentServices, lastStatus) {
+  const changes = [];
+  
+  currentServices.forEach(svc => {
+    const last = lastStatus[svc.id];
+    if (last && last.status !== svc.status) {
+      changes.push({
+        serviceId: svc.id,
+        serviceName: svc.name,
+        oldStatus: last.status,
+        newStatus: svc.status,
+        error: svc.error
+      });
+    }
+  });
+
+  return changes;
+}
+
 async function handleSystemStatusCheck(request) {
   const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -3357,6 +3510,22 @@ async function handleSystemStatusCheck(request) {
   let overall = 'operational';
   if (summary.down > 0) overall = summary.down >= summary.total / 2 ? 'major_outage' : 'partial_outage';
   else if (summary.degraded > 0) overall = 'degraded';
+
+  // ═══ Discord Status Benachrichtigungen ═══
+  // Lade letzten Status und vergleiche
+  const lastStatus = loadLastStatus();
+  const changes = detectStatusChanges(results, lastStatus);
+  
+  // Bei Änderungen: Discord-Benachrichtigung senden (async, blockiert nicht)
+  if (changes.length > 0) {
+    console.log(`[Status Check] ${changes.length} Status-Änderung(en) erkannt`);
+    sendDiscordStatusNotification(changes).catch(err => {
+      console.error('[Status Check] Discord-Benachrichtigung fehlgeschlagen:', err);
+    });
+  }
+  
+  // Speichere aktuellen Status für nächsten Vergleich
+  saveCurrentStatus(results);
 
   return NextResponse.json(
     {
