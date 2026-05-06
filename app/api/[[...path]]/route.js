@@ -3192,93 +3192,115 @@ async function checkDiscordBotReal() {
 
 
 // ══════════════════════════════════════════════════════════════
-// Discord Status Notifications
+// Discord Status Notifications (Supabase-basiert für Vercel)
 // ══════════════════════════════════════════════════════════════
 
 const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1501605144037429278/sOcPlEFvE_4r_zjuxOUv4dfOQmTb5a9RB-3JLT7bib5nTzw90VX8yHoeUfkJHDOuU_-K';
-const STATUS_CACHE_FILE = '/tmp/system-status-cache.json';
-const NOTIFICATION_LOCK_FILE = '/tmp/system-status-notification-lock.json';
 
-// Lade letzten bekannten Status
-function loadLastStatus() {
+// Lade letzten bekannten Status aus Supabase
+async function loadLastStatus() {
   try {
-    const fs = require('fs');
-    if (fs.existsSync(STATUS_CACHE_FILE)) {
-      const data = fs.readFileSync(STATUS_CACHE_FILE, 'utf8');
-      return JSON.parse(data);
+    const { data, error } = await supabaseAdmin
+      .from('system_status_cache')
+      .select('*')
+      .single();
+    
+    if (error) {
+      // Tabelle existiert noch nicht oder ist leer
+      console.log('[Status Notify] Kein Cache gefunden, erstelle initial...');
+      return {};
     }
+    
+    return data?.services || {};
   } catch (e) {
     console.error('[Status Notify] Fehler beim Laden:', e);
+    return {};
   }
-  return {};
 }
 
-// Speichere aktuellen Status
-function saveCurrentStatus(services) {
+// Speichere aktuellen Status in Supabase
+async function saveCurrentStatus(services) {
   try {
-    const fs = require('fs');
     const statusMap = {};
     services.forEach(svc => {
       statusMap[svc.id] = {
         status: svc.status,
         name: svc.name,
         error: svc.error,
-        notifiedAt: Date.now() // Timestamp wann benachrichtigt wurde
+        updatedAt: Date.now()
       };
     });
-    fs.writeFileSync(STATUS_CACHE_FILE, JSON.stringify(statusMap, null, 2), 'utf8');
+    
+    const { error } = await supabaseAdmin
+      .from('system_status_cache')
+      .upsert({
+        id: 'current',
+        services: statusMap,
+        updated_at: new Date().toISOString()
+      });
+    
+    if (error) {
+      console.error('[Status Notify] Fehler beim Speichern:', error);
+    }
   } catch (e) {
     console.error('[Status Notify] Fehler beim Speichern:', e);
   }
 }
 
-// Prüfe ob Benachrichtigung bereits gesendet wurde (verhindert Duplikate)
-function hasBeenNotified(serviceId, status) {
+// Prüfe ob Benachrichtigung bereits gesendet wurde (Supabase-basiert)
+async function hasBeenNotified(batchKey) {
   try {
-    const fs = require('fs');
-    if (fs.existsSync(NOTIFICATION_LOCK_FILE)) {
-      const data = fs.readFileSync(NOTIFICATION_LOCK_FILE, 'utf8');
-      const locks = JSON.parse(data);
-      const key = `${serviceId}_${status}`;
-      // Benachrichtigung gilt als gesendet, wenn sie innerhalb der letzten 5 Minuten gesendet wurde
-      if (locks[key] && (Date.now() - locks[key]) < 300000) {
-        return true;
-      }
+    const { data, error } = await supabaseAdmin
+      .from('system_status_notifications')
+      .select('sent_at')
+      .eq('batch_key', batchKey)
+      .single();
+    
+    if (error && error.code !== 'PGRST116') {
+      return false; // Bei Fehler: sende lieber als zu überspringen
     }
+    
+    if (data) {
+      // Benachrichtigung gilt als gesendet, wenn sie innerhalb der letzten 5 Minuten war
+      const sentAt = new Date(data.sent_at).getTime();
+      const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+      return sentAt > fiveMinutesAgo;
+    }
+    
+    return false;
   } catch (e) {
     console.error('[Status Notify] Fehler beim Lock-Check:', e);
+    return false;
   }
-  return false;
 }
 
-// Markiere Benachrichtigung als gesendet
-function markAsNotified(serviceId, status) {
+// Markiere Benachrichtigung als gesendet (Supabase-basiert)
+async function markAsNotified(batchKey) {
   try {
-    const fs = require('fs');
-    let locks = {};
-    if (fs.existsSync(NOTIFICATION_LOCK_FILE)) {
-      const data = fs.readFileSync(NOTIFICATION_LOCK_FILE, 'utf8');
-      locks = JSON.parse(data);
+    const { error } = await supabaseAdmin
+      .from('system_status_notifications')
+      .upsert({
+        batch_key: batchKey,
+        sent_at: new Date().toISOString()
+      });
+    
+    if (error) {
+      console.error('[Status Notify] Fehler beim Lock-Setzen:', error);
     }
-    const key = `${serviceId}_${status}`;
-    locks[key] = Date.now();
     
-    // Cleanup alte Locks (älter als 10 Minuten)
-    const now = Date.now();
-    Object.keys(locks).forEach(k => {
-      if (now - locks[k] > 600000) {
-        delete locks[k];
-      }
-    });
-    
-    fs.writeFileSync(NOTIFICATION_LOCK_FILE, JSON.stringify(locks, null, 2), 'utf8');
+    // Cleanup: Lösche alte Benachrichtigungen (älter als 10 Minuten)
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    await supabaseAdmin
+      .from('system_status_notifications')
+      .delete()
+      .lt('sent_at', tenMinutesAgo);
   } catch (e) {
     console.error('[Status Notify] Fehler beim Lock-Setzen:', e);
   }
 }
 
 // Sende Discord-Benachrichtigung bei Status-Änderung
-async function sendDiscordStatusNotification(changes) {
+async function sendDiscordStatusNotification(changes, allServices) {
   if (!changes || changes.length === 0) return;
 
   const statusEmoji = {
@@ -3306,72 +3328,97 @@ async function sendDiscordStatusNotification(changes) {
   };
 
   try {
-    for (const change of changes) {
-      // Prüfe ob diese Benachrichtigung bereits gesendet wurde
-      if (hasBeenNotified(change.serviceId, change.newStatus)) {
-        console.log(`[Status Notify] ⏭️ Überspringe: ${change.serviceName} (bereits benachrichtigt)`);
-        continue;
+    // Erstelle eindeutigen Lock-Key für diese Änderungen
+    const changeKey = changes.map(c => `${c.serviceId}_${c.newStatus}`).sort().join('|');
+    
+    const alreadyNotified = await hasBeenNotified(changeKey);
+    if (alreadyNotified) {
+      console.log(`[Status Notify] ⏭️ Überspringe: Batch bereits benachrichtigt`);
+      return;
+    }
+
+    // Bestimme Gesamtfarbe basierend auf schlimmstem Status
+    const worstStatus = allServices.reduce((worst, svc) => {
+      const priority = { down: 4, major_outage: 3, partial_outage: 2, degraded: 1, operational: 0 };
+      return (priority[svc.status] || 0) > (priority[worst] || 0) ? svc.status : worst;
+    }, 'operational');
+
+    // Erstelle Fields für alle Services
+    const fields = allServices.map(svc => {
+      const emoji = statusEmoji[svc.status] || '❓';
+      const label = statusLabel[svc.status] || 'Unbekannt';
+      
+      // Prüfe ob dieser Service sich geändert hat
+      const change = changes.find(c => c.serviceId === svc.id);
+      const changedMark = change ? ' **[GEÄNDERT]**' : '';
+      
+      let value = `${emoji} **${label}**${changedMark}`;
+      
+      // Füge alte Status-Info hinzu bei Änderungen
+      if (change) {
+        const oldEmoji = statusEmoji[change.oldStatus] || '❓';
+        const oldLabel = statusLabel[change.oldStatus] || 'Unbekannt';
+        value += `\n↩️ War: ${oldEmoji} ${oldLabel}`;
       }
-
-      const emoji = statusEmoji[change.newStatus] || '❓';
-      const color = statusColor[change.newStatus] || 0x6B7280;
-      const label = statusLabel[change.newStatus] || 'Unbekannt';
-
-      // Embed erstellen
-      const embed = {
-        title: `${emoji} Status-Änderung: ${change.serviceName}`,
-        description: change.newStatus === 'operational' 
-          ? `**${change.serviceName}** ist wieder erreichbar und funktioniert normal.`
-          : `**${change.serviceName}** ist momentan nicht erreichbar.`,
-        color: color,
-        fields: [
-          {
-            name: 'Vorheriger Status',
-            value: `${statusEmoji[change.oldStatus] || '❓'} ${statusLabel[change.oldStatus] || 'Unbekannt'}`,
-            inline: true
-          },
-          {
-            name: 'Aktueller Status',
-            value: `${emoji} ${label}`,
-            inline: true
-          }
-        ],
-        timestamp: new Date().toISOString(),
-        footer: {
-          text: 'HHRP System Status'
-        }
+      
+      // Füge Fehlerinfo hinzu bei Offline-Services
+      if (svc.status === 'down' && svc.error) {
+        value += `\n⚠️ ${svc.error}`;
+      }
+      
+      return {
+        name: svc.name,
+        value: value,
+        inline: true
       };
+    });
 
-      // Wenn Service offline ist, füge Fehlerinfo hinzu
-      if (change.newStatus === 'down' && change.error) {
-        embed.fields.push({
-          name: 'Details',
-          value: change.error,
-          inline: false
-        });
+    // Zusammenfassung erstellen
+    const summary = allServices.reduce((acc, svc) => {
+      acc[svc.status] = (acc[svc.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    const summaryText = [
+      summary.operational ? `✅ ${summary.operational} Operational` : null,
+      summary.degraded ? `⚠️ ${summary.degraded} Eingeschränkt` : null,
+      summary.down ? `🔴 ${summary.down} Offline` : null
+    ].filter(Boolean).join(' • ');
+
+    // Hauptbeschreibung
+    const description = changes.length === 1
+      ? `**${changes[0].serviceName}** hat den Status geändert.`
+      : `**${changes.length} Services** haben ihren Status geändert.`;
+
+    // Ein großes Embed mit allen Services
+    const embed = {
+      title: '🔄 System Status Update',
+      description: `${description}\n\n📊 **Übersicht:** ${summaryText}`,
+      color: statusColor[worstStatus] || 0x6B7280,
+      fields: fields,
+      timestamp: new Date().toISOString(),
+      footer: {
+        text: `HHRP System Status • ${allServices.length} Services überwacht`
       }
+    };
 
-      // Webhook senden
-      const response = await fetch(DISCORD_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: 'System Status',
-          avatar_url: 'https://cdn.discordapp.com/embed/avatars/0.png',
-          embeds: [embed]
-        })
-      });
+    // Webhook senden
+    const response = await fetch(DISCORD_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'System Status',
+        avatar_url: 'https://cdn.discordapp.com/embed/avatars/0.png',
+        embeds: [embed]
+      })
+    });
 
-      if (!response.ok) {
-        console.error('[Status Notify] Discord-Webhook Fehler:', response.status);
-      } else {
-        console.log(`[Status Notify] ✅ Benachrichtigung gesendet: ${change.serviceName} → ${label}`);
-        // Markiere als benachrichtigt, damit es nicht nochmal gesendet wird
-        markAsNotified(change.serviceId, change.newStatus);
-      }
-
-      // Rate-Limiting beachten (Discord erlaubt 5 Webhooks pro 2 Sekunden)
-      await new Promise(resolve => setTimeout(resolve, 500));
+    if (!response.ok) {
+      console.error('[Status Notify] Discord-Webhook Fehler:', response.status);
+    } else {
+      console.log(`[Status Notify] ✅ Batch-Benachrichtigung gesendet: ${changes.length} Änderung(en)`);
+      // Markiere als benachrichtigt
+      await markAsNotified(changeKey);
     }
   } catch (e) {
     console.error('[Status Notify] Fehler beim Senden:', e);
@@ -3567,20 +3614,23 @@ async function handleSystemStatusCheck(request) {
   else if (summary.degraded > 0) overall = 'degraded';
 
   // ═══ Discord Status Benachrichtigungen ═══
-  // Lade letzten Status und vergleiche
-  const lastStatus = loadLastStatus();
+  // Lade letzten Status und vergleiche (async)
+  const lastStatus = await loadLastStatus();
   const changes = detectStatusChanges(results, lastStatus);
   
   // Bei Änderungen: Discord-Benachrichtigung senden (async, blockiert nicht)
   if (changes.length > 0) {
     console.log(`[Status Check] ${changes.length} Status-Änderung(en) erkannt`);
-    sendDiscordStatusNotification(changes).catch(err => {
+    // Fire-and-forget: Blockiert Response nicht
+    sendDiscordStatusNotification(changes, results).catch(err => {
       console.error('[Status Check] Discord-Benachrichtigung fehlgeschlagen:', err);
     });
   }
   
-  // Speichere aktuellen Status für nächsten Vergleich
-  saveCurrentStatus(results);
+  // Speichere aktuellen Status für nächsten Vergleich (async, nicht blockierend)
+  saveCurrentStatus(results).catch(err => {
+    console.error('[Status Check] Status-Speicherung fehlgeschlagen:', err);
+  });
 
   return NextResponse.json(
     {
