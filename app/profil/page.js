@@ -5224,7 +5224,12 @@ export default function ProfilPage() {
                 { id: 'preset:city-2', src: '/bg-city-2.webp', name: 'Aerial Night' },
                 { id: 'preset:city-3', src: '/bg-city-3.webp', name: 'Dark Metropole' },
                 { id: 'preset:neon-1', src: '/bg-neon-1.webp', name: 'Neon Streets' },
-                { id: 'preset:neon-2', src: '/bg-neon-2.webp', name: 'Green Neon' }
+                { id: 'preset:neon-2', src: '/bg-neon-2.webp', name: 'Green Neon' },
+                { id: 'preset:harbor-night', src: '/bg-harbor-night.webp', name: 'Hamburg Harbor' },
+                { id: 'preset:cyberpunk-rain', src: '/bg-cyberpunk-rain.webp', name: 'Cyberpunk Rain' },
+                { id: 'preset:tokyo-lanterns', src: '/bg-tokyo-lanterns.webp', name: 'Tokyo Lanterns' },
+                { id: 'preset:foggy-skyline', src: '/bg-foggy-skyline.webp', name: 'Foggy Skyline' },
+                { id: 'preset:futuristic-blue', src: '/bg-futuristic-blue.webp', name: 'Futuristic Blue' }
               ];
 
               // Auto-Entfernung: Wenn kein VIP Platinum+ aber custom/preset BG vorhanden
