@@ -23,9 +23,7 @@ import {
   Lightbulb, Filter, Search, ArrowLeftRight, Target, Calculator,
   TrendingUpIcon, BarChart2, Send, XCircle, Infinity, Car, Coins,
   ChevronDown, ChevronRight, Palette, Wand2, Activity, Eye, EyeOff,
-  MousePointer2, Layers, Gauge, Percent, ArrowRight,
-  Sun, Flame, Trees, Snowflake, Mountain, Leaf, Flower2, Cloud,
-  Waves, Cpu, Atom, Wind, Moon
+  MousePointer2, Layers, Gauge, Percent, ArrowRight
 } from 'lucide-react';
 import { LicenseBadge } from '@/components/profile/LicenseBadge';
 import { LevelProgress } from '@/components/profile/LevelProgress';
@@ -5219,8 +5217,7 @@ export default function ProfilPage() {
               const hasVipForCustomBg = licenses.includes('vip_platinum') || licenses.includes('vip_ultimate') || licenses.includes('vip_elite_plus') || licenses.includes('luxus_pass');
               const isStandardBgActive = customBg === 'standard';
               const isPresetBg = customBg && customBg.startsWith('preset:');
-              const isAnimatedBg = customBg && customBg.startsWith('animated:');
-              const isCustomBgActive = customBg && customBg !== 'standard' && !isPresetBg && !isAnimatedBg;
+              const isCustomBgActive = customBg && customBg !== 'standard' && !isPresetBg;
 
               const presetBackgrounds = [
                 { id: 'preset:city-1', src: '/bg-city-1.webp', name: 'City Skyline' },
@@ -5230,32 +5227,8 @@ export default function ProfilPage() {
                 { id: 'preset:neon-2', src: '/bg-neon-2.webp', name: 'Green Neon' }
               ];
 
-              // 20 vorgefertigte ANIMIERTE Hintergründe (CSS-only, mit echten Effekten)
-              const animatedBackgrounds = [
-                { id: 'animated:starry',    name: 'Sternenhimmel',     icon: Star,       color: 'text-yellow-200' },
-                { id: 'animated:aurora',    name: 'Aurora Borealis',   icon: Sparkles,   color: 'text-emerald-300' },
-                { id: 'animated:shooting',  name: 'Schießende Sterne', icon: Sparkles,   color: 'text-blue-200' },
-                { id: 'animated:galaxy',    name: 'Galaxy',            icon: Atom,       color: 'text-purple-300' },
-                { id: 'animated:nebula',    name: 'Nebula',            icon: Sparkles,   color: 'text-pink-300' },
-                { id: 'animated:cosmic',    name: 'Cosmic Dust',       icon: Sparkles,   color: 'text-violet-300' },
-                { id: 'animated:cyberpunk', name: 'Cyberpunk',         icon: Cpu,        color: 'text-cyan-300' },
-                { id: 'animated:plasma',    name: 'Plasma',            icon: Atom,       color: 'text-fuchsia-300' },
-                { id: 'animated:ocean',     name: 'Ocean Waves',       icon: Waves,      color: 'text-sky-300' },
-                { id: 'animated:inferno',   name: 'Inferno',           icon: Flame,      color: 'text-orange-300' },
-                { id: 'animated:forest',    name: 'Mystic Forest',     icon: Trees,      color: 'text-green-300' },
-                { id: 'animated:ice',       name: 'Ice Crystal',       icon: Snowflake,  color: 'text-cyan-200' },
-                { id: 'animated:volcanic',  name: 'Vulkan',            icon: Mountain,   color: 'text-red-300' },
-                { id: 'animated:neon',      name: 'Neon Tokyo',        icon: Zap,        color: 'text-pink-300' },
-                { id: 'animated:city',      name: 'Hamburg Lights',    icon: Building2,  color: 'text-amber-300' },
-                { id: 'animated:rainbow',   name: 'Rainbow',           icon: Palette,    color: 'text-pink-300' },
-                { id: 'animated:snow',      name: 'Schneefall',        icon: Cloud,      color: 'text-slate-200' },
-                { id: 'animated:ember',     name: 'Ember Glow',        icon: Flame,      color: 'text-amber-300' },
-                { id: 'animated:polar',     name: 'Polar Lights',      icon: Wind,       color: 'text-cyan-300' },
-                { id: 'animated:sakura',    name: 'Sakura',            icon: Flower2,    color: 'text-pink-200' }
-              ];
-
-              // Auto-Entfernung: Wenn kein VIP Platinum+ aber custom/preset/animated BG vorhanden
-              if (!hasVipForCustomBg && (isCustomBgActive || isPresetBg || isAnimatedBg)) {
+              // Auto-Entfernung: Wenn kein VIP Platinum+ aber custom/preset BG vorhanden
+              if (!hasVipForCustomBg && (isCustomBgActive || isPresetBg)) {
                 setTimeout(() => {
                   localStorage.removeItem('hhrp-custom-bg');
                   setCustomBg(null);
@@ -5321,122 +5294,37 @@ export default function ProfilPage() {
                       </div>
 
                       {hasVipForCustomBg ? (
-                        <div className="space-y-5">
-                          {/* === Statische Bilder Grid === */}
-                          <div>
-                            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                              <ImagePlus className="w-3 h-3" />
-                              Statische Bilder
-                            </p>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                              {presetBackgrounds.map((bg) => (
-                                <div
-                                  key={bg.id}
-                                  onClick={() => {
-                                    if (customBg === bg.id) {
-                                      localStorage.removeItem('hhrp-custom-bg');
-                                      setCustomBg(null);
-                                      window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
-                                      toast.success('Hintergrundbild deaktiviert');
-                                    } else {
-                                      localStorage.setItem('hhrp-custom-bg', bg.id);
-                                      setCustomBg(bg.id);
-                                      window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: bg.id } }));
-                                      toast.success(`${bg.name} aktiviert!`);
-                                    }
-                                  }}
-                                  className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition-all aspect-[4/3] ${customBg === bg.id ? 'border-purple-500 ring-2 ring-purple-500/30 scale-[1.02]' : 'border-white/10 hover:border-white/25 hover:scale-[1.02]'}`}
-                                >
-                                  <img src={bg.src} alt={bg.name} className="w-full h-full object-cover" />
-                                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                                  <p className="absolute bottom-1.5 left-2 text-[10px] text-white/70 font-medium">{bg.name}</p>
-                                  {customBg === bg.id && (
-                                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
-                                      <Check className="w-3 h-3 text-white" />
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* === Animierte Hintergründe (NEU) === */}
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-                                <Sparkles className="w-3 h-3" />
-                                Animierte Hintergründe
-                                <span className="px-1.5 py-0.5 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30 text-[9px] text-purple-300 font-bold">
-                                  20 Designs
-                                </span>
-                              </p>
-                              <p className="text-[10px] text-white/30 hidden sm:block">Performance-schonend, CSS-only</p>
-                            </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                              {animatedBackgrounds.map((bg) => {
-                                const isActive = customBg === bg.id;
-                                const animClass = `hhrp-anim-${bg.id.replace('animated:', '')}`;
-                                const BgIcon = bg.icon;
-                                return (
-                                  <div
-                                    key={bg.id}
-                                    onClick={() => {
-                                      if (isActive) {
-                                        localStorage.removeItem('hhrp-custom-bg');
-                                        setCustomBg(null);
-                                        window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
-                                        toast.success('Hintergrund deaktiviert');
-                                      } else {
-                                        localStorage.setItem('hhrp-custom-bg', bg.id);
-                                        setCustomBg(bg.id);
-                                        window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: bg.id } }));
-                                        toast.success(`${bg.name} aktiviert!`);
-                                      }
-                                    }}
-                                    className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition-all duration-300 aspect-[4/3] group ${isActive ? 'border-purple-500 ring-2 ring-purple-500/40 scale-[1.03] shadow-2xl shadow-purple-500/30' : 'border-white/10 hover:border-white/30 hover:scale-[1.03] hover:shadow-xl'}`}
-                                  >
-                                    {/* Live Animation Preview */}
-                                    <div className={`hhrp-anim-bg preview ${animClass}`} />
-
-                                    {/* Sanfte Vignette */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/30 pointer-events-none" />
-
-                                    {/* LIVE Badge oben links */}
-                                    <div className="absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/50 backdrop-blur-md border border-white/15 shadow-lg">
-                                      <span className="relative flex h-1.5 w-1.5">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-pink-500"></span>
-                                      </span>
-                                      <span className="text-[8px] text-white font-bold uppercase tracking-wider">Live</span>
-                                    </div>
-
-                                    {/* Großes Themen-Icon mittig (subtil) */}
-                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-25 group-hover:opacity-40 transition-opacity">
-                                      <BgIcon
-                                        className={`w-10 h-10 ${bg.color} drop-shadow-[0_0_8px_currentColor]`}
-                                        strokeWidth={1.5}
-                                      />
-                                    </div>
-
-                                    {/* Label unten */}
-                                    <div className="absolute bottom-0 left-0 right-0 p-2 flex items-center gap-1.5">
-                                      <BgIcon className={`w-3.5 h-3.5 ${bg.color} flex-shrink-0 drop-shadow-md`} strokeWidth={2.5} />
-                                      <p className="text-[11px] text-white font-semibold drop-shadow-md truncate">{bg.name}</p>
-                                    </div>
-
-                                    {/* Active Check */}
-                                    {isActive && (
-                                      <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/60 ring-2 ring-white/20">
-                                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                                      </div>
-                                    )}
-
-                                    {/* Hover Glow */}
-                                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-gradient-to-tr from-transparent via-white/5 to-transparent" />
+                        <div className="space-y-4">
+                          {/* Vorinstallierte Bilder Grid */}
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                            {presetBackgrounds.map((bg) => (
+                              <div
+                                key={bg.id}
+                                onClick={() => {
+                                  if (customBg === bg.id) {
+                                    localStorage.removeItem('hhrp-custom-bg');
+                                    setCustomBg(null);
+                                    window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
+                                    toast.success('Hintergrundbild deaktiviert');
+                                  } else {
+                                    localStorage.setItem('hhrp-custom-bg', bg.id);
+                                    setCustomBg(bg.id);
+                                    window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: bg.id } }));
+                                    toast.success(`${bg.name} aktiviert!`);
+                                  }
+                                }}
+                                className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition-all aspect-[4/3] ${customBg === bg.id ? 'border-purple-500 ring-2 ring-purple-500/30 scale-[1.02]' : 'border-white/10 hover:border-white/25 hover:scale-[1.02]'}`}
+                              >
+                                <img src={bg.src} alt={bg.name} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                                <p className="absolute bottom-1.5 left-2 text-[10px] text-white/70 font-medium">{bg.name}</p>
+                                {customBg === bg.id && (
+                                  <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
+                                    <Check className="w-3 h-3 text-white" />
                                   </div>
-                                );
-                              })}
-                            </div>
+                                )}
+                              </div>
+                            ))}
                           </div>
 
                           {/* Eigenes Bild Upload */}
@@ -5513,7 +5401,7 @@ export default function ProfilPage() {
                         </div>
                       ) : (
                         <div className="space-y-3">
-                          {/* Gesperrte Vorschau - Statische Bilder */}
+                          {/* Gesperrte Vorschau */}
                           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 opacity-40 pointer-events-none">
                             {presetBackgrounds.map((bg) => (
                               <div key={bg.id} className="relative rounded-xl overflow-hidden border border-white/10 aspect-[4/3]">
@@ -5524,36 +5412,11 @@ export default function ProfilPage() {
                               </div>
                             ))}
                           </div>
-
-                          {/* Gesperrte Vorschau - Animierte Hintergründe */}
-                          <div>
-                            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                              <Sparkles className="w-3 h-3" />
-                              Animierte Hintergründe
-                              <span className="px-1.5 py-0.5 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30 text-[9px] text-purple-300 font-bold">
-                                20 Designs
-                              </span>
-                            </p>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 opacity-40 pointer-events-none">
-                              {animatedBackgrounds.slice(0, 12).map((bg) => {
-                                const animClass = `hhrp-anim-${bg.id.replace('animated:', '')}`;
-                                return (
-                                  <div key={bg.id} className="relative rounded-xl overflow-hidden border border-white/10 aspect-[4/3]">
-                                    <div className={`hhrp-anim-bg preview ${animClass}`} style={{ filter: 'blur(2px)' }} />
-                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                      <Lock className="w-4 h-4 text-white/40" />
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-
                           <div className="p-4 rounded-lg bg-white/[0.02] border border-white/5">
                             <div className="flex items-center gap-2">
                               <Lock className="w-4 h-4 text-white/20 flex-shrink-0" />
                               <p className="text-xs text-white/35">
-                                Du benötigst VIP Platinum, VIP Ultimate, VIP Elite Plus oder Luxus-Pass um zusätzliche Hintergrundbilder, animierte Hintergründe und eigene Uploads zu nutzen.
+                                Du benötigst VIP Platinum, VIP Ultimate, VIP Elite Plus oder Luxus-Pass um zusätzliche Hintergrundbilder und eigene Uploads zu nutzen.
                               </p>
                             </div>
                           </div>
