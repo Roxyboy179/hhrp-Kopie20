@@ -1741,36 +1741,24 @@ export default function ProfilPage() {
   };
 
   // Badges für Haupt-Tabs (numerische Counter)
-  const mainTabBadges = useMemo(() => {
-    const badges = {};
-    if (Array.isArray(bewerbungen) && bewerbungen.length > 0) {
-      badges.applications = bewerbungen.length;
-    }
-    return badges;
-  }, [bewerbungen]);
+  const mainTabBadges = {};
+  if (Array.isArray(bewerbungen) && bewerbungen.length > 0) {
+    mainTabBadges.applications = bewerbungen.length;
+  }
 
   // Notification-Dots für Haupt-Tabs (pulsierender Punkt bei neuer Aktivität)
-  const mainTabNotifications = useMemo(() => {
-    const dots = {};
-    // Pulsierender Punkt auf "Übersicht" wenn Rewards verfügbar sind
-    if (Array.isArray(rewards) && rewards.length > 0) {
-      dots.overview = true;
-    }
-    // Auf "Finanzen" wenn offene Rechnungen vorhanden
-    const pendingInvoices = (userData?.invoices || []).filter((inv) => inv.status === 'pending').length;
-    if (pendingInvoices > 0) dots.finance = true;
-    return dots;
-  }, [rewards, userData?.invoices]);
+  const mainTabNotifications = {};
+  if (Array.isArray(rewards) && rewards.length > 0) {
+    mainTabNotifications.overview = true;
+  }
+  const pendingInvoicesCount = (userData?.invoices || []).filter((inv) => inv.status === 'pending').length;
+  if (pendingInvoicesCount > 0) mainTabNotifications.finance = true;
 
   // Badges für Sub-Tabs
-  const subTabBadges = useMemo(() => {
-    const invs = (userData?.invoices || []).filter((inv) => inv.status === 'pending').length;
-    const kredite = (userData?.kredite || []).filter((k) => k.status === 'aktiv' || k.status === 'pending').length;
-    return {
-      invoices: invs,
-      kredite: kredite,
-    };
-  }, [userData?.invoices, userData?.kredite]);
+  const subTabBadges = {
+    invoices: pendingInvoicesCount,
+    kredite: (userData?.kredite || []).filter((k) => k.status === 'aktiv' || k.status === 'pending').length,
+  };
 
   // Tab-Lock Funktion (für Komponente)
   const isTabLocked = (tab) => {
@@ -1880,26 +1868,25 @@ export default function ProfilPage() {
           </div>
         )}
 
-        {/* Tab Navigation - Haupt + Sub Tabs (sticky) */}
-        <div className="sticky top-20 z-30 -mx-4 px-4 py-3 bg-gradient-to-b from-zinc-950/95 via-zinc-950/85 to-zinc-950/40 backdrop-blur-xl space-y-3 border-b border-white/[0.04]">
-          <MainTabsBar
-            tabs={mainTabs}
-            activeTab={activeTab}
-            onTabChange={handleMainTabChange}
-            isTabLocked={isTabLocked}
-            badges={mainTabBadges}
-            notifications={mainTabNotifications}
-          />
+        {/* Tab Navigation - Haupt-Tabs */}
+        <MainTabsBar
+          tabs={mainTabs}
+          activeTab={activeTab}
+          onTabChange={handleMainTabChange}
+          isTabLocked={isTabLocked}
+          badges={mainTabBadges}
+          notifications={mainTabNotifications}
+        />
 
-          {subTabs[activeTab] && (
-            <SubTabsBar
-              subTabs={subTabs[activeTab]}
-              activeSubTab={activeSubTab}
-              onSubTabChange={handleSubTabChange}
-              badges={subTabBadges}
-            />
-          )}
-        </div>
+        {/* Sub-Tabs (nur wenn Haupt-Tab Sub-Tabs hat) */}
+        {subTabs[activeTab] && (
+          <SubTabsBar
+            subTabs={subTabs[activeTab]}
+            activeSubTab={activeSubTab}
+            onSubTabChange={handleSubTabChange}
+            badges={subTabBadges}
+          />
+        )}
 
         {/* Rewards Section */}
         {rewards.length > 0 && (
