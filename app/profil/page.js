@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import DailyBonusCard from '@/components/DailyBonusCard';
 import AnimatedValue from '@/components/AnimatedValue';
 import Pagination from '@/components/Pagination';
@@ -47,6 +47,7 @@ import HamburgHorizonTab from '@/components/profile/HamburgHorizonTab';
 import LicensesView from '@/components/profile/LicensesView';
 import ProfileTour, { TourStartButton, hasCompletedProfileTour } from '@/components/profile/ProfileTour';
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
+import { MainTabsBar, SubTabsBar } from '@/components/profile/ProfileTabBar';
 import { useRealtime } from '@/hooks/useRealtime';
 import { RealtimeIndicator } from '@/components/shared/RealtimeIndicator';
 import { getSupabaseBrowser } from '@/lib/supabase-browser';
@@ -1111,6 +1112,9 @@ export default function ProfilPage() {
   // Optional: Ziel-Kategorie für den Shop-Tab (wird beim Tab-Wechsel gesetzt, z.B. Free-Pass-Banner)
   const [shopJumpToCategory, setShopJumpToCategory] = useState(null);
   const [activeSubTab, setActiveSubTab] = useState('transactions'); // Default Sub-Tab
+  // Speichert den zuletzt aktiven Sub-Tab pro Haupt-Tab (Persistenz via localStorage)
+  const [lastSubTabs, setLastSubTabs] = useState({});
+  const urlInitialized = useRef(false);
   
   // Filter States für Transaktionen
   const [transactionFilter, setTransactionFilter] = useState({
@@ -1209,7 +1213,7 @@ export default function ProfilPage() {
     ]
   };
 
-  // Handler für Haupt-Tab Wechsel
+  // Handler für Haupt-Tab Wechsel (mit Last-Sub-Tab Memory)
   const handleMainTabChange = (tabId) => {
     // Prüfe ob User einen Charakter hat - wenn nicht, sind alle Tabs außer 'overview' gesperrt
     const hasChar = !!(userData?.character?.name || userData?.characterName);
@@ -1220,11 +1224,74 @@ export default function ProfilPage() {
       return;
     }
     setActiveTab(tabId);
-    // Setze Default Sub-Tab wenn Kategorie Sub-Tabs hat
+    // Setze Sub-Tab: zuletzt aktiver wenn vorhanden, sonst Default
     if (subTabs[tabId]) {
-      setActiveSubTab(subTabs[tabId][0].id);
+      const last = lastSubTabs[tabId];
+      const validLast = last && subTabs[tabId].some((s) => s.id === last);
+      setActiveSubTab(validLast ? last : subTabs[tabId][0].id);
     }
   };
+
+  // Handler für Sub-Tab Wechsel (merkt sich den aktiven Sub-Tab pro Haupt-Tab)
+  const handleSubTabChange = (subId) => {
+    setActiveSubTab(subId);
+    setLastSubTabs((prev) => ({ ...prev, [activeTab]: subId }));
+  };
+
+  // localStorage: Last-Sub-Tabs laden (einmalig beim Mount)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = localStorage.getItem('profil_lastSubTabs');
+      if (raw) setLastSubTabs(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  // localStorage: Last-Sub-Tabs speichern bei Änderung
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('profil_lastSubTabs', JSON.stringify(lastSubTabs));
+    } catch {}
+  }, [lastSubTabs]);
+
+  // URL-Sync: Initiale Werte aus URL lesen (?tab=...&sub=...)
+  const searchParamsHook = useSearchParams();
+  useEffect(() => {
+    if (urlInitialized.current) return;
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get('tab');
+      const s = params.get('sub');
+      if (t && mainTabs.some((m) => m.id === t)) {
+        setActiveTab(t);
+        if (s && subTabs[t]?.some((sub) => sub.id === s)) {
+          setActiveSubTab(s);
+        } else if (subTabs[t]) {
+          setActiveSubTab(subTabs[t][0].id);
+        }
+      }
+    } catch {}
+    urlInitialized.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // URL-Sync: Bei Tab/SubTab-Änderung URL aktualisieren (ohne Navigation)
+  useEffect(() => {
+    if (!urlInitialized.current) return;
+    if (typeof window === 'undefined') return;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tab', activeTab);
+      if (subTabs[activeTab]) {
+        url.searchParams.set('sub', activeSubTab);
+      } else {
+        url.searchParams.delete('sub');
+      }
+      window.history.replaceState({}, '', url.toString());
+    } catch {}
+  }, [activeTab, activeSubTab]);
 
   // Auto-Redirect: Wenn User keinen Charakter hat und gerade auf gesperrtem Tab ist
   useEffect(() => {
@@ -1674,6 +1741,44 @@ export default function ProfilPage() {
     'Abgelehnt': 'bg-red-500/20 text-red-300 border-red-500/30'
   };
 
+  // Badges für Haupt-Tabs (numerische Counter)
+  const mainTabBadges = useMemo(() => {
+    const badges = {};
+    if (Array.isArray(bewerbungen) && bewerbungen.length > 0) {
+      badges.applications = bewerbungen.length;
+    }
+    return badges;
+  }, [bewerbungen]);
+
+  // Notification-Dots für Haupt-Tabs (pulsierender Punkt bei neuer Aktivität)
+  const mainTabNotifications = useMemo(() => {
+    const dots = {};
+    // Pulsierender Punkt auf "Übersicht" wenn Rewards verfügbar sind
+    if (Array.isArray(rewards) && rewards.length > 0) {
+      dots.overview = true;
+    }
+    // Auf "Finanzen" wenn offene Rechnungen vorhanden
+    const pendingInvoices = (userData?.invoices || []).filter((inv) => inv.status === 'pending').length;
+    if (pendingInvoices > 0) dots.finance = true;
+    return dots;
+  }, [rewards, userData?.invoices]);
+
+  // Badges für Sub-Tabs
+  const subTabBadges = useMemo(() => {
+    const invs = (userData?.invoices || []).filter((inv) => inv.status === 'pending').length;
+    const kredite = (userData?.kredite || []).filter((k) => k.status === 'aktiv' || k.status === 'pending').length;
+    return {
+      invoices: invs,
+      kredite: kredite,
+    };
+  }, [userData?.invoices, userData?.kredite]);
+
+  // Tab-Lock Funktion (für Komponente)
+  const isTabLocked = (tab) => {
+    const hasChar = !!(userData?.character?.name || userData?.characterName);
+    return !loading && userData && !hasChar && tab.id !== 'overview';
+  };
+
   return (
     <div className="min-h-screen px-4 py-8 pt-24">
       <div className="max-w-6xl mx-auto space-y-6">
@@ -1776,111 +1881,26 @@ export default function ProfilPage() {
           </div>
         )}
 
-        {/* Tab Navigation - Haupt-Tabs */}
-        <div data-tour="main-tabs" className="glass rounded-2xl p-2 border border-white/[0.08]">
-          {/* Mobile: Horizontal Scrollable */}
-          <div className="flex lg:hidden gap-2 overflow-x-auto pb-2 scrollbar-hide snap-x snap-mandatory">
-            {mainTabs.map((tab) => {
-              const Icon = tab.icon;
-              const hasChar = !!(userData?.character?.name || userData?.characterName);
-              // Während Loading NIEMALS sperren (verhindert Flackern)
-              const isLocked = !loading && userData && !hasChar && tab.id !== 'overview';
-              const DisplayIcon = isLocked ? Lock : Icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => handleMainTabChange(tab.id)}
-                  disabled={isLocked}
-                  className={`flex items-center gap-2 px-4 py-3 rounded-xl transition-all text-sm whitespace-nowrap snap-center flex-shrink-0 ${
-                    activeTab === tab.id
-                      ? 'bg-white/10 text-white border border-white/20 shadow-lg'
-                      : isLocked
-                      ? 'bg-orange-500/5 text-orange-300/50 border border-orange-500/20 cursor-not-allowed'
-                      : 'text-white/50 hover:text-white/70 hover:bg-white/5 border border-transparent'
-                  }`}
-                >
-                  <DisplayIcon className={`w-4 h-4 flex-shrink-0 ${isLocked ? 'text-orange-400/60' : ''}`} />
-                  <span className="font-medium">{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-          
-          {/* Desktop: Grid Layout */}
-          <div className="hidden lg:grid grid-cols-5 gap-2">
-            {mainTabs.map((tab) => {
-              const Icon = tab.icon;
-              const hasChar = !!(userData?.character?.name || userData?.characterName);
-              const isLocked = !loading && userData && !hasChar && tab.id !== 'overview';
-              const DisplayIcon = isLocked ? Lock : Icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => handleMainTabChange(tab.id)}
-                  disabled={isLocked}
-                  title={isLocked ? 'Charakter erforderlich – erstelle einen im Discord' : tab.label}
-                  className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl transition-all text-base ${
-                    activeTab === tab.id
-                      ? 'bg-white/10 text-white border border-white/20'
-                      : isLocked
-                      ? 'bg-orange-500/5 text-orange-300/50 border border-orange-500/20 cursor-not-allowed'
-                      : 'text-white/50 hover:text-white/70 hover:bg-white/5'
-                  }`}
-                >
-                  <DisplayIcon className={`w-5 h-5 flex-shrink-0 ${isLocked ? 'text-orange-400/60' : ''}`} />
-                  <span className="font-medium">{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        {/* Tab Navigation - Haupt + Sub Tabs (sticky) */}
+        <div className="sticky top-20 z-30 -mx-4 px-4 py-3 bg-gradient-to-b from-zinc-950/95 via-zinc-950/85 to-zinc-950/40 backdrop-blur-xl space-y-3 border-b border-white/[0.04]">
+          <MainTabsBar
+            tabs={mainTabs}
+            activeTab={activeTab}
+            onTabChange={handleMainTabChange}
+            isTabLocked={isTabLocked}
+            badges={mainTabBadges}
+            notifications={mainTabNotifications}
+          />
 
-        {/* Sub-Tabs (nur wenn Haupt-Tab Sub-Tabs hat) */}
-        {subTabs[activeTab] && (
-          <div className="glass rounded-2xl p-2 border border-white/[0.08]">
-            {/* Mobile: Horizontal Scrollable */}
-            <div className="flex lg:hidden gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {subTabs[activeTab].map((subTab) => {
-                const Icon = subTab.icon;
-                return (
-                  <button
-                    key={subTab.id}
-                    onClick={() => setActiveSubTab(subTab.id)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-xs whitespace-nowrap flex-shrink-0 ${
-                      activeSubTab === subTab.id
-                        ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white border border-blue-400/30'
-                        : 'text-white/50 hover:text-white/70 hover:bg-white/5'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="font-medium">{subTab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-            
-            {/* Desktop: Flex Layout */}
-            <div className="hidden lg:flex gap-2 justify-center">
-              {subTabs[activeTab].map((subTab) => {
-                const Icon = subTab.icon;
-                return (
-                  <button
-                    key={subTab.id}
-                    onClick={() => setActiveSubTab(subTab.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm ${
-                      activeSubTab === subTab.id
-                        ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white border border-blue-400/30'
-                        : 'text-white/50 hover:text-white/70 hover:bg-white/5'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
-                    <span className="font-medium">{subTab.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+          {subTabs[activeTab] && (
+            <SubTabsBar
+              subTabs={subTabs[activeTab]}
+              activeSubTab={activeSubTab}
+              onSubTabChange={handleSubTabChange}
+              badges={subTabBadges}
+            />
+          )}
+        </div>
 
         {/* Rewards Section */}
         {rewards.length > 0 && (
