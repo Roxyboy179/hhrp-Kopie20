@@ -1222,9 +1222,9 @@ input, textarea, select, button, a, [role="button"] {
 .hhrp-anim-bg {
   position: fixed;
   inset: 0;
-  z-index: 0;
+  z-index: -1;
   pointer-events: none;
-  opacity: 0.35;
+  opacity: 0.7;
   overflow: hidden;
 }
 .hhrp-anim-bg.preview {
@@ -1234,6 +1234,7 @@ input, textarea, select, button, a, [role="button"] {
   height: 100%;
   opacity: 1;
   border-radius: inherit;
+  z-index: 0;
 }
 .hhrp-no-anim .hhrp-anim-bg,
 .hhrp-datenspar .hhrp-anim-bg {
