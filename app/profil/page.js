@@ -23,7 +23,9 @@ import {
   Lightbulb, Filter, Search, ArrowLeftRight, Target, Calculator,
   TrendingUpIcon, BarChart2, Send, XCircle, Infinity, Car, Coins,
   ChevronDown, ChevronRight, Palette, Wand2, Activity, Eye, EyeOff,
-  MousePointer2, Layers, Gauge, Percent, ArrowRight
+  MousePointer2, Layers, Gauge, Percent, ArrowRight,
+  Sun, Flame, Trees, Snowflake, Mountain, Leaf, Flower2, Cloud,
+  Waves, Cpu, Atom, Wind, Moon
 } from 'lucide-react';
 import { LicenseBadge } from '@/components/profile/LicenseBadge';
 import { LevelProgress } from '@/components/profile/LevelProgress';
@@ -5228,28 +5230,28 @@ export default function ProfilPage() {
                 { id: 'preset:neon-2', src: '/bg-neon-2.webp', name: 'Green Neon' }
               ];
 
-              // 20 vorgefertigte ANIMIERTE Hintergründe (CSS-only, keine externen Assets)
+              // 20 vorgefertigte ANIMIERTE Hintergründe (CSS-only, mit echten Effekten)
               const animatedBackgrounds = [
-                { id: 'animated:aurora',    name: 'Aurora',        emoji: '🌌' },
-                { id: 'animated:galaxy',    name: 'Galaxy',        emoji: '🌠' },
-                { id: 'animated:sunset',    name: 'Sunset',        emoji: '🌅' },
-                { id: 'animated:cyberpunk', name: 'Cyberpunk',     emoji: '🌃' },
-                { id: 'animated:plasma',    name: 'Plasma',        emoji: '🪐' },
-                { id: 'animated:ocean',     name: 'Ocean',         emoji: '🌊' },
-                { id: 'animated:fire',      name: 'Fire',          emoji: '🔥' },
-                { id: 'animated:forest',    name: 'Forest',        emoji: '🌲' },
-                { id: 'animated:ice',       name: 'Ice Crystal',   emoji: '❄️' },
-                { id: 'animated:lava',      name: 'Lava',          emoji: '🌋' },
-                { id: 'animated:neon',      name: 'Neon Pulse',    emoji: '💡' },
-                { id: 'animated:city',      name: 'City Lights',   emoji: '🏙️' },
-                { id: 'animated:rainbow',   name: 'Rainbow',       emoji: '🌈' },
-                { id: 'animated:nebula',    name: 'Nebula',        emoji: '✨' },
-                { id: 'animated:volcanic',  name: 'Volcanic',      emoji: '🌋' },
-                { id: 'animated:mint',      name: 'Mint Breeze',   emoji: '🍃' },
-                { id: 'animated:cosmic',    name: 'Cosmic Dust',   emoji: '⭐' },
-                { id: 'animated:ember',     name: 'Ember',         emoji: '🔆' },
-                { id: 'animated:polar',     name: 'Polar Lights',  emoji: '🧊' },
-                { id: 'animated:sakura',    name: 'Sakura',        emoji: '🌸' }
+                { id: 'animated:starry',    name: 'Sternenhimmel',     icon: Star,       color: 'text-yellow-200' },
+                { id: 'animated:aurora',    name: 'Aurora Borealis',   icon: Sparkles,   color: 'text-emerald-300' },
+                { id: 'animated:shooting',  name: 'Schießende Sterne', icon: Sparkles,   color: 'text-blue-200' },
+                { id: 'animated:galaxy',    name: 'Galaxy',            icon: Atom,       color: 'text-purple-300' },
+                { id: 'animated:nebula',    name: 'Nebula',            icon: Sparkles,   color: 'text-pink-300' },
+                { id: 'animated:cosmic',    name: 'Cosmic Dust',       icon: Sparkles,   color: 'text-violet-300' },
+                { id: 'animated:cyberpunk', name: 'Cyberpunk',         icon: Cpu,        color: 'text-cyan-300' },
+                { id: 'animated:plasma',    name: 'Plasma',            icon: Atom,       color: 'text-fuchsia-300' },
+                { id: 'animated:ocean',     name: 'Ocean Waves',       icon: Waves,      color: 'text-sky-300' },
+                { id: 'animated:inferno',   name: 'Inferno',           icon: Flame,      color: 'text-orange-300' },
+                { id: 'animated:forest',    name: 'Mystic Forest',     icon: Trees,      color: 'text-green-300' },
+                { id: 'animated:ice',       name: 'Ice Crystal',       icon: Snowflake,  color: 'text-cyan-200' },
+                { id: 'animated:volcanic',  name: 'Vulkan',            icon: Mountain,   color: 'text-red-300' },
+                { id: 'animated:neon',      name: 'Neon Tokyo',        icon: Zap,        color: 'text-pink-300' },
+                { id: 'animated:city',      name: 'Hamburg Lights',    icon: Building2,  color: 'text-amber-300' },
+                { id: 'animated:rainbow',   name: 'Rainbow',           icon: Palette,    color: 'text-pink-300' },
+                { id: 'animated:snow',      name: 'Schneefall',        icon: Cloud,      color: 'text-slate-200' },
+                { id: 'animated:ember',     name: 'Ember Glow',        icon: Flame,      color: 'text-amber-300' },
+                { id: 'animated:polar',     name: 'Polar Lights',      icon: Wind,       color: 'text-cyan-300' },
+                { id: 'animated:sakura',    name: 'Sakura',            icon: Flower2,    color: 'text-pink-200' }
               ];
 
               // Auto-Entfernung: Wenn kein VIP Platinum+ aber custom/preset/animated BG vorhanden
@@ -5374,6 +5376,7 @@ export default function ProfilPage() {
                               {animatedBackgrounds.map((bg) => {
                                 const isActive = customBg === bg.id;
                                 const animClass = `hhrp-anim-${bg.id.replace('animated:', '')}`;
+                                const BgIcon = bg.icon;
                                 return (
                                   <div
                                     key={bg.id}
@@ -5390,35 +5393,46 @@ export default function ProfilPage() {
                                         toast.success(`${bg.name} aktiviert!`);
                                       }
                                     }}
-                                    className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition-all aspect-[4/3] group ${isActive ? 'border-purple-500 ring-2 ring-purple-500/30 scale-[1.02]' : 'border-white/10 hover:border-white/25 hover:scale-[1.02]'}`}
+                                    className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition-all duration-300 aspect-[4/3] group ${isActive ? 'border-purple-500 ring-2 ring-purple-500/40 scale-[1.03] shadow-2xl shadow-purple-500/30' : 'border-white/10 hover:border-white/30 hover:scale-[1.03] hover:shadow-xl'}`}
                                   >
                                     {/* Live Animation Preview */}
                                     <div className={`hhrp-anim-bg preview ${animClass}`} />
 
-                                    {/* Overlay */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                    {/* Sanfte Vignette */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/30 pointer-events-none" />
 
-                                    {/* Animated Indicator (pulsierender Punkt) */}
-                                    <div className="absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10">
+                                    {/* LIVE Badge oben links */}
+                                    <div className="absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/50 backdrop-blur-md border border-white/15 shadow-lg">
                                       <span className="relative flex h-1.5 w-1.5">
                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
                                         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-pink-500"></span>
                                       </span>
-                                      <span className="text-[8px] text-white/80 font-bold uppercase tracking-wide">Live</span>
+                                      <span className="text-[8px] text-white font-bold uppercase tracking-wider">Live</span>
                                     </div>
 
-                                    {/* Label */}
-                                    <div className="absolute bottom-1.5 left-2 right-2 flex items-center gap-1">
-                                      <span className="text-sm">{bg.emoji}</span>
-                                      <p className="text-[10px] text-white font-medium drop-shadow-md truncate">{bg.name}</p>
+                                    {/* Großes Themen-Icon mittig (subtil) */}
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-25 group-hover:opacity-40 transition-opacity">
+                                      <BgIcon
+                                        className={`w-10 h-10 ${bg.color} drop-shadow-[0_0_8px_currentColor]`}
+                                        strokeWidth={1.5}
+                                      />
+                                    </div>
+
+                                    {/* Label unten */}
+                                    <div className="absolute bottom-0 left-0 right-0 p-2 flex items-center gap-1.5">
+                                      <BgIcon className={`w-3.5 h-3.5 ${bg.color} flex-shrink-0 drop-shadow-md`} strokeWidth={2.5} />
+                                      <p className="text-[11px] text-white font-semibold drop-shadow-md truncate">{bg.name}</p>
                                     </div>
 
                                     {/* Active Check */}
                                     {isActive && (
-                                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center shadow-lg shadow-purple-500/50">
-                                        <Check className="w-3 h-3 text-white" />
+                                      <div className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/60 ring-2 ring-white/20">
+                                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
                                       </div>
                                     )}
+
+                                    {/* Hover Glow */}
+                                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-gradient-to-tr from-transparent via-white/5 to-transparent" />
                                   </div>
                                 );
                               })}

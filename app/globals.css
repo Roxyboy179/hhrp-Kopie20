@@ -1215,15 +1215,16 @@ input, textarea, select, button, a, [role="button"] {
 
 
 /* ============================================================
-   ANIMIERTE HINTERGRÜNDE (20 Stück)
-   Werden via .hhrp-anim-bg + .hhrp-anim-{name} Klasse aktiviert
+   ANIMIERTE HINTERGRÜNDE v2.0 (20 Stück - mit echten Effekten)
+   - Sternenfelder, fallende Partikel, Aurora-Bänder, Glow
+   - Werden via .hhrp-anim-bg + .hhrp-anim-{name} aktiviert
 ============================================================ */
 .hhrp-anim-bg {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.22;
+  opacity: 0.35;
   overflow: hidden;
 }
 .hhrp-anim-bg.preview {
@@ -1239,208 +1240,12 @@ input, textarea, select, button, a, [role="button"] {
   animation: none !important;
 }
 .hhrp-no-anim .hhrp-anim-bg *,
-.hhrp-datenspar .hhrp-anim-bg * {
+.hhrp-datenspar .hhrp-anim-bg *,
+.hhrp-no-anim .hhrp-anim-bg::before,
+.hhrp-no-anim .hhrp-anim-bg::after,
+.hhrp-datenspar .hhrp-anim-bg::before,
+.hhrp-datenspar .hhrp-anim-bg::after {
   animation: none !important;
-}
-
-/* 1. Aurora Borealis */
-.hhrp-anim-aurora {
-  background: linear-gradient(125deg, #0a1929 0%, #0f4c75 20%, #3282b8 40%, #5d3fd3 60%, #16c79a 80%, #0a1929 100%);
-  background-size: 400% 400%;
-  animation: hhrp-bg-flow 22s ease infinite;
-}
-
-/* 2. Galaxy */
-.hhrp-anim-galaxy {
-  background:
-    radial-gradient(circle at 25% 25%, #4a148c 0%, transparent 40%),
-    radial-gradient(circle at 75% 75%, #1a237e 0%, transparent 40%),
-    radial-gradient(circle at 50% 50%, #311b92 0%, #000 70%);
-  background-size: 300% 300%;
-  animation: hhrp-bg-flow 35s ease infinite;
-}
-
-/* 3. Sunset */
-.hhrp-anim-sunset {
-  background: linear-gradient(135deg, #ff6b6b 0%, #feca57 25%, #ff9ff3 50%, #f368e0 75%, #ee5a6f 100%);
-  background-size: 400% 400%;
-  animation: hhrp-bg-flow 18s ease infinite;
-}
-
-/* 4. Cyberpunk Grid */
-.hhrp-anim-cyberpunk {
-  background:
-    linear-gradient(rgba(255, 0, 200, 0.5) 1px, transparent 1px) 0 0/40px 40px,
-    linear-gradient(90deg, rgba(0, 255, 255, 0.5) 1px, transparent 1px) 0 0/40px 40px,
-    linear-gradient(135deg, #0a0a23 0%, #1a0033 50%, #2d0052 100%);
-  animation: hhrp-cyberpunk-grid 8s linear infinite;
-}
-@keyframes hhrp-cyberpunk-grid {
-  0%   { background-position: 0 0, 0 0, 0 0; }
-  100% { background-position: 40px 40px, 40px 40px, 0 0; }
-}
-
-/* 5. Plasma */
-.hhrp-anim-plasma {
-  background:
-    radial-gradient(circle at 20% 30%, #ff006e 0%, transparent 50%),
-    radial-gradient(circle at 80% 60%, #8338ec 0%, transparent 50%),
-    radial-gradient(circle at 50% 80%, #3a86ff 0%, transparent 50%),
-    radial-gradient(circle at 70% 20%, #06ffa5 0%, transparent 40%),
-    #1a0033;
-  background-size: 200% 200%;
-  animation: hhrp-bg-flow 14s ease infinite;
-}
-
-/* 6. Ocean */
-.hhrp-anim-ocean {
-  background: linear-gradient(180deg, #001f3f 0%, #003d7a 30%, #0074d9 60%, #39cccc 90%, #7fdbff 100%);
-  background-size: 100% 300%;
-  animation: hhrp-bg-vertical 12s ease infinite;
-}
-
-/* 7. Fire */
-.hhrp-anim-fire {
-  background: linear-gradient(0deg, #410101 0%, #7a0c0c 20%, #d62828 40%, #f77f00 70%, #fcbf49 100%);
-  background-size: 100% 200%;
-  animation: hhrp-bg-vertical 6s ease-in-out infinite alternate;
-}
-
-/* 8. Forest */
-.hhrp-anim-forest {
-  background: linear-gradient(135deg, #052e16 0%, #14532d 25%, #166534 50%, #15803d 75%, #22c55e 100%);
-  background-size: 400% 400%;
-  animation: hhrp-bg-flow 24s ease infinite;
-}
-
-/* 9. Ice Crystal */
-.hhrp-anim-ice {
-  background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 25%, #06b6d4 50%, #67e8f9 75%, #ecfeff 100%);
-  background-size: 300% 300%;
-  animation: hhrp-bg-flow 16s ease infinite;
-}
-
-/* 10. Lava */
-.hhrp-anim-lava {
-  background:
-    radial-gradient(circle at 30% 40%, #f43f5e 0%, transparent 50%),
-    radial-gradient(circle at 70% 60%, #f59e0b 0%, transparent 50%),
-    radial-gradient(circle at 50% 80%, #dc2626 0%, transparent 50%),
-    #1a0a0a;
-  background-size: 200% 200%;
-  animation: hhrp-bg-flow 10s ease infinite;
-}
-
-/* 11. Neon Pulse */
-.hhrp-anim-neon {
-  background: linear-gradient(135deg, #ff00ff 0%, #00ffff 50%, #ff00ff 100%);
-  background-size: 200% 200%;
-  animation: hhrp-bg-flow 8s ease infinite, hhrp-neon-pulse 3s ease-in-out infinite;
-}
-@keyframes hhrp-neon-pulse {
-  0%, 100% { filter: brightness(1) saturate(1); }
-  50%      { filter: brightness(1.3) saturate(1.4); }
-}
-
-/* 12. City Lights (Hamburg) */
-.hhrp-anim-city {
-  background:
-    radial-gradient(circle at 20% 80%, #fbbf24 0%, transparent 30%),
-    radial-gradient(circle at 80% 70%, #3b82f6 0%, transparent 35%),
-    radial-gradient(circle at 50% 90%, #f97316 0%, transparent 30%),
-    linear-gradient(180deg, #0c1b33 0%, #1e293b 60%, #0f172a 100%);
-  background-size: 250% 250%;
-  animation: hhrp-bg-flow 20s ease infinite;
-}
-
-/* 13. Rainbow Flow */
-.hhrp-anim-rainbow {
-  background: linear-gradient(135deg, #ff0080, #ff8c00, #ffd700, #00ff80, #00bfff, #8a2be2, #ff0080);
-  background-size: 600% 600%;
-  animation: hhrp-bg-flow 25s linear infinite;
-}
-
-/* 14. Nebula */
-.hhrp-anim-nebula {
-  background:
-    radial-gradient(circle at 30% 30%, #ec4899 0%, transparent 50%),
-    radial-gradient(circle at 70% 70%, #8b5cf6 0%, transparent 50%),
-    radial-gradient(circle at 50% 50%, #6366f1 0%, transparent 60%),
-    #0a0118;
-  background-size: 300% 300%;
-  animation: hhrp-bg-flow 28s ease infinite;
-}
-
-/* 15. Volcanic */
-.hhrp-anim-volcanic {
-  background:
-    radial-gradient(ellipse at 50% 100%, #b91c1c 0%, transparent 60%),
-    linear-gradient(180deg, #1c0a0a 0%, #450a0a 60%, #7f1d1d 100%);
-  background-size: 200% 200%;
-  animation: hhrp-bg-vertical 9s ease-in-out infinite alternate;
-}
-
-/* 16. Mint Breeze */
-.hhrp-anim-mint {
-  background: linear-gradient(135deg, #064e3b 0%, #047857 25%, #10b981 50%, #6ee7b7 75%, #d1fae5 100%);
-  background-size: 400% 400%;
-  animation: hhrp-bg-flow 18s ease infinite;
-}
-
-/* 17. Cosmic Dust */
-.hhrp-anim-cosmic {
-  background:
-    radial-gradient(circle at 15% 25%, rgba(168, 85, 247, 0.6) 0%, transparent 40%),
-    radial-gradient(circle at 85% 75%, rgba(99, 102, 241, 0.5) 0%, transparent 40%),
-    radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.3) 0%, transparent 50%),
-    #050014;
-  background-size: 200% 200%;
-  animation: hhrp-bg-flow 26s ease infinite;
-  position: relative;
-}
-.hhrp-anim-cosmic::before,
-.hhrp-anim-cosmic::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image:
-    radial-gradient(2px 2px at 20% 30%, white, transparent),
-    radial-gradient(1px 1px at 60% 70%, white, transparent),
-    radial-gradient(1px 1px at 80% 20%, white, transparent),
-    radial-gradient(2px 2px at 40% 80%, white, transparent),
-    radial-gradient(1px 1px at 10% 60%, white, transparent);
-  background-size: 200% 200%;
-  background-repeat: repeat;
-  animation: hhrp-stars-twinkle 4s ease-in-out infinite alternate;
-}
-.hhrp-anim-cosmic::after {
-  animation-delay: 2s;
-  background-position: 50% 50%;
-}
-@keyframes hhrp-stars-twinkle {
-  0%   { opacity: 0.3; }
-  100% { opacity: 0.9; }
-}
-
-/* 18. Ember (Bernstein) */
-.hhrp-anim-ember {
-  background: linear-gradient(135deg, #451a03 0%, #92400e 25%, #d97706 50%, #fbbf24 75%, #fef3c7 100%);
-  background-size: 400% 400%;
-  animation: hhrp-bg-flow 14s ease infinite;
-}
-
-/* 19. Polar Lights */
-.hhrp-anim-polar {
-  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 20%, #1e40af 40%, #06b6d4 60%, #67e8f9 80%, #f0f9ff 100%);
-  background-size: 400% 400%;
-  animation: hhrp-bg-flow 30s ease infinite;
-}
-
-/* 20. Sakura */
-.hhrp-anim-sakura {
-  background: linear-gradient(135deg, #831843 0%, #be185d 20%, #ec4899 40%, #f9a8d4 60%, #fce7f3 80%, #fdf2f8 100%);
-  background-size: 400% 400%;
-  animation: hhrp-bg-flow 22s ease infinite;
 }
 
 /* === Universelle Keyframes === */
@@ -1454,3 +1259,688 @@ input, textarea, select, button, a, [role="button"] {
   50%  { background-position: 50% 100%; }
   100% { background-position: 50% 0%; }
 }
+@keyframes hhrp-twinkle {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 1; }
+}
+@keyframes hhrp-twinkle-2 {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+@keyframes hhrp-shooting-star {
+  0%   { transform: translate(-20%, 120%) rotate(-35deg); opacity: 0; }
+  5%   { opacity: 1; }
+  40%  { opacity: 1; }
+  60%  { transform: translate(120%, -20%) rotate(-35deg); opacity: 0; }
+  100% { transform: translate(120%, -20%) rotate(-35deg); opacity: 0; }
+}
+@keyframes hhrp-snow-fall {
+  0%   { background-position: 0 -10%, 0 -10%, 0 -10%; }
+  100% { background-position: 100px 110%, -50px 110%, 80px 110%; }
+}
+@keyframes hhrp-petal-fall {
+  0%   { background-position: 0 -10%, 50px -10%, -30px -10%; transform: translateX(0); }
+  50%  { transform: translateX(20px); }
+  100% { background-position: 80px 110%, -40px 110%, 100px 110%; transform: translateX(0); }
+}
+@keyframes hhrp-ember-rise {
+  0%   { background-position: 0 110%, 50px 110%, -30px 110%; }
+  100% { background-position: 0 -10%, 50px -10%, -30px -10%; }
+}
+@keyframes hhrp-aurora-wave {
+  0%, 100% { transform: translateX(-5%) scaleY(1); }
+  50%      { transform: translateX(5%) scaleY(1.1); }
+}
+@keyframes hhrp-pulse-glow {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50%      { filter: brightness(1.3) saturate(1.4); }
+}
+@keyframes hhrp-spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes hhrp-drift {
+  0%   { transform: translate(0, 0); }
+  50%  { transform: translate(2%, -1%); }
+  100% { transform: translate(0, 0); }
+}
+
+/* ============================================================
+   STERNENFELD-Layer (wiederverwendbar) - via ::before
+============================================================ */
+.hhrp-stars::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.4px 1.4px at 8% 12%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 23% 47%, #fff, transparent 60%),
+    radial-gradient(1.6px 1.6px at 17% 78%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 32% 8%, rgba(255,255,255,0.85), transparent 60%),
+    radial-gradient(1.8px 1.8px at 41% 31%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 49% 60%, rgba(255,255,255,0.7), transparent 60%),
+    radial-gradient(1.4px 1.4px at 58% 14%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 65% 85%, #fff, transparent 60%),
+    radial-gradient(1.6px 1.6px at 71% 38%, #fff, transparent 60%),
+    radial-gradient(1.8px 1.8px at 79% 67%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 84% 21%, rgba(255,255,255,0.85), transparent 60%),
+    radial-gradient(1.4px 1.4px at 91% 49%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 96% 79%, #fff, transparent 60%),
+    radial-gradient(2px 2px at 12% 33%, #fff, transparent 60%),
+    radial-gradient(1.8px 1.8px at 35% 73%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 56% 28%, rgba(255,255,255,0.8), transparent 60%),
+    radial-gradient(2px 2px at 75% 11%, #fff, transparent 60%),
+    radial-gradient(1.5px 1.5px at 85% 88%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 5% 65%, #fff, transparent 60%),
+    radial-gradient(1.3px 1.3px at 95% 5%, #fff, transparent 60%);
+  background-size: 250px 250px;
+  background-repeat: repeat;
+  animation: hhrp-twinkle 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+.hhrp-stars::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 14% 22%, #fff, transparent 60%),
+    radial-gradient(1.2px 1.2px at 28% 64%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 44% 18%, rgba(200,220,255,0.9), transparent 60%),
+    radial-gradient(1.5px 1.5px at 52% 53%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 68% 27%, #fff, transparent 60%),
+    radial-gradient(1.4px 1.4px at 73% 76%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 88% 38%, rgba(220,230,255,0.85), transparent 60%),
+    radial-gradient(1.2px 1.2px at 8% 82%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 36% 91%, #fff, transparent 60%),
+    radial-gradient(1.6px 1.6px at 62% 6%, #fff, transparent 60%);
+  background-size: 350px 350px;
+  background-repeat: repeat;
+  animation: hhrp-twinkle-2 5s ease-in-out infinite;
+  animation-delay: 1.5s;
+  pointer-events: none;
+}
+
+/* ============================================================
+   1. STERNENHIMMEL (NEU - der Klassiker)
+============================================================ */
+.hhrp-anim-starry {
+  background:
+    radial-gradient(ellipse at 50% 100%, #1e293b 0%, #020617 60%, #000 100%);
+  position: relative;
+}
+.hhrp-anim-starry::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 5% 8%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 15% 22%, #fff, transparent 60%),
+    radial-gradient(1.8px 1.8px at 25% 41%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 35% 16%, rgba(255,255,255,0.85), transparent 60%),
+    radial-gradient(2px 2px at 45% 68%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 55% 33%, #fff, transparent 60%),
+    radial-gradient(1.4px 1.4px at 62% 89%, #fff, transparent 60%),
+    radial-gradient(1.6px 1.6px at 71% 12%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 78% 55%, rgba(255,255,255,0.85), transparent 60%),
+    radial-gradient(2.2px 2.2px at 85% 28%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 92% 73%, #fff, transparent 60%),
+    radial-gradient(1.4px 1.4px at 8% 55%, #fff, transparent 60%),
+    radial-gradient(1.8px 1.8px at 22% 78%, #fff, transparent 60%),
+    radial-gradient(1.2px 1.2px at 39% 50%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 49% 6%, rgba(220,235,255,0.95), transparent 60%),
+    radial-gradient(1.6px 1.6px at 67% 64%, #fff, transparent 60%),
+    radial-gradient(2px 2px at 88% 92%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 18% 92%, #fff, transparent 60%),
+    radial-gradient(1.4px 1.4px at 96% 12%, #fff, transparent 60%),
+    radial-gradient(1.2px 1.2px at 32% 62%, #fff, transparent 60%);
+  background-size: 200px 200px;
+  background-repeat: repeat;
+  animation: hhrp-twinkle 3s ease-in-out infinite;
+}
+.hhrp-anim-starry::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 11% 33%, #fff, transparent 60%),
+    radial-gradient(1.2px 1.2px at 24% 71%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 41% 14%, #fff, transparent 60%),
+    radial-gradient(1.4px 1.4px at 53% 49%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 67% 26%, #fff, transparent 60%),
+    radial-gradient(1.6px 1.6px at 76% 81%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 86% 41%, #fff, transparent 60%),
+    radial-gradient(1.2px 1.2px at 7% 86%, #fff, transparent 60%);
+  background-size: 320px 320px;
+  background-repeat: repeat;
+  animation: hhrp-twinkle-2 4.5s ease-in-out infinite;
+  animation-delay: 1.5s;
+}
+
+/* ============================================================
+   2. AURORA BOREALIS (verbessert mit Sternen + Bändern)
+============================================================ */
+.hhrp-anim-aurora {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 110%, rgba(16, 185, 129, 0.4) 0%, transparent 50%),
+    radial-gradient(ellipse 70% 50% at 30% 100%, rgba(168, 85, 247, 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse 90% 40% at 70% 90%, rgba(59, 130, 246, 0.35) 0%, transparent 50%),
+    linear-gradient(180deg, #020617 0%, #0c1e3e 40%, #1e1b4b 100%);
+  background-size: 200% 200%;
+  animation: hhrp-bg-flow 18s ease infinite;
+  position: relative;
+}
+.hhrp-anim-aurora::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(180deg,
+      transparent 0%,
+      rgba(74, 222, 128, 0.15) 30%,
+      rgba(168, 85, 247, 0.2) 50%,
+      rgba(59, 130, 246, 0.15) 70%,
+      transparent 100%);
+  filter: blur(40px);
+  animation: hhrp-aurora-wave 12s ease-in-out infinite;
+}
+.hhrp-anim-aurora::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.2px 1.2px at 12% 18%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 28% 8%, #fff, transparent 60%),
+    radial-gradient(1.4px 1.4px at 47% 22%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 63% 14%, #fff, transparent 60%),
+    radial-gradient(1.6px 1.6px at 78% 25%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 89% 9%, #fff, transparent 60%);
+  background-size: 280px 280px;
+  background-repeat: repeat;
+  animation: hhrp-twinkle 3.5s ease-in-out infinite;
+}
+
+/* ============================================================
+   3. GALAXY (Spiral-Galaxie mit Sternenfeld + Glow)
+============================================================ */
+.hhrp-anim-galaxy {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(168, 85, 247, 0.4) 0%, transparent 25%),
+    radial-gradient(ellipse 90% 30% at 50% 50%, rgba(236, 72, 153, 0.3) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 50% 50%, rgba(59, 130, 246, 0.3) 0%, transparent 60%),
+    radial-gradient(circle at 50% 50%, #1a0033 0%, #050014 50%, #000 100%);
+  position: relative;
+}
+.hhrp-anim-galaxy::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse 40% 5% at 50% 50%, rgba(255, 255, 255, 0.2) 0%, transparent 100%),
+    radial-gradient(ellipse 5% 40% at 50% 50%, rgba(255, 255, 255, 0.15) 0%, transparent 100%);
+  animation: hhrp-spin-slow 60s linear infinite;
+}
+.hhrp-anim-galaxy::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 8% 12%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 23% 47%, #fff, transparent 60%),
+    radial-gradient(1.8px 1.8px at 17% 78%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 41% 31%, #fff, transparent 60%),
+    radial-gradient(1.6px 1.6px at 65% 85%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 79% 67%, #fff, transparent 60%),
+    radial-gradient(1.4px 1.4px at 91% 49%, #fff, transparent 60%),
+    radial-gradient(2px 2px at 12% 33%, #fff, transparent 60%),
+    radial-gradient(1.8px 1.8px at 75% 11%, #fff, transparent 60%),
+    radial-gradient(1.5px 1.5px at 85% 88%, #fff, transparent 60%);
+  background-size: 250px 250px;
+  background-repeat: repeat;
+  animation: hhrp-twinkle 3.5s ease-in-out infinite;
+}
+
+/* ============================================================
+   4. SCHIESSENDE STERNE (Dunkler Himmel + 3 Shooting Stars)
+============================================================ */
+.hhrp-anim-shooting {
+  background:
+    radial-gradient(ellipse at 50% 100%, #0f172a 0%, #020617 70%, #000 100%);
+  position: relative;
+}
+.hhrp-anim-shooting::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 18%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 25% 42%, #fff, transparent 60%),
+    radial-gradient(1.4px 1.4px at 38% 71%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 52% 13%, #fff, transparent 60%),
+    radial-gradient(1.6px 1.6px at 65% 56%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 78% 29%, #fff, transparent 60%),
+    radial-gradient(1.8px 1.8px at 88% 81%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 7% 88%, #fff, transparent 60%);
+  background-size: 200px 200px;
+  background-repeat: repeat;
+  animation: hhrp-twinkle 3.5s ease-in-out infinite;
+}
+.hhrp-anim-shooting::after {
+  content: "";
+  position: absolute;
+  width: 150px;
+  height: 2px;
+  top: 0;
+  left: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.9), #fff);
+  border-radius: 50%;
+  filter: blur(0.5px);
+  box-shadow: 0 0 8px #fff, 0 0 20px rgba(255,255,255,0.5);
+  animation: hhrp-shooting-star 6s linear infinite;
+  animation-delay: 1s;
+}
+
+/* ============================================================
+   5. NEBULA (Kosmische Wolken + Sterne)
+============================================================ */
+.hhrp-anim-nebula {
+  background:
+    radial-gradient(circle at 25% 30%, rgba(236, 72, 153, 0.6) 0%, transparent 45%),
+    radial-gradient(circle at 75% 70%, rgba(139, 92, 246, 0.55) 0%, transparent 45%),
+    radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.4) 0%, transparent 60%),
+    radial-gradient(circle at 80% 20%, rgba(244, 114, 182, 0.4) 0%, transparent 35%),
+    #050014;
+  background-size: 250% 250%;
+  animation: hhrp-bg-flow 28s ease infinite;
+  position: relative;
+}
+.hhrp-anim-nebula::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.4px 1.4px at 10% 15%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 22% 48%, #fff, transparent 60%),
+    radial-gradient(1.6px 1.6px at 18% 79%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 33% 9%, #fff, transparent 60%),
+    radial-gradient(1.8px 1.8px at 42% 32%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 50% 61%, #fff, transparent 60%),
+    radial-gradient(1.4px 1.4px at 59% 15%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 66% 86%, #fff, transparent 60%),
+    radial-gradient(1.6px 1.6px at 72% 39%, #fff, transparent 60%),
+    radial-gradient(1.8px 1.8px at 80% 68%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 85% 22%, #fff, transparent 60%),
+    radial-gradient(1.4px 1.4px at 92% 50%, #fff, transparent 60%);
+  background-size: 280px 280px;
+  background-repeat: repeat;
+  animation: hhrp-twinkle 3.5s ease-in-out infinite;
+}
+
+/* ============================================================
+   6. COSMIC DUST (Driftende Partikel + Sterne)
+============================================================ */
+.hhrp-anim-cosmic {
+  background:
+    radial-gradient(circle at 15% 25%, rgba(168, 85, 247, 0.5) 0%, transparent 40%),
+    radial-gradient(circle at 85% 75%, rgba(99, 102, 241, 0.45) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.3) 0%, transparent 50%),
+    #050014;
+  background-size: 200% 200%;
+  animation: hhrp-bg-flow 26s ease infinite;
+  position: relative;
+}
+.hhrp-anim-cosmic::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 20% 30%, rgba(255,200,255,0.9), transparent 70%),
+    radial-gradient(1.5px 1.5px at 60% 70%, rgba(200,220,255,0.85), transparent 70%),
+    radial-gradient(1.5px 1.5px at 80% 20%, rgba(255,255,255,0.9), transparent 70%),
+    radial-gradient(2px 2px at 40% 80%, rgba(200,255,255,0.85), transparent 70%),
+    radial-gradient(1.5px 1.5px at 10% 60%, #fff, transparent 70%),
+    radial-gradient(1.5px 1.5px at 70% 40%, rgba(255,200,200,0.85), transparent 70%),
+    radial-gradient(2.5px 2.5px at 30% 10%, rgba(220,200,255,0.9), transparent 70%);
+  background-size: 220px 220px;
+  background-repeat: repeat;
+  animation: hhrp-twinkle 3s ease-in-out infinite, hhrp-drift 15s ease-in-out infinite;
+}
+
+/* ============================================================
+   7. CYBERPUNK GRID (Neon-Grid + Glow + Flicker)
+============================================================ */
+.hhrp-anim-cyberpunk {
+  background:
+    linear-gradient(rgba(255, 0, 200, 0.5) 1px, transparent 1px) 0 0/40px 40px,
+    linear-gradient(90deg, rgba(0, 255, 255, 0.5) 1px, transparent 1px) 0 0/40px 40px,
+    radial-gradient(ellipse at 50% 100%, rgba(255, 0, 200, 0.3) 0%, transparent 50%),
+    linear-gradient(135deg, #0a0a23 0%, #1a0033 50%, #2d0052 100%);
+  animation: hhrp-cyber-grid 4s linear infinite, hhrp-pulse-glow 3s ease-in-out infinite;
+  position: relative;
+}
+@keyframes hhrp-cyber-grid {
+  0%   { background-position: 0 0, 0 0, 0 0, 0 0; }
+  100% { background-position: 0 40px, 40px 0, 0 0, 0 0; }
+}
+.hhrp-anim-cyberpunk::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 40% 10% at 30% 50%, rgba(0, 255, 255, 0.4) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 10% at 70% 60%, rgba(255, 0, 200, 0.4) 0%, transparent 70%);
+  filter: blur(20px);
+}
+
+/* ============================================================
+   8. PLASMA (Multi-Blob morphing)
+============================================================ */
+.hhrp-anim-plasma {
+  background:
+    radial-gradient(circle at 20% 30%, #ff006e 0%, transparent 50%),
+    radial-gradient(circle at 80% 60%, #8338ec 0%, transparent 50%),
+    radial-gradient(circle at 50% 80%, #3a86ff 0%, transparent 50%),
+    radial-gradient(circle at 70% 20%, #06ffa5 0%, transparent 40%),
+    #1a0033;
+  background-size: 200% 200%;
+  animation: hhrp-bg-flow 14s ease infinite, hhrp-pulse-glow 5s ease-in-out infinite;
+}
+
+/* ============================================================
+   9. OCEAN WAVES (Gradient + langsame Wellenbewegung)
+============================================================ */
+.hhrp-anim-ocean {
+  background:
+    linear-gradient(180deg,
+      #001f3f 0%,
+      #003d7a 25%,
+      #0074d9 55%,
+      #39cccc 85%,
+      #7fdbff 100%);
+  background-size: 100% 200%;
+  animation: hhrp-bg-vertical 12s ease infinite;
+  position: relative;
+}
+.hhrp-anim-ocean::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 20% at 50% 30%, rgba(255,255,255,0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 70% 15% at 30% 60%, rgba(255,255,255,0.1) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 12% at 70% 80%, rgba(255,255,255,0.12) 0%, transparent 60%);
+  animation: hhrp-aurora-wave 8s ease-in-out infinite;
+}
+
+/* ============================================================
+   10. INFERNO (Feuer + steigende Glut-Partikel)
+============================================================ */
+.hhrp-anim-inferno {
+  background:
+    radial-gradient(ellipse at 50% 110%, #fcbf49 0%, #f77f00 30%, #d62828 60%, #410101 100%);
+  position: relative;
+}
+.hhrp-anim-inferno::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 15% 100%, rgba(255, 200, 100, 0.9), transparent 70%),
+    radial-gradient(1.5px 1.5px at 35% 100%, rgba(255, 150, 50, 0.85), transparent 70%),
+    radial-gradient(2.5px 2.5px at 55% 100%, rgba(255, 200, 100, 0.9), transparent 70%),
+    radial-gradient(1.5px 1.5px at 75% 100%, rgba(255, 100, 50, 0.85), transparent 70%),
+    radial-gradient(2px 2px at 90% 100%, rgba(255, 220, 150, 0.9), transparent 70%);
+  background-size: 100px 200px;
+  background-repeat: repeat-x;
+  animation: hhrp-ember-rise 4s linear infinite;
+}
+.hhrp-anim-inferno::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 100%, rgba(255, 220, 100, 0.4) 0%, transparent 50%);
+  animation: hhrp-pulse-glow 2s ease-in-out infinite;
+}
+
+/* ============================================================
+   11. FOREST MIST (Dunkler Wald + Lichtstrahlen)
+============================================================ */
+.hhrp-anim-forest {
+  background:
+    radial-gradient(ellipse 60% 100% at 50% 0%, rgba(132, 204, 22, 0.3) 0%, transparent 50%),
+    linear-gradient(180deg, #052e16 0%, #14532d 35%, #166534 70%, #15803d 100%);
+  background-size: 200% 200%;
+  animation: hhrp-bg-flow 20s ease infinite;
+  position: relative;
+}
+.hhrp-anim-forest::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(110deg, transparent 30%, rgba(190, 242, 100, 0.15) 35%, transparent 40%),
+    linear-gradient(110deg, transparent 60%, rgba(190, 242, 100, 0.12) 65%, transparent 70%);
+  animation: hhrp-aurora-wave 10s ease-in-out infinite;
+}
+
+/* ============================================================
+   12. ICE CRYSTAL (Eis + Kristall-Sparkles)
+============================================================ */
+.hhrp-anim-ice {
+  background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 25%, #06b6d4 50%, #67e8f9 75%, #ecfeff 100%);
+  background-size: 300% 300%;
+  animation: hhrp-bg-flow 16s ease infinite;
+  position: relative;
+}
+.hhrp-anim-ice::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 12% 25%, rgba(255,255,255,0.95), transparent 50%),
+    radial-gradient(1.5px 1.5px at 35% 60%, rgba(255,255,255,0.9), transparent 50%),
+    radial-gradient(2.5px 2.5px at 60% 30%, rgba(220,250,255,0.95), transparent 50%),
+    radial-gradient(1.5px 1.5px at 80% 70%, rgba(255,255,255,0.9), transparent 50%),
+    radial-gradient(2px 2px at 90% 15%, rgba(220,250,255,0.95), transparent 50%);
+  background-size: 200px 200px;
+  background-repeat: repeat;
+  animation: hhrp-twinkle 2.5s ease-in-out infinite;
+}
+
+/* ============================================================
+   13. VULKAN (Pulsierende Lava + Glut)
+============================================================ */
+.hhrp-anim-volcanic {
+  background:
+    radial-gradient(ellipse at 50% 100%, #fbbf24 0%, #ef4444 20%, #b91c1c 50%, #1c0a0a 100%);
+  position: relative;
+}
+.hhrp-anim-volcanic::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 30% at 50% 90%, rgba(251, 191, 36, 0.5) 0%, transparent 60%);
+  animation: hhrp-pulse-glow 3s ease-in-out infinite;
+}
+.hhrp-anim-volcanic::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 25% 100%, rgba(251, 191, 36, 0.85), transparent 70%),
+    radial-gradient(2px 2px at 55% 100%, rgba(239, 68, 68, 0.85), transparent 70%),
+    radial-gradient(1.5px 1.5px at 75% 100%, rgba(251, 191, 36, 0.85), transparent 70%);
+  background-size: 80px 200px;
+  background-repeat: repeat-x;
+  animation: hhrp-ember-rise 5s linear infinite;
+}
+
+/* ============================================================
+   14. NEON TOKYO (Neon-Lichter pulsieren)
+============================================================ */
+.hhrp-anim-neon {
+  background:
+    linear-gradient(135deg, #ff00ff 0%, #00ffff 50%, #ff00ff 100%);
+  background-size: 200% 200%;
+  animation: hhrp-bg-flow 8s ease infinite, hhrp-pulse-glow 2s ease-in-out infinite;
+}
+
+/* ============================================================
+   15. HAMBURG NIGHT LIGHTS (Skyline mit Lichtern)
+============================================================ */
+.hhrp-anim-city {
+  background:
+    radial-gradient(circle at 20% 80%, rgba(251, 191, 36, 0.5) 0%, transparent 25%),
+    radial-gradient(circle at 50% 90%, rgba(249, 115, 22, 0.5) 0%, transparent 25%),
+    radial-gradient(circle at 80% 70%, rgba(59, 130, 246, 0.5) 0%, transparent 30%),
+    linear-gradient(180deg, #0c1b33 0%, #1e293b 60%, #0f172a 100%);
+  background-size: 250% 250%;
+  animation: hhrp-bg-flow 20s ease infinite;
+  position: relative;
+}
+.hhrp-anim-city::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.4px 1.4px at 12% 15%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 28% 8%, #fff, transparent 60%),
+    radial-gradient(1.6px 1.6px at 47% 22%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 63% 14%, #fff, transparent 60%),
+    radial-gradient(1.2px 1.2px at 78% 25%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 89% 9%, #fff, transparent 60%);
+  background-size: 280px 200px;
+  background-repeat: repeat;
+  animation: hhrp-twinkle 3.5s ease-in-out infinite;
+}
+
+/* ============================================================
+   16. RAINBOW FLOW
+============================================================ */
+.hhrp-anim-rainbow {
+  background: linear-gradient(135deg, #ff0080, #ff8c00, #ffd700, #00ff80, #00bfff, #8a2be2, #ff0080);
+  background-size: 600% 600%;
+  animation: hhrp-bg-flow 25s linear infinite;
+}
+
+/* ============================================================
+   17. SCHNEEFALL (NEU - Fallende Schneeflocken)
+============================================================ */
+.hhrp-anim-snow {
+  background: linear-gradient(180deg, #1e293b 0%, #334155 50%, #475569 100%);
+  position: relative;
+}
+.hhrp-anim-snow::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 10% 0%, rgba(255,255,255,0.9), transparent 70%),
+    radial-gradient(1.5px 1.5px at 30% 0%, rgba(255,255,255,0.8), transparent 70%),
+    radial-gradient(2.5px 2.5px at 55% 0%, #fff, transparent 70%),
+    radial-gradient(1.5px 1.5px at 75% 0%, rgba(255,255,255,0.85), transparent 70%),
+    radial-gradient(2px 2px at 90% 0%, rgba(255,255,255,0.9), transparent 70%),
+    radial-gradient(1.2px 1.2px at 15% 0%, rgba(255,255,255,0.7), transparent 70%),
+    radial-gradient(1.8px 1.8px at 45% 0%, #fff, transparent 70%),
+    radial-gradient(1.5px 1.5px at 65% 0%, rgba(255,255,255,0.8), transparent 70%),
+    radial-gradient(2.2px 2.2px at 85% 0%, rgba(255,255,255,0.9), transparent 70%);
+  background-size: 200px 300px, 250px 300px, 180px 300px;
+  background-repeat: repeat;
+  animation: hhrp-snow-fall 8s linear infinite;
+}
+.hhrp-anim-snow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 20% 0%, rgba(255,255,255,0.7), transparent 70%),
+    radial-gradient(1px 1px at 40% 0%, rgba(255,255,255,0.6), transparent 70%),
+    radial-gradient(2px 2px at 60% 0%, rgba(255,255,255,0.8), transparent 70%),
+    radial-gradient(1px 1px at 80% 0%, rgba(255,255,255,0.6), transparent 70%);
+  background-size: 220px 400px;
+  background-repeat: repeat;
+  animation: hhrp-snow-fall 12s linear infinite;
+  animation-delay: -3s;
+}
+
+/* ============================================================
+   18. EMBER GLOW (Warme Glut)
+============================================================ */
+.hhrp-anim-ember {
+  background: linear-gradient(135deg, #451a03 0%, #92400e 25%, #d97706 50%, #fbbf24 75%, #fef3c7 100%);
+  background-size: 400% 400%;
+  animation: hhrp-bg-flow 14s ease infinite, hhrp-pulse-glow 4s ease-in-out infinite;
+}
+
+/* ============================================================
+   19. POLAR LIGHTS (Kühle Aurora + Sterne)
+============================================================ */
+.hhrp-anim-polar {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 110%, rgba(6, 182, 212, 0.5) 0%, transparent 50%),
+    radial-gradient(ellipse 90% 40% at 30% 100%, rgba(56, 189, 248, 0.4) 0%, transparent 50%),
+    linear-gradient(180deg, #0f172a 0%, #1e3a8a 30%, #0c4a6e 70%, #022c43 100%);
+  background-size: 200% 200%;
+  animation: hhrp-bg-flow 22s ease infinite;
+  position: relative;
+}
+.hhrp-anim-polar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(180deg, transparent 0%, rgba(103, 232, 249, 0.15) 40%, rgba(56, 189, 248, 0.2) 60%, transparent 100%);
+  filter: blur(35px);
+  animation: hhrp-aurora-wave 14s ease-in-out infinite;
+}
+.hhrp-anim-polar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.4px 1.4px at 15% 20%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 30% 8%, #fff, transparent 60%),
+    radial-gradient(1.6px 1.6px at 50% 24%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 65% 12%, #fff, transparent 60%),
+    radial-gradient(1.4px 1.4px at 80% 26%, #fff, transparent 60%),
+    radial-gradient(1px 1px at 92% 9%, #fff, transparent 60%);
+  background-size: 280px 280px;
+  background-repeat: repeat;
+  animation: hhrp-twinkle 3.5s ease-in-out infinite;
+}
+
+/* ============================================================
+   20. SAKURA (Fallende Kirschblüten)
+============================================================ */
+.hhrp-anim-sakura {
+  background: linear-gradient(135deg, #831843 0%, #be185d 20%, #ec4899 40%, #f9a8d4 60%, #fce7f3 80%, #fdf2f8 100%);
+  background-size: 400% 400%;
+  animation: hhrp-bg-flow 22s ease infinite;
+  position: relative;
+}
+.hhrp-anim-sakura::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(3px 3px at 12% 0%, rgba(252, 165, 200, 0.95), transparent 60%),
+    radial-gradient(4px 4px at 35% 0%, rgba(244, 114, 182, 0.95), transparent 60%),
+    radial-gradient(3px 3px at 60% 0%, rgba(252, 165, 200, 0.9), transparent 60%),
+    radial-gradient(4px 4px at 80% 0%, rgba(236, 72, 153, 0.9), transparent 60%);
+  background-size: 200px 350px;
+  background-repeat: repeat;
+  animation: hhrp-petal-fall 10s linear infinite;
+}
+.hhrp-anim-sakura::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2.5px 2.5px at 22% 0%, rgba(252, 200, 220, 0.9), transparent 60%),
+    radial-gradient(3px 3px at 48% 0%, rgba(244, 114, 182, 0.85), transparent 60%),
+    radial-gradient(2.5px 2.5px at 72% 0%, rgba(252, 200, 220, 0.85), transparent 60%);
+  background-size: 250px 450px;
+  background-repeat: repeat;
+  animation: hhrp-petal-fall 14s linear infinite;
+  animation-delay: -3s;
+}
+
