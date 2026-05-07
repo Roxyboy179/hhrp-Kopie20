@@ -5217,7 +5217,8 @@ export default function ProfilPage() {
               const hasVipForCustomBg = licenses.includes('vip_platinum') || licenses.includes('vip_ultimate') || licenses.includes('vip_elite_plus') || licenses.includes('luxus_pass');
               const isStandardBgActive = customBg === 'standard';
               const isPresetBg = customBg && customBg.startsWith('preset:');
-              const isCustomBgActive = customBg && customBg !== 'standard' && !isPresetBg;
+              const isAnimatedBg = customBg && customBg.startsWith('animated:');
+              const isCustomBgActive = customBg && customBg !== 'standard' && !isPresetBg && !isAnimatedBg;
 
               const presetBackgrounds = [
                 { id: 'preset:city-1', src: '/bg-city-1.webp', name: 'City Skyline' },
@@ -5227,8 +5228,32 @@ export default function ProfilPage() {
                 { id: 'preset:neon-2', src: '/bg-neon-2.webp', name: 'Green Neon' }
               ];
 
-              // Auto-Entfernung: Wenn kein VIP Platinum+ aber custom/preset BG vorhanden
-              if (!hasVipForCustomBg && (isCustomBgActive || isPresetBg)) {
+              // 20 vorgefertigte ANIMIERTE Hintergründe (CSS-only, keine externen Assets)
+              const animatedBackgrounds = [
+                { id: 'animated:aurora',    name: 'Aurora',        emoji: '🌌' },
+                { id: 'animated:galaxy',    name: 'Galaxy',        emoji: '🌠' },
+                { id: 'animated:sunset',    name: 'Sunset',        emoji: '🌅' },
+                { id: 'animated:cyberpunk', name: 'Cyberpunk',     emoji: '🌃' },
+                { id: 'animated:plasma',    name: 'Plasma',        emoji: '🪐' },
+                { id: 'animated:ocean',     name: 'Ocean',         emoji: '🌊' },
+                { id: 'animated:fire',      name: 'Fire',          emoji: '🔥' },
+                { id: 'animated:forest',    name: 'Forest',        emoji: '🌲' },
+                { id: 'animated:ice',       name: 'Ice Crystal',   emoji: '❄️' },
+                { id: 'animated:lava',      name: 'Lava',          emoji: '🌋' },
+                { id: 'animated:neon',      name: 'Neon Pulse',    emoji: '💡' },
+                { id: 'animated:city',      name: 'City Lights',   emoji: '🏙️' },
+                { id: 'animated:rainbow',   name: 'Rainbow',       emoji: '🌈' },
+                { id: 'animated:nebula',    name: 'Nebula',        emoji: '✨' },
+                { id: 'animated:volcanic',  name: 'Volcanic',      emoji: '🌋' },
+                { id: 'animated:mint',      name: 'Mint Breeze',   emoji: '🍃' },
+                { id: 'animated:cosmic',    name: 'Cosmic Dust',   emoji: '⭐' },
+                { id: 'animated:ember',     name: 'Ember',         emoji: '🔆' },
+                { id: 'animated:polar',     name: 'Polar Lights',  emoji: '🧊' },
+                { id: 'animated:sakura',    name: 'Sakura',        emoji: '🌸' }
+              ];
+
+              // Auto-Entfernung: Wenn kein VIP Platinum+ aber custom/preset/animated BG vorhanden
+              if (!hasVipForCustomBg && (isCustomBgActive || isPresetBg || isAnimatedBg)) {
                 setTimeout(() => {
                   localStorage.removeItem('hhrp-custom-bg');
                   setCustomBg(null);
@@ -5294,37 +5319,110 @@ export default function ProfilPage() {
                       </div>
 
                       {hasVipForCustomBg ? (
-                        <div className="space-y-4">
-                          {/* Vorinstallierte Bilder Grid */}
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                            {presetBackgrounds.map((bg) => (
-                              <div
-                                key={bg.id}
-                                onClick={() => {
-                                  if (customBg === bg.id) {
-                                    localStorage.removeItem('hhrp-custom-bg');
-                                    setCustomBg(null);
-                                    window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
-                                    toast.success('Hintergrundbild deaktiviert');
-                                  } else {
-                                    localStorage.setItem('hhrp-custom-bg', bg.id);
-                                    setCustomBg(bg.id);
-                                    window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: bg.id } }));
-                                    toast.success(`${bg.name} aktiviert!`);
-                                  }
-                                }}
-                                className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition-all aspect-[4/3] ${customBg === bg.id ? 'border-purple-500 ring-2 ring-purple-500/30 scale-[1.02]' : 'border-white/10 hover:border-white/25 hover:scale-[1.02]'}`}
-                              >
-                                <img src={bg.src} alt={bg.name} className="w-full h-full object-cover" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                                <p className="absolute bottom-1.5 left-2 text-[10px] text-white/70 font-medium">{bg.name}</p>
-                                {customBg === bg.id && (
-                                  <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
-                                    <Check className="w-3 h-3 text-white" />
+                        <div className="space-y-5">
+                          {/* === Statische Bilder Grid === */}
+                          <div>
+                            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                              <ImagePlus className="w-3 h-3" />
+                              Statische Bilder
+                            </p>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                              {presetBackgrounds.map((bg) => (
+                                <div
+                                  key={bg.id}
+                                  onClick={() => {
+                                    if (customBg === bg.id) {
+                                      localStorage.removeItem('hhrp-custom-bg');
+                                      setCustomBg(null);
+                                      window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
+                                      toast.success('Hintergrundbild deaktiviert');
+                                    } else {
+                                      localStorage.setItem('hhrp-custom-bg', bg.id);
+                                      setCustomBg(bg.id);
+                                      window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: bg.id } }));
+                                      toast.success(`${bg.name} aktiviert!`);
+                                    }
+                                  }}
+                                  className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition-all aspect-[4/3] ${customBg === bg.id ? 'border-purple-500 ring-2 ring-purple-500/30 scale-[1.02]' : 'border-white/10 hover:border-white/25 hover:scale-[1.02]'}`}
+                                >
+                                  <img src={bg.src} alt={bg.name} className="w-full h-full object-cover" />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                                  <p className="absolute bottom-1.5 left-2 text-[10px] text-white/70 font-medium">{bg.name}</p>
+                                  {customBg === bg.id && (
+                                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center">
+                                      <Check className="w-3 h-3 text-white" />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* === Animierte Hintergründe (NEU) === */}
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+                                <Sparkles className="w-3 h-3" />
+                                Animierte Hintergründe
+                                <span className="px-1.5 py-0.5 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30 text-[9px] text-purple-300 font-bold">
+                                  20 Designs
+                                </span>
+                              </p>
+                              <p className="text-[10px] text-white/30 hidden sm:block">Performance-schonend, CSS-only</p>
+                            </div>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                              {animatedBackgrounds.map((bg) => {
+                                const isActive = customBg === bg.id;
+                                const animClass = `hhrp-anim-${bg.id.replace('animated:', '')}`;
+                                return (
+                                  <div
+                                    key={bg.id}
+                                    onClick={() => {
+                                      if (isActive) {
+                                        localStorage.removeItem('hhrp-custom-bg');
+                                        setCustomBg(null);
+                                        window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: null } }));
+                                        toast.success('Hintergrund deaktiviert');
+                                      } else {
+                                        localStorage.setItem('hhrp-custom-bg', bg.id);
+                                        setCustomBg(bg.id);
+                                        window.dispatchEvent(new CustomEvent('hhrp-bg-change', { detail: { bg: bg.id } }));
+                                        toast.success(`${bg.name} aktiviert!`);
+                                      }
+                                    }}
+                                    className={`relative rounded-xl overflow-hidden border-2 cursor-pointer transition-all aspect-[4/3] group ${isActive ? 'border-purple-500 ring-2 ring-purple-500/30 scale-[1.02]' : 'border-white/10 hover:border-white/25 hover:scale-[1.02]'}`}
+                                  >
+                                    {/* Live Animation Preview */}
+                                    <div className={`hhrp-anim-bg preview ${animClass}`} />
+
+                                    {/* Overlay */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                                    {/* Animated Indicator (pulsierender Punkt) */}
+                                    <div className="absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/40 backdrop-blur-sm border border-white/10">
+                                      <span className="relative flex h-1.5 w-1.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-pink-500"></span>
+                                      </span>
+                                      <span className="text-[8px] text-white/80 font-bold uppercase tracking-wide">Live</span>
+                                    </div>
+
+                                    {/* Label */}
+                                    <div className="absolute bottom-1.5 left-2 right-2 flex items-center gap-1">
+                                      <span className="text-sm">{bg.emoji}</span>
+                                      <p className="text-[10px] text-white font-medium drop-shadow-md truncate">{bg.name}</p>
+                                    </div>
+
+                                    {/* Active Check */}
+                                    {isActive && (
+                                      <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center shadow-lg shadow-purple-500/50">
+                                        <Check className="w-3 h-3 text-white" />
+                                      </div>
+                                    )}
                                   </div>
-                                )}
-                              </div>
-                            ))}
+                                );
+                              })}
+                            </div>
                           </div>
 
                           {/* Eigenes Bild Upload */}
@@ -5401,7 +5499,7 @@ export default function ProfilPage() {
                         </div>
                       ) : (
                         <div className="space-y-3">
-                          {/* Gesperrte Vorschau */}
+                          {/* Gesperrte Vorschau - Statische Bilder */}
                           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 opacity-40 pointer-events-none">
                             {presetBackgrounds.map((bg) => (
                               <div key={bg.id} className="relative rounded-xl overflow-hidden border border-white/10 aspect-[4/3]">
@@ -5412,11 +5510,36 @@ export default function ProfilPage() {
                               </div>
                             ))}
                           </div>
+
+                          {/* Gesperrte Vorschau - Animierte Hintergründe */}
+                          <div>
+                            <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                              <Sparkles className="w-3 h-3" />
+                              Animierte Hintergründe
+                              <span className="px-1.5 py-0.5 rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30 text-[9px] text-purple-300 font-bold">
+                                20 Designs
+                              </span>
+                            </p>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 opacity-40 pointer-events-none">
+                              {animatedBackgrounds.slice(0, 12).map((bg) => {
+                                const animClass = `hhrp-anim-${bg.id.replace('animated:', '')}`;
+                                return (
+                                  <div key={bg.id} className="relative rounded-xl overflow-hidden border border-white/10 aspect-[4/3]">
+                                    <div className={`hhrp-anim-bg preview ${animClass}`} style={{ filter: 'blur(2px)' }} />
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                      <Lock className="w-4 h-4 text-white/40" />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+
                           <div className="p-4 rounded-lg bg-white/[0.02] border border-white/5">
                             <div className="flex items-center gap-2">
                               <Lock className="w-4 h-4 text-white/20 flex-shrink-0" />
                               <p className="text-xs text-white/35">
-                                Du benötigst VIP Platinum, VIP Ultimate, VIP Elite Plus oder Luxus-Pass um zusätzliche Hintergrundbilder und eigene Uploads zu nutzen.
+                                Du benötigst VIP Platinum, VIP Ultimate, VIP Elite Plus oder Luxus-Pass um zusätzliche Hintergrundbilder, animierte Hintergründe und eigene Uploads zu nutzen.
                               </p>
                             </div>
                           </div>

@@ -1212,3 +1212,245 @@ input, textarea, select, button, a, [role="button"] {
 .hhrp-toggle-switch.active {
   box-shadow: 0 0 12px currentColor;
 }
+
+
+/* ============================================================
+   ANIMIERTE HINTERGRÜNDE (20 Stück)
+   Werden via .hhrp-anim-bg + .hhrp-anim-{name} Klasse aktiviert
+============================================================ */
+.hhrp-anim-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  overflow: hidden;
+}
+.hhrp-anim-bg.preview {
+  position: relative;
+  inset: auto;
+  width: 100%;
+  height: 100%;
+  opacity: 1;
+  border-radius: inherit;
+}
+.hhrp-no-anim .hhrp-anim-bg,
+.hhrp-datenspar .hhrp-anim-bg {
+  animation: none !important;
+}
+.hhrp-no-anim .hhrp-anim-bg *,
+.hhrp-datenspar .hhrp-anim-bg * {
+  animation: none !important;
+}
+
+/* 1. Aurora Borealis */
+.hhrp-anim-aurora {
+  background: linear-gradient(125deg, #0a1929 0%, #0f4c75 20%, #3282b8 40%, #5d3fd3 60%, #16c79a 80%, #0a1929 100%);
+  background-size: 400% 400%;
+  animation: hhrp-bg-flow 22s ease infinite;
+}
+
+/* 2. Galaxy */
+.hhrp-anim-galaxy {
+  background:
+    radial-gradient(circle at 25% 25%, #4a148c 0%, transparent 40%),
+    radial-gradient(circle at 75% 75%, #1a237e 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, #311b92 0%, #000 70%);
+  background-size: 300% 300%;
+  animation: hhrp-bg-flow 35s ease infinite;
+}
+
+/* 3. Sunset */
+.hhrp-anim-sunset {
+  background: linear-gradient(135deg, #ff6b6b 0%, #feca57 25%, #ff9ff3 50%, #f368e0 75%, #ee5a6f 100%);
+  background-size: 400% 400%;
+  animation: hhrp-bg-flow 18s ease infinite;
+}
+
+/* 4. Cyberpunk Grid */
+.hhrp-anim-cyberpunk {
+  background:
+    linear-gradient(rgba(255, 0, 200, 0.5) 1px, transparent 1px) 0 0/40px 40px,
+    linear-gradient(90deg, rgba(0, 255, 255, 0.5) 1px, transparent 1px) 0 0/40px 40px,
+    linear-gradient(135deg, #0a0a23 0%, #1a0033 50%, #2d0052 100%);
+  animation: hhrp-cyberpunk-grid 8s linear infinite;
+}
+@keyframes hhrp-cyberpunk-grid {
+  0%   { background-position: 0 0, 0 0, 0 0; }
+  100% { background-position: 40px 40px, 40px 40px, 0 0; }
+}
+
+/* 5. Plasma */
+.hhrp-anim-plasma {
+  background:
+    radial-gradient(circle at 20% 30%, #ff006e 0%, transparent 50%),
+    radial-gradient(circle at 80% 60%, #8338ec 0%, transparent 50%),
+    radial-gradient(circle at 50% 80%, #3a86ff 0%, transparent 50%),
+    radial-gradient(circle at 70% 20%, #06ffa5 0%, transparent 40%),
+    #1a0033;
+  background-size: 200% 200%;
+  animation: hhrp-bg-flow 14s ease infinite;
+}
+
+/* 6. Ocean */
+.hhrp-anim-ocean {
+  background: linear-gradient(180deg, #001f3f 0%, #003d7a 30%, #0074d9 60%, #39cccc 90%, #7fdbff 100%);
+  background-size: 100% 300%;
+  animation: hhrp-bg-vertical 12s ease infinite;
+}
+
+/* 7. Fire */
+.hhrp-anim-fire {
+  background: linear-gradient(0deg, #410101 0%, #7a0c0c 20%, #d62828 40%, #f77f00 70%, #fcbf49 100%);
+  background-size: 100% 200%;
+  animation: hhrp-bg-vertical 6s ease-in-out infinite alternate;
+}
+
+/* 8. Forest */
+.hhrp-anim-forest {
+  background: linear-gradient(135deg, #052e16 0%, #14532d 25%, #166534 50%, #15803d 75%, #22c55e 100%);
+  background-size: 400% 400%;
+  animation: hhrp-bg-flow 24s ease infinite;
+}
+
+/* 9. Ice Crystal */
+.hhrp-anim-ice {
+  background: linear-gradient(135deg, #0c4a6e 0%, #0369a1 25%, #06b6d4 50%, #67e8f9 75%, #ecfeff 100%);
+  background-size: 300% 300%;
+  animation: hhrp-bg-flow 16s ease infinite;
+}
+
+/* 10. Lava */
+.hhrp-anim-lava {
+  background:
+    radial-gradient(circle at 30% 40%, #f43f5e 0%, transparent 50%),
+    radial-gradient(circle at 70% 60%, #f59e0b 0%, transparent 50%),
+    radial-gradient(circle at 50% 80%, #dc2626 0%, transparent 50%),
+    #1a0a0a;
+  background-size: 200% 200%;
+  animation: hhrp-bg-flow 10s ease infinite;
+}
+
+/* 11. Neon Pulse */
+.hhrp-anim-neon {
+  background: linear-gradient(135deg, #ff00ff 0%, #00ffff 50%, #ff00ff 100%);
+  background-size: 200% 200%;
+  animation: hhrp-bg-flow 8s ease infinite, hhrp-neon-pulse 3s ease-in-out infinite;
+}
+@keyframes hhrp-neon-pulse {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50%      { filter: brightness(1.3) saturate(1.4); }
+}
+
+/* 12. City Lights (Hamburg) */
+.hhrp-anim-city {
+  background:
+    radial-gradient(circle at 20% 80%, #fbbf24 0%, transparent 30%),
+    radial-gradient(circle at 80% 70%, #3b82f6 0%, transparent 35%),
+    radial-gradient(circle at 50% 90%, #f97316 0%, transparent 30%),
+    linear-gradient(180deg, #0c1b33 0%, #1e293b 60%, #0f172a 100%);
+  background-size: 250% 250%;
+  animation: hhrp-bg-flow 20s ease infinite;
+}
+
+/* 13. Rainbow Flow */
+.hhrp-anim-rainbow {
+  background: linear-gradient(135deg, #ff0080, #ff8c00, #ffd700, #00ff80, #00bfff, #8a2be2, #ff0080);
+  background-size: 600% 600%;
+  animation: hhrp-bg-flow 25s linear infinite;
+}
+
+/* 14. Nebula */
+.hhrp-anim-nebula {
+  background:
+    radial-gradient(circle at 30% 30%, #ec4899 0%, transparent 50%),
+    radial-gradient(circle at 70% 70%, #8b5cf6 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, #6366f1 0%, transparent 60%),
+    #0a0118;
+  background-size: 300% 300%;
+  animation: hhrp-bg-flow 28s ease infinite;
+}
+
+/* 15. Volcanic */
+.hhrp-anim-volcanic {
+  background:
+    radial-gradient(ellipse at 50% 100%, #b91c1c 0%, transparent 60%),
+    linear-gradient(180deg, #1c0a0a 0%, #450a0a 60%, #7f1d1d 100%);
+  background-size: 200% 200%;
+  animation: hhrp-bg-vertical 9s ease-in-out infinite alternate;
+}
+
+/* 16. Mint Breeze */
+.hhrp-anim-mint {
+  background: linear-gradient(135deg, #064e3b 0%, #047857 25%, #10b981 50%, #6ee7b7 75%, #d1fae5 100%);
+  background-size: 400% 400%;
+  animation: hhrp-bg-flow 18s ease infinite;
+}
+
+/* 17. Cosmic Dust */
+.hhrp-anim-cosmic {
+  background:
+    radial-gradient(circle at 15% 25%, rgba(168, 85, 247, 0.6) 0%, transparent 40%),
+    radial-gradient(circle at 85% 75%, rgba(99, 102, 241, 0.5) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(236, 72, 153, 0.3) 0%, transparent 50%),
+    #050014;
+  background-size: 200% 200%;
+  animation: hhrp-bg-flow 26s ease infinite;
+  position: relative;
+}
+.hhrp-anim-cosmic::before,
+.hhrp-anim-cosmic::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(2px 2px at 20% 30%, white, transparent),
+    radial-gradient(1px 1px at 60% 70%, white, transparent),
+    radial-gradient(1px 1px at 80% 20%, white, transparent),
+    radial-gradient(2px 2px at 40% 80%, white, transparent),
+    radial-gradient(1px 1px at 10% 60%, white, transparent);
+  background-size: 200% 200%;
+  background-repeat: repeat;
+  animation: hhrp-stars-twinkle 4s ease-in-out infinite alternate;
+}
+.hhrp-anim-cosmic::after {
+  animation-delay: 2s;
+  background-position: 50% 50%;
+}
+@keyframes hhrp-stars-twinkle {
+  0%   { opacity: 0.3; }
+  100% { opacity: 0.9; }
+}
+
+/* 18. Ember (Bernstein) */
+.hhrp-anim-ember {
+  background: linear-gradient(135deg, #451a03 0%, #92400e 25%, #d97706 50%, #fbbf24 75%, #fef3c7 100%);
+  background-size: 400% 400%;
+  animation: hhrp-bg-flow 14s ease infinite;
+}
+
+/* 19. Polar Lights */
+.hhrp-anim-polar {
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 20%, #1e40af 40%, #06b6d4 60%, #67e8f9 80%, #f0f9ff 100%);
+  background-size: 400% 400%;
+  animation: hhrp-bg-flow 30s ease infinite;
+}
+
+/* 20. Sakura */
+.hhrp-anim-sakura {
+  background: linear-gradient(135deg, #831843 0%, #be185d 20%, #ec4899 40%, #f9a8d4 60%, #fce7f3 80%, #fdf2f8 100%);
+  background-size: 400% 400%;
+  animation: hhrp-bg-flow 22s ease infinite;
+}
+
+/* === Universelle Keyframes === */
+@keyframes hhrp-bg-flow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes hhrp-bg-vertical {
+  0%   { background-position: 50% 0%; }
+  50%  { background-position: 50% 100%; }
+  100% { background-position: 50% 0%; }
+}

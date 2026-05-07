@@ -364,22 +364,29 @@ export default function RootClientLayout({ children }) {
             ...(customBg ? { position: 'relative' } : {})
           }}>
           {customBg && !datensparmodus && (
-            <div 
-              style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundImage: `url(${getBgUrl(customBg)})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundAttachment: 'fixed',
-                opacity: 0.15,
-                zIndex: 0,
-                pointerEvents: 'none'
-              }}
-            />
+            customBg.startsWith('animated:') ? (
+              <div
+                className={`hhrp-anim-bg hhrp-anim-${customBg.replace('animated:', '')}`}
+                aria-hidden="true"
+              />
+            ) : (
+              <div 
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundImage: `url(${getBgUrl(customBg)})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundAttachment: 'fixed',
+                  opacity: 0.15,
+                  zIndex: 0,
+                  pointerEvents: 'none'
+                }}
+              />
+            )
           )}
           <WartungsBanner />
           <LayoutContent>{children}</LayoutContent>
