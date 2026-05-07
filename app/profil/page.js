@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '@/components/providers/AuthProvider';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import DailyBonusCard from '@/components/DailyBonusCard';
 import AnimatedValue from '@/components/AnimatedValue';
 import Pagination from '@/components/Pagination';
@@ -1256,7 +1256,6 @@ export default function ProfilPage() {
   }, [lastSubTabs]);
 
   // URL-Sync: Initiale Werte aus URL lesen (?tab=...&sub=...)
-  const searchParamsHook = useSearchParams();
   useEffect(() => {
     if (urlInitialized.current) return;
     if (typeof window === 'undefined') return;
