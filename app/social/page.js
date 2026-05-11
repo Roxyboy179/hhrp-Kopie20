@@ -137,7 +137,7 @@ export default function SocialPage() {
 function YouTubeCard({ yt }) {
   const data = yt.data;
   const profileUrl =
-    data?.profileUrl || 'https://www.youtube.com/@hamburghorizonrphhrp';
+    data?.profileUrl || 'https://www.youtube.com/@not_ung';
   const videos = Array.isArray(data?.videos) ? data.videos : [];
   const latest = videos[0];
   const rest = videos.slice(1, 4);
@@ -172,7 +172,7 @@ function YouTubeCard({ yt }) {
               YouTube
             </h2>
             <p className="text-[11.5px] text-white/45 truncate">
-              {data?.handle || '@hamburghorizonrphhrp'}
+              {data?.handle || '@not_ung'}
             </p>
           </div>
         </div>
