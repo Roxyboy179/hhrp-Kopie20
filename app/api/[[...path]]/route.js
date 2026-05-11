@@ -6167,7 +6167,7 @@ async function handleCreateTeamBeschwerde(request) {
 
 
 // ===== Social Media: YouTube & TikTok Latest Video =====
-const SOCIAL_YT_HANDLE = 'hamburghorizonrphhrp';
+const SOCIAL_YT_HANDLE = 'not_ung';
 const SOCIAL_TT_HANDLE = 'hamburghorizonrp';
 const SOCIAL_CACHE_TTL_MS = 10 * 60 * 1000; // 10 min
 
