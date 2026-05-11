@@ -39,7 +39,7 @@ Der Build-Log sollte dann zeigen:
 ## Verification
 
 Nach erfolgreichem Deploy:
-1. Öffne https://hhrp-radio.preview.emergentagent.com/admin
+1. Öffne https://apply-guard.preview.emergentagent.com/admin
 2. Teste Login mit:
    - Mitarbeiter-Nummer: MA-001
    - Username: roxyboy2474
