@@ -144,6 +144,11 @@ function DiscordFlow({ onBack, onClose, refreshUser }) {
             {errorCode === 'account_locked' ? 'Account gesperrt' : 'Anmeldung fehlgeschlagen'}
           </p>
           <p className="text-sm text-white/60 text-center px-4">{errorMessage}</p>
+          {errorCode && (
+            <p className="text-[10px] text-white/30 font-mono text-center">
+              Code: {errorCode}
+            </p>
+          )}
           {errorCode === 'account_locked' ? (
             <div className="flex flex-col gap-2 mt-2 w-full px-4">
               <Link
