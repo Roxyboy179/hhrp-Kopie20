@@ -43,6 +43,7 @@ import {
   resetFailedAttempts,
   deleteSupabaseAccount,
 } from '@/lib/supabase-auth';
+import { sendAccountLockedEmail } from '@/lib/email-sender';
 
 // Web Push Configuration
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -181,6 +182,20 @@ async function getGuildMember(userId) {
     return member;
   } catch (error) {
     console.error('[DEBUG] Exception in getGuildMember:', error);
+    return null;
+  }
+}
+
+async function getDiscordUsername(userId) {
+  try {
+    const res = await fetch(`https://discord.com/api/v10/users/${userId}`, {
+      headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` },
+    });
+    if (!res.ok) return null;
+    const user = await res.json();
+    return user.global_name || user.username || null;
+  } catch (error) {
+    console.error('[getDiscordUsername] error:', error);
     return null;
   }
 }
@@ -470,6 +485,15 @@ async function handleSupabaseLogin(request) {
         if (link) {
           const updatedLink = await incrementFailedAttempts(email);
           if (updatedLink?.locked_at) {
+            // E-Mail-Benachrichtigung bei Account-Sperrung
+            try {
+              const discordUsername = link.discord_user_id ? await getDiscordUsername(link.discord_user_id) : null;
+              await sendAccountLockedEmail(email, discordUsername || 'HHRP-Mitglied');
+            } catch (emailErr) {
+              console.error('[supabase-login] E-Mail-Versand fehlgeschlagen:', emailErr);
+              // Weiter machen, auch wenn E-Mail fehlschlägt
+            }
+            
             return NextResponse.json({
               error: 'Zu viele Fehlversuche. Dein Account wurde gesperrt. Bitte setze dein Passwort zurück.',
               code: 'ACCOUNT_LOCKED',
