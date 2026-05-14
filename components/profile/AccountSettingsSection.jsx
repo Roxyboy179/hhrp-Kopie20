@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import {
   UserCheck, Mail, KeyRound, ShieldCheck, ShieldAlert, Loader2,
-  CheckCircle2, AlertCircle, RefreshCw, Eye, EyeOff
+  CheckCircle2, AlertCircle, RefreshCw, Eye, EyeOff, ArrowRight, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -11,13 +12,7 @@ export default function AccountSettingsSection({ discordEmail }) {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState(null); // { hasAccount, email, emailVerified, ... }
 
-  // Sign-up form
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-
-  // Change password form
+  // Change password form (nur wenn Konto vorhanden)
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [newPwConfirm, setNewPwConfirm] = useState('');
@@ -43,37 +38,6 @@ export default function AccountSettingsSection({ discordEmail }) {
   useEffect(() => {
     loadStatus();
   }, [loadStatus]);
-
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    if (password.length < 8) {
-      toast.error('Passwort muss mindestens 8 Zeichen lang sein');
-      return;
-    }
-    if (password !== confirmPassword) {
-      toast.error('Passwörter stimmen nicht überein');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const res = await fetch('/api/auth/supabase/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ password }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Fehler');
-      toast.success('Konto erstellt! Bitte bestätige deine E-Mail.');
-      setPassword('');
-      setConfirmPassword('');
-      await loadStatus();
-    } catch (err) {
-      toast.error(err.message || 'Konto-Erstellung fehlgeschlagen');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   const handleResend = async () => {
     if (!status?.email) return;
@@ -155,134 +119,65 @@ export default function AccountSettingsSection({ discordEmail }) {
     );
   }
 
-  // === Kein Konto vorhanden -> Erstellen ===
+  // === Kein Konto vorhanden -> Call-to-Action zu eigener Seite ===
   if (!status?.hasAccount) {
-    const emailToUse = status?.discordEmail || discordEmail || '';
     return (
-      <div className="glass rounded-2xl p-6 border border-white/[0.08]">
-        <div className="flex items-center gap-3 mb-5">
+      <div
+        className="glass rounded-2xl p-6 md:p-8 border border-white/[0.08]"
+        style={{ background: 'rgba(8, 8, 8, 0.45)' }}
+      >
+        <div className="flex items-center gap-4 mb-5">
           <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center"
+            className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
             style={{
               background: 'rgba(var(--theme-accent-rgb), 0.12)',
               border: '1px solid rgba(var(--theme-accent-rgb), 0.25)',
             }}
           >
-            <UserCheck className="w-5 h-5" style={{ color: 'var(--theme-accent)' }} />
+            <UserCheck className="w-6 h-6" style={{ color: 'var(--theme-accent)' }} />
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-white">Mein Konto erstellen</h2>
-            <p className="text-xs text-white/40">
-              Erstelle einen Login mit E-Mail + Passwort (verknüpft mit deinem Discord)
+          <div className="min-w-0">
+            <h2 className="text-lg md:text-xl font-bold text-white">Du hast noch kein Login-Konto</h2>
+            <p className="text-xs md:text-sm text-white/45 mt-0.5">
+              Erstelle einen Login mit E-Mail-Adresse und Passwort
             </p>
           </div>
         </div>
 
-        {!emailToUse ? (
-          <div
-            className="rounded-xl p-4 text-sm flex items-start gap-2"
-            style={{
-              background: 'rgba(239,68,68,0.06)',
-              border: '1px solid rgba(239,68,68,0.2)',
-            }}
-          >
-            <AlertCircle className="w-4 h-4 text-red-400 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-red-300 font-medium">Discord-Email fehlt</p>
-              <p className="text-red-300/70 text-xs mt-1">
-                Bitte melde dich erneut mit Discord an, damit wir deine E-Mail-Adresse erhalten.
-              </p>
-            </div>
+        <div className="space-y-2.5 mb-6">
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+            <Mail className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--theme-accent)' }} />
+            <p className="text-xs md:text-sm text-white/70">
+              Email-Login mit deiner Discord-Email — schneller anmelden ohne Discord-Popup.
+            </p>
           </div>
-        ) : (
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-white/60 mb-1.5">
-                E-Mail-Adresse <span className="text-white/30">(automatisch von Discord)</span>
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                <input
-                  type="email"
-                  value={emailToUse}
-                  disabled
-                  readOnly
-                  className="w-full pl-10 pr-3 py-3 bg-white/[0.02] border border-white/10 rounded-xl text-white/70 text-sm cursor-not-allowed"
-                />
-              </div>
-              <p className="text-[11px] text-white/35 mt-1.5">
-                Die E-Mail ist mit deinem Discord-Account verknüpft und kann nicht geändert werden.
-              </p>
-            </div>
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+            <KeyRound className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--theme-accent)' }} />
+            <p className="text-xs md:text-sm text-white/70">
+              Sicheres eigenes Passwort — bei Bedarf jederzeit zurücksetzbar.
+            </p>
+          </div>
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+            <ShieldCheck className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: 'var(--theme-accent)' }} />
+            <p className="text-xs md:text-sm text-white/70">
+              Mit Discord-Account verknüpft — Server-Rollen & Berechtigungen bleiben erhalten.
+            </p>
+          </div>
+        </div>
 
-            <div>
-              <label className="block text-xs font-medium text-white/60 mb-1.5">Passwort</label>
-              <div className="relative">
-                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-                <input
-                  type={showPw ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  className="w-full pl-10 pr-10 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-white/25 text-sm"
-                  placeholder="Mindestens 8 Zeichen"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
-                >
-                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
+        <Link
+          href="/konto-erstellen"
+          className="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm md:text-base transition"
+          style={{ background: 'var(--theme-accent)', color: '#000' }}
+        >
+          <Sparkles className="w-4 h-4" />
+          Konto jetzt erstellen
+          <ArrowRight className="w-4 h-4" />
+        </Link>
 
-            <div>
-              <label className="block text-xs font-medium text-white/60 mb-1.5">
-                Passwort wiederholen
-              </label>
-              <input
-                type={showPw ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={8}
-                className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-white/25 text-sm"
-              />
-            </div>
-
-            <div
-              className="rounded-xl p-3 text-xs flex items-start gap-2"
-              style={{
-                background: 'rgba(var(--theme-accent-rgb), 0.06)',
-                border: '1px solid rgba(var(--theme-accent-rgb), 0.15)',
-              }}
-            >
-              <Mail className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" style={{ color: 'var(--theme-accent)' }} />
-              <p className="text-white/60">
-                Nach der Erstellung schicken wir dir eine Bestätigungs-Mail. Du kannst dich erst
-                einloggen, wenn du deine E-Mail verifiziert hast.
-              </p>
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 disabled:opacity-50"
-              style={{ background: 'var(--theme-accent)', color: '#000' }}
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Erstelle Konto…
-                </>
-              ) : (
-                'Konto erstellen'
-              )}
-            </button>
-          </form>
-        )}
+        <p className="text-[11px] md:text-xs text-white/35 text-center mt-3">
+          Die E-Mail wird automatisch von deinem Discord-Account übernommen.
+        </p>
       </div>
     );
   }

@@ -268,7 +268,7 @@ export default function HomePage() {
               </div>
             ) : (
               <button
-                onClick={() => setLoginModalOpen(true)}
+                onClick={() => router.push('/login?mode=discord')}
                 className="inline-flex items-center justify-center gap-3 px-10 py-4 lg:px-12 lg:py-5 rounded-2xl text-base lg:text-lg font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
                 style={{ 
                   background: 'var(--theme-accent)',
@@ -300,7 +300,7 @@ export default function HomePage() {
               variant="landing"
               onClick={() => {
                 if (user) router.push('/profil?tab=shop');
-                else setLoginModalOpen(true);
+                else router.push('/login');
               }}
             />
           </div>
@@ -708,7 +708,7 @@ export default function HomePage() {
               </Button>
             ) : (
               <button
-                onClick={() => setLoginModalOpen(true)}
+                onClick={() => router.push('/login?mode=discord')}
                 className="inline-flex items-center justify-center gap-3 px-10 md:px-12 py-4 md:py-5 rounded-2xl text-base md:text-lg font-bold transition-all hover:scale-[1.02] active:scale-[0.98]"
                 style={{ 
                   background: 'var(--theme-accent)',
@@ -723,8 +723,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Login Modal */}
-      <LoginModal open={loginModalOpen} onOpenChange={setLoginModalOpen} />
+      {/* Login Modal entfernt — Login ist jetzt eine eigene Seite unter /login */}
     </div>
   );
 }

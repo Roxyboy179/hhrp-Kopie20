@@ -158,7 +158,7 @@ export function Navbar({ user, loading }) {
                         key={n.id}
                         onClick={(e) => {
                           e.preventDefault();
-                          setLoginModalOpen(true);
+                          router.push('/login');
                         }}
                         className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 whitespace-nowrap ${
                           isActive
@@ -393,7 +393,7 @@ export function Navbar({ user, loading }) {
               <button
                 onClick={(e) => {
                   e.preventDefault();
-                  setLoginModalOpen(true);
+                  router.push('/login');
                 }}
                 className="flex items-center gap-2 text-white px-3 sm:px-4 py-2 rounded-xl text-sm font-medium transition-all hover:scale-105 active:scale-95"
                 style={{
@@ -498,7 +498,7 @@ export function Navbar({ user, loading }) {
                       key={n.id}
                       onClick={(e) => {
                         e.preventDefault();
-                        setLoginModalOpen(true);
+                        router.push('/login');
                         setMobileOpen(false);
                       }}
                       className="w-full text-left px-3 py-2.5 rounded-lg text-[13px] text-white/70 hover:bg-white/[0.05] active:bg-white/[0.07] transition-all flex items-center gap-3"
@@ -637,7 +637,7 @@ export function Navbar({ user, loading }) {
               <button
                 onClick={() => {
                   setMobileOpen(false);
-                  setLoginModalOpen(true);
+                  router.push('/login');
                 }}
                 className="w-full mt-2 px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2"
                 style={{
