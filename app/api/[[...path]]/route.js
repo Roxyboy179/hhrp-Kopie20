@@ -10444,3 +10444,4 @@ async function handleVoiceSupportAdminEnd(request, sessionId) {
     return NextResponse.json({ error: 'Server-Fehler' }, { status: 500 });
   }
 }
+
