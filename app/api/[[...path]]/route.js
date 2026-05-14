@@ -41,6 +41,7 @@ import {
   getSupabaseAuthStatus,
   incrementFailedAttempts,
   resetFailedAttempts,
+  checkIfAccountLocked,
   deleteSupabaseAccount,
 } from '@/lib/supabase-auth';
 import { sendAccountLockedEmail } from '@/lib/email-sender';
@@ -451,7 +452,7 @@ async function handleSupabaseSignup(request) {
 /**
  * POST /api/auth/supabase/login
  * Email/Passwort-Login. Prüft Discord-Server-Mitgliedschaft & setzt auth_token-Cookie.
- * AUTO-BAN: Nach 3 Fehlversuchen wird der Account gesperrt.
+ * AUTO-BAN: Nach 3 Fehlversuchen wird der Account gesperrt (für JEDE E-Mail, auch ohne Discord-Link).
  */
 async function handleSupabaseLogin(request) {
   try {
@@ -461,9 +462,9 @@ async function handleSupabaseLogin(request) {
       return NextResponse.json({ error: 'E-Mail und Passwort erforderlich' }, { status: 400 });
     }
 
-    // 1. Prüfe ob Account bereits gesperrt ist
-    const link = await getLinkByEmail(email);
-    if (link && link.locked_at) {
+    // 1. Prüfe ob Account bereits gesperrt ist (funktioniert auch ohne Discord-Link!)
+    const isLocked = await checkIfAccountLocked(email);
+    if (isLocked) {
       return NextResponse.json({
         error: 'Dein Account wurde nach 3 fehlgeschlagenen Login-Versuchen gesperrt. Bitte setze dein Passwort zurück, um den Account zu entsperren.',
         code: 'ACCOUNT_LOCKED',
@@ -481,31 +482,36 @@ async function handleSupabaseLogin(request) {
         }, { status: 403 });
       }
       if (e?.message === 'INVALID_CREDENTIALS') {
-        // Fehlversuch zählen (Auto-Ban nach 3 Versuchen)
-        if (link) {
-          const updatedLink = await incrementFailedAttempts(email);
-          if (updatedLink?.locked_at) {
-            // E-Mail-Benachrichtigung bei Account-Sperrung
-            try {
-              const discordUsername = link.discord_user_id ? await getDiscordUsername(link.discord_user_id) : null;
-              await sendAccountLockedEmail(email, discordUsername || 'HHRP-Mitglied');
-            } catch (emailErr) {
-              console.error('[supabase-login] E-Mail-Versand fehlgeschlagen:', emailErr);
-              // Weiter machen, auch wenn E-Mail fehlschlägt
-            }
-            
-            return NextResponse.json({
-              error: 'Zu viele Fehlversuche. Dein Account wurde gesperrt. Bitte setze dein Passwort zurück.',
-              code: 'ACCOUNT_LOCKED',
-            }, { status: 403 });
+        // Fehlversuch zählen (funktioniert für JEDE E-Mail!)
+        const updatedData = await incrementFailedAttempts(email);
+        
+        if (updatedData?.locked_at) {
+          // E-Mail-Benachrichtigung bei Account-Sperrung
+          try {
+            const link = await getLinkByEmail(email);
+            const discordUsername = link?.discord_user_id 
+              ? await getDiscordUsername(link.discord_user_id) 
+              : null;
+            await sendAccountLockedEmail(email, discordUsername || 'HHRP-Mitglied');
+          } catch (emailErr) {
+            console.error('[supabase-login] E-Mail-Versand fehlgeschlagen:', emailErr);
           }
-          const remaining = 3 - (updatedLink?.failed_login_attempts || 0);
+          
+          return NextResponse.json({
+            error: 'Zu viele Fehlversuche. Dein Account wurde gesperrt. Bitte setze dein Passwort zurück.',
+            code: 'ACCOUNT_LOCKED',
+          }, { status: 403 });
+        }
+        
+        if (updatedData) {
+          const remaining = 3 - (updatedData.failed_login_attempts || 0);
           if (remaining > 0 && remaining < 3) {
             return NextResponse.json({
               error: `E-Mail oder Passwort falsch. Noch ${remaining} Versuch${remaining === 1 ? '' : 'e'} übrig.`,
             }, { status: 401 });
           }
         }
+        
         return NextResponse.json({ error: 'E-Mail oder Passwort falsch' }, { status: 401 });
       }
       console.error('[supabase-login] error:', e);
@@ -518,6 +524,7 @@ async function handleSupabaseLogin(request) {
     }
 
     // Discord-Verknüpfung laden
+    const link = await getLinkByEmail(email);
     if (!link) {
       return NextResponse.json({
         error: 'Dein Account ist nicht mit Discord verknüpft. Bitte logge dich zuerst über Discord ein.',
@@ -525,9 +532,7 @@ async function handleSupabaseLogin(request) {
     }
 
     // Login erfolgreich -> Fehlversuche zurücksetzen
-    if (link.failed_login_attempts > 0 || link.locked_at) {
-      await resetFailedAttempts(email);
-    }
+    await resetFailedAttempts(email);
 
     // Server-Mitgliedschaft prüfen
     const member = await getGuildMember(link.discord_user_id);
@@ -10444,4 +10449,3 @@ async function handleVoiceSupportAdminEnd(request, sessionId) {
     return NextResponse.json({ error: 'Server-Fehler' }, { status: 500 });
   }
 }
-
