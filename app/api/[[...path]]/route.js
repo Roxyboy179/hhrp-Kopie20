@@ -795,6 +795,10 @@ async function handleSupabaseDeleteAccount(request) {
       return NextResponse.json({ error: 'Kein Login-Account vorhanden' }, { status: 404 });
     }
 
+    // E-Mail/Username VOR dem Löschen merken (wird sonst aus Tabelle entfernt)
+    const emailForNotice = link.email;
+    const usernameForNotice = discordUser.username || discordUser.globalName || null;
+
     try {
       await deleteSupabaseAccount(discordUser.id);
     } catch (e) {
@@ -815,6 +819,18 @@ async function handleSupabaseDeleteAccount(request) {
         ipAddress: getIpAddress(request),
       });
     } catch (e) { /* noop */ }
+
+    // Bestätigungs-Mail senden (Best-Effort, blockiert die Response nicht)
+    if (emailForNotice) {
+      try {
+        const { sendAccountDeletedEmail } = await import('@/lib/email-sender');
+        sendAccountDeletedEmail(emailForNotice, usernameForNotice).catch((err) => {
+          console.warn('[supabase-delete] mail send failed (non-blocking):', err?.message || err);
+        });
+      } catch (mailErr) {
+        console.warn('[supabase-delete] mail module load failed:', mailErr?.message || mailErr);
+      }
+    }
 
     return NextResponse.json({
       success: true,
