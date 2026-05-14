@@ -102,7 +102,7 @@ is_active: true
 
 ### 3. Login testen
 
-**URL:** https://account-security-43.preview.emergentagent.com/admin
+**URL:** https://hhrp-2fa-system.preview.emergentagent.com/admin
 
 **Eingeben:**
 - Mitarbeiter-Nummer: `MA-001`

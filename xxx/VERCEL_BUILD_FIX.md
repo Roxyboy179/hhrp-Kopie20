@@ -39,7 +39,7 @@ Der Build-Log sollte dann zeigen:
 ## Verification
 
 Nach erfolgreichem Deploy:
-1. Öffne https://account-security-43.preview.emergentagent.com/admin
+1. Öffne https://hhrp-2fa-system.preview.emergentagent.com/admin
 2. Teste Login mit:
    - Mitarbeiter-Nummer: MA-001
    - Username: roxyboy2474
