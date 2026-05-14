@@ -39,6 +39,9 @@ import {
   resendVerificationEmail as supabaseResendVerification,
   changePasswordWithCurrent as supabaseChangePassword,
   getSupabaseAuthStatus,
+  incrementFailedAttempts,
+  resetFailedAttempts,
+  deleteSupabaseAccount,
 } from '@/lib/supabase-auth';
 
 // Web Push Configuration
@@ -433,6 +436,7 @@ async function handleSupabaseSignup(request) {
 /**
  * POST /api/auth/supabase/login
  * Email/Passwort-Login. Prüft Discord-Server-Mitgliedschaft & setzt auth_token-Cookie.
+ * AUTO-BAN: Nach 3 Fehlversuchen wird der Account gesperrt.
  */
 async function handleSupabaseLogin(request) {
   try {
@@ -440,6 +444,15 @@ async function handleSupabaseLogin(request) {
     const { email, password } = body || {};
     if (!email || !password) {
       return NextResponse.json({ error: 'E-Mail und Passwort erforderlich' }, { status: 400 });
+    }
+
+    // 1. Prüfe ob Account bereits gesperrt ist
+    const link = await getLinkByEmail(email);
+    if (link && link.locked_at) {
+      return NextResponse.json({
+        error: 'Dein Account wurde nach 3 fehlgeschlagenen Login-Versuchen gesperrt. Bitte setze dein Passwort zurück, um den Account zu entsperren.',
+        code: 'ACCOUNT_LOCKED',
+      }, { status: 403 });
     }
 
     let supaResult;
@@ -453,6 +466,22 @@ async function handleSupabaseLogin(request) {
         }, { status: 403 });
       }
       if (e?.message === 'INVALID_CREDENTIALS') {
+        // Fehlversuch zählen (Auto-Ban nach 3 Versuchen)
+        if (link) {
+          const updatedLink = await incrementFailedAttempts(email);
+          if (updatedLink?.locked_at) {
+            return NextResponse.json({
+              error: 'Zu viele Fehlversuche. Dein Account wurde gesperrt. Bitte setze dein Passwort zurück.',
+              code: 'ACCOUNT_LOCKED',
+            }, { status: 403 });
+          }
+          const remaining = 3 - (updatedLink?.failed_login_attempts || 0);
+          if (remaining > 0 && remaining < 3) {
+            return NextResponse.json({
+              error: `E-Mail oder Passwort falsch. Noch ${remaining} Versuch${remaining === 1 ? '' : 'e'} übrig.`,
+            }, { status: 401 });
+          }
+        }
         return NextResponse.json({ error: 'E-Mail oder Passwort falsch' }, { status: 401 });
       }
       console.error('[supabase-login] error:', e);
@@ -465,11 +494,15 @@ async function handleSupabaseLogin(request) {
     }
 
     // Discord-Verknüpfung laden
-    const link = await getLinkByEmail(email);
     if (!link) {
       return NextResponse.json({
         error: 'Dein Account ist nicht mit Discord verknüpft. Bitte logge dich zuerst über Discord ein.',
       }, { status: 403 });
+    }
+
+    // Login erfolgreich -> Fehlversuche zurücksetzen
+    if (link.failed_login_attempts > 0 || link.locked_at) {
+      await resetFailedAttempts(email);
     }
 
     // Server-Mitgliedschaft prüfen
@@ -600,24 +633,33 @@ async function handleSupabaseResendVerification(request) {
 /**
  * POST /api/auth/supabase/update-password
  * Zwei Modi:
- *   1) Mit accessToken aus Recovery-Mail (User nicht eingeloggt)
+ *   1) Mit accessToken aus Recovery-Mail (User nicht eingeloggt) -> Setzt failed_attempts zurück (Auto-Unban)
  *   2) Mit currentPassword (User eingeloggt – kennt sein aktuelles PW)
  */
 async function handleSupabaseUpdatePassword(request) {
   try {
     const body = await request.json();
-    const { newPassword, accessToken, currentPassword } = body || {};
+    const { newPassword, accessToken, currentPassword, email: providedEmail } = body || {};
 
     if (!newPassword || newPassword.length < 8) {
       return NextResponse.json({ error: 'Passwort muss mindestens 8 Zeichen lang sein' }, { status: 400 });
     }
 
-    // Modus 1: Recovery-Link
+    // Modus 1: Recovery-Link (AUTO-UNBAN)
     if (accessToken) {
       try {
         const { updatePasswordWithToken } = await import('@/lib/supabase-auth');
-        await updatePasswordWithToken(accessToken, newPassword);
-        return NextResponse.json({ success: true, message: 'Passwort aktualisiert' });
+        const result = await updatePasswordWithToken(accessToken, newPassword);
+        
+        // Fehlversuche zurücksetzen (Auto-Unban)
+        if (result?.user?.email) {
+          await resetFailedAttempts(result.user.email);
+        }
+        
+        return NextResponse.json({
+          success: true,
+          message: 'Passwort aktualisiert und Account entsperrt'
+        });
       } catch (e) {
         console.error('[supabase-update-pw token] error:', e);
         return NextResponse.json({
@@ -646,6 +688,9 @@ async function handleSupabaseUpdatePassword(request) {
         currentPassword,
         newPassword,
       });
+      
+      // Fehlversuche zurücksetzen nach erfolgreicher Passwortänderung
+      await resetFailedAttempts(link.email);
     } catch (e) {
       if (e?.message === 'INVALID_CREDENTIALS') {
         return NextResponse.json({ error: 'Aktuelles Passwort ist falsch' }, { status: 401 });
@@ -702,6 +747,53 @@ async function handleSupabaseStatus(request) {
   } catch (error) {
     console.error('[supabase-status] error:', error);
     return NextResponse.json({ hasAccount: false }, { status: 200 });
+  }
+}
+
+/**
+ * DELETE /api/auth/supabase/delete-account
+ * Löscht den Supabase-Account des eingeloggten Users (sofortige Löschung).
+ */
+async function handleSupabaseDeleteAccount(request) {
+  try {
+    const discordUser = getUserFromRequest(request);
+    if (!discordUser) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+
+    const link = await getLinkByDiscordId(discordUser.id);
+    if (!link) {
+      return NextResponse.json({ error: 'Kein Login-Account vorhanden' }, { status: 404 });
+    }
+
+    try {
+      await deleteSupabaseAccount(discordUser.id);
+    } catch (e) {
+      if (e?.message === 'ACCOUNT_NOT_FOUND') {
+        return NextResponse.json({ error: 'Kein Account gefunden' }, { status: 404 });
+      }
+      console.error('[supabase-delete] error:', e);
+      return NextResponse.json({ error: 'Konto-Löschung fehlgeschlagen' }, { status: 500 });
+    }
+
+    // Activity Log
+    try {
+      await logActivity({
+        actionType: LOG_ACTIONS.USER_ACCOUNT_DELETED || 'USER_ACCOUNT_DELETED',
+        userId: discordUser.id,
+        username: discordUser.username || discordUser.globalName,
+        details: { email: link.email },
+        ipAddress: getIpAddress(request),
+      });
+    } catch (e) { /* noop */ }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Dein Login-Account wurde erfolgreich gelöscht.'
+    });
+  } catch (error) {
+    console.error('[supabase-delete] unexpected:', error);
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
   }
 }
 
@@ -5769,6 +5861,10 @@ export async function DELETE(request) {
   
   if (p.startsWith('admin/accounts/')) {
     return handleAdminDeleteAccount(request, p.substring('admin/accounts/'.length));
+  }
+
+  if (p === 'auth/supabase/delete-account') {
+    return handleSupabaseDeleteAccount(request);
   }
 
   return NextResponse.json({ error: 'Not found' }, { status: 404 });
