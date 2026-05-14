@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LogOut, Menu, X, Globe, FileText, Eye, Settings, User, Loader2,
   Users, ChevronDown, FlaskConical, Headphones, Radio, Play, Palette, Smartphone,
-  Sparkles
+  Sparkles, UserPlus, ShieldCheck
 } from 'lucide-react';
 import { NotificationBell } from '@/components/shared/NotificationBell';
 import { LoginModal } from '@/components/LoginModal';
@@ -66,6 +66,7 @@ export function Navbar({ user, loading }) {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [themeModalOpen, setThemeModalOpen] = useState(false);
   const [installModalOpen, setInstallModalOpen] = useState(false);
+  const [supabaseAccount, setSupabaseAccount] = useState(null); // { hasAccount, emailVerified, ... }
   const pathname = usePathname();
   const router = useRouter();
   const { refreshUser } = useAuth();
@@ -80,6 +81,24 @@ export function Navbar({ user, loading }) {
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
+
+  // Supabase-Konto-Status laden (für „Konto erstellen" / „Mein Konto" Menü)
+  useEffect(() => {
+    if (!user) {
+      setSupabaseAccount(null);
+      return;
+    }
+    let cancelled = false;
+    fetch('/api/auth/supabase/status', { credentials: 'include' })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!cancelled) setSupabaseAccount(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user, pathname]);
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
@@ -103,12 +122,37 @@ export function Navbar({ user, loading }) {
     : null;
 
   // Items für Dropdown / Mobile (DRY)
+  const accountItem = supabaseAccount?.hasAccount
+    ? {
+        id: 'mein-konto',
+        label: 'Mein Konto',
+        icon: ShieldCheck,
+        color: 'rgb(34, 197, 94)',
+        onClick: () => router.push('/mein-konto'),
+        badge: supabaseAccount?.emailVerified ? null : '!', // gelbes ! wenn unbestätigt
+      }
+    : {
+        id: 'konto-erstellen',
+        label: 'Konto erstellen',
+        icon: UserPlus,
+        color: 'rgb(34, 197, 94)',
+        onClick: () => router.push('/konto-erstellen'),
+      };
+
+  // Account-Items für Dropdown (immer Profil anzeigen, accountItem nur wenn supabaseAccount geladen)
+  const accountItems = [
+    { id: 'profil', label: 'Profil', icon: User, color: 'rgb(99, 102, 241)', onClick: () => router.push('/profil') },
+  ];
+  
+  // Füge accountItem nur hinzu, wenn supabaseAccount-Status geladen wurde
+  if (supabaseAccount !== null) {
+    accountItems.push(accountItem);
+  }
+
   const dropdownSections = [
     {
       label: 'Account',
-      items: [
-        { id: 'profil', label: 'Profil', icon: User, color: 'rgb(99, 102, 241)', onClick: () => router.push('/profil') },
-      ],
+      items: accountItems,
     },
     {
       label: 'Services',
@@ -339,7 +383,7 @@ export function Navbar({ user, loading }) {
                               className="cursor-pointer flex items-center gap-3 px-2.5 py-2 mx-0.5 rounded-lg text-white/75 hover:text-white focus:text-white hover:bg-white/[0.05] focus:bg-white/[0.05] transition-colors"
                             >
                               <span
-                                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                                className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 relative"
                                 style={{
                                   background: `${it.color.replace('rgb', 'rgba').replace(')', ', 0.12)')}`,
                                   border: `1px solid ${it.color
@@ -351,8 +395,19 @@ export function Navbar({ user, loading }) {
                                   className="w-3.5 h-3.5"
                                   style={{ color: it.color }}
                                 />
+                                {it.badge && (
+                                  <span
+                                    className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold"
+                                    style={{
+                                      background: 'rgb(234, 179, 8)',
+                                      color: '#000',
+                                    }}
+                                  >
+                                    {it.badge}
+                                  </span>
+                                )}
                               </span>
-                              <span className="text-[13px] font-medium">{it.label}</span>
+                              <span className="text-[13px] font-medium flex-1">{it.label}</span>
                             </DropdownMenuItem>
                           ))}
                         </div>
