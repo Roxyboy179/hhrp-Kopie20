@@ -795,8 +795,9 @@ async function handleSupabaseDeleteAccount(request) {
       return NextResponse.json({ error: 'Kein Login-Account vorhanden' }, { status: 404 });
     }
 
-    // E-Mail/Username VOR dem Löschen merken (wird sonst aus Tabelle entfernt)
-    const emailForNotice = link.email;
+    // E-Mail/Username VOR dem Löschen merken (Link wird sonst entfernt)
+    const supaEmail = link.email ? String(link.email).toLowerCase() : null;
+    const discordEmail = discordUser.email ? String(discordUser.email).toLowerCase() : null;
     const usernameForNotice = discordUser.username || discordUser.globalName || null;
 
     try {
@@ -820,16 +821,26 @@ async function handleSupabaseDeleteAccount(request) {
       });
     } catch (e) { /* noop */ }
 
-    // Bestätigungs-Mail senden (Best-Effort, blockiert die Response nicht)
-    if (emailForNotice) {
-      try {
-        const { sendAccountDeletedEmail } = await import('@/lib/email-sender');
-        sendAccountDeletedEmail(emailForNotice, usernameForNotice).catch((err) => {
-          console.warn('[supabase-delete] mail send failed (non-blocking):', err?.message || err);
-        });
-      } catch (mailErr) {
-        console.warn('[supabase-delete] mail module load failed:', mailErr?.message || mailErr);
-      }
+    // Bestätigungs-Mail an alle bekannten Adressen senden (Discord-Email + Supabase-Email).
+    // Wir warten auf den Versand und loggen das Ergebnis, damit wir Probleme sehen.
+    try {
+      const { sendAccountDeletedEmail } = await import('@/lib/email-sender');
+      const recipients = [supaEmail, discordEmail].filter(
+        (e, i, arr) => !!e && arr.indexOf(e) === i
+      );
+      console.log('[supabase-delete] sending farewell mail to:', recipients);
+      const results = await Promise.allSettled(
+        recipients.map((to) => sendAccountDeletedEmail(to, usernameForNotice))
+      );
+      results.forEach((r, i) => {
+        if (r.status === 'rejected') {
+          console.error('[supabase-delete] mail rejected for', recipients[i], r.reason?.message || r.reason);
+        } else {
+          console.log('[supabase-delete] mail status for', recipients[i], '=', r.value);
+        }
+      });
+    } catch (mailErr) {
+      console.warn('[supabase-delete] mail module load failed:', mailErr?.message || mailErr);
     }
 
     return NextResponse.json({
