@@ -29,6 +29,17 @@ import { logActivity, cleanupOldLogs, getLogs, getIpAddress, LOG_ACTIONS } from 
 import { createNotification, getUserNotifications, getUnreadCount, markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/notifications';
 import { RT, emitEvent } from '@/lib/realtime-bus';
 import { sendVoiceSupportWebhook, updateVoiceSupportWebhook, cleanupStaleSessions, sendVoiceSupportTranscript } from '@/lib/voice-support';
+import {
+  getLinkByDiscordId,
+  getLinkByEmail,
+  createLink,
+  signUpSupabaseUser,
+  signInWithPassword as supabaseSignIn,
+  sendPasswordResetEmail as supabaseSendResetMail,
+  resendVerificationEmail as supabaseResendVerification,
+  changePasswordWithCurrent as supabaseChangePassword,
+  getSupabaseAuthStatus,
+} from '@/lib/supabase-auth';
 
 // Web Push Configuration
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -330,7 +341,373 @@ function createStatusChangeEmbed(bewerbung, oldStatus, newStatus) {
   };
 }
 
-// ===== DISCORD OAUTH =====
+// =====================================================================
+// SUPABASE AUTH (Email/Passwort) – ergänzt Discord-OAuth
+// =====================================================================
+
+/**
+ * POST /api/auth/supabase/signup
+ * Erstellt einen Supabase-Auth-Account und verknüpft ihn mit dem aktuell
+ * via Discord eingeloggten User. Email MUSS = Discord-Email sein.
+ */
+async function handleSupabaseSignup(request) {
+  try {
+    const discordUser = getUserFromRequest(request);
+    if (!discordUser) {
+      return NextResponse.json({ error: 'Discord-Login erforderlich' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { password } = body || {};
+    if (!password || typeof password !== 'string' || password.length < 8) {
+      return NextResponse.json({ error: 'Passwort muss mindestens 8 Zeichen lang sein' }, { status: 400 });
+    }
+
+    const discordEmail = (discordUser.email || '').toLowerCase();
+    if (!discordEmail) {
+      return NextResponse.json({
+        error: 'Deine Discord-Email konnte nicht ermittelt werden. Bitte melde dich erneut mit Discord an.'
+      }, { status: 400 });
+    }
+
+    // Schon verknüpft?
+    const existingLink = await getLinkByDiscordId(discordUser.id);
+    if (existingLink) {
+      return NextResponse.json({
+        error: 'Du hast bereits einen Login-Account.'
+      }, { status: 409 });
+    }
+    const emailLink = await getLinkByEmail(discordEmail);
+    if (emailLink) {
+      return NextResponse.json({
+        error: 'Diese E-Mail ist bereits mit einem anderen Discord-Account verknüpft.'
+      }, { status: 409 });
+    }
+
+    // Supabase-Account anlegen (sendet automatisch Confirm-Mail)
+    let signUpData;
+    try {
+      signUpData = await signUpSupabaseUser({
+        email: discordEmail,
+        password,
+        discordUserId: discordUser.id,
+      });
+    } catch (e) {
+      if (e?.message === 'EMAIL_ALREADY_REGISTERED') {
+        return NextResponse.json({
+          error: 'Diese E-Mail ist bereits registriert. Bitte versuche dich einzuloggen oder dein Passwort zurückzusetzen.'
+        }, { status: 409 });
+      }
+      console.error('[supabase-signup] error:', e);
+      return NextResponse.json({ error: 'Konto-Erstellung fehlgeschlagen' }, { status: 500 });
+    }
+
+    const supabaseUserId = signUpData?.user?.id;
+    if (!supabaseUserId) {
+      return NextResponse.json({ error: 'Konto-Erstellung fehlgeschlagen' }, { status: 500 });
+    }
+
+    // Link speichern
+    try {
+      await createLink({
+        discordUserId: discordUser.id,
+        supabaseUserId,
+        email: discordEmail,
+      });
+    } catch (e) {
+      console.error('[supabase-signup] link insert failed:', e);
+      // Best effort: User wurde angelegt, Link nicht. Trotzdem Success – User bekommt Mail.
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Konto erstellt. Bitte bestätige deine E-Mail-Adresse.',
+      email: discordEmail,
+    });
+  } catch (error) {
+    console.error('[supabase-signup] unexpected error:', error);
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/auth/supabase/login
+ * Email/Passwort-Login. Prüft Discord-Server-Mitgliedschaft & setzt auth_token-Cookie.
+ */
+async function handleSupabaseLogin(request) {
+  try {
+    const body = await request.json();
+    const { email, password } = body || {};
+    if (!email || !password) {
+      return NextResponse.json({ error: 'E-Mail und Passwort erforderlich' }, { status: 400 });
+    }
+
+    let supaResult;
+    try {
+      supaResult = await supabaseSignIn({ email, password });
+    } catch (e) {
+      if (e?.message === 'EMAIL_NOT_CONFIRMED') {
+        return NextResponse.json({
+          error: 'Bitte bestätige zuerst deine E-Mail-Adresse.',
+          code: 'EMAIL_NOT_CONFIRMED',
+        }, { status: 403 });
+      }
+      if (e?.message === 'INVALID_CREDENTIALS') {
+        return NextResponse.json({ error: 'E-Mail oder Passwort falsch' }, { status: 401 });
+      }
+      console.error('[supabase-login] error:', e);
+      return NextResponse.json({ error: 'Login fehlgeschlagen' }, { status: 500 });
+    }
+
+    const supaUser = supaResult?.user;
+    if (!supaUser) {
+      return NextResponse.json({ error: 'Login fehlgeschlagen' }, { status: 500 });
+    }
+
+    // Discord-Verknüpfung laden
+    const link = await getLinkByEmail(email);
+    if (!link) {
+      return NextResponse.json({
+        error: 'Dein Account ist nicht mit Discord verknüpft. Bitte logge dich zuerst über Discord ein.',
+      }, { status: 403 });
+    }
+
+    // Server-Mitgliedschaft prüfen
+    const member = await getGuildMember(link.discord_user_id);
+    if (!member) {
+      return NextResponse.json({
+        error: 'Du bist kein Mitglied des Hamburg Horizon RP Discord-Servers.',
+      }, { status: 403 });
+    }
+
+    // Discord-Userdaten laden (für JWT)
+    let discordUsername = link.email;
+    let discordAvatar = null;
+    let discordGlobalName = null;
+    try {
+      const dRes = await fetch(`https://discord.com/api/v10/users/${link.discord_user_id}`, {
+        headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` },
+      });
+      if (dRes.ok) {
+        const dUser = await dRes.json();
+        discordUsername = dUser.username || discordUsername;
+        discordGlobalName = dUser.global_name || null;
+        discordAvatar = dUser.avatar || null;
+      }
+    } catch (e) {
+      console.warn('[supabase-login] discord user fetch failed:', e);
+    }
+
+    const adminRole = getAdminRole(member.roles || []);
+    const teamRole = isTeamMember(member.roles || []);
+
+    const tokenPayload = {
+      id: link.discord_user_id,
+      username: discordUsername,
+      globalName: discordGlobalName,
+      avatar: discordAvatar,
+      email: link.email,
+      createdAt: new Date(parseInt((BigInt(link.discord_user_id) >> 22n) + 1420070400000n)).toISOString(),
+      adminLevel: adminRole?.level || 0,
+      adminRole: adminRole?.name || null,
+      canCreateAccounts: adminRole?.canCreateAccounts || false,
+      canSeeAll: adminRole?.canSeeAll || false,
+      isTeamMember: !!(adminRole || teamRole),
+      teamRole: teamRole?.name || null,
+      authMethod: 'supabase',
+    };
+
+    const token = createToken(tokenPayload);
+
+    // Activity Log
+    try {
+      await logActivity({
+        actionType: LOG_ACTIONS.USER_LOGIN,
+        userId: link.discord_user_id,
+        username: discordUsername,
+        details: { method: 'supabase', email: link.email },
+        ipAddress: getIpAddress(request),
+      });
+    } catch (e) { /* noop */ }
+
+    const response = NextResponse.json({ success: true });
+    response.cookies.set('auth_token', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60,
+    });
+    return response;
+  } catch (error) {
+    console.error('[supabase-login] unexpected:', error);
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/auth/supabase/request-password-reset
+ * Schickt Passwort-Reset-Mail (Antwort generisch um User-Existenz nicht zu leaken).
+ */
+async function handleSupabaseRequestReset(request) {
+  try {
+    const body = await request.json();
+    const { email } = body || {};
+    if (!email) return NextResponse.json({ error: 'E-Mail erforderlich' }, { status: 400 });
+
+    try {
+      await supabaseSendResetMail(email);
+    } catch (e) {
+      console.warn('[supabase-reset] send failed:', e?.message || e);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Falls ein Konto mit dieser E-Mail existiert, wurde eine Reset-Mail verschickt.',
+    });
+  } catch (error) {
+    console.error('[supabase-reset] error:', error);
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/auth/supabase/resend-verification
+ * Sendet Bestätigungs-Mail erneut.
+ */
+async function handleSupabaseResendVerification(request) {
+  try {
+    const body = await request.json();
+    const { email } = body || {};
+    if (!email) return NextResponse.json({ error: 'E-Mail erforderlich' }, { status: 400 });
+
+    try {
+      await supabaseResendVerification(email);
+    } catch (e) {
+      console.warn('[supabase-resend] failed:', e?.message || e);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Bestätigungs-Mail wurde erneut verschickt (falls noch nicht bestätigt).',
+    });
+  } catch (error) {
+    console.error('[supabase-resend] error:', error);
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/auth/supabase/update-password
+ * Zwei Modi:
+ *   1) Mit accessToken aus Recovery-Mail (User nicht eingeloggt)
+ *   2) Mit currentPassword (User eingeloggt – kennt sein aktuelles PW)
+ */
+async function handleSupabaseUpdatePassword(request) {
+  try {
+    const body = await request.json();
+    const { newPassword, accessToken, currentPassword } = body || {};
+
+    if (!newPassword || newPassword.length < 8) {
+      return NextResponse.json({ error: 'Passwort muss mindestens 8 Zeichen lang sein' }, { status: 400 });
+    }
+
+    // Modus 1: Recovery-Link
+    if (accessToken) {
+      try {
+        const { updatePasswordWithToken } = await import('@/lib/supabase-auth');
+        await updatePasswordWithToken(accessToken, newPassword);
+        return NextResponse.json({ success: true, message: 'Passwort aktualisiert' });
+      } catch (e) {
+        console.error('[supabase-update-pw token] error:', e);
+        return NextResponse.json({
+          error: 'Link ungültig oder abgelaufen. Bitte fordere einen neuen Reset-Link an.'
+        }, { status: 400 });
+      }
+    }
+
+    // Modus 2: Eingeloggter User
+    const discordUser = getUserFromRequest(request);
+    if (!discordUser) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+    if (!currentPassword) {
+      return NextResponse.json({ error: 'Aktuelles Passwort erforderlich' }, { status: 400 });
+    }
+
+    const link = await getLinkByDiscordId(discordUser.id);
+    if (!link) {
+      return NextResponse.json({ error: 'Kein Login-Account vorhanden' }, { status: 404 });
+    }
+
+    try {
+      await supabaseChangePassword({
+        email: link.email,
+        currentPassword,
+        newPassword,
+      });
+    } catch (e) {
+      if (e?.message === 'INVALID_CREDENTIALS') {
+        return NextResponse.json({ error: 'Aktuelles Passwort ist falsch' }, { status: 401 });
+      }
+      if (e?.message === 'EMAIL_NOT_CONFIRMED') {
+        return NextResponse.json({
+          error: 'Bitte bestätige zuerst deine E-Mail.',
+          code: 'EMAIL_NOT_CONFIRMED',
+        }, { status: 403 });
+      }
+      console.error('[supabase-update-pw] error:', e);
+      return NextResponse.json({ error: 'Passwort-Änderung fehlgeschlagen' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: 'Passwort aktualisiert' });
+  } catch (error) {
+    console.error('[supabase-update-pw] unexpected:', error);
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
+  }
+}
+
+/**
+ * GET /api/auth/supabase/status
+ * Zeigt im Profil-UI an, ob der User bereits einen Email-Login-Account hat.
+ */
+async function handleSupabaseStatus(request) {
+  try {
+    const discordUser = getUserFromRequest(request);
+    if (!discordUser) {
+      return NextResponse.json({ hasAccount: false }, { status: 200 });
+    }
+
+    const link = await getLinkByDiscordId(discordUser.id);
+    if (!link) {
+      return NextResponse.json({
+        hasAccount: false,
+        discordEmail: discordUser.email || null,
+      });
+    }
+
+    let emailVerified = false;
+    try {
+      const supaUser = await getSupabaseAuthStatus(link.supabase_user_id);
+      emailVerified = !!supaUser?.email_confirmed_at;
+    } catch (e) { /* noop */ }
+
+    return NextResponse.json({
+      hasAccount: true,
+      email: link.email,
+      emailVerified,
+      createdAt: link.created_at,
+      discordEmail: discordUser.email || null,
+    });
+  } catch (error) {
+    console.error('[supabase-status] error:', error);
+    return NextResponse.json({ hasAccount: false }, { status: 200 });
+  }
+}
+
+// =====================================================================
+// DISCORD OAUTH
+// =====================================================================
 function handleDiscordAuth() {
   const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=identify%20email`;
   return NextResponse.redirect(authUrl, { status: 307 });
@@ -4612,6 +4989,7 @@ export async function GET(request) {
     case 'auth/discord': return handleDiscordAuth();
     case 'auth/callback': return handleDiscordCallback(request);
     case 'auth/me': return handleAuthMe(request);
+    case 'auth/supabase/status': return handleSupabaseStatus(request);
     case 'bewerbungen': return handleGetBewerbungen(request);
     case 'bewerbungen/stats': return handleGetBewerbungenStats(request);
     case 'bewerbung-settings': return handleGetBewerbungSettings(request);
@@ -5103,6 +5481,11 @@ export async function POST(request) {
 
   switch (p) {
     case 'auth/logout': return handleLogout(request);
+    case 'auth/supabase/signup': return handleSupabaseSignup(request);
+    case 'auth/supabase/login': return handleSupabaseLogin(request);
+    case 'auth/supabase/request-password-reset': return handleSupabaseRequestReset(request);
+    case 'auth/supabase/update-password': return handleSupabaseUpdatePassword(request);
+    case 'auth/supabase/resend-verification': return handleSupabaseResendVerification(request);
     case 'bewerbungen': return handleCreateBewerbung(request);
     case 'bewerbung-settings': return handleUpdateBewerbungSettings(request);
     case 'admin/login': return handleAdminLogin(request);

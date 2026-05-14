@@ -23,7 +23,7 @@ import {
   Lightbulb, Filter, Search, ArrowLeftRight, Target, Calculator,
   TrendingUpIcon, BarChart2, Send, XCircle, Infinity, Car, Coins,
   ChevronDown, ChevronRight, Palette, Wand2, Activity, Eye, EyeOff,
-  MousePointer2, Layers, Gauge, Percent, ArrowRight
+  MousePointer2, Layers, Gauge, Percent, ArrowRight, UserCheck
 } from 'lucide-react';
 import { LicenseBadge } from '@/components/profile/LicenseBadge';
 import { LevelProgress } from '@/components/profile/LevelProgress';
@@ -48,6 +48,7 @@ import LicensesView from '@/components/profile/LicensesView';
 import ProfileTour, { TourStartButton, hasCompletedProfileTour } from '@/components/profile/ProfileTour';
 import { AnimatedNumber } from '@/components/shared/AnimatedNumber';
 import { MainTabsBar, SubTabsBar } from '@/components/profile/ProfileTabBar';
+import AccountSettingsSection from '@/components/profile/AccountSettingsSection';
 import { useRealtime } from '@/hooks/useRealtime';
 import { RealtimeIndicator } from '@/components/shared/RealtimeIndicator';
 import { getSupabaseBrowser } from '@/lib/supabase-browser';
@@ -4831,6 +4832,7 @@ export default function ProfilPage() {
                 {/* Sektion-Tabs */}
                 <div className="flex gap-1.5 overflow-x-auto scrollbar-hide snap-x">
                   {[
+                    { id: 'account',     label: 'Mein Konto',  icon: UserCheck,  color: 'green' },
                     { id: 'appearance',  label: 'Darstellung', icon: Palette,    color: 'cyan' },
                     { id: 'effects',     label: 'Effekte',     icon: Wand2,      color: 'purple' },
                     { id: 'background',  label: 'Hintergrund', icon: ImagePlus,  color: 'indigo' },
@@ -4859,6 +4861,11 @@ export default function ProfilPage() {
               // Globale Filter-Hilfe: wenn Suche aktiv, zeige nur Sektionen mit Match
               return null; 
             })()}
+
+            {/* === MEIN KONTO (Supabase Auth) === */}
+            {settingsSection === 'account' && !settingsSearch && (
+              <AccountSettingsSection discordEmail={user?.email} />
+            )}
 
             {/* === DARSTELLUNG (Grundlagen) === */}
             {(settingsSection === 'appearance' || settingsSearch) && (
