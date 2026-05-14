@@ -18,6 +18,7 @@ const DiscordIcon = ({ size = 16 }) => (
 function DiscordFlow({ onBack, onClose, refreshUser }) {
   const [status, setStatus] = useState('loading');
   const [errorMessage, setErrorMessage] = useState('');
+  const [errorCode, setErrorCode] = useState('');
   const [countdown, setCountdown] = useState(30);
   const popupRef = useRef(null);
   const checkClosedIntervalRef = useRef(null);
@@ -60,12 +61,14 @@ function DiscordFlow({ onBack, onClose, refreshUser }) {
           setStatus('success');
         } else if (data.error) {
           setStatus('error');
+          setErrorCode(data.error);
           const map = {
             discord_denied: 'Du hast die Anmeldung abgebrochen.',
             no_code: 'Kein Autorisierungscode erhalten.',
             token_failed: 'Token-Austausch fehlgeschlagen.',
             user_failed: 'Benutzer-Daten konnten nicht abgerufen werden.',
             not_member: 'Du bist nicht Mitglied des Hamburg Horizon Discord-Servers.',
+            account_locked: 'Dein Login-Konto wurde nach 3 fehlgeschlagenen Login-Versuchen gesperrt. Bitte setze dein Passwort zurück, um den Account zu entsperren.',
             auth_failed: 'Anmeldung fehlgeschlagen. Bitte versuche es erneut.',
           };
           setErrorMessage(map[data.error] || 'Ein unbekannter Fehler ist aufgetreten.');
@@ -137,17 +140,35 @@ function DiscordFlow({ onBack, onClose, refreshUser }) {
             style={{ background: 'rgba(239,68,68,0.1)', border: '2px solid rgba(239,68,68,0.3)' }}>
             <XCircle className="w-10 h-10 text-red-500" />
           </div>
-          <p className="text-lg font-semibold text-white">Anmeldung fehlgeschlagen</p>
+          <p className="text-lg font-semibold text-white">
+            {errorCode === 'account_locked' ? 'Account gesperrt' : 'Anmeldung fehlgeschlagen'}
+          </p>
           <p className="text-sm text-white/60 text-center px-4">{errorMessage}</p>
-          <div className="flex gap-2 mt-2">
-            <Button onClick={onBack} variant="ghost" className="text-white/70">Zurück</Button>
-            <Button
-              onClick={() => { setStatus('loading'); openDiscordPopup(); }}
-              style={{ background: 'var(--theme-accent)', color: '#000' }}
-            >
-              Erneut versuchen
-            </Button>
-          </div>
+          {errorCode === 'account_locked' ? (
+            <div className="flex flex-col gap-2 mt-2 w-full px-4">
+              <Link
+                href="/auth/reset-password"
+                onClick={onClose}
+                className="w-full text-center py-2.5 rounded-lg font-medium text-sm transition"
+                style={{ background: 'var(--theme-accent)', color: '#000' }}
+              >
+                Passwort zurücksetzen
+              </Link>
+              <Button onClick={onBack} variant="ghost" className="text-white/70 w-full">
+                Zurück zur Auswahl
+              </Button>
+            </div>
+          ) : (
+            <div className="flex gap-2 mt-2">
+              <Button onClick={onBack} variant="ghost" className="text-white/70">Zurück</Button>
+              <Button
+                onClick={() => { setStatus('loading'); openDiscordPopup(); }}
+                style={{ background: 'var(--theme-accent)', color: '#000' }}
+              >
+                Erneut versuchen
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

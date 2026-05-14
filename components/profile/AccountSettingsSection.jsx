@@ -2,14 +2,28 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   UserCheck, Mail, KeyRound, ShieldCheck, ShieldAlert, Loader2,
-  CheckCircle2, AlertCircle, RefreshCw, Eye, EyeOff, ArrowRight, Sparkles
+  CheckCircle2, AlertCircle, RefreshCw, Eye, EyeOff, ArrowRight, Sparkles,
+  Trash2, AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { IconInput } from '@/components/ui/IconInput';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export default function AccountSettingsSection({ discordEmail }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState(null); // { hasAccount, email, emailVerified, ... }
 
@@ -23,6 +37,11 @@ export default function AccountSettingsSection({ discordEmail }) {
   // Misc
   const [resending, setResending] = useState(false);
   const [requestingReset, setRequestingReset] = useState(false);
+
+  // Account löschen
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const loadStatus = useCallback(async () => {
     try {
@@ -109,6 +128,38 @@ export default function AccountSettingsSection({ discordEmail }) {
       toast.error(err.message || 'Passwort-Änderung fehlgeschlagen');
     } finally {
       setChanging(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText.trim().toUpperCase() !== 'LÖSCHEN') {
+      toast.error('Bitte tippe "LÖSCHEN" zur Bestätigung ein');
+      return;
+    }
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/auth/supabase/delete-account', {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'Konto-Löschung fehlgeschlagen');
+      toast.success('Dein Login-Konto wurde gelöscht.');
+      setDeleteOpen(false);
+      setDeleteConfirmText('');
+      // Status neu laden, damit die "Konto erstellen" CTA wieder erscheint
+      setLoading(true);
+      await loadStatus();
+      // Zurück zum Profil leiten
+      try {
+        router.refresh();
+      } catch {
+        /* noop */
+      }
+    } catch (err) {
+      toast.error(err.message || 'Konto-Löschung fehlgeschlagen');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -348,6 +399,134 @@ export default function AccountSettingsSection({ discordEmail }) {
             {requestingReset ? 'Wird gesendet…' : 'Passwort vergessen? Reset-Link per E-Mail anfordern'}
           </button>
         </div>
+      </div>
+
+      {/* Danger Zone — Konto löschen */}
+      <div
+        className="glass rounded-2xl p-6 border"
+        style={{
+          background: 'rgba(239, 68, 68, 0.04)',
+          borderColor: 'rgba(239, 68, 68, 0.2)',
+        }}
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div
+            className="w-10 h-10 rounded-lg flex items-center justify-center"
+            style={{
+              background: 'rgba(239, 68, 68, 0.12)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+            }}
+          >
+            <AlertTriangle className="w-5 h-5 text-red-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-white">Gefahrenbereich</h2>
+            <p className="text-xs text-white/40">Unwiderrufliche Aktionen</p>
+          </div>
+        </div>
+
+        <div className="rounded-xl p-4 mb-4" style={{ background: 'rgba(0,0,0,0.25)', border: '1px solid rgba(255,255,255,0.04)' }}>
+          <p className="text-sm text-white/80 font-medium mb-1.5">Login-Konto löschen</p>
+          <p className="text-xs text-white/50 leading-relaxed">
+            Dein Email/Passwort-Login wird vollständig entfernt. Dein Discord-Account und deine
+            Spielerdaten (Lizenzen, Geld, Bewerbungen etc.) bleiben unverändert bestehen — du
+            kannst dich danach weiterhin über Discord anmelden.
+            <br />
+            <span className="text-red-300/80">Diese Aktion kann nicht rückgängig gemacht werden.</span>
+          </p>
+        </div>
+
+        <AlertDialog
+          open={deleteOpen}
+          onOpenChange={(o) => {
+            setDeleteOpen(o);
+            if (!o) setDeleteConfirmText('');
+          }}
+        >
+          <AlertDialogTrigger asChild>
+            <button
+              className="w-full py-3 rounded-xl text-sm font-medium flex items-center justify-center gap-2 transition"
+              style={{
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                color: '#fca5a5',
+              }}
+            >
+              <Trash2 className="w-4 h-4" />
+              Konto endgültig löschen
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent
+            className="border-white/10"
+            style={{
+              background: 'rgba(12, 12, 12, 0.98)',
+              backdropFilter: 'blur(20px)',
+            }}
+          >
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-white">
+                <AlertTriangle className="w-5 h-5 text-red-400" />
+                Login-Konto wirklich löschen?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-white/60 text-sm space-y-2">
+                <span className="block">
+                  Du bist im Begriff, dein Login-Konto für{' '}
+                  <span className="text-white font-medium">{status.email}</span> dauerhaft zu
+                  löschen.
+                </span>
+                <span className="block">
+                  Du kannst dich anschließend nur noch via{' '}
+                  <span className="text-white">Discord</span> anmelden. Deine Spielerdaten bleiben
+                  erhalten.
+                </span>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            <div className="space-y-2 my-2">
+              <label className="block text-xs font-medium text-white/60">
+                Tippe <span className="text-red-300 font-bold">LÖSCHEN</span> ein, um zu bestätigen:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="LÖSCHEN"
+                className="w-full px-3 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-red-500/40 text-sm font-mono tracking-wider"
+                autoComplete="off"
+                disabled={deleting}
+              />
+            </div>
+
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                disabled={deleting}
+                className="bg-white/[0.04] border-white/10 text-white hover:bg-white/[0.08] hover:text-white"
+              >
+                Abbrechen
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleDeleteAccount();
+                }}
+                disabled={deleting || deleteConfirmText.trim().toUpperCase() !== 'LÖSCHEN'}
+                className="bg-red-500/90 text-white hover:bg-red-500 disabled:opacity-50"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Lösche…
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Endgültig löschen
+                  </>
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

@@ -893,6 +893,25 @@ async function handleDiscordCallback(request) {
     const discordUser = await userRes.json();
     console.log('[OAUTH] Step 2 OK - User:', discordUser.username, '(', discordUser.id, ')');
 
+    // Step 2.5: Check if linked Supabase account is locked (3 failed login attempts)
+    // ─────────────────────────────────────────────────────────────────
+    // Wenn der Supabase-Login-Account des Users nach 3 fehlgeschlagenen
+    // Login-Versuchen gesperrt wurde, blockieren wir auch den Discord-Login.
+    // Der User muss sein Passwort zurücksetzen, um den Account zu entsperren.
+    try {
+      if (discordUser?.email) {
+        const locked = await checkIfAccountLocked(discordUser.email);
+        if (locked) {
+          console.warn('[OAUTH] Account is LOCKED for', discordUser.email, '- blocking Discord login');
+          return NextResponse.redirect(new URL(`/auth-callback?error=account_locked`, BASE_URL));
+        }
+      }
+    } catch (lockErr) {
+      // Bei Fehler in der Sperr-Prüfung lassen wir den Login durch (fail-open),
+      // damit ein Supabase-Outage nicht den Discord-Login zerstört.
+      console.warn('[OAUTH] Lock check failed (continuing):', lockErr?.message || lockErr);
+    }
+
     // Step 3: Check guild membership
     console.log('[OAUTH] Step 3: Checking guild membership...');
     const member = await getGuildMember(discordUser.id);

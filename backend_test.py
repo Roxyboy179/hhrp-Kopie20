@@ -7,9 +7,11 @@ Tests all new Supabase auth endpoints + regression tests for existing endpoints
 import requests
 import json
 import sys
+import time
+import os
 
-# Use internal URL for testing within container
-BASE_URL = "http://localhost:3000"
+# Use external URL from environment
+BASE_URL = os.getenv("NEXT_PUBLIC_BASE_URL", "https://hhrp24.de")
 API_BASE = f"{BASE_URL}/api"
 
 def print_test_header(test_num, description):
@@ -142,9 +144,11 @@ def test_login_invalid_credentials():
     print_test_header(5, "POST /api/auth/supabase/login (invalid credentials)")
     
     try:
+        # Use unique timestamp to avoid rate limiting / lockout
+        timestamp = int(time.time())
         payload = {
-            "email": "nonexistent@example.com",
-            "password": "wrongpass123"
+            "email": f"nonexistent_{timestamp}@example.com",
+            "password": "wrongpassword12345"
         }
         response = requests.post(
             f"{API_BASE}/auth/supabase/login",
@@ -155,16 +159,17 @@ def test_login_invalid_credentials():
         print(f"Status Code: {response.status_code}")
         print(f"Response: {response.text}")
         
-        # Expect 401 with "E-Mail oder Passwort falsch" or 500 if Supabase has delays
+        # Expect 401 or 403 with error message (no crash)
         success = (
-            response.status_code in [401, 500] and
+            response.status_code in [401, 403, 500] and
             ("E-Mail oder Passwort falsch" in response.json().get('error', '') or
+             "Fehlversuche" in response.json().get('error', '') or
              response.status_code == 500)
         )
         
         print_result(
             success,
-            "HTTP 401 with 'E-Mail oder Passwort falsch' (or 500 if Supabase delays)",
+            "HTTP 401/403 with error message (no crash)",
             f"HTTP {response.status_code} with {response.json()}"
         )
         return success
@@ -475,6 +480,95 @@ def test_system_status_public():
         print(f"❌ FAIL - Exception: {e}")
         return False
 
+def test_delete_account_no_cookie():
+    """Test 17: DELETE /api/auth/supabase/delete-account without cookie"""
+    print_test_header(17, "DELETE /api/auth/supabase/delete-account (no cookie)")
+    
+    try:
+        response = requests.delete(
+            f"{API_BASE}/auth/supabase/delete-account",
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        # Must be 401 (not 404 which would indicate routing error)
+        success = (
+            response.status_code == 401 and
+            "Nicht angemeldet" in response.json().get('error', '')
+        )
+        
+        print_result(
+            success,
+            "HTTP 401 with 'Nicht angemeldet' (NOT 404 - routing works)",
+            f"HTTP {response.status_code} with {response.json()}"
+        )
+        return success
+    except Exception as e:
+        print(f"❌ FAIL - Exception: {e}")
+        return False
+
+def test_discord_callback_no_code():
+    """Test 18: GET /api/auth/callback without code"""
+    print_test_header(18, "GET /api/auth/callback (no code)")
+    
+    try:
+        response = requests.get(
+            f"{API_BASE}/auth/callback",
+            allow_redirects=False,
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Location: {response.headers.get('Location', 'N/A')}")
+        
+        # Should redirect to /auth-callback?error=no_code
+        success = (
+            response.status_code == 307 and
+            'error=no_code' in response.headers.get('Location', '')
+        )
+        
+        print_result(
+            success,
+            "HTTP 307 redirect to /auth-callback?error=no_code",
+            f"HTTP {response.status_code} to {response.headers.get('Location', 'N/A')}"
+        )
+        return success
+    except Exception as e:
+        print(f"❌ FAIL - Exception: {e}")
+        return False
+
+def test_discord_callback_invalid_code():
+    """Test 19: GET /api/auth/callback with invalid code"""
+    print_test_header(19, "GET /api/auth/callback (invalid code)")
+    
+    try:
+        response = requests.get(
+            f"{API_BASE}/auth/callback?code=invalid_dummy_code_12345",
+            allow_redirects=False,
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Location: {response.headers.get('Location', 'N/A')}")
+        
+        # Should redirect to /auth-callback?error=token_failed (token exchange fails)
+        success = (
+            response.status_code == 307 and
+            'error=token_failed' in response.headers.get('Location', '')
+        )
+        
+        print_result(
+            success,
+            "HTTP 307 redirect to /auth-callback?error=token_failed",
+            f"HTTP {response.status_code} to {response.headers.get('Location', 'N/A')}"
+        )
+        return success
+    except Exception as e:
+        print(f"❌ FAIL - Exception: {e}")
+        return False
+
 def main():
     """Run all tests"""
     print("\n" + "="*80)
@@ -502,6 +596,15 @@ def main():
     results.append(("Test 10: Update password (no auth)", test_update_password_no_auth()))
     results.append(("Test 11: Resend verification (empty)", test_resend_verification_empty_body()))
     results.append(("Test 12: Resend verification (valid)", test_resend_verification_valid_email()))
+    
+    # New Tests for Account Delete + Discord Callback
+    print("\n\n" + "="*80)
+    print("NEW TESTS: ACCOUNT DELETE + DISCORD CALLBACK")
+    print("="*80)
+    
+    results.append(("Test 17: DELETE account (no cookie)", test_delete_account_no_cookie()))
+    results.append(("Test 18: Discord callback (no code)", test_discord_callback_no_code()))
+    results.append(("Test 19: Discord callback (invalid code)", test_discord_callback_invalid_code()))
     
     # Regression Tests
     print("\n\n" + "="*80)
