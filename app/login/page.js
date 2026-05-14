@@ -224,12 +224,14 @@ function DiscordLoginCard() {
   const { refreshUser } = useAuth();
   const [status, setStatus] = useState('idle'); // 'idle' | 'loading' | 'success' | 'error'
   const [errorMessage, setErrorMessage] = useState('');
+  const [errorCode, setErrorCode] = useState('');
   const popupRef = useRef(null);
   const checkClosedIntervalRef = useRef(null);
 
   const openDiscordPopup = useCallback(() => {
     setStatus('loading');
     setErrorMessage('');
+    setErrorCode('');
     const width = 600;
     const height = 700;
     const left = window.screen.width / 2 - width / 2;
@@ -273,15 +275,22 @@ function DiscordLoginCard() {
           }, 1500);
         } else if (data.error) {
           setStatus('error');
+          setErrorCode(data.error);
           const map = {
             discord_denied: 'Du hast die Anmeldung abgebrochen.',
             no_code: 'Kein Autorisierungscode erhalten.',
             token_failed: 'Token-Austausch fehlgeschlagen.',
             user_failed: 'Benutzer-Daten konnten nicht abgerufen werden.',
             not_member: 'Du bist nicht Mitglied des Hamburg Horizon Discord-Servers.',
+            account_locked: 'Dein Login-Konto wurde nach 3 fehlgeschlagenen Login-Versuchen gesperrt. Bitte setze dein Passwort zurück, um den Account zu entsperren.',
             auth_failed: 'Anmeldung fehlgeschlagen. Bitte versuche es erneut.',
           };
-          setErrorMessage(map[data.error] || 'Ein unbekannter Fehler ist aufgetreten.');
+          let resolved = map[data.error];
+          if (!resolved && /lock|gesperr/i.test(String(data.error))) {
+            resolved = map.account_locked;
+            setErrorCode('account_locked');
+          }
+          setErrorMessage(resolved || 'Ein unbekannter Fehler ist aufgetreten.');
         }
       }
     };
@@ -380,15 +389,28 @@ function DiscordLoginCard() {
           >
             <XCircle className="w-8 h-8 text-red-500" />
           </div>
-          <p className="text-lg font-semibold text-white">Anmeldung fehlgeschlagen</p>
+          <p className="text-lg font-semibold text-white">
+            {errorCode === 'account_locked' ? 'Account gesperrt' : 'Anmeldung fehlgeschlagen'}
+          </p>
           <p className="text-sm text-white/60 text-center px-4">{errorMessage}</p>
-          <button
-            onClick={openDiscordPopup}
-            className="mt-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white"
-            style={{ background: '#5865F2' }}
-          >
-            Erneut versuchen
-          </button>
+          {errorCode === 'account_locked' ? (
+            <Link
+              href="/auth/reset-password"
+              className="mt-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-black inline-flex items-center gap-2"
+              style={{ background: 'var(--theme-accent)' }}
+            >
+              <KeyRound className="w-4 h-4" />
+              Passwort zurücksetzen
+            </Link>
+          ) : (
+            <button
+              onClick={openDiscordPopup}
+              className="mt-2 px-5 py-2.5 rounded-xl text-sm font-medium text-white"
+              style={{ background: '#5865F2' }}
+            >
+              Erneut versuchen
+            </button>
+          )}
         </div>
       )}
     </div>
