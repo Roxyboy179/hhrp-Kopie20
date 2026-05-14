@@ -44,7 +44,17 @@ import {
   checkIfAccountLocked,
   deleteSupabaseAccount,
 } from '@/lib/supabase-auth';
-import { sendAccountLockedEmail } from '@/lib/email-sender';
+import { sendAccountLockedEmail, sendBackupCodesEmail } from '@/lib/email-sender';
+import {
+  getTwoFaState,
+  startTwoFaSetup,
+  activateTwoFa,
+  deactivateTwoFa,
+  regenerateBackupCodes,
+  verifyTwoFaCode,
+  createLoginChallenge,
+  consumeLoginChallenge,
+} from '@/lib/twofa';
 
 // Web Push Configuration
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -450,6 +460,83 @@ async function handleSupabaseSignup(request) {
 }
 
 /**
+ * Finalisiert einen Supabase-Login: prüft Discord-Mitgliedschaft,
+ * baut JWT, setzt auth_token-Cookie. Wird sowohl beim "normalen" Login
+ * als auch nach erfolgreicher 2FA-Verifizierung verwendet.
+ *
+ * @returns NextResponse mit gesetztem Cookie ODER Fehler-Response
+ */
+async function finalizeSupabaseLogin(request, link, loginMeta = {}) {
+  // Server-Mitgliedschaft prüfen
+  const member = await getGuildMember(link.discord_user_id);
+  if (!member) {
+    return NextResponse.json({
+      error: 'Du bist kein Mitglied des Hamburg Horizon RP Discord-Servers.',
+    }, { status: 403 });
+  }
+
+  // Discord-Userdaten laden (für JWT)
+  let discordUsername = link.email;
+  let discordAvatar = null;
+  let discordGlobalName = null;
+  try {
+    const dRes = await fetch(`https://discord.com/api/v10/users/${link.discord_user_id}`, {
+      headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` },
+    });
+    if (dRes.ok) {
+      const dUser = await dRes.json();
+      discordUsername = dUser.username || discordUsername;
+      discordGlobalName = dUser.global_name || null;
+      discordAvatar = dUser.avatar || null;
+    }
+  } catch (e) {
+    console.warn('[finalizeSupabaseLogin] discord user fetch failed:', e);
+  }
+
+  const adminRole = getAdminRole(member.roles || []);
+  const teamRole = isTeamMember(member.roles || []);
+
+  const tokenPayload = {
+    id: link.discord_user_id,
+    username: discordUsername,
+    globalName: discordGlobalName,
+    avatar: discordAvatar,
+    email: link.email,
+    createdAt: new Date(parseInt((BigInt(link.discord_user_id) >> 22n) + 1420070400000n)).toISOString(),
+    adminLevel: adminRole?.level || 0,
+    adminRole: adminRole?.name || null,
+    canCreateAccounts: adminRole?.canCreateAccounts || false,
+    canSeeAll: adminRole?.canSeeAll || false,
+    isTeamMember: !!(adminRole || teamRole),
+    teamRole: teamRole?.name || null,
+    authMethod: 'supabase',
+  };
+
+  const token = createToken(tokenPayload);
+
+  // Activity Log
+  try {
+    await logActivity({
+      actionType: LOG_ACTIONS.USER_LOGIN,
+      userId: link.discord_user_id,
+      username: discordUsername,
+      details: { method: 'supabase', email: link.email, ...loginMeta },
+      ipAddress: getIpAddress(request),
+    });
+  } catch (e) { /* noop */ }
+
+  const response = NextResponse.json({ success: true });
+  response.cookies.set('auth_token', token, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 7 * 24 * 60 * 60,
+  });
+  return response;
+}
+
+/**
  * POST /api/auth/supabase/login
  * Email/Passwort-Login. Prüft Discord-Server-Mitgliedschaft & setzt auth_token-Cookie.
  * AUTO-BAN: Nach 3 Fehlversuchen wird der Account gesperrt (für JEDE E-Mail, auch ohne Discord-Link).
@@ -534,75 +621,66 @@ async function handleSupabaseLogin(request) {
     // Login erfolgreich -> Fehlversuche zurücksetzen
     await resetFailedAttempts(email);
 
-    // Server-Mitgliedschaft prüfen
-    const member = await getGuildMember(link.discord_user_id);
-    if (!member) {
-      return NextResponse.json({
-        error: 'Du bist kein Mitglied des Hamburg Horizon RP Discord-Servers.',
-      }, { status: 403 });
-    }
-
-    // Discord-Userdaten laden (für JWT)
-    let discordUsername = link.email;
-    let discordAvatar = null;
-    let discordGlobalName = null;
+    // 2FA aktiviert? → Challenge ausstellen, KEIN Cookie setzen
     try {
-      const dRes = await fetch(`https://discord.com/api/v10/users/${link.discord_user_id}`, {
-        headers: { Authorization: `Bot ${DISCORD_BOT_TOKEN}` },
-      });
-      if (dRes.ok) {
-        const dUser = await dRes.json();
-        discordUsername = dUser.username || discordUsername;
-        discordGlobalName = dUser.global_name || null;
-        discordAvatar = dUser.avatar || null;
+      const state = await getTwoFaState(link.supabase_user_id);
+      if (state?.enabled) {
+        const challengeId = createLoginChallenge(link.supabase_user_id, link.email);
+        return NextResponse.json({
+          requires2FA: true,
+          challengeId,
+          message: '2FA-Code erforderlich',
+        });
       }
     } catch (e) {
-      console.warn('[supabase-login] discord user fetch failed:', e);
+      console.warn('[supabase-login] 2FA state check failed:', e?.message || e);
     }
 
-    const adminRole = getAdminRole(member.roles || []);
-    const teamRole = isTeamMember(member.roles || []);
-
-    const tokenPayload = {
-      id: link.discord_user_id,
-      username: discordUsername,
-      globalName: discordGlobalName,
-      avatar: discordAvatar,
-      email: link.email,
-      createdAt: new Date(parseInt((BigInt(link.discord_user_id) >> 22n) + 1420070400000n)).toISOString(),
-      adminLevel: adminRole?.level || 0,
-      adminRole: adminRole?.name || null,
-      canCreateAccounts: adminRole?.canCreateAccounts || false,
-      canSeeAll: adminRole?.canSeeAll || false,
-      isTeamMember: !!(adminRole || teamRole),
-      teamRole: teamRole?.name || null,
-      authMethod: 'supabase',
-    };
-
-    const token = createToken(tokenPayload);
-
-    // Activity Log
-    try {
-      await logActivity({
-        actionType: LOG_ACTIONS.USER_LOGIN,
-        userId: link.discord_user_id,
-        username: discordUsername,
-        details: { method: 'supabase', email: link.email },
-        ipAddress: getIpAddress(request),
-      });
-    } catch (e) { /* noop */ }
-
-    const response = NextResponse.json({ success: true });
-    response.cookies.set('auth_token', token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 7 * 24 * 60 * 60,
-    });
-    return response;
+    return await finalizeSupabaseLogin(request, link);
   } catch (error) {
     console.error('[supabase-login] unexpected:', error);
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/auth/supabase/login-verify-2fa
+ * Schließt einen 2FA-pflichtigen Login ab. Body: { challengeId, code }
+ * Code = 6-stelliger TOTP-Code ODER Backup-Code (XXXX-XXXX).
+ */
+async function handleSupabaseLoginVerify2FA(request) {
+  try {
+    const body = await request.json();
+    const { challengeId, code } = body || {};
+    if (!challengeId || !code) {
+      return NextResponse.json({ error: 'Challenge und Code erforderlich' }, { status: 400 });
+    }
+
+    const entry = consumeLoginChallenge(challengeId);
+    if (!entry) {
+      return NextResponse.json({
+        error: 'Challenge ungültig oder abgelaufen. Bitte erneut anmelden.',
+        code: 'CHALLENGE_EXPIRED',
+      }, { status: 400 });
+    }
+
+    const valid = await verifyTwoFaCode(entry.supabaseUserId, code);
+    if (!valid) {
+      // Challenge ist konsumiert → User muss neu starten (Sicherheit)
+      return NextResponse.json({
+        error: 'Ungültiger 2FA-Code',
+        code: 'INVALID_2FA',
+      }, { status: 401 });
+    }
+
+    const link = await getLinkByEmail(entry.email);
+    if (!link) {
+      return NextResponse.json({ error: 'Kein verknüpfter Account' }, { status: 403 });
+    }
+
+    return await finalizeSupabaseLogin(request, link, { twofa: true });
+  } catch (error) {
+    console.error('[supabase-login-2fa] unexpected:', error);
     return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
   }
 }
@@ -711,6 +789,29 @@ async function handleSupabaseUpdatePassword(request) {
       return NextResponse.json({ error: 'Kein Login-Account vorhanden' }, { status: 404 });
     }
 
+    // 2FA prüfen, falls aktiviert
+    try {
+      const state = await getTwoFaState(link.supabase_user_id);
+      if (state?.enabled) {
+        const { twoFactorCode } = body || {};
+        if (!twoFactorCode) {
+          return NextResponse.json({
+            error: '2FA-Code erforderlich',
+            code: 'TWOFA_REQUIRED',
+          }, { status: 403 });
+        }
+        const ok = await verifyTwoFaCode(link.supabase_user_id, twoFactorCode);
+        if (!ok) {
+          return NextResponse.json({
+            error: 'Ungültiger 2FA-Code',
+            code: 'INVALID_2FA',
+          }, { status: 401 });
+        }
+      }
+    } catch (e) {
+      console.warn('[supabase-update-pw] 2FA check failed:', e?.message || e);
+    }
+
     try {
       await supabaseChangePassword({
         email: link.email,
@@ -795,6 +896,40 @@ async function handleSupabaseDeleteAccount(request) {
       return NextResponse.json({ error: 'Kein Login-Account vorhanden' }, { status: 404 });
     }
 
+    // 2FA prüfen, falls aktiviert (Code aus Query oder Body)
+    let twoFactorCode = null;
+    try {
+      const url = new URL(request.url);
+      twoFactorCode = url.searchParams.get('twoFactorCode') || null;
+    } catch { /* noop */ }
+    if (!twoFactorCode) {
+      try {
+        const body = await request.json();
+        twoFactorCode = body?.twoFactorCode || null;
+      } catch { /* DELETE braucht keinen Body */ }
+    }
+
+    try {
+      const state = await getTwoFaState(link.supabase_user_id);
+      if (state?.enabled) {
+        if (!twoFactorCode) {
+          return NextResponse.json({
+            error: '2FA-Code erforderlich',
+            code: 'TWOFA_REQUIRED',
+          }, { status: 403 });
+        }
+        const ok = await verifyTwoFaCode(link.supabase_user_id, twoFactorCode);
+        if (!ok) {
+          return NextResponse.json({
+            error: 'Ungültiger 2FA-Code',
+            code: 'INVALID_2FA',
+          }, { status: 401 });
+        }
+      }
+    } catch (e) {
+      console.warn('[supabase-delete] 2FA check failed:', e?.message || e);
+    }
+
     // E-Mail/Username VOR dem Löschen merken (Link wird sonst entfernt)
     const supaEmail = link.email ? String(link.email).toLowerCase() : null;
     const discordEmail = discordUser.email ? String(discordUser.email).toLowerCase() : null;
@@ -849,6 +984,240 @@ async function handleSupabaseDeleteAccount(request) {
     });
   } catch (error) {
     console.error('[supabase-delete] unexpected:', error);
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
+  }
+}
+
+// =====================================================================
+// 2FA (TOTP / Google Authenticator)
+// =====================================================================
+
+/**
+ * GET /api/auth/2fa/status
+ * Liefert den aktuellen 2FA-Status des eingeloggten Users.
+ */
+async function handle2FAStatus(request) {
+  try {
+    const discordUser = getUserFromRequest(request);
+    if (!discordUser) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+    const link = await getLinkByDiscordId(discordUser.id);
+    if (!link) {
+      return NextResponse.json({ enabled: false, hasAccount: false });
+    }
+    const state = await getTwoFaState(link.supabase_user_id);
+    return NextResponse.json({
+      hasAccount: true,
+      enabled: !!state?.enabled,
+      backupCodesRemaining: state?.backupCodesCount || 0,
+      enabledAt: state?.enabledAt || null,
+    });
+  } catch (error) {
+    console.error('[2fa-status] error:', error);
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/auth/2fa/setup-init
+ * Generiert ein neues TOTP-Secret + OTPAuth-URL für QR-Anzeige.
+ * Aktiviert 2FA NICHT — Benutzer muss erst Code verifizieren.
+ */
+async function handle2FASetupInit(request) {
+  try {
+    const discordUser = getUserFromRequest(request);
+    if (!discordUser) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+    const link = await getLinkByDiscordId(discordUser.id);
+    if (!link) {
+      return NextResponse.json({ error: 'Kein Login-Account vorhanden' }, { status: 404 });
+    }
+    const state = await getTwoFaState(link.supabase_user_id);
+    if (state?.enabled) {
+      return NextResponse.json({ error: '2FA ist bereits aktiviert' }, { status: 409 });
+    }
+    const { secret, otpauth } = await startTwoFaSetup(link.supabase_user_id, link.email);
+    return NextResponse.json({ secret, otpauth, email: link.email });
+  } catch (error) {
+    console.error('[2fa-setup-init] error:', error);
+    return NextResponse.json({ error: 'Setup fehlgeschlagen' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/auth/2fa/setup-verify
+ * Body: { code }
+ * Verifiziert den eingegebenen Code gegen das pending secret.
+ * Bei Erfolg: 2FA aktiviert + 10 Backup-Codes generiert + per Mail verschickt.
+ */
+async function handle2FASetupVerify(request) {
+  try {
+    const discordUser = getUserFromRequest(request);
+    if (!discordUser) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+    const body = await request.json();
+    const { code } = body || {};
+    if (!code) {
+      return NextResponse.json({ error: 'Code erforderlich' }, { status: 400 });
+    }
+    const link = await getLinkByDiscordId(discordUser.id);
+    if (!link) {
+      return NextResponse.json({ error: 'Kein Login-Account vorhanden' }, { status: 404 });
+    }
+
+    let backupCodes;
+    try {
+      const res = await activateTwoFa(link.supabase_user_id, code);
+      backupCodes = res.backupCodes;
+    } catch (e) {
+      if (e?.message === 'NO_PENDING_SECRET') {
+        return NextResponse.json({
+          error: 'Bitte starte die Einrichtung erneut.',
+          code: 'NO_PENDING_SECRET',
+        }, { status: 400 });
+      }
+      if (e?.message === 'INVALID_CODE') {
+        return NextResponse.json({ error: 'Ungültiger Code', code: 'INVALID_CODE' }, { status: 401 });
+      }
+      console.error('[2fa-setup-verify] error:', e);
+      return NextResponse.json({ error: 'Aktivierung fehlgeschlagen' }, { status: 500 });
+    }
+
+    // Backup-Codes per Mail an die Login-E-Mail senden
+    try {
+      await sendBackupCodesEmail(link.email, backupCodes);
+    } catch (mailErr) {
+      console.warn('[2fa-setup-verify] mail send failed:', mailErr?.message || mailErr);
+    }
+
+    // Activity Log
+    try {
+      await logActivity({
+        actionType: '2FA_ENABLED',
+        userId: discordUser.id,
+        username: discordUser.username || discordUser.globalName,
+        details: { email: link.email },
+        ipAddress: getIpAddress(request),
+      });
+    } catch (e) { /* noop */ }
+
+    return NextResponse.json({
+      success: true,
+      message: '2FA aktiviert. Backup-Codes wurden per E-Mail verschickt.',
+      backupCodes,
+    });
+  } catch (error) {
+    console.error('[2fa-setup-verify] unexpected:', error);
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/auth/2fa/disable
+ * Body: { currentPassword, code }
+ * Verlangt aktuelles Passwort + 2FA-Code (TOTP oder Backup) zum Deaktivieren.
+ */
+async function handle2FADisable(request) {
+  try {
+    const discordUser = getUserFromRequest(request);
+    if (!discordUser) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+    const body = await request.json();
+    const { currentPassword, code } = body || {};
+    if (!currentPassword) {
+      return NextResponse.json({ error: 'Passwort erforderlich' }, { status: 400 });
+    }
+    if (!code) {
+      return NextResponse.json({ error: '2FA-Code erforderlich' }, { status: 400 });
+    }
+    const link = await getLinkByDiscordId(discordUser.id);
+    if (!link) {
+      return NextResponse.json({ error: 'Kein Login-Account vorhanden' }, { status: 404 });
+    }
+
+    // Passwort re-verifizieren
+    try {
+      await supabaseSignIn({ email: link.email, password: currentPassword });
+    } catch (e) {
+      if (e?.message === 'INVALID_CREDENTIALS') {
+        return NextResponse.json({ error: 'Passwort falsch' }, { status: 401 });
+      }
+      return NextResponse.json({ error: 'Passwort-Prüfung fehlgeschlagen' }, { status: 500 });
+    }
+
+    // 2FA-Code prüfen
+    const ok = await verifyTwoFaCode(link.supabase_user_id, code);
+    if (!ok) {
+      return NextResponse.json({ error: 'Ungültiger 2FA-Code', code: 'INVALID_2FA' }, { status: 401 });
+    }
+
+    await deactivateTwoFa(link.supabase_user_id);
+
+    try {
+      await logActivity({
+        actionType: '2FA_DISABLED',
+        userId: discordUser.id,
+        username: discordUser.username || discordUser.globalName,
+        details: { email: link.email },
+        ipAddress: getIpAddress(request),
+      });
+    } catch (e) { /* noop */ }
+
+    return NextResponse.json({ success: true, message: '2FA deaktiviert' });
+  } catch (error) {
+    console.error('[2fa-disable] unexpected:', error);
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/auth/2fa/regenerate-backup-codes
+ * Body: { code }
+ * Erzeugt 10 neue Backup-Codes (alte werden invalidiert) und verschickt sie per Mail.
+ */
+async function handle2FARegenerateBackupCodes(request) {
+  try {
+    const discordUser = getUserFromRequest(request);
+    if (!discordUser) {
+      return NextResponse.json({ error: 'Nicht angemeldet' }, { status: 401 });
+    }
+    const body = await request.json();
+    const { code } = body || {};
+    if (!code) {
+      return NextResponse.json({ error: '2FA-Code erforderlich' }, { status: 400 });
+    }
+    const link = await getLinkByDiscordId(discordUser.id);
+    if (!link) {
+      return NextResponse.json({ error: 'Kein Login-Account vorhanden' }, { status: 404 });
+    }
+    const state = await getTwoFaState(link.supabase_user_id);
+    if (!state?.enabled) {
+      return NextResponse.json({ error: '2FA ist nicht aktiviert' }, { status: 400 });
+    }
+    const ok = await verifyTwoFaCode(link.supabase_user_id, code);
+    if (!ok) {
+      return NextResponse.json({ error: 'Ungültiger 2FA-Code', code: 'INVALID_2FA' }, { status: 401 });
+    }
+
+    const { backupCodes } = await regenerateBackupCodes(link.supabase_user_id);
+
+    try {
+      await sendBackupCodesEmail(link.email, backupCodes);
+    } catch (mailErr) {
+      console.warn('[2fa-regen] mail send failed:', mailErr?.message || mailErr);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Neue Backup-Codes generiert und per E-Mail verschickt.',
+      backupCodes,
+    });
+  } catch (error) {
+    console.error('[2fa-regen] unexpected:', error);
     return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
   }
 }
@@ -5157,6 +5526,7 @@ export async function GET(request) {
     case 'auth/callback': return handleDiscordCallback(request);
     case 'auth/me': return handleAuthMe(request);
     case 'auth/supabase/status': return handleSupabaseStatus(request);
+    case 'auth/2fa/status': return handle2FAStatus(request);
     case 'bewerbungen': return handleGetBewerbungen(request);
     case 'bewerbungen/stats': return handleGetBewerbungenStats(request);
     case 'bewerbung-settings': return handleGetBewerbungSettings(request);
@@ -5653,6 +6023,11 @@ export async function POST(request) {
     case 'auth/supabase/request-password-reset': return handleSupabaseRequestReset(request);
     case 'auth/supabase/update-password': return handleSupabaseUpdatePassword(request);
     case 'auth/supabase/resend-verification': return handleSupabaseResendVerification(request);
+    case 'auth/supabase/login-verify-2fa': return handleSupabaseLoginVerify2FA(request);
+    case 'auth/2fa/setup-init': return handle2FASetupInit(request);
+    case 'auth/2fa/setup-verify': return handle2FASetupVerify(request);
+    case 'auth/2fa/disable': return handle2FADisable(request);
+    case 'auth/2fa/regenerate-backup-codes': return handle2FARegenerateBackupCodes(request);
     case 'bewerbungen': return handleCreateBewerbung(request);
     case 'bewerbung-settings': return handleUpdateBewerbungSettings(request);
     case 'admin/login': return handleAdminLogin(request);

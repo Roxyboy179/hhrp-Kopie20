@@ -6,10 +6,11 @@ import { useRouter } from 'next/navigation';
 import {
   UserCheck, Mail, KeyRound, ShieldCheck, ShieldAlert, Loader2,
   CheckCircle2, AlertCircle, RefreshCw, Eye, EyeOff, ArrowRight, Sparkles,
-  Trash2, AlertTriangle
+  Trash2, AlertTriangle, Smartphone
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { IconInput } from '@/components/ui/IconInput';
+import TwoFactorSection from '@/components/profile/TwoFactorSection';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +39,11 @@ export default function AccountSettingsSection({ discordEmail }) {
   const [resending, setResending] = useState(false);
   const [requestingReset, setRequestingReset] = useState(false);
 
+  // 2FA Status (cached, wird auch von TwoFactorSection nachgeladen)
+  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
+  const [twoFACodeForPw, setTwoFACodeForPw] = useState('');
+  const [twoFACodeForDel, setTwoFACodeForDel] = useState('');
+
   // Account löschen
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
@@ -55,9 +61,26 @@ export default function AccountSettingsSection({ discordEmail }) {
     }
   }, []);
 
+  const load2FAStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/auth/2fa/status', { credentials: 'include' });
+      const data = await res.json();
+      if (res.ok) setTwoFAEnabled(!!data.enabled);
+    } catch { /* noop */ }
+  }, []);
+
   useEffect(() => {
     loadStatus();
   }, [loadStatus]);
+
+  useEffect(() => {
+    if (status?.hasAccount) {
+      load2FAStatus();
+      // Reload alle 30s, falls 2FA in TwoFactorSection geändert wurde
+      const t = setInterval(load2FAStatus, 30000);
+      return () => clearInterval(t);
+    }
+  }, [status?.hasAccount, load2FAStatus]);
 
   const handleResend = async () => {
     if (!status?.email) return;
@@ -107,6 +130,10 @@ export default function AccountSettingsSection({ discordEmail }) {
       toast.error('Neue Passwörter stimmen nicht überein');
       return;
     }
+    if (twoFAEnabled && !twoFACodeForPw) {
+      toast.error('Bitte 2FA-Code eingeben');
+      return;
+    }
     setChanging(true);
     try {
       const res = await fetch('/api/auth/supabase/update-password', {
@@ -116,14 +143,28 @@ export default function AccountSettingsSection({ discordEmail }) {
         body: JSON.stringify({
           currentPassword: currentPw,
           newPassword: newPw,
+          twoFactorCode: twoFAEnabled ? twoFACodeForPw.trim() : undefined,
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Fehler');
+      if (!res.ok) {
+        if (data.code === 'TWOFA_REQUIRED') {
+          // 2FA wurde gerade aktiviert während dieser Seite offen war
+          setTwoFAEnabled(true);
+          toast.error('2FA-Code erforderlich — bitte Code eingeben');
+          return;
+        }
+        if (data.code === 'INVALID_2FA') {
+          toast.error('Ungültiger 2FA-Code');
+          return;
+        }
+        throw new Error(data.error || 'Fehler');
+      }
       toast.success('Passwort aktualisiert');
       setCurrentPw('');
       setNewPw('');
       setNewPwConfirm('');
+      setTwoFACodeForPw('');
     } catch (err) {
       toast.error(err.message || 'Passwort-Änderung fehlgeschlagen');
     } finally {
@@ -136,17 +177,38 @@ export default function AccountSettingsSection({ discordEmail }) {
       toast.error('Bitte tippe "LÖSCHEN" zur Bestätigung ein');
       return;
     }
+    if (twoFAEnabled && !twoFACodeForDel) {
+      toast.error('Bitte 2FA-Code eingeben');
+      return;
+    }
     setDeleting(true);
     try {
-      const res = await fetch('/api/auth/supabase/delete-account', {
+      const fetchOpts = {
         method: 'DELETE',
         credentials: 'include',
-      });
+      };
+      if (twoFAEnabled) {
+        fetchOpts.headers = { 'Content-Type': 'application/json' };
+        fetchOpts.body = JSON.stringify({ twoFactorCode: twoFACodeForDel.trim() });
+      }
+      const res = await fetch('/api/auth/supabase/delete-account', fetchOpts);
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'Konto-Löschung fehlgeschlagen');
+      if (!res.ok) {
+        if (data.code === 'TWOFA_REQUIRED') {
+          setTwoFAEnabled(true);
+          toast.error('2FA-Code erforderlich');
+          return;
+        }
+        if (data.code === 'INVALID_2FA') {
+          toast.error('Ungültiger 2FA-Code');
+          return;
+        }
+        throw new Error(data.error || 'Konto-Löschung fehlgeschlagen');
+      }
       toast.success('Dein Login-Konto wurde gelöscht.');
       setDeleteOpen(false);
       setDeleteConfirmText('');
+      setTwoFACodeForDel('');
       // Status neu laden, damit die "Konto erstellen" CTA wieder erscheint
       setLoading(true);
       await loadStatus();
@@ -373,6 +435,24 @@ export default function AccountSettingsSection({ discordEmail }) {
             />
           </div>
 
+          {twoFAEnabled && (
+            <div>
+              <label className="block text-xs font-medium text-white/60 mb-1.5 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-green-400" />
+                2FA-Code (aus Authenticator-App oder Backup-Code)
+              </label>
+              <input
+                type="text"
+                value={twoFACodeForPw}
+                onChange={(e) => setTwoFACodeForPw(e.target.value)}
+                placeholder="123456 oder XXXX-XXXX"
+                className="w-full px-3 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-white/25 text-sm font-mono tracking-wider"
+                autoComplete="one-time-code"
+                required
+              />
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={changing}
@@ -400,6 +480,9 @@ export default function AccountSettingsSection({ discordEmail }) {
           </button>
         </div>
       </div>
+
+      {/* 2FA Section */}
+      <TwoFactorSection accountEmail={status?.email || discordEmail} />
 
       {/* Danger Zone — Konto löschen */}
       <div
@@ -495,6 +578,24 @@ export default function AccountSettingsSection({ discordEmail }) {
                 autoComplete="off"
                 disabled={deleting}
               />
+
+              {twoFAEnabled && (
+                <>
+                  <label className="block text-xs font-medium text-white/60 pt-2 flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-green-400" />
+                    2FA-Code (oder Backup-Code)
+                  </label>
+                  <input
+                    type="text"
+                    value={twoFACodeForDel}
+                    onChange={(e) => setTwoFACodeForDel(e.target.value)}
+                    placeholder="123456 oder XXXX-XXXX"
+                    className="w-full px-3 py-2.5 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-white/25 text-sm font-mono tracking-wider"
+                    autoComplete="one-time-code"
+                    disabled={deleting}
+                  />
+                </>
+              )}
             </div>
 
             <AlertDialogFooter>

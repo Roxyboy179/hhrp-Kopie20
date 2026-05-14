@@ -32,6 +32,25 @@ except Discord auth. Password reset must work and email verification is mandator
 9. Existing endpoints continue to work: GET /api/auth/me, GET /api/auth/discord, GET /api/stats etc.
 10. Verify the route map in route.js is reachable (no 404 for the new routes)
 
+## 2FA Backend tests (Iteration 2)
+The following NEW endpoints must respond correctly to unauthenticated / invalid requests
+(without breaking the existing endpoints):
+
+A. GET  /api/auth/2fa/status               (no cookie) → 401 "Nicht angemeldet"
+B. POST /api/auth/2fa/setup-init           (no cookie) → 401 "Nicht angemeldet"
+C. POST /api/auth/2fa/setup-verify         (no cookie / no body) → 401 or 400
+D. POST /api/auth/2fa/disable              (no cookie) → 401
+E. POST /api/auth/2fa/regenerate-backup-codes (no cookie) → 401
+F. POST /api/auth/supabase/login-verify-2fa (no body) → 400 "Challenge und Code erforderlich"
+G. POST /api/auth/supabase/login-verify-2fa with bad challengeId → 400 with code CHALLENGE_EXPIRED
+H. POST /api/auth/supabase/login still returns 401 on invalid credentials (regression check)
+I. POST /api/auth/supabase/login with valid creds for a user WITHOUT 2FA → returns 200 + cookie
+   (no requires2FA flag) — only feasible if test creds are seeded; otherwise SKIP.
+J. POST /api/auth/supabase/update-password without token returns its existing behaviour
+   (validation only, no regression).
+K. DELETE /api/auth/supabase/delete-account without cookie → 401 (regression).
+L. All new routes must be reachable in the GET/POST routing map (no 404).
+
 ## test_credentials
 None required for backend tests (we will test endpoint reachability and validation only,
 since the SQL migration must be run in the Supabase dashboard before full sign-up/login

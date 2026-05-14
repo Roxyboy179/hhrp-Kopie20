@@ -28,6 +28,12 @@ function EmailLoginCard() {
   const [needsVerify, setNeedsVerify] = useState(false);
   const [resending, setResending] = useState(false);
 
+  // 2FA-Challenge State
+  const [twoFAStage, setTwoFAStage] = useState(false);
+  const [twoFAChallengeId, setTwoFAChallengeId] = useState('');
+  const [twoFACode, setTwoFACode] = useState('');
+  const [twoFAUseBackup, setTwoFAUseBackup] = useState(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) return;
@@ -49,11 +55,55 @@ function EmailLoginCard() {
         }
         throw new Error(data.error || 'Login fehlgeschlagen');
       }
+      if (data.requires2FA && data.challengeId) {
+        setTwoFAChallengeId(data.challengeId);
+        setTwoFAStage(true);
+        setTwoFACode('');
+        toast.success('Bitte gib deinen 2FA-Code ein');
+        return;
+      }
       toast.success('Erfolgreich angemeldet');
       await refreshUser();
       router.push('/profil');
     } catch (err) {
       toast.error(err.message || 'Login fehlgeschlagen');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify2FA = async (e) => {
+    e.preventDefault();
+    const code = twoFACode.trim();
+    if (!code) {
+      toast.error('Bitte Code eingeben');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/supabase/login-verify-2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ challengeId: twoFAChallengeId, code }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.code === 'CHALLENGE_EXPIRED' || data.code === 'INVALID_2FA') {
+          toast.error(data.error || 'Verifizierung fehlgeschlagen');
+          setTwoFAStage(false);
+          setTwoFAChallengeId('');
+          setTwoFACode('');
+          setPassword('');
+          return;
+        }
+        throw new Error(data.error || 'Verifizierung fehlgeschlagen');
+      }
+      toast.success('Erfolgreich angemeldet');
+      await refreshUser();
+      router.push('/profil');
+    } catch (err) {
+      toast.error(err.message || 'Verifizierung fehlgeschlagen');
     } finally {
       setLoading(false);
     }
@@ -91,16 +141,89 @@ function EmailLoginCard() {
             border: '1px solid rgba(var(--theme-accent-rgb), 0.25)',
           }}
         >
-          <Mail className="w-6 h-6" style={{ color: 'var(--theme-accent)' }} />
+          {twoFAStage ? (
+            <ShieldCheck className="w-6 h-6" style={{ color: 'var(--theme-accent)' }} />
+          ) : (
+            <Mail className="w-6 h-6" style={{ color: 'var(--theme-accent)' }} />
+          )}
         </div>
         <div className="min-w-0">
-          <h1 className="text-xl md:text-2xl font-bold text-white">Mit E-Mail anmelden</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-white">
+            {twoFAStage ? '2FA-Code erforderlich' : 'Mit E-Mail anmelden'}
+          </h1>
           <p className="text-xs md:text-sm text-white/45 mt-0.5">
-            Login mit E-Mail-Adresse und Passwort
+            {twoFAStage
+              ? (twoFAUseBackup
+                  ? 'Gib einen deiner Backup-Codes ein.'
+                  : 'Öffne deine Authenticator-App und gib den 6-stelligen Code ein.')
+              : 'Login mit E-Mail-Adresse und Passwort'}
           </p>
         </div>
       </div>
 
+      {twoFAStage ? (
+        <form onSubmit={handleVerify2FA} className="space-y-4">
+          <div>
+            <label className="block text-xs md:text-sm font-medium text-white/70 mb-2">
+              {twoFAUseBackup ? 'Backup-Code' : '6-stelliger Code'}
+            </label>
+            <input
+              type="text"
+              inputMode={twoFAUseBackup ? 'text' : 'numeric'}
+              value={twoFACode}
+              onChange={(e) => {
+                const v = twoFAUseBackup ? e.target.value : e.target.value.replace(/\D/g, '').slice(0, 6);
+                setTwoFACode(v);
+              }}
+              maxLength={twoFAUseBackup ? 9 : 6}
+              placeholder={twoFAUseBackup ? 'XXXX-XXXX' : '123456'}
+              className="w-full px-4 py-4 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-white/25 text-center text-2xl font-mono tracking-[0.4em] font-semibold"
+              autoComplete="one-time-code"
+              autoFocus
+              disabled={loading}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading || !twoFACode}
+            className="w-full py-3.5 rounded-xl font-semibold text-sm md:text-base transition flex items-center justify-center gap-2 disabled:opacity-50"
+            style={{ background: 'var(--theme-accent)', color: '#000' }}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Verifiziere…
+              </>
+            ) : (
+              'Code bestätigen'
+            )}
+          </button>
+
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setTwoFAStage(false);
+                setTwoFAChallengeId('');
+                setTwoFACode('');
+                setPassword('');
+              }}
+              className="text-xs md:text-sm text-white/55 hover:text-white underline transition flex items-center gap-1.5"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Zurück
+            </button>
+            <button
+              type="button"
+              onClick={() => { setTwoFAUseBackup((v) => !v); setTwoFACode(''); }}
+              className="text-xs md:text-sm text-white/55 hover:text-white underline"
+            >
+              {twoFAUseBackup ? 'App-Code verwenden' : 'Backup-Code verwenden'}
+            </button>
+          </div>
+        </form>
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-xs md:text-sm font-medium text-white/70 mb-2">
@@ -214,6 +337,7 @@ function EmailLoginCard() {
           </p>
         </div>
       </form>
+      )}
     </div>
   );
 }

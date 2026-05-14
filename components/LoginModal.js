@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Loader2, CheckCircle2, XCircle, Mail, KeyRound, Eye, EyeOff, ArrowLeft, Sparkles } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Mail, KeyRound, Eye, EyeOff, ArrowLeft, Sparkles, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { toast } from 'sonner';
@@ -195,6 +195,12 @@ function EmailLoginFlow({ onBack, onClose, refreshUser }) {
   const [needsVerify, setNeedsVerify] = useState(false);
   const [resending, setResending] = useState(false);
 
+  // 2FA-Challenge State
+  const [twoFAStage, setTwoFAStage] = useState(false);
+  const [twoFAChallengeId, setTwoFAChallengeId] = useState('');
+  const [twoFACode, setTwoFACode] = useState('');
+  const [twoFAUseBackup, setTwoFAUseBackup] = useState(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) return;
@@ -216,11 +222,65 @@ function EmailLoginFlow({ onBack, onClose, refreshUser }) {
         }
         throw new Error(data.error || 'Login fehlgeschlagen');
       }
+      // 2FA erforderlich? → Stage wechseln
+      if (data.requires2FA && data.challengeId) {
+        setTwoFAChallengeId(data.challengeId);
+        setTwoFAStage(true);
+        setTwoFACode('');
+        toast.success('Bitte gib deinen 2FA-Code ein');
+        return;
+      }
       toast.success('Erfolgreich angemeldet');
       onClose();
       setTimeout(() => refreshUser(), 100);
     } catch (err) {
       toast.error(err.message || 'Login fehlgeschlagen');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify2FA = async (e) => {
+    e.preventDefault();
+    const code = twoFACode.trim();
+    if (!code) {
+      toast.error('Bitte Code eingeben');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/supabase/login-verify-2fa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ challengeId: twoFAChallengeId, code }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.code === 'CHALLENGE_EXPIRED') {
+          toast.error('Sitzung abgelaufen — bitte erneut anmelden');
+          setTwoFAStage(false);
+          setTwoFAChallengeId('');
+          setTwoFACode('');
+          setPassword('');
+          return;
+        }
+        if (data.code === 'INVALID_2FA') {
+          toast.error('Ungültiger Code');
+          // Challenge wurde konsumiert → Re-Login nötig
+          setTwoFAStage(false);
+          setTwoFAChallengeId('');
+          setTwoFACode('');
+          setPassword('');
+          return;
+        }
+        throw new Error(data.error || 'Verifizierung fehlgeschlagen');
+      }
+      toast.success('Erfolgreich angemeldet');
+      onClose();
+      setTimeout(() => refreshUser(), 100);
+    } catch (err) {
+      toast.error(err.message || 'Verifizierung fehlgeschlagen');
     } finally {
       setLoading(false);
     }
@@ -248,13 +308,89 @@ function EmailLoginFlow({ onBack, onClose, refreshUser }) {
   return (
     <div className="pt-2 pb-1">
       <button
-        onClick={onBack}
+        onClick={() => {
+          if (twoFAStage) {
+            // Aus 2FA-Stage zurück → Re-Login
+            setTwoFAStage(false);
+            setTwoFAChallengeId('');
+            setTwoFACode('');
+            setPassword('');
+            return;
+          }
+          onBack();
+        }}
         className="flex items-center gap-2 text-xs text-white/40 hover:text-white/80 mb-4 transition"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
-        Zurück zur Auswahl
+        {twoFAStage ? 'Zurück zum Login' : 'Zurück zur Auswahl'}
       </button>
 
+      {twoFAStage ? (
+        <form onSubmit={handleVerify2FA} className="space-y-4">
+          <div className="text-center mb-2">
+            <div
+              className="w-12 h-12 rounded-full mx-auto mb-3 flex items-center justify-center"
+              style={{
+                background: 'rgba(var(--theme-accent-rgb), 0.12)',
+                border: '1px solid rgba(var(--theme-accent-rgb), 0.25)',
+              }}
+            >
+              <ShieldCheck className="w-6 h-6" style={{ color: 'var(--theme-accent)' }} />
+            </div>
+            <h3 className="text-white font-semibold text-base mb-1">2FA-Code erforderlich</h3>
+            <p className="text-xs text-white/50">
+              {twoFAUseBackup
+                ? 'Gib einen deiner Backup-Codes ein.'
+                : 'Öffne deine Authenticator-App und gib den 6-stelligen Code ein.'}
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-white/60 mb-1.5">
+              {twoFAUseBackup ? 'Backup-Code' : '6-stelliger Code'}
+            </label>
+            <input
+              type="text"
+              inputMode={twoFAUseBackup ? 'text' : 'numeric'}
+              value={twoFACode}
+              onChange={(e) => {
+                const v = twoFAUseBackup ? e.target.value : e.target.value.replace(/\D/g, '').slice(0, 6);
+                setTwoFACode(v);
+              }}
+              maxLength={twoFAUseBackup ? 9 : 6}
+              placeholder={twoFAUseBackup ? 'XXXX-XXXX' : '123456'}
+              className="w-full px-3 py-4 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-white/25 text-center text-2xl font-mono tracking-[0.4em] font-semibold"
+              autoComplete="one-time-code"
+              autoFocus
+              disabled={loading}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading || !twoFACode}
+            className="w-full py-3 rounded-xl font-medium text-sm transition flex items-center justify-center gap-2 disabled:opacity-50"
+            style={{ background: 'var(--theme-accent)', color: '#000' }}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Verifiziere…
+              </>
+            ) : (
+              'Code bestätigen'
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setTwoFAUseBackup((v) => !v); setTwoFACode(''); }}
+            className="w-full text-xs text-white/50 hover:text-white underline"
+          >
+            {twoFAUseBackup ? 'Stattdessen App-Code verwenden' : 'Stattdessen Backup-Code verwenden'}
+          </button>
+        </form>
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-xs font-medium text-white/60 mb-1.5">E-Mail-Adresse</label>
@@ -351,6 +487,7 @@ function EmailLoginFlow({ onBack, onClose, refreshUser }) {
           Ein „Nur Login"-Konto kannst du im Profil unter <b className="text-white/70">Einstellungen → Mein Konto</b> erstellen (Discord-Login erforderlich).
         </div>
       </form>
+      )}
     </div>
   );
 }
