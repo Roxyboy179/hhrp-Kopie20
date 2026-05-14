@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { IconInput } from '@/components/ui/IconInput';
 
 const DiscordIcon = ({ size = 18 }) => (
   <svg width={size} height={size} viewBox="0 0 127.14 96.36" fill="currentColor">
@@ -105,40 +106,32 @@ function EmailLoginCard() {
           <label className="block text-xs md:text-sm font-medium text-white/70 mb-2">
             E-Mail-Adresse
           </label>
-          <div className="relative">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              placeholder="deine@discord-email.de"
-              className="w-full pl-11 pr-4 py-3.5 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-white/25 text-sm"
-            />
-          </div>
+          <IconInput
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoComplete="email"
+            placeholder="deine@discord-email.de"
+            icon={Mail}
+          />
         </div>
 
         <div>
           <label className="block text-xs md:text-sm font-medium text-white/70 mb-2">Passwort</label>
-          <div className="relative">
-            <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-            <input
-              type={showPw ? 'text' : 'password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              autoComplete="current-password"
-              className="w-full pl-11 pr-11 py-3.5 bg-white/[0.04] border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/25 text-sm"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPw((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white p-1"
-            >
-              {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
+          <IconInput
+            type={showPw ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="current-password"
+            icon={KeyRound}
+            rightAction={{
+              onClick: () => setShowPw((v) => !v),
+              icon: showPw ? EyeOff : Eye,
+              label: showPw ? 'Passwort verbergen' : 'Passwort anzeigen',
+            }}
+          />
         </div>
 
         {needsVerify && (

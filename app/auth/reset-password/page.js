@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Mail, ArrowLeft, Loader2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { IconInput } from '@/components/ui/IconInput';
 
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState('');
@@ -69,13 +70,13 @@ export default function ResetPasswordPage() {
                   <label className="block text-xs font-medium text-white/60 mb-1.5">
                     E-Mail-Adresse
                   </label>
-                  <input
+                  <IconInput
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     placeholder="deine@discord-email.de"
-                    className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-white/25 text-sm"
+                    icon={Mail}
                   />
                 </div>
 

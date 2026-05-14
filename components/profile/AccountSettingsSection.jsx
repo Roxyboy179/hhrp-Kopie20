@@ -7,6 +7,7 @@ import {
   CheckCircle2, AlertCircle, RefreshCw, Eye, EyeOff, ArrowRight, Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { IconInput } from '@/components/ui/IconInput';
 
 export default function AccountSettingsSection({ discordEmail }) {
   const [loading, setLoading] = useState(true);
@@ -280,34 +281,30 @@ export default function AccountSettingsSection({ discordEmail }) {
             <label className="block text-xs font-medium text-white/60 mb-1.5">
               Aktuelles Passwort
             </label>
-            <div className="relative">
-              <input
-                type={showChangePw ? 'text' : 'password'}
-                value={currentPw}
-                onChange={(e) => setCurrentPw(e.target.value)}
-                required
-                className="w-full px-4 py-3 pr-10 bg-white/[0.04] border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/25 text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => setShowChangePw((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
-              >
-                {showChangePw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
+            <IconInput
+              type={showChangePw ? 'text' : 'password'}
+              value={currentPw}
+              onChange={(e) => setCurrentPw(e.target.value)}
+              required
+              icon={KeyRound}
+              rightAction={{
+                onClick: () => setShowChangePw((v) => !v),
+                icon: showChangePw ? EyeOff : Eye,
+                label: showChangePw ? 'Passwort verbergen' : 'Passwort anzeigen',
+              }}
+            />
           </div>
 
           <div>
             <label className="block text-xs font-medium text-white/60 mb-1.5">Neues Passwort</label>
-            <input
+            <IconInput
               type={showChangePw ? 'text' : 'password'}
               value={newPw}
               onChange={(e) => setNewPw(e.target.value)}
               required
               minLength={8}
-              className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/25 text-sm"
               placeholder="Mindestens 8 Zeichen"
+              icon={KeyRound}
             />
           </div>
 
@@ -315,13 +312,13 @@ export default function AccountSettingsSection({ discordEmail }) {
             <label className="block text-xs font-medium text-white/60 mb-1.5">
               Neues Passwort wiederholen
             </label>
-            <input
+            <IconInput
               type={showChangePw ? 'text' : 'password'}
               value={newPwConfirm}
               onChange={(e) => setNewPwConfirm(e.target.value)}
               required
               minLength={8}
-              className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-white focus:outline-none focus:border-white/25 text-sm"
+              icon={KeyRound}
             />
           </div>
 

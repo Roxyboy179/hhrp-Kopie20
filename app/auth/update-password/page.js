@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { KeyRound, ArrowLeft, Loader2, CheckCircle2, XCircle, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { IconInput } from '@/components/ui/IconInput';
 
 export default function UpdatePasswordPage() {
   const router = useRouter();
@@ -141,36 +142,32 @@ export default function UpdatePasswordPage() {
                   <label className="block text-xs font-medium text-white/60 mb-1.5">
                     Neues Passwort
                   </label>
-                  <div className="relative">
-                    <input
-                      type={showPw ? 'text' : 'password'}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      minLength={8}
-                      className="w-full px-4 py-3 pr-10 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-white/25 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPw((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white"
-                    >
-                      {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
+                  <IconInput
+                    type={showPw ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    icon={KeyRound}
+                    rightAction={{
+                      onClick: () => setShowPw((v) => !v),
+                      icon: showPw ? EyeOff : Eye,
+                      label: showPw ? 'Passwort verbergen' : 'Passwort anzeigen',
+                    }}
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-white/60 mb-1.5">
                     Passwort wiederholen
                   </label>
-                  <input
+                  <IconInput
                     type={showPw ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     minLength={8}
-                    className="w-full px-4 py-3 bg-white/[0.04] border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-white/25 text-sm"
+                    icon={KeyRound}
                   />
                 </div>
 
