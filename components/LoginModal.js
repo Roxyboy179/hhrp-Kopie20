@@ -71,7 +71,13 @@ function DiscordFlow({ onBack, onClose, refreshUser }) {
             account_locked: 'Dein Login-Konto wurde nach 3 fehlgeschlagenen Login-Versuchen gesperrt. Bitte setze dein Passwort zurück, um den Account zu entsperren.',
             auth_failed: 'Anmeldung fehlgeschlagen. Bitte versuche es erneut.',
           };
-          setErrorMessage(map[data.error] || 'Ein unbekannter Fehler ist aufgetreten.');
+          // Heuristik: Wenn der Code "lock" / "lock" enthält → Sperr-Meldung
+          let resolved = map[data.error];
+          if (!resolved && /lock|gesperr/i.test(String(data.error))) {
+            resolved = map.account_locked;
+            setErrorCode('account_locked');
+          }
+          setErrorMessage(resolved || 'Ein unbekannter Fehler ist aufgetreten.');
         }
       }
     };
