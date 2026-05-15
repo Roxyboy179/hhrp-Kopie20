@@ -51,6 +51,23 @@ J. POST /api/auth/supabase/update-password without token returns its existing be
 K. DELETE /api/auth/supabase/delete-account without cookie → 401 (regression).
 L. All new routes must be reachable in the GET/POST routing map (no 404).
 
+## Reauthentication Backend tests (Iteration 3)
+NEW endpoints for Account-Freischaltung per E-Mail-OTP after 3 failed logins.
+
+M. POST /api/auth/supabase/request-reauth (no body) → 400 "Gültige E-Mail erforderlich"
+N. POST /api/auth/supabase/request-reauth body `{"email":"not-an-email"}` → 400
+O. POST /api/auth/supabase/request-reauth body `{"email":"nonexistent_xyz@example.com"}`
+   → 200 (generic success message; anti-enumeration). Response MUST NOT reveal if user exists.
+P. POST /api/auth/supabase/verify-reauth (no body) → 400 "E-Mail und Code erforderlich"
+Q. POST /api/auth/supabase/verify-reauth body `{"email":"x@y.com","code":"123"}` → 400 "Code muss 6-stellig sein"
+R. POST /api/auth/supabase/verify-reauth body `{"email":"nonexistent_xyz@example.com","code":"000000"}`
+   → 401 with `code:"INVALID"` (generic, no enumeration)
+S. POST /api/auth/supabase/login with valid email but wrong password — 3rd attempt should
+   trigger the `ACCOUNT_LOCKED` code path (response includes `code:"ACCOUNT_LOCKED"` and the
+   NEW message about "E-Mail-Code freizuschalten" instead of "Passwort zurücksetzen").
+   This is only verifiable if a test user is seeded; otherwise SKIP.
+T. All NEW routes must be reachable (no 404). Existing routes must still work.
+
 ## test_credentials
 None required for backend tests (we will test endpoint reachability and validation only,
 since the SQL migration must be run in the Supabase dashboard before full sign-up/login

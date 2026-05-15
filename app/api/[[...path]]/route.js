@@ -44,7 +44,7 @@ import {
   checkIfAccountLocked,
   deleteSupabaseAccount,
 } from '@/lib/supabase-auth';
-import { sendAccountLockedEmail, sendBackupCodesEmail } from '@/lib/email-sender';
+import { sendAccountLockedEmail, sendBackupCodesEmail, sendReauthCodeEmail } from '@/lib/email-sender';
 import {
   getTwoFaState,
   startTwoFaSetup,
@@ -55,6 +55,7 @@ import {
   createLoginChallenge,
   consumeLoginChallenge,
 } from '@/lib/twofa';
+import { createReauthOtp, verifyReauthOtp } from '@/lib/reauth';
 
 // Web Push Configuration
 const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -553,7 +554,7 @@ async function handleSupabaseLogin(request) {
     const isLocked = await checkIfAccountLocked(email);
     if (isLocked) {
       return NextResponse.json({
-        error: 'Dein Account wurde nach 3 fehlgeschlagenen Login-Versuchen gesperrt. Bitte setze dein Passwort zurück, um den Account zu entsperren.',
+        error: 'Dein Account wurde nach 3 fehlgeschlagenen Login-Versuchen gesperrt. Bitte bestätige deine Identität per E-Mail-Code, um den Account wieder freizuschalten.',
         code: 'ACCOUNT_LOCKED',
       }, { status: 403 });
     }
@@ -585,7 +586,7 @@ async function handleSupabaseLogin(request) {
           }
           
           return NextResponse.json({
-            error: 'Zu viele Fehlversuche. Dein Account wurde gesperrt. Bitte setze dein Passwort zurück.',
+            error: 'Zu viele Fehlversuche. Dein Account wurde gesperrt. Bitte bestätige deine Identität per E-Mail-Code zur Freischaltung.',
             code: 'ACCOUNT_LOCKED',
           }, { status: 403 });
         }
@@ -1218,6 +1219,119 @@ async function handle2FARegenerateBackupCodes(request) {
     });
   } catch (error) {
     console.error('[2fa-regen] unexpected:', error);
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
+  }
+}
+
+// =====================================================================
+// Reauthentication via E-Mail-OTP (Account-Freischaltung nach 3 Fehlversuchen)
+// =====================================================================
+
+/**
+ * POST /api/auth/supabase/request-reauth
+ * Body: { email }
+ * Sendet einen 6-stelligen Bestätigungscode an die E-Mail.
+ * Antwortet IMMER 200 mit generischer Nachricht (Anti-Enumeration),
+ * außer bei Rate-Limit (429).
+ */
+async function handleRequestReauth(request) {
+  try {
+    const body = await request.json();
+    const email = body?.email ? String(body.email).toLowerCase().trim() : '';
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+      return NextResponse.json({ error: 'Gültige E-Mail erforderlich' }, { status: 400 });
+    }
+
+    const result = await createReauthOtp(email);
+
+    if (result.alreadySentRecently) {
+      return NextResponse.json({
+        error: 'Bitte warte eine Minute, bevor du einen neuen Code anforderst.',
+        code: 'RATE_LIMITED',
+      }, { status: 429 });
+    }
+
+    // E-Mail nur senden, wenn User existiert. Nach außen aber GLEICHE Antwort.
+    if (result.userExists && result.code) {
+      try {
+        await sendReauthCodeEmail(email, result.code);
+      } catch (mailErr) {
+        console.error('[reauth-request] mail send failed:', mailErr);
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Wenn ein Konto mit dieser E-Mail existiert, wurde ein Bestätigungscode versendet.',
+    });
+  } catch (error) {
+    console.error('[reauth-request] unexpected:', error);
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/auth/supabase/verify-reauth
+ * Body: { email, code }
+ * Verifiziert den 6-stelligen Code. Bei Erfolg wird der Account entsperrt
+ * (failed_login_attempts → 0, locked_at → null).
+ */
+async function handleVerifyReauth(request) {
+  try {
+    const body = await request.json();
+    const email = body?.email ? String(body.email).toLowerCase().trim() : '';
+    const code = body?.code ? String(body.code).replace(/\D/g, '').slice(0, 6) : '';
+
+    if (!email || !code) {
+      return NextResponse.json({ error: 'E-Mail und Code erforderlich' }, { status: 400 });
+    }
+    if (code.length !== 6) {
+      return NextResponse.json({ error: 'Code muss 6-stellig sein' }, { status: 400 });
+    }
+
+    const result = await verifyReauthOtp(email, code);
+
+    if (!result.ok) {
+      // Generische Antworten nach außen, damit man nicht User-Existenz prüfen kann
+      if (result.reason === 'EXPIRED') {
+        return NextResponse.json({
+          error: 'Der Code ist abgelaufen. Bitte fordere einen neuen Code an.',
+          code: 'EXPIRED',
+        }, { status: 400 });
+      }
+      if (result.reason === 'TOO_MANY_ATTEMPTS') {
+        return NextResponse.json({
+          error: 'Zu viele Fehlversuche. Bitte fordere einen neuen Code an.',
+          code: 'TOO_MANY_ATTEMPTS',
+        }, { status: 429 });
+      }
+      // NOT_FOUND, NO_OTP, INVALID → alle als "ungültiger Code"
+      const attemptsLeft = typeof result.attemptsLeft === 'number' ? result.attemptsLeft : null;
+      return NextResponse.json({
+        error: attemptsLeft !== null
+          ? `Ungültiger Code. Noch ${attemptsLeft} Versuch${attemptsLeft === 1 ? '' : 'e'}.`
+          : 'Ungültiger oder abgelaufener Code.',
+        code: 'INVALID',
+      }, { status: 401 });
+    }
+
+    // Activity Log
+    try {
+      await logActivity({
+        actionType: 'ACCOUNT_REAUTH_UNLOCK',
+        userId: null,
+        username: result.email,
+        details: { email: result.email, method: 'email_otp' },
+        ipAddress: getIpAddress(request),
+      });
+    } catch (e) { /* noop */ }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Dein Account wurde erfolgreich freigeschaltet. Du kannst dich jetzt wieder anmelden.',
+    });
+  } catch (error) {
+    console.error('[reauth-verify] unexpected:', error);
     return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
   }
 }
@@ -6028,6 +6142,8 @@ export async function POST(request) {
     case 'auth/2fa/setup-verify': return handle2FASetupVerify(request);
     case 'auth/2fa/disable': return handle2FADisable(request);
     case 'auth/2fa/regenerate-backup-codes': return handle2FARegenerateBackupCodes(request);
+    case 'auth/supabase/request-reauth': return handleRequestReauth(request);
+    case 'auth/supabase/verify-reauth': return handleVerifyReauth(request);
     case 'bewerbungen': return handleCreateBewerbung(request);
     case 'bewerbung-settings': return handleUpdateBewerbungSettings(request);
     case 'admin/login': return handleAdminLogin(request);

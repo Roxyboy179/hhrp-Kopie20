@@ -68,7 +68,7 @@ function DiscordFlow({ onBack, onClose, refreshUser }) {
             token_failed: 'Token-Austausch fehlgeschlagen.',
             user_failed: 'Benutzer-Daten konnten nicht abgerufen werden.',
             not_member: 'Du bist nicht Mitglied des Hamburg Horizon Discord-Servers.',
-            account_locked: 'Dein Login-Konto wurde nach 3 fehlgeschlagenen Login-Versuchen gesperrt. Bitte setze dein Passwort zurück, um den Account zu entsperren.',
+            account_locked: 'Dein Login-Konto wurde nach 3 fehlgeschlagenen Login-Versuchen gesperrt. Bitte schalte dein Konto per E-Mail-Code wieder frei.',
             auth_failed: 'Anmeldung fehlgeschlagen. Bitte versuche es erneut.',
           };
           // Heuristik: Wenn der Code "lock" / "lock" enthält → Sperr-Meldung
@@ -158,12 +158,13 @@ function DiscordFlow({ onBack, onClose, refreshUser }) {
           {errorCode === 'account_locked' ? (
             <div className="flex flex-col gap-2 mt-2 w-full px-4">
               <Link
-                href="/auth/reset-password"
+                href="/login?mode=reauth"
                 onClick={onClose}
-                className="w-full text-center py-2.5 rounded-lg font-medium text-sm transition"
+                className="w-full text-center py-2.5 rounded-lg font-medium text-sm transition inline-flex items-center justify-center gap-2"
                 style={{ background: 'var(--theme-accent)', color: '#000' }}
               >
-                Passwort zurücksetzen
+                <ShieldCheck className="w-4 h-4" />
+                Konto freischalten
               </Link>
               <Button onClick={onBack} variant="ghost" className="text-white/70 w-full">
                 Zurück zur Auswahl
@@ -218,6 +219,17 @@ function EmailLoginFlow({ onBack, onClose, refreshUser }) {
         if (data.code === 'EMAIL_NOT_CONFIRMED') {
           setNeedsVerify(true);
           toast.error('E-Mail noch nicht bestätigt');
+          return;
+        }
+        if (data.code === 'ACCOUNT_LOCKED') {
+          toast.error('Account gesperrt — bitte freischalten');
+          onClose();
+          // kleinen Tick warten, damit das Modal sauber schließt, dann navigieren
+          setTimeout(() => {
+            try {
+              window.location.href = `/login?mode=reauth&email=${encodeURIComponent(email)}`;
+            } catch { /* noop */ }
+          }, 80);
           return;
         }
         throw new Error(data.error || 'Login fehlgeschlagen');
