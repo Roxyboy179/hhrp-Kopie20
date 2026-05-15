@@ -158,7 +158,7 @@ function DiscordFlow({ onBack, onClose, refreshUser }) {
           {errorCode === 'account_locked' ? (
             <div className="flex flex-col gap-2 mt-2 w-full px-4">
               <Link
-                href="/login?mode=reauth"
+                href="/konto-freischalten"
                 onClick={onClose}
                 className="w-full text-center py-2.5 rounded-lg font-medium text-sm transition inline-flex items-center justify-center gap-2"
                 style={{ background: 'var(--theme-accent)', color: '#000' }}
@@ -227,7 +227,7 @@ function EmailLoginFlow({ onBack, onClose, refreshUser }) {
           // kleinen Tick warten, damit das Modal sauber schließt, dann navigieren
           setTimeout(() => {
             try {
-              window.location.href = `/login?mode=reauth&email=${encodeURIComponent(email)}`;
+              window.location.href = `/konto-freischalten?email=${encodeURIComponent(email)}`;
             } catch { /* noop */ }
           }, 80);
           return;

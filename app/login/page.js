@@ -55,8 +55,8 @@ function EmailLoginCard() {
         }
         if (data.code === 'ACCOUNT_LOCKED') {
           toast.error('Account gesperrt — bitte freischalten');
-          // Direkt zum Reauth-Modus weiterleiten, E-Mail vorbefüllen
-          router.push(`/login?mode=reauth&email=${encodeURIComponent(email)}`);
+          // Direkt zur Konto-Freischaltungs-Seite weiterleiten, E-Mail vorbefüllen
+          router.push(`/konto-freischalten?email=${encodeURIComponent(email)}`);
           return;
         }
         throw new Error(data.error || 'Login fehlgeschlagen');
@@ -310,12 +310,20 @@ function EmailLoginCard() {
           )}
         </button>
 
-        <div className="flex items-center justify-between text-xs md:text-sm pt-2">
+        <div className="flex items-center justify-between flex-wrap gap-2 text-xs md:text-sm pt-2">
           <Link
             href="/auth/reset-password"
             className="text-white/55 hover:text-white underline transition"
           >
             Passwort vergessen?
+          </Link>
+          <Link
+            href="/konto-freischalten"
+            className="hover:text-white underline transition inline-flex items-center gap-1.5"
+            style={{ color: 'rgba(var(--theme-accent-rgb), 0.85)' }}
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Konto freischalten
           </Link>
           <Link
             href="/konto-erstellen"
@@ -525,7 +533,7 @@ function DiscordLoginCard() {
           <p className="text-sm text-white/60 text-center px-4">{errorMessage}</p>
           {errorCode === 'account_locked' ? (
             <Link
-              href="/login?mode=reauth"
+              href="/konto-freischalten"
               className="mt-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-black inline-flex items-center gap-2"
               style={{ background: 'var(--theme-accent)' }}
             >
@@ -798,13 +806,22 @@ function ReauthCard() {
 function LoginPageContent() {
   const searchParams = useSearchParams();
   const modeParam = searchParams.get('mode');
-  const initialMode = modeParam === 'discord' ? 'discord'
-    : modeParam === 'reauth' ? 'reauth'
-    : 'email';
+  const initialMode = modeParam === 'discord' ? 'discord' : 'email';
   const reason = searchParams.get('reason');
   const [mode, setMode] = useState(initialMode);
   const { user } = useAuth();
   const router = useRouter();
+
+  // Legacy-Redirect: ?mode=reauth → eigene Seite /konto-freischalten
+  useEffect(() => {
+    if (modeParam === 'reauth') {
+      const emailQ = searchParams.get('email');
+      const url = emailQ
+        ? `/konto-freischalten?email=${encodeURIComponent(emailQ)}`
+        : '/konto-freischalten';
+      router.replace(url);
+    }
+  }, [modeParam, searchParams, router]);
 
   // Bereits eingeloggt? -> ab zum Profil
   useEffect(() => {
@@ -816,7 +833,6 @@ function LoginPageContent() {
   const tabs = [
     { id: 'email', label: 'Nur Login', icon: Mail },
     { id: 'discord', label: 'Discord Login', icon: DiscordIcon },
-    { id: 'reauth', label: 'Konto freischalten', icon: ShieldCheck },
   ];
 
   return (
@@ -925,7 +941,6 @@ function LoginPageContent() {
         {/* Content */}
         {mode === 'email' && <EmailLoginCard />}
         {mode === 'discord' && <DiscordLoginCard />}
-        {mode === 'reauth' && <ReauthCard />}
 
         {/* Footer */}
         <p className="text-center text-[11px] md:text-xs text-white/30 mt-6 md:mt-8">

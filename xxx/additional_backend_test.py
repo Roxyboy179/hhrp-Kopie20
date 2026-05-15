@@ -13,7 +13,7 @@ import time
 import uuid
 
 # Configuration
-BASE_URL = "https://hhrp-2fa-system.preview.emergentagent.com"
+BASE_URL = "https://realtime-sync-33.preview.emergentagent.com"
 JWT_SECRET = "hhrp-jwt-secret-hamburg-horizon-2025"
 
 def create_jwt_token(payload):
