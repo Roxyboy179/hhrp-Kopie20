@@ -163,3 +163,48 @@ All 19 backend API tests executed successfully against https://hhrp24.de/api
 **From Testing Agent to Main Agent:**
 All backend endpoints for the HHRP Supabase Auth extension are working correctly. The new account lock check in Discord callback is properly integrated and uses fail-open strategy. DELETE endpoint routing is confirmed working. No critical issues found.
 
+
+
+---
+
+## Feature Addition (2026): Admin Benutzer-Verwaltung (Level 4)
+
+### Was wurde hinzugefügt
+- **Neue Admin-Seite** `/admin/benutzer` (nur für Level 4 / Projektinhaber)
+- **3 neue API-Endpoints** unter `/api/admin/users/*`
+- **Erweiterte Suche**: E-Mail, Discord-ID, Discord-Username (auto-detect oder manuell)
+- **E-Mail-Benachrichtigungen** für betroffene User bei beiden Admin-Aktionen
+- **Sidebar-Nav** & **Dashboard-ActionCard** (sichtbar nur ab Level 4)
+
+### Neue API-Endpoints (alle Level 4-only, geben sonst 403 zurück)
+1. **GET `/api/admin/users/lookup?q=...&type=auto|email|discordId|username`**
+   - Suche per E-Mail (exakt), Discord-ID (exakt, 15-25 Ziffern) oder Username (ILIKE in `user_data.data`)
+   - `type=auto` (default) erkennt den Typ am Format
+   - Liefert: `{ found, user }` oder bei mehreren Username-Treffern `{ found:true, multiple:true, candidates:[...] }`
+   - Liefert auch `discordUsername`, `globalName`, 2FA-Status, Lock-Status
+   - **Legacy:** `?email=...` wird weiterhin unterstützt
+
+2. **POST `/api/admin/users/disable-2fa`** Body: `{ email }`
+   - Ruft `deactivateTwoFa(userId)` auf
+   - 400 wenn 2FA nicht aktiv ist (`code: NOT_ENABLED`)
+   - Sendet E-Mail `send2FARemovedByAdminEmail` (Template ⚠️ rot)
+   - Loggt Aktion als `2FA_ADMIN_REMOVED`
+
+3. **POST `/api/admin/users/unlock`** Body: `{ email }`
+   - Ruft `resetFailedAttempts(email)` auf (entfernt `locked_at` + setzt `failed_login_attempts: 0`)
+   - Sendet E-Mail `sendAccountUnlockedByAdminEmail` **nur** wenn der Account vorher wirklich gesperrt war
+   - Liefert `wasLocked: boolean` zurück
+   - Loggt Aktion als `ACCOUNT_ADMIN_UNLOCKED`
+
+### Wichtige Implementierungs-Details
+- `findAuthUserByEmail` wurde in `/app/lib/supabase-auth.js` exportiert (vorher private)
+- `sbAdmin` wird via `getSupabaseAdmin()` lokal geholt — **nicht** den global importierten `supabaseAdmin` lokal mit `const` shadowen (führt zu "defined multiple times")
+- Username-Suche nutzt Postgres `data->>discord_username.ilike` über `OR()`
+- E-Mail-Versand ist fire-and-forget (Catch + Log)
+
+### Backend-Test Cases (Empfehlung)
+- `GET /api/admin/users/lookup?q=test` ohne Admin-Cookie → 403
+- `POST /api/admin/users/disable-2fa` ohne Admin-Cookie → 403
+- `POST /api/admin/users/unlock` ohne Admin-Cookie → 403
+- (Manuell verifiziert: alle 3 Endpoints liefern 403 ohne Auth)
+- Frontend Seite `/admin/benutzer` lädt mit Status 200

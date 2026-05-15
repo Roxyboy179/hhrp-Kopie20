@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, FileText, UserPlus, Settings, LogOut, 
-  Menu, X, ChevronRight, Sliders, Clock, Shield, AlertTriangle, Headphones
+  Menu, X, ChevronRight, Sliders, Clock, Shield, AlertTriangle, Headphones, UserCog
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminAuthProvider, useAdminAuth } from '@/components/providers/AdminAuthProvider';
@@ -48,6 +48,7 @@ function AdminShell({ children }) {
     { href: '/admin/voice-support', label: 'Voice Support', icon: <Headphones className="w-[18px] h-[18px]" />, show: true },
     { href: '/admin/logs', label: 'Aktivitäts-Logs', icon: <Clock className="w-[18px] h-[18px]" />, show: true },
     { href: '/admin/accounts', label: 'Accounts', icon: <UserPlus className="w-[18px] h-[18px]" />, show: canSeeAccounts },
+    { href: '/admin/benutzer', label: 'Benutzer-Verwaltung', icon: <UserCog className="w-[18px] h-[18px]" />, show: admin?.roleLevel >= 4 },
     { href: '/admin/system-status', label: 'System-Status', icon: <Shield className="w-[18px] h-[18px]" />, show: admin?.roleLevel >= 4 },
     { href: '/admin/einstellungen', label: 'Einstellungen', icon: <Settings className="w-[18px] h-[18px]" />, show: true },
   ];

@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import webpush from 'web-push';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin, getSupabaseAdmin } from '@/lib/supabase';
 import { readStats, writeStats, incrementStat } from '@/lib/stats-file';
 import { SHOP_ITEMS, CREDIT_PURCHASE_OPTIONS, BANK_LIMIT_UPGRADES, CREDIT_SPEND_ITEMS, CREDIT_CRATES } from '@/lib/shop-data';
 import { findActivePromotion, findActiveCreditBonus, getCreditsSpendingDiscount } from '@/lib/shop-promotions';
@@ -43,8 +43,9 @@ import {
   resetFailedAttempts,
   checkIfAccountLocked,
   deleteSupabaseAccount,
+  findAuthUserByEmail,
 } from '@/lib/supabase-auth';
-import { sendAccountLockedEmail, sendBackupCodesEmail, sendReauthCodeEmail } from '@/lib/email-sender';
+import { sendAccountLockedEmail, sendBackupCodesEmail, sendReauthCodeEmail, sendAccountUnlockedByAdminEmail, send2FARemovedByAdminEmail } from '@/lib/email-sender';
 import {
   getTwoFaState,
   startTwoFaSetup,
@@ -5651,6 +5652,7 @@ export async function GET(request) {
     case 'admin/accounts': return handleAdminGetAccounts(request);
     case 'admin/settings': return handleAdminGetSettings(request);
     case 'admin/verwarnungen-suche': return handleAdminVerwarnungenSuche(request);
+    case 'admin/users/lookup': return handleAdminUserLookup(request);
     
     // Battle Pass Endpoints (nur GET hier; POST + claim/purchase sind im POST-Handler)
     case 'battle-pass/current': return handleBattlePassCurrent(request);
@@ -6152,6 +6154,8 @@ export async function POST(request) {
     case 'admin/check-role': return handleCheckDiscordRole(request);
     case 'admin/settings': return handleAdminUpdateSettings(request);
     case 'admin/system-status': return handleUpdateSystemStatus(request); // Same as PUT
+    case 'admin/users/disable-2fa': return handleAdminDisable2FA(request);
+    case 'admin/users/unlock': return handleAdminUnlockAccount(request);
     case 'user/rewards/claim': return handleClaimReward(request);
     case 'user/rewards/daily': return handleDailyBonus(request);
     case 'user/rewards/reset-daily': return handleResetDaily(request);
@@ -6180,6 +6184,302 @@ export async function POST(request) {
     case 'character/edit-request': return handleCharacterEditRequest(request);
     case 'character/delete-request': return handleCharacterDeleteRequest(request);
     default: return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Admin: User Management (2FA entfernen, Account entsperren) — nur Level 4
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/admin/users/lookup?q=...&type=auto|email|discordId|username
+ * Sucht einen Supabase-User per E-Mail, Discord-ID oder Discord-Benutzername.
+ * Gibt Status zurück (2FA, Lock). Nur Level 4 (Projektinhaber).
+ *
+ * - `type=email` (default falls @ enthalten):      exakte E-Mail-Suche
+ * - `type=discordId` (default falls nur Ziffern): Suche via user_auth_links.discord_user_id
+ * - `type=username`:                              Suche in user_data.data (Discord-Username)
+ * - `type=auto` (default): automatische Erkennung
+ *
+ * Liefert bei Username-Suche ggf. mehrere Kandidaten zurück.
+ */
+async function handleAdminUserLookup(request) {
+  try {
+    const admin = getAdminContext(request);
+    if (!admin || admin.roleLevel < 4) {
+      return NextResponse.json({ error: 'Nur Projektinhaber (Level 4)' }, { status: 403 });
+    }
+
+    const url = new URL(request.url);
+    // Legacy ?email=… weiter unterstützen
+    const rawQuery = (url.searchParams.get('q') || url.searchParams.get('email') || '').trim();
+    let type = (url.searchParams.get('type') || 'auto').toLowerCase();
+
+    if (!rawQuery) {
+      return NextResponse.json({ error: 'Suchbegriff erforderlich (q oder email)' }, { status: 400 });
+    }
+
+    // Auto-detect
+    if (type === 'auto') {
+      if (rawQuery.includes('@')) type = 'email';
+      else if (/^\d{15,25}$/.test(rawQuery)) type = 'discordId';
+      else type = 'username';
+    }
+
+    const sbAdmin = await getSupabaseAdmin();
+    let candidateEmail = null;
+    // eslint-disable-next-line no-unused-vars
+    let multipleCandidates = [];
+
+    if (type === 'email') {
+      const email = rawQuery.toLowerCase();
+      if (!/\S+@\S+\.\S+/.test(email)) {
+        return NextResponse.json({ error: 'Ungültige E-Mail-Adresse' }, { status: 400 });
+      }
+      candidateEmail = email;
+    } else if (type === 'discordId') {
+      // Suche via user_auth_links → email
+      const link = await getLinkByDiscordId(rawQuery);
+      if (!link) {
+        return NextResponse.json({ found: false, type, query: rawQuery }, { status: 200 });
+      }
+      candidateEmail = link.email;
+    } else if (type === 'username') {
+      // Username-Suche: user_data.data (JSONB) → discord_username oder global_name
+      // Wir machen einen ILIKE über die Stringified JSON (max 25 Treffer, Case-Insensitive)
+      const { data: matches } = await sbAdmin
+        .from('user_data')
+        .select('discord_user_id, data')
+        .or(`data->>discord_username.ilike.%${rawQuery}%,data->>global_name.ilike.%${rawQuery}%,data->>username.ilike.%${rawQuery}%`)
+        .limit(25);
+
+      if (!matches || matches.length === 0) {
+        return NextResponse.json({ found: false, type, query: rawQuery }, { status: 200 });
+      }
+
+      // Mappe Discord-IDs auf E-Mails via user_auth_links
+      const discordIds = matches.map(m => m.discord_user_id).filter(Boolean);
+      const { data: links } = await sbAdmin
+        .from('user_auth_links')
+        .select('discord_user_id, email')
+        .in('discord_user_id', discordIds);
+
+      const linkMap = new Map((links || []).map(l => [String(l.discord_user_id), l.email]));
+
+      const enriched = matches
+        .map(m => {
+          const d = typeof m.data === 'string' ? (() => { try { return JSON.parse(m.data); } catch { return {}; } })() : (m.data || {});
+          const username = d.discord_username || d.username || d.global_name || null;
+          const email = linkMap.get(String(m.discord_user_id)) || null;
+          return {
+            discordUserId: m.discord_user_id,
+            discordUsername: username,
+            globalName: d.global_name || null,
+            email,
+          };
+        })
+        .filter(c => c.email); // ohne email keine Aktion möglich
+
+      if (enriched.length === 0) {
+        return NextResponse.json({ found: false, type, query: rawQuery }, { status: 200 });
+      }
+
+      // Genau 1 Treffer → direkt laden, sonst Liste zurückgeben
+      if (enriched.length === 1) {
+        candidateEmail = enriched[0].email;
+      } else {
+        return NextResponse.json({
+          found: true,
+          multiple: true,
+          type,
+          query: rawQuery,
+          candidates: enriched,
+        });
+      }
+    } else {
+      return NextResponse.json({ error: 'Ungültiger type-Parameter' }, { status: 400 });
+    }
+
+    // Jetzt User per E-Mail laden
+    const user = await findAuthUserByEmail(candidateEmail);
+    if (!user) {
+      return NextResponse.json({ found: false, type, query: rawQuery }, { status: 200 });
+    }
+
+    const meta = user.user_metadata || {};
+    const link = await getLinkByEmail(candidateEmail);
+
+    // Discord-Username aus user_data nachladen (falls verlinkt)
+    let discordUsername = null;
+    let globalName = null;
+    if (link?.discord_user_id) {
+      const { data: ud } = await supabaseAdmin
+        .from('user_data')
+        .select('data')
+        .eq('discord_user_id', link.discord_user_id)
+        .maybeSingle();
+      if (ud?.data) {
+        const d = typeof ud.data === 'string' ? (() => { try { return JSON.parse(ud.data); } catch { return {}; } })() : ud.data;
+        discordUsername = d.discord_username || d.username || null;
+        globalName = d.global_name || null;
+      }
+    }
+
+    return NextResponse.json({
+      found: true,
+      type,
+      query: rawQuery,
+      user: {
+        id: user.id,
+        email: user.email,
+        createdAt: user.created_at,
+        emailConfirmedAt: user.email_confirmed_at || null,
+        lastSignInAt: user.last_sign_in_at || null,
+        discordUserId: link?.discord_user_id || meta.discord_user_id || null,
+        discordUsername,
+        globalName,
+        twoFa: {
+          enabled: !!meta.twofa_enabled,
+          enabledAt: meta.twofa_enabled_at || null,
+          backupCodesRemaining: Array.isArray(meta.twofa_backup_codes) ? meta.twofa_backup_codes.length : 0,
+        },
+        lock: {
+          locked: !!meta.locked_at,
+          lockedAt: meta.locked_at || null,
+          failedLoginAttempts: meta.failed_login_attempts || 0,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('[admin-user-lookup] error:', error);
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/admin/users/disable-2fa
+ * Body: { email }
+ * Deaktiviert 2FA für den User. Nur Level 4 (Projektinhaber).
+ */
+async function handleAdminDisable2FA(request) {
+  try {
+    const admin = getAdminContext(request);
+    if (!admin || admin.roleLevel < 4) {
+      return NextResponse.json({ error: 'Nur Projektinhaber (Level 4)' }, { status: 403 });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const email = String(body?.email || '').trim().toLowerCase();
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+      return NextResponse.json({ error: 'Gültige E-Mail erforderlich' }, { status: 400 });
+    }
+
+    const user = await findAuthUserByEmail(email);
+    if (!user) {
+      return NextResponse.json({ error: 'User nicht gefunden' }, { status: 404 });
+    }
+
+    const meta = user.user_metadata || {};
+    if (!meta.twofa_enabled && !meta.twofa_pending_secret) {
+      return NextResponse.json({ error: '2FA ist nicht aktiviert', code: 'NOT_ENABLED' }, { status: 400 });
+    }
+
+    await deactivateTwoFa(user.id);
+
+    // E-Mail an User senden (fire-and-forget)
+    send2FARemovedByAdminEmail(email).catch(err => {
+      console.error('[admin-disable-2fa] Email send failed:', err);
+    });
+
+    try {
+      await logActivity({
+        actionType: '2FA_ADMIN_REMOVED',
+        userId: admin.discordUserId || admin.mitarbeiterNummer,
+        username: admin.discordUsername,
+        details: {
+          targetEmail: email,
+          targetUserId: user.id,
+          adminRoleName: admin.roleName,
+          adminRoleLevel: admin.roleLevel,
+        },
+        ipAddress: getIpAddress(request),
+      });
+    } catch (e) { /* noop */ }
+
+    return NextResponse.json({
+      success: true,
+      message: `2FA für ${email} entfernt`,
+    });
+  } catch (error) {
+    console.error('[admin-disable-2fa] error:', error);
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/admin/users/unlock
+ * Body: { email }
+ * Entsperrt einen Account (Reset failed_login_attempts + locked_at).
+ * Nur Level 4 (Projektinhaber).
+ */
+async function handleAdminUnlockAccount(request) {
+  try {
+    const admin = getAdminContext(request);
+    if (!admin || admin.roleLevel < 4) {
+      return NextResponse.json({ error: 'Nur Projektinhaber (Level 4)' }, { status: 403 });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const email = String(body?.email || '').trim().toLowerCase();
+    if (!email || !/\S+@\S+\.\S+/.test(email)) {
+      return NextResponse.json({ error: 'Gültige E-Mail erforderlich' }, { status: 400 });
+    }
+
+    const user = await findAuthUserByEmail(email);
+    if (!user) {
+      return NextResponse.json({ error: 'User nicht gefunden' }, { status: 404 });
+    }
+
+    const meta = user.user_metadata || {};
+    const wasLocked = !!meta.locked_at;
+
+    // Reset (auch wenn nicht gesperrt – setzt failed_login_attempts auf 0)
+    await resetFailedAttempts(email);
+
+    // E-Mail nur senden wenn der Account vorher wirklich gesperrt war
+    if (wasLocked) {
+      sendAccountUnlockedByAdminEmail(email).catch(err => {
+        console.error('[admin-unlock] Email send failed:', err);
+      });
+    }
+
+    try {
+      await logActivity({
+        actionType: 'ACCOUNT_ADMIN_UNLOCKED',
+        userId: admin.discordUserId || admin.mitarbeiterNummer,
+        username: admin.discordUsername,
+        details: {
+          targetEmail: email,
+          targetUserId: user.id,
+          wasLocked,
+          previousFailedAttempts: meta.failed_login_attempts || 0,
+          adminRoleName: admin.roleName,
+          adminRoleLevel: admin.roleLevel,
+        },
+        ipAddress: getIpAddress(request),
+      });
+    } catch (e) { /* noop */ }
+
+    return NextResponse.json({
+      success: true,
+      message: wasLocked
+        ? `Account ${email} wurde entsperrt`
+        : `Fehlversuche für ${email} zurückgesetzt`,
+      wasLocked,
+    });
+  } catch (error) {
+    console.error('[admin-unlock] error:', error);
+    return NextResponse.json({ error: 'Interner Fehler' }, { status: 500 });
   }
 }
 

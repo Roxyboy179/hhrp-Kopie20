@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { 
   Loader2, Lock, LogIn, FileText, UserPlus, 
   Clock, CheckCircle2, XCircle, AlertTriangle,
-  Users, Shield, Eye, EyeOff, ArrowRight
+  Users, Shield, Eye, EyeOff, ArrowRight, UserCog
 } from 'lucide-react';
 import { useAdminAuth } from '@/components/providers/AdminAuthProvider';
 import { useRealtime } from '@/hooks/useRealtime';
@@ -433,6 +433,14 @@ export default function AdminPage() {
             title="Admin Accounts"
             description="Keine Berechtigung (min. Level 3 erforderlich)"
             disabled
+          />
+        )}
+        {admin.roleLevel >= 4 && (
+          <ActionCard
+            icon={UserCog}
+            title="Benutzer-Verwaltung"
+            description="2FA entfernen oder gesperrte Accounts entsperren"
+            onClick={() => router.push('/admin/benutzer')}
           />
         )}
       </div>

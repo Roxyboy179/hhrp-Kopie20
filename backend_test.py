@@ -569,6 +569,264 @@ def test_discord_callback_invalid_code():
         print(f"❌ FAIL - Exception: {e}")
         return False
 
+def test_admin_lookup_no_auth():
+    """Test 20: GET /api/admin/users/lookup without admin cookie"""
+    print_test_header(20, "GET /api/admin/users/lookup (no auth)")
+    
+    try:
+        response = requests.get(
+            f"{API_BASE}/admin/users/lookup?q=test@example.com",
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        # Must be 403 (not 404 which would indicate routing error)
+        success = (
+            response.status_code == 403 and
+            "Nur Projektinhaber (Level 4)" in response.json().get('error', '')
+        )
+        
+        print_result(
+            success,
+            "HTTP 403 with 'Nur Projektinhaber (Level 4)' (NOT 404 - routing works)",
+            f"HTTP {response.status_code} with {response.json()}"
+        )
+        return success
+    except Exception as e:
+        print(f"❌ FAIL - Exception: {e}")
+        return False
+
+def test_admin_lookup_no_query():
+    """Test 21: GET /api/admin/users/lookup without query parameter"""
+    print_test_header(21, "GET /api/admin/users/lookup (no query)")
+    
+    try:
+        response = requests.get(
+            f"{API_BASE}/admin/users/lookup",
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        # Auth check happens first, so expect 403
+        success = response.status_code == 403
+        
+        print_result(
+            success,
+            "HTTP 403 (auth check before query validation)",
+            f"HTTP {response.status_code} with {response.json()}"
+        )
+        return success
+    except Exception as e:
+        print(f"❌ FAIL - Exception: {e}")
+        return False
+
+def test_admin_lookup_legacy_email():
+    """Test 22: GET /api/admin/users/lookup with legacy email parameter"""
+    print_test_header(22, "GET /api/admin/users/lookup (legacy ?email=)")
+    
+    try:
+        response = requests.get(
+            f"{API_BASE}/admin/users/lookup?email=test@example.com",
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        # Auth check happens first, so expect 403
+        success = (
+            response.status_code == 403 and
+            "Nur Projektinhaber (Level 4)" in response.json().get('error', '')
+        )
+        
+        print_result(
+            success,
+            "HTTP 403 (legacy email param supported, auth check first)",
+            f"HTTP {response.status_code} with {response.json()}"
+        )
+        return success
+    except Exception as e:
+        print(f"❌ FAIL - Exception: {e}")
+        return False
+
+def test_admin_lookup_discord_id():
+    """Test 23: GET /api/admin/users/lookup with Discord ID"""
+    print_test_header(23, "GET /api/admin/users/lookup (Discord ID)")
+    
+    try:
+        response = requests.get(
+            f"{API_BASE}/admin/users/lookup?q=123456789012345678&type=discordId",
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        # Auth check happens first, so expect 403
+        success = (
+            response.status_code == 403 and
+            "Nur Projektinhaber (Level 4)" in response.json().get('error', '')
+        )
+        
+        print_result(
+            success,
+            "HTTP 403 (Discord ID type, auth check first)",
+            f"HTTP {response.status_code} with {response.json()}"
+        )
+        return success
+    except Exception as e:
+        print(f"❌ FAIL - Exception: {e}")
+        return False
+
+def test_admin_lookup_username():
+    """Test 24: GET /api/admin/users/lookup with username"""
+    print_test_header(24, "GET /api/admin/users/lookup (username)")
+    
+    try:
+        response = requests.get(
+            f"{API_BASE}/admin/users/lookup?q=testuser&type=username",
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        # Auth check happens first, so expect 403
+        success = (
+            response.status_code == 403 and
+            "Nur Projektinhaber (Level 4)" in response.json().get('error', '')
+        )
+        
+        print_result(
+            success,
+            "HTTP 403 (username type, auth check first)",
+            f"HTTP {response.status_code} with {response.json()}"
+        )
+        return success
+    except Exception as e:
+        print(f"❌ FAIL - Exception: {e}")
+        return False
+
+def test_admin_disable_2fa_no_auth():
+    """Test 25: POST /api/admin/users/disable-2fa without admin cookie"""
+    print_test_header(25, "POST /api/admin/users/disable-2fa (no auth)")
+    
+    try:
+        payload = {"email": "test@example.com"}
+        response = requests.post(
+            f"{API_BASE}/admin/users/disable-2fa",
+            json=payload,
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        # Must be 403 (not 404 which would indicate routing error)
+        success = (
+            response.status_code == 403 and
+            "Nur Projektinhaber (Level 4)" in response.json().get('error', '')
+        )
+        
+        print_result(
+            success,
+            "HTTP 403 with 'Nur Projektinhaber (Level 4)' (NOT 404 - routing works)",
+            f"HTTP {response.status_code} with {response.json()}"
+        )
+        return success
+    except Exception as e:
+        print(f"❌ FAIL - Exception: {e}")
+        return False
+
+def test_admin_disable_2fa_no_body():
+    """Test 26: POST /api/admin/users/disable-2fa without body"""
+    print_test_header(26, "POST /api/admin/users/disable-2fa (no body)")
+    
+    try:
+        response = requests.post(
+            f"{API_BASE}/admin/users/disable-2fa",
+            json={},
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        # Auth check happens first, so expect 403
+        success = response.status_code == 403
+        
+        print_result(
+            success,
+            "HTTP 403 (auth check before body validation)",
+            f"HTTP {response.status_code} with {response.json()}"
+        )
+        return success
+    except Exception as e:
+        print(f"❌ FAIL - Exception: {e}")
+        return False
+
+def test_admin_unlock_no_auth():
+    """Test 27: POST /api/admin/users/unlock without admin cookie"""
+    print_test_header(27, "POST /api/admin/users/unlock (no auth)")
+    
+    try:
+        payload = {"email": "test@example.com"}
+        response = requests.post(
+            f"{API_BASE}/admin/users/unlock",
+            json=payload,
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        # Must be 403 (not 404 which would indicate routing error)
+        success = (
+            response.status_code == 403 and
+            "Nur Projektinhaber (Level 4)" in response.json().get('error', '')
+        )
+        
+        print_result(
+            success,
+            "HTTP 403 with 'Nur Projektinhaber (Level 4)' (NOT 404 - routing works)",
+            f"HTTP {response.status_code} with {response.json()}"
+        )
+        return success
+    except Exception as e:
+        print(f"❌ FAIL - Exception: {e}")
+        return False
+
+def test_admin_unlock_no_body():
+    """Test 28: POST /api/admin/users/unlock without body"""
+    print_test_header(28, "POST /api/admin/users/unlock (no body)")
+    
+    try:
+        response = requests.post(
+            f"{API_BASE}/admin/users/unlock",
+            json={},
+            timeout=10
+        )
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        # Auth check happens first, so expect 403
+        success = response.status_code == 403
+        
+        print_result(
+            success,
+            "HTTP 403 (auth check before body validation)",
+            f"HTTP {response.status_code} with {response.json()}"
+        )
+        return success
+    except Exception as e:
+        print(f"❌ FAIL - Exception: {e}")
+        return False
+
 def main():
     """Run all tests"""
     print("\n" + "="*80)
@@ -605,6 +863,21 @@ def main():
     results.append(("Test 17: DELETE account (no cookie)", test_delete_account_no_cookie()))
     results.append(("Test 18: Discord callback (no code)", test_discord_callback_no_code()))
     results.append(("Test 19: Discord callback (invalid code)", test_discord_callback_invalid_code()))
+    
+    # New Tests for Admin User Management (Level 4)
+    print("\n\n" + "="*80)
+    print("NEW TESTS: ADMIN USER MANAGEMENT (LEVEL 4)")
+    print("="*80)
+    
+    results.append(("Test 20: Admin lookup (no auth)", test_admin_lookup_no_auth()))
+    results.append(("Test 21: Admin lookup (no query)", test_admin_lookup_no_query()))
+    results.append(("Test 22: Admin lookup (legacy email)", test_admin_lookup_legacy_email()))
+    results.append(("Test 23: Admin lookup (Discord ID)", test_admin_lookup_discord_id()))
+    results.append(("Test 24: Admin lookup (username)", test_admin_lookup_username()))
+    results.append(("Test 25: Admin disable 2FA (no auth)", test_admin_disable_2fa_no_auth()))
+    results.append(("Test 26: Admin disable 2FA (no body)", test_admin_disable_2fa_no_body()))
+    results.append(("Test 27: Admin unlock (no auth)", test_admin_unlock_no_auth()))
+    results.append(("Test 28: Admin unlock (no body)", test_admin_unlock_no_body()))
     
     # Regression Tests
     print("\n\n" + "="*80)
