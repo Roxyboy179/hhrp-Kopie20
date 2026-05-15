@@ -6381,10 +6381,22 @@ async function handleAdminDisable2FA(request) {
 
     const meta = user.user_metadata || {};
     if (!meta.twofa_enabled && !meta.twofa_pending_secret) {
+      console.log(`[admin-disable-2fa] ${email}: 2FA war NICHT aktiv (Admin ${admin.discordUsername})`);
       return NextResponse.json({ error: '2FA ist nicht aktiviert', code: 'NOT_ENABLED' }, { status: 400 });
     }
 
+    console.log(`[admin-disable-2fa] START — email=${email} userId=${user.id} hadEnabled=${!!meta.twofa_enabled} hadPending=${!!meta.twofa_pending_secret} (Admin ${admin.discordUsername})`);
     await deactivateTwoFa(user.id);
+
+    // Verifikation: nochmal frisch lesen
+    try {
+      const sbAdminV = await getSupabaseAdmin();
+      const { data: verify } = await sbAdminV.auth.admin.getUserById(user.id);
+      const m2 = verify?.user?.user_metadata || {};
+      console.log(`[admin-disable-2fa] DONE — email=${email} stillEnabled=${!!m2.twofa_enabled} stillPending=${!!m2.twofa_pending_secret}`);
+    } catch (e) {
+      console.warn('[admin-disable-2fa] verify read failed:', e?.message || e);
+    }
 
     // E-Mail an User senden (fire-and-forget)
     send2FARemovedByAdminEmail(email).catch(err => {
@@ -6442,9 +6454,22 @@ async function handleAdminUnlockAccount(request) {
 
     const meta = user.user_metadata || {};
     const wasLocked = !!meta.locked_at;
+    const prevAttempts = meta.failed_login_attempts || 0;
+
+    console.log(`[admin-unlock] START — email=${email} userId=${user.id} wasLocked=${wasLocked} prevAttempts=${prevAttempts} (Admin ${admin.discordUsername})`);
 
     // Reset (auch wenn nicht gesperrt – setzt failed_login_attempts auf 0)
     await resetFailedAttempts(email);
+
+    // Verifikation: nochmal frisch lesen
+    try {
+      const sbAdminV = await getSupabaseAdmin();
+      const { data: verify } = await sbAdminV.auth.admin.getUserById(user.id);
+      const m2 = verify?.user?.user_metadata || {};
+      console.log(`[admin-unlock] DONE — email=${email} stillLocked=${!!m2.locked_at} attemptsNow=${m2.failed_login_attempts || 0}`);
+    } catch (e) {
+      console.warn('[admin-unlock] verify read failed:', e?.message || e);
+    }
 
     // E-Mail nur senden wenn der Account vorher wirklich gesperrt war
     if (wasLocked) {
