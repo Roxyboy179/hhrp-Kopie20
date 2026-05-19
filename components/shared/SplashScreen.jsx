@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Gamepad2, Briefcase, Zap, Shield, Users, CheckCircle } from 'lucide-react';
+import { LAUNCHER_NAME, LAUNCHER_TAGLINE } from '@/lib/launcher';
 
 export function SplashScreen({ onComplete }) {
   const [progress, setProgress] = useState(0);
@@ -64,7 +65,7 @@ export function SplashScreen({ onComplete }) {
       else if (p < 40) setLoadingText('Daten werden geladen...');
       else if (p < 60) setLoadingText('Interface wird initialisiert...');
       else if (p < 80) setLoadingText('Fast fertig...');
-      else setLoadingText('Willkommen bei HHRP!');
+      else setLoadingText(`Willkommen im ${LAUNCHER_NAME}!`);
       
       if (p < 100) requestAnimationFrame(animate);
     };
@@ -196,14 +197,14 @@ export function SplashScreen({ onComplete }) {
           phase >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
         } ${phase >= 4 ? 'scale-105 opacity-0 -translate-y-4' : ''}`}>
           <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight mb-4 leading-tight">
-            {phase >= 4 ? 'Bereit!' : 'HHRP'}
+            {phase >= 4 ? 'Bereit!' : LAUNCHER_NAME}
           </h1>
           <div className="flex items-center justify-center gap-2 mb-2">
             <div className="w-12 h-px" style={{ background: 'linear-gradient(to right, transparent, rgba(var(--theme-accent-rgb), 0.5))' }} />
             <p className={`text-base font-light tracking-[0.3em] uppercase transition-all duration-500 ${
               phase >= 4 ? 'text-green-400' : 'text-white/50'
             }`}>
-              {phase >= 4 ? 'Vollständig geladen' : 'Hamburg Horizon Roleplay'}
+              {phase >= 4 ? 'Vollständig geladen' : LAUNCHER_TAGLINE}
             </p>
             <div className="w-12 h-px" style={{ background: 'linear-gradient(to left, transparent, rgba(var(--theme-accent-rgb), 0.5))' }} />
           </div>
@@ -293,7 +294,7 @@ export function SplashScreen({ onComplete }) {
       <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center gap-3">
         <div className="w-64 h-px" style={{ background: `linear-gradient(to right, transparent, rgba(var(--theme-accent-rgb, 99, 102, 241), 0.2), transparent)` }} />
         <p className="text-[10px] text-white/10 tracking-[0.3em] uppercase">
-          Powered by HHRP
+          {LAUNCHER_NAME}
         </p>
       </div>
     </div>

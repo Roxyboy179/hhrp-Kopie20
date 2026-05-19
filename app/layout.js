@@ -2,7 +2,7 @@ import './globals.css';
 import RootClientLayout from './RootClientLayout';
 
 export const metadata = {
-  title: 'HHRP',
+  title: 'HHRP Launcher',
   description: 'Offizielles Bewerbungsportal von Hamburg Horizon RP. Bewirb dich jetzt für unser Team! Wir suchen motivierte Mitglieder für Team-Positionen, Praktika und Beförderungen. Starte deine Karriere bei Hamburg Horizon Roleplay.',
   keywords: 'Hamburg Horizon RP, Bewerbung, Team, Praktikum, Uprank, Bewerbungsportal, Hamburg RP, Roleplay Team',
   authors: [{ name: 'Hamburg Horizon RP Team' }],
@@ -11,10 +11,10 @@ export const metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'HHRP',
+    title: 'HHRP Launcher',
   },
   openGraph: {
-    title: 'HHRP',
+    title: 'HHRP Launcher',
     description: 'Offizielles Bewerbungsportal von Hamburg Horizon RP. Bewirb dich jetzt für unser Team! Team-Bewerbung • Praktikum • Uprank. Werde Teil unserer professionellen Roleplay-Community und gestalte Hamburg Horizon mit uns!',
     url: '/',
     siteName: 'Hamburg Horizon RP',
@@ -31,7 +31,7 @@ export const metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HHRP',
+    title: 'HHRP Launcher',
     description: 'Offizielles Bewerbungsportal von Hamburg Horizon RP. Bewirb dich jetzt für unser Team! Team-Bewerbung • Praktikum • Uprank',
     images: ['/embed.webp'],
   },
@@ -63,43 +63,98 @@ export default function RootLayout({ children }) {
         {/* Preload kritische Assets */}
         <link rel="preload" as="image" href="/logo.webp" />
         
-        {/* Inline Styles für sofortigen Loading Screen */}
+        {/* Inline Styles — HHRP Launcher Startbildschirm (gleiches Layout wie Splash) */}
         <style dangerouslySetInnerHTML={{__html: `
           #app-loader {
             position: fixed;
             inset: 0;
-            background: #050505;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 9999;
-            transition: opacity 0.3s ease-out;
+            transition: opacity 0.5s ease-out;
           }
           #app-loader.hidden {
             opacity: 0;
             pointer-events: none;
           }
-          .loader-spinner {
-            width: 48px;
-            height: 48px;
-            border: 4px solid rgba(255,255,255,0.1);
-            border-top-color: var(--theme-accent, #667eea);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+          .loader-inner {
+            text-align: center;
+            position: relative;
+            z-index: 1;
           }
-          @keyframes spin {
-            to { transform: rotate(360deg); }
+          .loader-glow {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            border-radius: 50%;
+            background: rgba(99, 102, 241, 0.12);
+            filter: blur(120px);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+          }
+          .loader-logo-wrap {
+            position: relative;
+            width: 96px;
+            height: 96px;
+            margin: 0 auto 28px;
           }
           .loader-logo {
-            width: 80px;
-            height: 80px;
-            margin-bottom: 24px;
+            width: 96px;
+            height: 96px;
             border-radius: 24px;
-            animation: pulse 2s ease-in-out infinite;
+            box-shadow: 0 20px 60px rgba(99, 102, 241, 0.35);
           }
-          @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.8; transform: scale(0.95); }
+          .loader-ring {
+            position: absolute;
+            inset: -6px;
+            border-radius: 28px;
+            border: 2px dashed rgba(99, 102, 241, 0.25);
+            animation: spin 12s linear infinite;
+          }
+          .loader-title {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.02em;
+            margin-bottom: 6px;
+          }
+          .loader-sub {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.25em;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 24px;
+          }
+          .loader-bar {
+            width: 220px;
+            height: 4px;
+            background: rgba(99, 102, 241, 0.1);
+            border-radius: 999px;
+            overflow: hidden;
+            margin: 0 auto 10px;
+          }
+          .loader-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, rgba(99,102,241,0.6), rgba(99,102,241,1));
+            border-radius: 999px;
+            animation: loaderProgress 2.5s ease-out forwards;
+            box-shadow: 0 0 16px rgba(99, 102, 241, 0.5);
+          }
+          .loader-status {
+            font-size: 0.65rem;
+            color: rgba(99, 102, 241, 0.55);
+            letter-spacing: 0.08em;
+          }
+          @keyframes spin { to { transform: rotate(360deg); } }
+          @keyframes loaderProgress {
+            0% { width: 0%; }
+            40% { width: 55%; }
+            75% { width: 88%; }
+            100% { width: 100%; }
           }
         `}} />
       </head>
