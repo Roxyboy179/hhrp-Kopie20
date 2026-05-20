@@ -2,6 +2,7 @@
   "version": "1.0.0",
   "releaseNotes": "Erster Release mit Update-Warnung und Download-Seite.",
   "publishedAt": "2026-05-19",
-  "fileName": "hhrp-launcher.exe",
+  "fileName": "HHRP Launcher.exe",
+  "installerFileName": "HHRP Launcher Setup.exe",
   "minWindows": "Windows 10 (64-bit)"
 }

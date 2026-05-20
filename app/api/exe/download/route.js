@@ -2,28 +2,40 @@ import fs from 'fs';
 import { NextResponse } from 'next/server';
 import {
   getLauncherExePath,
+  getLauncherInstallerPath,
   getLauncherVersionMeta,
   isLauncherExeAvailable,
+  isLauncherInstallerAvailable,
 } from '@/lib/launcher-version';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET() {
+export async function GET(request) {
   try {
-    if (!isLauncherExeAvailable()) {
+    const url = new URL(request.url);
+    const installerRequested = url.searchParams.get('installer') === '1';
+
+    const installerAvailable = isLauncherInstallerAvailable();
+    const portableAvailable = isLauncherExeAvailable();
+
+    if (!installerAvailable && !portableAvailable) {
       return NextResponse.json(
-        {
-          error:
-            'Launcher noch nicht veröffentlicht. Bitte später erneut versuchen.',
-        },
+        { error: 'Launcher noch nicht veröffentlicht. Bitte später erneut versuchen.' },
         { status: 404 }
       );
     }
 
     const meta = getLauncherVersionMeta();
-    const filePath = getLauncherExePath();
+    const useInstaller = installerRequested && installerAvailable;
+    const filePath = useInstaller
+      ? getLauncherInstallerPath()
+      : portableAvailable
+      ? getLauncherExePath()
+      : getLauncherInstallerPath();
     const stat = fs.statSync(filePath);
-    const fileName = meta.fileName || 'hhrp-launcher.exe';
+    const fileName = useInstaller
+      ? meta.installerFileName || 'HHRP Launcher Setup.exe'
+      : meta.fileName || 'HHRP Launcher.exe';
 
     const stream = fs.createReadStream(filePath);
     const webStream = new ReadableStream({
@@ -39,7 +51,7 @@ export async function GET() {
 
     return new NextResponse(webStream, {
       headers: {
-        'Content-Type': 'application/octet-stream',
+        'Content-Type': 'application/x-msdownload',
         'Content-Disposition': `attachment; filename="${fileName}"`,
         'Content-Length': String(stat.size),
         'Cache-Control': 'no-store, max-age=0',

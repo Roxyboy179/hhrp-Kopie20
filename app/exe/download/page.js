@@ -28,7 +28,15 @@ export default function ExeDownloadPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const canDownload = info?.available;
+  const canDownloadInstaller = info?.installerAvailable;
+  const canDownload = info?.available || canDownloadInstaller;
+  const downloadLink = canDownloadInstaller
+    ? info.installerDownloadUrl
+    : info?.downloadUrl;
+  const fileInfo = canDownloadInstaller && info.installerFile ? info.installerFile : info?.file;
+  const downloadLabel = canDownloadInstaller
+    ? 'HHRP Launcher installieren'
+    : 'HHRP Launcher herunterladen';
 
   return (
     <div
@@ -55,14 +63,14 @@ export default function ExeDownloadPage() {
             />
           </div>
           <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight mb-3">
-            HHRP Launcher
+            HHRP Launcher installieren
           </h1>
           <p
             className="text-sm sm:text-base max-w-md mx-auto"
             style={{ color: 'rgba(var(--theme-accent-rgb), 0.45)' }}
           >
-            Offizieller Windows-Launcher — nur hier auf hhrp24.de herunterladen.
-            Updates werden automatisch erkannt.
+            Lade den offiziellen HHRP Launcher herunter, installiere ihn einmal und
+            starte ihn danach direkt als Anwendung mit eigenem Icon.
           </p>
         </div>
 
@@ -97,23 +105,12 @@ export default function ExeDownloadPage() {
                 >
                   Version {info.version}
                 </span>
-                {info.file?.sizeMB && (
+                {fileInfo?.sizeMB && (
                   <span className="text-xs text-white/40">
-                    ca. {info.file.sizeMB} MB
-                  </span>
-                )}
-                {info.publishedAt && (
-                  <span className="text-xs text-white/30">
-                    Veröffentlicht: {info.publishedAt}
+                    ca. {fileInfo.sizeMB} MB
                   </span>
                 )}
               </div>
-
-              {info.releaseNotes && (
-                <p className="text-sm text-white/60 mb-6 leading-relaxed">
-                  {info.releaseNotes}
-                </p>
-              )}
 
               {!canDownload ? (
                 <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 mb-6">
@@ -124,18 +121,25 @@ export default function ExeDownloadPage() {
                   </p>
                 </div>
               ) : (
-                <a
-                  href="/api/exe/download"
-                  className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-semibold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] mb-6"
-                  style={{
-                    background: 'var(--theme-accent)',
-                    color: '#000',
-                    boxShadow: '0 8px 32px rgba(var(--theme-accent-rgb), 0.35)',
-                  }}
-                >
-                  <Download className="w-5 h-5" />
-                  hhrp-launcher.exe herunterladen
-                </a>
+                <>
+                  <a
+                    href={downloadLink}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-semibold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] mb-4"
+                    style={{
+                      background: 'var(--theme-accent)',
+                      color: '#000',
+                      boxShadow: '0 8px 32px rgba(var(--theme-accent-rgb), 0.35)',
+                    }}
+                  >
+                    <Download className="w-5 h-5" />
+                    {downloadLabel}
+                  </a>
+                  <p className="text-xs text-white/40 mb-6 max-w-2xl mx-auto">
+                    Speichere die Datei und führe sie einmal aus, um HHRP dauerhaft auf
+                    deinem PC zu installieren. Danach kannst du die App direkt über
+                    das Startmenü oder das Desktop-Icon öffnen.
+                  </p>
+                </>
               )}
 
               <ul className="space-y-3 text-sm text-white/55">
@@ -170,11 +174,8 @@ export default function ExeDownloadPage() {
                 </h2>
                 <ol className="space-y-2 text-sm text-white/50 list-decimal list-inside">
                   <li>Datei herunterladen und speichern</li>
-                  <li>
-                    Bei Windows-Warnung: „Weitere Informationen“ → „Trotzdem
-                    ausführen“
-                  </li>
-                  <li>Launcher startet HHRP im eigenen Fenster</li>
+                  <li>Datei einmal ausführen und den Launcher installieren</li>
+                  <li>HHRP danach direkt über Startmenü oder Desktop öffnen</li>
                   <li>
                     Bei neuer Version: Launcher zeigt eine Warnung und verweist
                     dich hierher zum Download

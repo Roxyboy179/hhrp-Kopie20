@@ -11,7 +11,8 @@
         "launcher:install": "cd hhrp-launcher && npm install",
         "launcher:start": "cd hhrp-launcher && npm start",
         "launcher:build": "cd hhrp-launcher && npm install && npm run build",
-        "launcher:publish": "cd hhrp-launcher && npm run build && npm run publish:website"
+        "launcher:publish": "cd hhrp-launcher && npm run build && npm run publish:website",
+        "launcher:build-installer": "powershell -NoProfile -ExecutionPolicy Bypass -File hhrp-launcher\\MakeInstaller.ps1"
     },
     "dependencies": {
         "@hookform/resolvers": "^5.1.1",
